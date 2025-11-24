@@ -1,0 +1,103 @@
+[project]
+name = "kronicle"
+version = "0.0.1"
+authors = [{ name = "Olivier Martineau", email = "olivier.martineau@irisa.fr" }]
+maintainers = [
+    { name = "Olivier Martineau", email = "olivier.martineau@irisa.fr" },
+]
+description = "FastAPI-powered TimescaleDB microservice for storing time-series sensor datas"
+readme = "README.md"
+requires-python = ">=3.11"
+license-files = ["LICENCE.md"]
+license = "AGPL-3.0"
+classifiers = [
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+]
+keywords = [
+    "timeseries",
+    "timescaledb",
+    "storage",
+    "fastapi",
+    "digital twin",
+    "Univ. Rennes",
+    "IRISA",
+]
+dynamic = ["dependencies", "optional-dependencies"]
+
+[project.urls]
+Homepage = "https://github.com/logistica-dev/kronicle"
+Documentation = "https://github.com/logistica-dev/kronicle/blob/latest_branch/README.md"
+Repository = "https://github.com/logistica-dev/kronicle"
+
+[build-system]
+requires = ["setuptools>=80.0"]
+build-backend = "setuptools.build_meta"
+
+# ----- Tool: black
+[tool.black]
+line-length = 120
+target-version = ['py312']
+
+# ----- Tool: commitizen
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "0.0.1"
+version_files = ["pyproject.toml:version"]
+
+# ----- Tool: pytest
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+norecursedirs = ["*.egg", ".eggs", "dist", "build", "wip"]
+filterwarnings = ["ignore:.*pkg_resources.*:DeprecationWarning"]
+addopts = [
+    "--cov-report=term-missing",
+    "--cov-report=html:reports/html_dir",
+    "--cov-report=xml:reports/coverage.xml",
+]
+
+# ----- Tool: setuptools
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["kronicle*"]
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements.txt"] }
+optional-dependencies = { dev = { file = ["requirements-dev.txt"] } }
+
+# ----- Tool: pyright
+[tool.pyright]
+exclude = ["**/__pycache__", "**/.venv", "**/.env"]
+executionEnvironments = [{ root = ".", extraPaths = ["src"] }]
+extraPaths = ["src"]
+include = ["src", "tests"]
+pythonVersion = "3.12"
+reportArgumentType = "warning"
+reportDuplicateImport = true
+reportImportCycles = true
+reportIncompatibleMethodOverride = "warning"
+reportMissingImports = true
+reportUnusedImport = true
+venv = ".venv"
+venvPath = "."
+verboseOutput = true
+
+# ----- Tool: Ruff
+[tool.ruff]
+# match Black
+line-length = 120
+# auto-fix issues (imports, unused vars)
+fix = true
+# common codes: E/F=flake8, I=imports, B=bugs, C=complexity
+# line length handled by Black
+exclude = ["**/.venv", "**/__pycache__", "**/.env"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "C"]
+ignore = ["E501"]

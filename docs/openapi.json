@@ -1,0 +1,2138 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Kronicle",
+    "summary": "FastAPI-powered TimescaleDB microservice for storing timeseries",
+    "version": "0.0.1"
+  },
+  "paths": {
+    "/api/v1/channels": {
+      "get": {
+        "tags": ["Read data"],
+        "summary": "list all available sensor channels",
+        "description": "Fetches metadata for all registered sensors.\nEach entry includes schema, metadata, tags, and the number of available rows.\nNo data rows are returned in this endpoint.\nOptionally, filter by a name or tag_key/tag_value pair.",
+        "operationId": "fetch_all_channels_metadata_api_v1_channels_get",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional name to filter by",
+              "title": "Name"
+            },
+            "description": "Optional name to filter by"
+          },
+          {
+            "name": "tag_key",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional tag key to filter by",
+              "title": "Tag Key"
+            },
+            "description": "Optional tag key to filter by"
+          },
+          {
+            "name": "tag_value",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional tag value to filter by",
+              "title": "Tag Value"
+            },
+            "description": "Optional tag value to filter by"
+          },
+          {
+            "name": "retries",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 5,
+              "title": "Retries"
+            }
+          },
+          {
+            "name": "delay",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 2.0,
+              "title": "Delay"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResponsePayload"
+                  },
+                  "title": "Response Fetch All Channels Metadata Api V1 Channels Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/channels/{sensor_id}": {
+      "get": {
+        "tags": ["Read data"],
+        "summary": "Fetch metadata for a specific sensor channel",
+        "description": "Retrieves metadata for the specified `sensor_id`, including schema, tags, and metadata.\nThe response also includes the number of rows stored for that sensor but does not include the row data itself.",
+        "operationId": "fetch_channel_api_v1_channels__sensor_id__get",
+        "parameters": [
+          {
+            "name": "sensor_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Sensor Id"
+            }
+          },
+          {
+            "name": "retries",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 5,
+              "title": "Retries"
+            }
+          },
+          {
+            "name": "delay",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 2.0,
+              "title": "Delay"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponsePayload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/channels/{sensor_id}/rows": {
+      "get": {
+        "tags": ["Read data"],
+        "summary": "Fetch stored rows for a specific sensor channel",
+        "description": "Retrieves all stored time-series rows for the specified `sensor_id`.\nThe response includes both metadata and data rows according to the sensor\u2019s schema.",
+        "operationId": "fetch_channel_rows_api_v1_channels__sensor_id__rows_get",
+        "parameters": [
+          {
+            "name": "sensor_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Sensor Id"
+            }
+          },
+          {
+            "name": "skip_received",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Optional flag, True to display data reception date",
+              "default": true,
+              "title": "Skip Received"
+            },
+            "description": "Optional flag, True to display data reception date"
+          },
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Optional date string, return rows from this date",
+              "title": "From Date"
+            },
+            "description": "Optional date string, return rows from this date"
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Optional date string, return rows up to this date",
+              "title": "To Date"
+            },
+            "description": "Optional date string, return rows up to this date"
+          },
+          {
+            "name": "retries",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 5,
+              "title": "Retries"
+            }
+          },
+          {
+            "name": "delay",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 2.0,
+              "title": "Delay"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponsePayload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/channels/{sensor_id}/columns": {
+      "get": {
+        "tags": ["Read data"],
+        "summary": "Fetch the data as columns for a specific sensor channel",
+        "description": "Retrieves all stored time-series rows for the specified `sensor_id` and present them as columns.\nThe response includes both metadata and data columns according to the sensor\u2019s schema.",
+        "operationId": "fetch_channel_columns_api_v1_channels__sensor_id__columns_get",
+        "parameters": [
+          {
+            "name": "sensor_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Sensor Id"
+            }
+          },
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Optional date string, return rows from this date",
+              "title": "From Date"
+            },
+            "description": "Optional date string, return rows from this date"
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Optional date string, return rows up to this date",
+              "title": "To Date"
+            },
+            "description": "Optional date string, return rows up to this date"
+          },
+          {
+            "name": "retries",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 5,
+              "title": "Retries"
+            }
+          },
+          {
+            "name": "delay",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 2.0,
+              "title": "Delay"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponsePayload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/data/v1/channels": {
+      "get": {
+        "tags": ["Input data"],
+        "summary": "list all available sensor channels",
+        "description": "Fetches metadata for all registered sensors.\nEach entry includes schema, metadata, tags, and the number of available rows.\nNo data rows are returned in this endpoint.\nOptionally, filter by a name or tag_key/tag_value pair.",
+        "operationId": "fetch_all_channels_metadata_data_v1_channels_get",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional name to filter by",
+              "title": "Name"
+            },
+            "description": "Optional name to filter by"
+          },
+          {
+            "name": "tag_key",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional tag key to filter by",
+              "title": "Tag Key"
+            },
+            "description": "Optional tag key to filter by"
+          },
+          {
+            "name": "tag_value",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional tag value to filter by",
+              "title": "Tag Value"
+            },
+            "description": "Optional tag value to filter by"
+          },
+          {
+            "name": "retries",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 5,
+              "title": "Retries"
+            }
+          },
+          {
+            "name": "delay",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 2.0,
+              "title": "Delay"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResponsePayload"
+                  },
+                  "title": "Response Fetch All Channels Metadata Data V1 Channels Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Input data"],
+        "summary": "Upsert metadata and insert rows",
+        "description": "Append-only operation: creates new metadata if missing and inserts sensor data rows",
+        "operationId": "upsert_metadata_and_rows_data_v1_channels_post",
+        "parameters": [
+          {
+            "name": "strict",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "If true, abort on any validation error",
+              "default": false,
+              "title": "Strict"
+            },
+            "description": "If true, abort on any validation error"
+          },
+          {
+            "name": "retries",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 5,
+              "title": "Retries"
+            }
+          },
+          {
+            "name": "delay",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 2.0,
+              "title": "Delay"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InputPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponsePayload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/data/v1/channels/{sensor_id}": {
+      "get": {
+        "tags": ["Input data"],
+        "summary": "Fetch metadata for a specific sensor channel",
+        "description": "Retrieves metadata for the specified `sensor_id`, including schema, tags, and metadata.\nThe response also includes the number of rows stored for that sensor but does not include the row data itself.",
+        "operationId": "fetch_channel_data_v1_channels__sensor_id__get",
+        "parameters": [
+          {
+            "name": "sensor_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Sensor Id"
+            }
+          },
+          {
+            "name": "retries",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 5,
+              "title": "Retries"
+            }
+          },
+          {
+            "name": "delay",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 2.0,
+              "title": "Delay"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponsePayload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/data/v1/channels/{sensor_id}/rows": {
+      "get": {
+        "tags": ["Input data"],
+        "summary": "Fetch stored rows for a specific sensor channel",
+        "description": "Retrieves all stored time-series rows for the specified `sensor_id`.\nThe response includes both metadata and data rows according to the sensor\u2019s schema.",
+        "operationId": "fetch_channel_rows_data_v1_channels__sensor_id__rows_get",
+        "parameters": [
+          {
+            "name": "sensor_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Sensor Id"
+            }
+          },
+          {
+            "name": "skip_received",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Optional flag, True to display data reception date",
+              "default": true,
+              "title": "Skip Received"
+            },
+            "description": "Optional flag, True to display data reception date"
+          },
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Optional date string, return rows from this date",
+              "title": "From Date"
+            },
+            "description": "Optional date string, return rows from this date"
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Optional date string, return rows up to this date",
+              "title": "To Date"
+            },
+            "description": "Optional date string, return rows up to this date"
+          },
+          {
+            "name": "retries",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 5,
+              "title": "Retries"
+            }
+          },
+          {
+            "name": "delay",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 2.0,
+              "title": "Delay"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponsePayload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Input data"],
+        "summary": "Insert rows for a sensor",
+        "description": "Append-only operation: insert new rows for an existing sensor. Does not modify metadata or schema.",
+        "operationId": "insert_rows_data_v1_channels__sensor_id__rows_post",
+        "parameters": [
+          {
+            "name": "sensor_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Sensor Id"
+            }
+          },
+          {
+            "name": "strict",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "If true, abort on any validation error",
+              "default": false,
+              "title": "Strict"
+            },
+            "description": "If true, abort on any validation error"
+          },
+          {
+            "name": "retries",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 5,
+              "title": "Retries"
+            }
+          },
+          {
+            "name": "delay",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 2.0,
+              "title": "Delay"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InputPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponsePayload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/data/v1/channels/{sensor_id}/columns": {
+      "get": {
+        "tags": ["Input data"],
+        "summary": "Fetch the data as columns for a specific sensor channel",
+        "description": "Retrieves all stored time-series rows for the specified `sensor_id` and present them as columns.\nThe response includes both metadata and data columns according to the sensor\u2019s schema.",
+        "operationId": "fetch_channel_columns_data_v1_channels__sensor_id__columns_get",
+        "parameters": [
+          {
+            "name": "sensor_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Sensor Id"
+            }
+          },
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Optional date string, return rows from this date",
+              "title": "From Date"
+            },
+            "description": "Optional date string, return rows from this date"
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Optional date string, return rows up to this date",
+              "title": "To Date"
+            },
+            "description": "Optional date string, return rows up to this date"
+          },
+          {
+            "name": "retries",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 5,
+              "title": "Retries"
+            }
+          },
+          {
+            "name": "delay",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 2.0,
+              "title": "Delay"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponsePayload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/setup/v1/channels": {
+      "get": {
+        "tags": ["Setup data channels"],
+        "summary": "list all available sensor channels",
+        "description": "Fetches metadata for all registered sensors.\nEach entry includes schema, metadata, tags, and the number of available rows.\nNo data rows are returned in this endpoint.\nOptionally, filter by a name or tag_key/tag_value pair.",
+        "operationId": "fetch_all_channels_metadata_setup_v1_channels_get",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional name to filter by",
+              "title": "Name"
+            },
+            "description": "Optional name to filter by"
+          },
+          {
+            "name": "tag_key",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional tag key to filter by",
+              "title": "Tag Key"
+            },
+            "description": "Optional tag key to filter by"
+          },
+          {
+            "name": "tag_value",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional tag value to filter by",
+              "title": "Tag Value"
+            },
+            "description": "Optional tag value to filter by"
+          },
+          {
+            "name": "retries",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 5,
+              "title": "Retries"
+            }
+          },
+          {
+            "name": "delay",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 2.0,
+              "title": "Delay"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResponsePayload"
+                  },
+                  "title": "Response Fetch All Channels Metadata Setup V1 Channels Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Setup data channels"],
+        "summary": "Create a new channel",
+        "description": "Create a new sensor channel with metadata and schema. Does not add rows, and fails if the channel already exists.",
+        "operationId": "create_channel_setup_v1_channels_post",
+        "parameters": [
+          {
+            "name": "retries",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 5,
+              "title": "Retries"
+            }
+          },
+          {
+            "name": "delay",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 2.0,
+              "title": "Delay"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InputPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponsePayload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Setup data channels"],
+        "summary": "Update or create a channel",
+        "description": "Upsert a channel: if it exists, updates metadata (schema must match if provided); if it does not exist, creates it with the given schema and metadata.",
+        "operationId": "update_channel_setup_v1_channels_put",
+        "parameters": [
+          {
+            "name": "retries",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 5,
+              "title": "Retries"
+            }
+          },
+          {
+            "name": "delay",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 2.0,
+              "title": "Delay"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InputPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponsePayload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/setup/v1/channels/{sensor_id}": {
+      "get": {
+        "tags": ["Setup data channels"],
+        "summary": "Fetch metadata for a specific sensor channel",
+        "description": "Retrieves metadata for the specified `sensor_id`, including schema, tags, and metadata.\nThe response also includes the number of rows stored for that sensor but does not include the row data itself.",
+        "operationId": "fetch_channel_setup_v1_channels__sensor_id__get",
+        "parameters": [
+          {
+            "name": "sensor_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Sensor Id"
+            }
+          },
+          {
+            "name": "retries",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 5,
+              "title": "Retries"
+            }
+          },
+          {
+            "name": "delay",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 2.0,
+              "title": "Delay"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponsePayload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": ["Setup data channels"],
+        "summary": "Partially update a channel",
+        "description": "Update only a subset of metadata, tags, or schema for the specified channel.",
+        "operationId": "patch_channel_setup_v1_channels__sensor_id__patch",
+        "parameters": [
+          {
+            "name": "retries",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 5,
+              "title": "Retries"
+            }
+          },
+          {
+            "name": "delay",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 2.0,
+              "title": "Delay"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InputPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponsePayload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Setup data channels"],
+        "summary": "Delete a channel",
+        "description": "Deletes a channel and its metadata. All data associated with the channel is also removed. Returns the metadata of the deleted channel.",
+        "operationId": "delete_channel_setup_v1_channels__sensor_id__delete",
+        "parameters": [
+          {
+            "name": "sensor_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Sensor Id"
+            }
+          },
+          {
+            "name": "retries",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 5,
+              "title": "Retries"
+            }
+          },
+          {
+            "name": "delay",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 2.0,
+              "title": "Delay"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponsePayload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/setup/v1/channels/{sensor_id}/rows": {
+      "get": {
+        "tags": ["Setup data channels"],
+        "summary": "Fetch stored rows for a specific sensor channel",
+        "description": "Retrieves all stored time-series rows for the specified `sensor_id`.\nThe response includes both metadata and data rows according to the sensor\u2019s schema.",
+        "operationId": "fetch_channel_rows_setup_v1_channels__sensor_id__rows_get",
+        "parameters": [
+          {
+            "name": "sensor_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Sensor Id"
+            }
+          },
+          {
+            "name": "skip_received",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Optional flag, True to display data reception date",
+              "default": true,
+              "title": "Skip Received"
+            },
+            "description": "Optional flag, True to display data reception date"
+          },
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Optional date string, return rows from this date",
+              "title": "From Date"
+            },
+            "description": "Optional date string, return rows from this date"
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Optional date string, return rows up to this date",
+              "title": "To Date"
+            },
+            "description": "Optional date string, return rows up to this date"
+          },
+          {
+            "name": "retries",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 5,
+              "title": "Retries"
+            }
+          },
+          {
+            "name": "delay",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 2.0,
+              "title": "Delay"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponsePayload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Setup data channels"],
+        "summary": "Insert rows for a sensor",
+        "description": "Append-only operation: insert new rows for an existing sensor. Does not modify metadata or schema.",
+        "operationId": "insert_rows_setup_v1_channels__sensor_id__rows_post",
+        "parameters": [
+          {
+            "name": "sensor_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Sensor Id"
+            }
+          },
+          {
+            "name": "strict",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "If true, abort on any validation error",
+              "default": false,
+              "title": "Strict"
+            },
+            "description": "If true, abort on any validation error"
+          },
+          {
+            "name": "retries",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 5,
+              "title": "Retries"
+            }
+          },
+          {
+            "name": "delay",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 2.0,
+              "title": "Delay"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InputPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponsePayload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Setup data channels"],
+        "summary": "Delete all rows for a channel",
+        "description": "Removes all data rows for the specified channel, while keeping its metadata intact.",
+        "operationId": "delete_channel_rows_setup_v1_channels__sensor_id__rows_delete",
+        "parameters": [
+          {
+            "name": "sensor_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Sensor Id"
+            }
+          },
+          {
+            "name": "retries",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 5,
+              "title": "Retries"
+            }
+          },
+          {
+            "name": "delay",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 2.0,
+              "title": "Delay"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponsePayload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/setup/v1/channels/{sensor_id}/columns": {
+      "get": {
+        "tags": ["Setup data channels"],
+        "summary": "Fetch the data as columns for a specific sensor channel",
+        "description": "Retrieves all stored time-series rows for the specified `sensor_id` and present them as columns.\nThe response includes both metadata and data columns according to the sensor\u2019s schema.",
+        "operationId": "fetch_channel_columns_setup_v1_channels__sensor_id__columns_get",
+        "parameters": [
+          {
+            "name": "sensor_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Sensor Id"
+            }
+          },
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Optional date string, return rows from this date",
+              "title": "From Date"
+            },
+            "description": "Optional date string, return rows from this date"
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Optional date string, return rows up to this date",
+              "title": "To Date"
+            },
+            "description": "Optional date string, return rows up to this date"
+          },
+          {
+            "name": "retries",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 5,
+              "title": "Retries"
+            }
+          },
+          {
+            "name": "delay",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 2.0,
+              "title": "Delay"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponsePayload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/setup/v1/channels/{sensor_id}/clone": {
+      "post": {
+        "tags": ["Setup data channels"],
+        "summary": "Clone a channel",
+        "description": "Creates a new channel by cloning an existing channel's schema and optionally metadata. Does not copy data rows.",
+        "operationId": "clone_channel_setup_v1_channels__sensor_id__clone_post",
+        "parameters": [
+          {
+            "name": "sensor_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Sensor Id"
+            }
+          },
+          {
+            "name": "retries",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 5,
+              "title": "Retries"
+            }
+          },
+          {
+            "name": "delay",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 2.0,
+              "title": "Delay"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InputPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponsePayload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/setup/v1/channels/batch-delete": {
+      "post": {
+        "tags": ["Setup data channels"],
+        "summary": "Delete multiple channels",
+        "operationId": "batch_delete_channels_setup_v1_channels_batch_delete_post",
+        "parameters": [
+          {
+            "name": "retries",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 5,
+              "title": "Retries"
+            }
+          },
+          {
+            "name": "delay",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 2.0,
+              "title": "Delay"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "title": "Payload"
+              },
+              "example": {
+                "sensor_ids": ["uuid1", "uuid2"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResponsePayload"
+                  },
+                  "title": "Response Batch Delete Channels Setup V1 Channels Batch Delete Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/setup/v1/schemas/columns_types": {
+      "get": {
+        "tags": ["Setup data channels"],
+        "summary": "list the types available to describe the columns",
+        "description": "Retrieves every Python-like type that can be used to describe the type of a data column",
+        "operationId": "get_column_types_setup_v1_schemas_columns_types_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array",
+                  "title": "Response Get Column Types Setup V1 Schemas Columns Types Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "InputPayload": {
+        "properties": {
+          "sensor_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sensor Id"
+          },
+          "sensor_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sensor Schema"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "items": {},
+                      "type": "array"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          },
+          "rows": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rows"
+          },
+          "strict": {
+            "type": "boolean",
+            "title": "Strict",
+            "description": "If true, any validation error aborts the entire request.",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "InputPayload",
+        "description": "User-provided payload for a sensor.\nThe 'sensor_schema' field is a dict of column_name -> type string.",
+        "example": {
+          "metadata": {
+            "unit": "C"
+          },
+          "rows": [
+            {
+              "humidity": 55.1,
+              "temperature": 20.5,
+              "time": "2025-01-01T00:00:00Z"
+            },
+            {
+              "humidity": 54.1,
+              "temperature": 20.0,
+              "time": "2025-01-02T00:00:00Z"
+            },
+            {
+              "humidity": 53.1,
+              "temperature": 20.5,
+              "time": "2025-01-03T00:00:00Z"
+            },
+            {
+              "humidity": 52.1,
+              "temperature": 29.5,
+              "time": "2025-01-04T00:00:00Z"
+            }
+          ],
+          "sensor_id": "143a64b8-316f-4346-a42c-83120b58b913",
+          "sensor_name": "thermo-0a9e3",
+          "sensor_schema": {
+            "humidity": "float",
+            "temperature": "float",
+            "time": "datetime"
+          },
+          "tags": {
+            "floor": 3,
+            "location": "lab"
+          }
+        }
+      },
+      "ResponsePayload": {
+        "properties": {
+          "sensor_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Sensor Id"
+          },
+          "sensor_schema": {
+            "$ref": "#/components/schemas/SensorSchema"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "items": {},
+                      "type": "array"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          },
+          "rows": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rows"
+          },
+          "columns": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "items": {},
+                  "type": "array"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Columns"
+          },
+          "available_rows": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Available Rows"
+          },
+          "op_status": {
+            "type": "string",
+            "title": "Op Status",
+            "description": "Overall operation status: success/warning/error",
+            "default": "success"
+          },
+          "op_details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Op Details"
+          }
+        },
+        "type": "object",
+        "required": ["sensor_id", "sensor_schema"],
+        "title": "ResponsePayload",
+        "description": "Payload returned in responses to the user.\n- issued_at: when the response was generated\n- available_rows: number of rows stored for this sensor (None if unknown)"
+      },
+      "SchemaType": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": ["name"],
+        "title": "SchemaType"
+      },
+      "SensorSchema": {
+        "properties": {
+          "column_types": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SchemaType"
+            },
+            "type": "object",
+            "title": "Column Types",
+            "description": "Column name -> SchemaType"
+          },
+          "db_to_usr": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Db To Usr",
+            "description": "DB column name mapping -> User-defined column name"
+          }
+        },
+        "type": "object",
+        "required": ["column_types"],
+        "title": "SensorSchema",
+        "description": "Stores application-level schema.\ncolumns: dict[column_name, SchemaType]\ndb_to_usr: dict[db_column_name, user_column_name]"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": ["loc", "msg", "type"],
+        "title": "ValidationError"
+      }
+    }
+  }
+}
