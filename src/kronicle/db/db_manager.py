@@ -582,7 +582,6 @@ if __name__ == "__main__":
     from datetime import timedelta, timezone
     from uuid import uuid4
 
-    from kronicle.db.db_manager import DatabaseManager
     from kronicle.db.sensor_metadata import SensorMetadata
     from kronicle.db.sensor_schema import SensorSchema
     from kronicle.utils.logger import log_d

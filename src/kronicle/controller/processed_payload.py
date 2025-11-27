@@ -155,7 +155,6 @@ if __name__ == "__main__":
 
     from pydantic import ValidationError
 
-    from kronicle.controller.processed_payload import ProcessedMetadata, ProcessedPayload
     from kronicle.utils.logger import log_d
 
     log_d(here, "=== sensor_payloads.py main test ===")

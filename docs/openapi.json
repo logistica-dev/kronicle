@@ -2,13 +2,15 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Kronicle",
-    "summary": "FastAPI-powered TimescaleDB microservice for storing timeseries",
+    "summary": "FastAPI-powered TimescaleDB microservice for storing time-series",
     "version": "0.0.1"
   },
   "paths": {
     "/api/v1/channels": {
       "get": {
-        "tags": ["Read data"],
+        "tags": [
+          "Read data"
+        ],
         "summary": "list all available sensor channels",
         "description": "Fetches metadata for all registered sensors.\nEach entry includes schema, metadata, tags, and the number of available rows.\nNo data rows are returned in this endpoint.\nOptionally, filter by a name or tag_key/tag_value pair.",
         "operationId": "fetch_all_channels_metadata_api_v1_channels_get",
@@ -127,7 +129,9 @@
     },
     "/api/v1/channels/{sensor_id}": {
       "get": {
-        "tags": ["Read data"],
+        "tags": [
+          "Read data"
+        ],
         "summary": "Fetch metadata for a specific sensor channel",
         "description": "Retrieves metadata for the specified `sensor_id`, including schema, tags, and metadata.\nThe response also includes the number of rows stored for that sensor but does not include the row data itself.",
         "operationId": "fetch_channel_api_v1_channels__sensor_id__get",
@@ -189,7 +193,9 @@
     },
     "/api/v1/channels/{sensor_id}/rows": {
       "get": {
-        "tags": ["Read data"],
+        "tags": [
+          "Read data"
+        ],
         "summary": "Fetch stored rows for a specific sensor channel",
         "description": "Retrieves all stored time-series rows for the specified `sensor_id`.\nThe response includes both metadata and data rows according to the sensor\u2019s schema.",
         "operationId": "fetch_channel_rows_api_v1_channels__sensor_id__rows_get",
@@ -285,7 +291,9 @@
     },
     "/api/v1/channels/{sensor_id}/columns": {
       "get": {
-        "tags": ["Read data"],
+        "tags": [
+          "Read data"
+        ],
         "summary": "Fetch the data as columns for a specific sensor channel",
         "description": "Retrieves all stored time-series rows for the specified `sensor_id` and present them as columns.\nThe response includes both metadata and data columns according to the sensor\u2019s schema.",
         "operationId": "fetch_channel_columns_api_v1_channels__sensor_id__columns_get",
@@ -369,7 +377,9 @@
     },
     "/data/v1/channels": {
       "get": {
-        "tags": ["Input data"],
+        "tags": [
+          "Input data"
+        ],
         "summary": "list all available sensor channels",
         "description": "Fetches metadata for all registered sensors.\nEach entry includes schema, metadata, tags, and the number of available rows.\nNo data rows are returned in this endpoint.\nOptionally, filter by a name or tag_key/tag_value pair.",
         "operationId": "fetch_all_channels_metadata_data_v1_channels_get",
@@ -486,7 +496,9 @@
         }
       },
       "post": {
-        "tags": ["Input data"],
+        "tags": [
+          "Input data"
+        ],
         "summary": "Upsert metadata and insert rows",
         "description": "Append-only operation: creates new metadata if missing and inserts sensor data rows",
         "operationId": "upsert_metadata_and_rows_data_v1_channels_post",
@@ -560,7 +572,9 @@
     },
     "/data/v1/channels/{sensor_id}": {
       "get": {
-        "tags": ["Input data"],
+        "tags": [
+          "Input data"
+        ],
         "summary": "Fetch metadata for a specific sensor channel",
         "description": "Retrieves metadata for the specified `sensor_id`, including schema, tags, and metadata.\nThe response also includes the number of rows stored for that sensor but does not include the row data itself.",
         "operationId": "fetch_channel_data_v1_channels__sensor_id__get",
@@ -622,7 +636,9 @@
     },
     "/data/v1/channels/{sensor_id}/rows": {
       "get": {
-        "tags": ["Input data"],
+        "tags": [
+          "Input data"
+        ],
         "summary": "Fetch stored rows for a specific sensor channel",
         "description": "Retrieves all stored time-series rows for the specified `sensor_id`.\nThe response includes both metadata and data rows according to the sensor\u2019s schema.",
         "operationId": "fetch_channel_rows_data_v1_channels__sensor_id__rows_get",
@@ -716,7 +732,9 @@
         }
       },
       "post": {
-        "tags": ["Input data"],
+        "tags": [
+          "Input data"
+        ],
         "summary": "Insert rows for a sensor",
         "description": "Append-only operation: insert new rows for an existing sensor. Does not modify metadata or schema.",
         "operationId": "insert_rows_data_v1_channels__sensor_id__rows_post",
@@ -800,7 +818,9 @@
     },
     "/data/v1/channels/{sensor_id}/columns": {
       "get": {
-        "tags": ["Input data"],
+        "tags": [
+          "Input data"
+        ],
         "summary": "Fetch the data as columns for a specific sensor channel",
         "description": "Retrieves all stored time-series rows for the specified `sensor_id` and present them as columns.\nThe response includes both metadata and data columns according to the sensor\u2019s schema.",
         "operationId": "fetch_channel_columns_data_v1_channels__sensor_id__columns_get",
@@ -884,7 +904,9 @@
     },
     "/setup/v1/channels": {
       "get": {
-        "tags": ["Setup data channels"],
+        "tags": [
+          "Setup data channels"
+        ],
         "summary": "list all available sensor channels",
         "description": "Fetches metadata for all registered sensors.\nEach entry includes schema, metadata, tags, and the number of available rows.\nNo data rows are returned in this endpoint.\nOptionally, filter by a name or tag_key/tag_value pair.",
         "operationId": "fetch_all_channels_metadata_setup_v1_channels_get",
@@ -1001,7 +1023,9 @@
         }
       },
       "post": {
-        "tags": ["Setup data channels"],
+        "tags": [
+          "Setup data channels"
+        ],
         "summary": "Create a new channel",
         "description": "Create a new sensor channel with metadata and schema. Does not add rows, and fails if the channel already exists.",
         "operationId": "create_channel_setup_v1_channels_post",
@@ -1061,7 +1085,9 @@
         }
       },
       "put": {
-        "tags": ["Setup data channels"],
+        "tags": [
+          "Setup data channels"
+        ],
         "summary": "Update or create a channel",
         "description": "Upsert a channel: if it exists, updates metadata (schema must match if provided); if it does not exist, creates it with the given schema and metadata.",
         "operationId": "update_channel_setup_v1_channels_put",
@@ -1123,7 +1149,9 @@
     },
     "/setup/v1/channels/{sensor_id}": {
       "get": {
-        "tags": ["Setup data channels"],
+        "tags": [
+          "Setup data channels"
+        ],
         "summary": "Fetch metadata for a specific sensor channel",
         "description": "Retrieves metadata for the specified `sensor_id`, including schema, tags, and metadata.\nThe response also includes the number of rows stored for that sensor but does not include the row data itself.",
         "operationId": "fetch_channel_setup_v1_channels__sensor_id__get",
@@ -1183,7 +1211,9 @@
         }
       },
       "patch": {
-        "tags": ["Setup data channels"],
+        "tags": [
+          "Setup data channels"
+        ],
         "summary": "Partially update a channel",
         "description": "Update only a subset of metadata, tags, or schema for the specified channel.",
         "operationId": "patch_channel_setup_v1_channels__sensor_id__patch",
@@ -1243,7 +1273,9 @@
         }
       },
       "delete": {
-        "tags": ["Setup data channels"],
+        "tags": [
+          "Setup data channels"
+        ],
         "summary": "Delete a channel",
         "description": "Deletes a channel and its metadata. All data associated with the channel is also removed. Returns the metadata of the deleted channel.",
         "operationId": "delete_channel_setup_v1_channels__sensor_id__delete",
@@ -1305,7 +1337,9 @@
     },
     "/setup/v1/channels/{sensor_id}/rows": {
       "get": {
-        "tags": ["Setup data channels"],
+        "tags": [
+          "Setup data channels"
+        ],
         "summary": "Fetch stored rows for a specific sensor channel",
         "description": "Retrieves all stored time-series rows for the specified `sensor_id`.\nThe response includes both metadata and data rows according to the sensor\u2019s schema.",
         "operationId": "fetch_channel_rows_setup_v1_channels__sensor_id__rows_get",
@@ -1399,7 +1433,9 @@
         }
       },
       "post": {
-        "tags": ["Setup data channels"],
+        "tags": [
+          "Setup data channels"
+        ],
         "summary": "Insert rows for a sensor",
         "description": "Append-only operation: insert new rows for an existing sensor. Does not modify metadata or schema.",
         "operationId": "insert_rows_setup_v1_channels__sensor_id__rows_post",
@@ -1481,7 +1517,9 @@
         }
       },
       "delete": {
-        "tags": ["Setup data channels"],
+        "tags": [
+          "Setup data channels"
+        ],
         "summary": "Delete all rows for a channel",
         "description": "Removes all data rows for the specified channel, while keeping its metadata intact.",
         "operationId": "delete_channel_rows_setup_v1_channels__sensor_id__rows_delete",
@@ -1543,7 +1581,9 @@
     },
     "/setup/v1/channels/{sensor_id}/columns": {
       "get": {
-        "tags": ["Setup data channels"],
+        "tags": [
+          "Setup data channels"
+        ],
         "summary": "Fetch the data as columns for a specific sensor channel",
         "description": "Retrieves all stored time-series rows for the specified `sensor_id` and present them as columns.\nThe response includes both metadata and data columns according to the sensor\u2019s schema.",
         "operationId": "fetch_channel_columns_setup_v1_channels__sensor_id__columns_get",
@@ -1627,7 +1667,9 @@
     },
     "/setup/v1/channels/{sensor_id}/clone": {
       "post": {
-        "tags": ["Setup data channels"],
+        "tags": [
+          "Setup data channels"
+        ],
         "summary": "Clone a channel",
         "description": "Creates a new channel by cloning an existing channel's schema and optionally metadata. Does not copy data rows.",
         "operationId": "clone_channel_setup_v1_channels__sensor_id__clone_post",
@@ -1699,7 +1741,9 @@
     },
     "/setup/v1/channels/batch-delete": {
       "post": {
-        "tags": ["Setup data channels"],
+        "tags": [
+          "Setup data channels"
+        ],
         "summary": "Delete multiple channels",
         "operationId": "batch_delete_channels_setup_v1_channels_batch_delete_post",
         "parameters": [
@@ -1734,7 +1778,10 @@
                 "title": "Payload"
               },
               "example": {
-                "sensor_ids": ["uuid1", "uuid2"]
+                "sensor_ids": [
+                  "uuid1",
+                  "uuid2"
+                ]
               }
             }
           }
@@ -1769,7 +1816,9 @@
     },
     "/setup/v1/schemas/columns_types": {
       "get": {
-        "tags": ["Setup data channels"],
+        "tags": [
+          "Setup data channels"
+        ],
         "summary": "list the types available to describe the columns",
         "description": "Retrieves every Python-like type that can be used to describe the type of a data column",
         "operationId": "get_column_types_setup_v1_schemas_columns_types_get",
@@ -1937,8 +1986,8 @@
               "time": "2025-01-04T00:00:00Z"
             }
           ],
-          "sensor_id": "143a64b8-316f-4346-a42c-83120b58b913",
-          "sensor_name": "thermo-0a9e3",
+          "sensor_id": "f5079782-30aa-47ca-ac2d-400a6ad0c22c",
+          "sensor_name": "thermo-945bf",
           "sensor_schema": {
             "humidity": "float",
             "temperature": "float",
@@ -2065,7 +2114,10 @@
           }
         },
         "type": "object",
-        "required": ["sensor_id", "sensor_schema"],
+        "required": [
+          "sensor_id",
+          "sensor_schema"
+        ],
         "title": "ResponsePayload",
         "description": "Payload returned in responses to the user.\n- issued_at: when the response was generated\n- available_rows: number of rows stored for this sensor (None if unknown)"
       },
@@ -2077,7 +2129,9 @@
           }
         },
         "type": "object",
-        "required": ["name"],
+        "required": [
+          "name"
+        ],
         "title": "SchemaType"
       },
       "SensorSchema": {
@@ -2100,7 +2154,9 @@
           }
         },
         "type": "object",
-        "required": ["column_types"],
+        "required": [
+          "column_types"
+        ],
         "title": "SensorSchema",
         "description": "Stores application-level schema.\ncolumns: dict[column_name, SchemaType]\ndb_to_usr: dict[db_column_name, user_column_name]"
       },
@@ -2130,7 +2186,11 @@
           }
         },
         "type": "object",
-        "required": ["loc", "msg", "type"],
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
         "title": "ValidationError"
       }
     }

@@ -89,7 +89,7 @@ class DBSettings(IniSection):
 
     @property
     def connection_url(self) -> str:
-        return f"postgresql://{self.db_usr}:{self.db_pwd}@{self.db_address}:{self.db_port}/{self.db_name}"
+        return f"postgresql://{self.usr}:{self.pwd}@{self.host}:{self.port}/{self.name}"
         # return self.db_connection_url
 
 
@@ -150,7 +150,7 @@ class Settings:
 # --------------------------------------------------------------------------------------------------
 def load_settings() -> Settings:
     here = "ini.load"
-    conf_file = os.getenv("kronicle_INI", "../conf/default-conf.ini")
+    conf_file = os.getenv("KRONICLE_INI", "../conf/default-conf.ini")
     log_d(here, "Reading conf file", conf_file)
     ini_file = expand_file_path(conf_file)
     check_is_file(ini_file, f"Configuration file not found: '{ini_file}'")
@@ -173,6 +173,8 @@ if __name__ == "__main__":
     log_d(here, "Full config as dict\n", conf.as_dict())
     log_d(here, "Full config as JSON:\n", conf.to_json(indent=2))
 
+    db_url = conf.db.connection_url
+    log_d(here, "DB connection url:", db_url)
 
 # if __name__ == "__main__":
 #     here = "conf"
