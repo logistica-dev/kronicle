@@ -14,7 +14,7 @@ from kronicle.types.errors import DatabaseConnectionError, NotFoundError
 from kronicle.types.iso_datetime import IsoDateTime
 from kronicle.utils.logger import log_d, log_w
 
-mod = "db_access"
+mod = "db"
 
 METADATA_TABLE_NAME = "sensor_metadata"
 
@@ -150,8 +150,20 @@ class DatabaseManager:
             return True
         except Exception as e:
             # Optional: log a warning
-            log_w("db_manager.ping", f"DB ping failed: {e}")
+            log_w(f"{mod}.ping", f"DB ping failed: {e}")
             raise
+
+    async def direct_ping(self) -> bool:
+        try:
+            conn = await connect(self.db_url)
+            try:
+                await conn.execute("SELECT 1;")
+            finally:
+                await conn.close()
+            return True
+        except Exception as e:
+            log_w(f"{mod}.direct_ping", f"Direct ping failed: {e}")
+            return False
 
     # ----------------------------------------------------------------------------------------------
     # Generic SQL helpers

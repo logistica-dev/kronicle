@@ -6,6 +6,70 @@
     "version": "0.0.1"
   },
   "paths": {
+    "/health/live": {
+      "get": {
+        "summary": "Liveness",
+        "operationId": "liveness_health_live_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "summary": "Readiness",
+        "operationId": "readiness_health_ready_get",
+        "parameters": [
+          {
+            "name": "retries",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 5,
+              "title": "Retries"
+            }
+          },
+          {
+            "name": "delay",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 2.0,
+              "title": "Delay"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/channels": {
       "get": {
         "tags": [
@@ -1986,8 +2050,8 @@
               "time": "2025-01-04T00:00:00Z"
             }
           ],
-          "sensor_id": "f5079782-30aa-47ca-ac2d-400a6ad0c22c",
-          "sensor_name": "thermo-945bf",
+          "sensor_id": "ad320154-f320-49fd-888c-9f2ce49db7c7",
+          "sensor_name": "thermo-1564d",
           "sensor_schema": {
             "humidity": "float",
             "temperature": "float",

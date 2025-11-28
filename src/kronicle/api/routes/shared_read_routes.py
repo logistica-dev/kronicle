@@ -1,4 +1,5 @@
-# kronicle/routes/read_routes.py
+# kronicle/routes/shared_read_routes.py
+
 from typing import Optional
 from uuid import UUID
 

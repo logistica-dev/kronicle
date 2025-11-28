@@ -95,6 +95,11 @@ class DatabaseWrapper:
         """Ping the database to ensure connectivity."""
         return await self._db.ping()
 
+    @db_error_handler
+    async def direct_ping(self) -> bool:
+        """Ping the database to ensure connectivity."""
+        return await self._db.direct_ping()
+
     # ---------------------------------------------------------
     # Connection close
     # ---------------------------------------------------------

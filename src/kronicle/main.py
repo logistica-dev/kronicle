@@ -11,6 +11,7 @@ from kronicle.api.exception_handlers import (
     app_error_handler,
     generic_exception_handler,
 )
+from kronicle.api.routes.health_check import health_check
 from kronicle.api.routes.read_routes import reader_router
 from kronicle.api.routes.setup_routes import setup_router
 from kronicle.api.routes.write_routes import writer_router
@@ -112,17 +113,14 @@ def read_root():
 
 
 # Root route
-@app.get("/health", include_in_schema=False)
-def health_check():
-    return {"status": "ok"}
-
-
-# Root route
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon():
     favicon_path = Path(__file__).resolve().parents[2] / "static" / "favicon.ico"
     return FileResponse(favicon_path)
 
+
+# Health checks
+app.include_router(health_check, prefix="/health")
 
 # Add read/write/setup routes
 app.include_router(reader_router, prefix=f"/api/{conf.api_version}")
