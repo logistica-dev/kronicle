@@ -36,8 +36,8 @@ class SensorController:
     def __init__(self, db: DatabaseWrapper):
         self._db = db
 
-    def ping(self):
-        return self._db.direct_ping()
+    async def ping(self) -> bool:
+        return await self._db.direct_ping()  # type: ignore[attr-defined]
 
     # ----------------------------------------------------------------------------------------------
     # Metadata CRUD

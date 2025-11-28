@@ -98,7 +98,9 @@ class DatabaseWrapper:
     @db_error_handler
     async def direct_ping(self) -> bool:
         """Ping the database to ensure connectivity."""
-        return await self._db.direct_ping()
+        if self._db is None or not isinstance(self._db, DatabaseManager):
+            return False
+        return await self._db.direct_ping()  # type: ignore[attr-defined]
 
     # ---------------------------------------------------------
     # Connection close

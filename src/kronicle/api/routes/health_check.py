@@ -1,3 +1,5 @@
+# kronicle/routes/health_check.py
+
 from fastapi import APIRouter, Depends
 
 from kronicle.controller.sensor_controller import SensorController
@@ -7,7 +9,7 @@ health_check = APIRouter()
 
 
 @health_check.get("/live", include_in_schema=True)
-async def liveness():
+def liveness():
     return {"status": "alive"}
 
 
@@ -17,7 +19,7 @@ async def readiness(
 ):
     try:
         # Minimal DB probe
-        is_ready: bool = await controller.ping()
+        is_ready: bool = await controller.ping()  # type: ignore[attr-defined]
         return {"status": "ready"} if is_ready else {"status": "not_ready"}
     except Exception as e:
         return {"status": "not_ready", "error": str(e)}
