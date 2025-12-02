@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 
 from kronicle.types.iso_datetime import IsoDateTime
 from kronicle.types.schema_types import SchemaType
-from kronicle.utils.logger import log_d, log_w
+from kronicle.utils.dev_logs import log_d, log_w
 from kronicle.utils.str_utils import normalize_column_name
 
 mod = "sensor_schema"
@@ -337,7 +337,7 @@ class SensorSchema(BaseModel):
 # --------------------------------------------------------------------------------------------------
 if __name__ == "__main__":
 
-    from kronicle.utils.logger import log_d
+    from kronicle.utils.dev_logs import log_d
 
     here = "sensor_schema tests"
 

@@ -1,7 +1,7 @@
 import asyncio
 
 from kronicle.log_bus.event_bus import api_queue, data_queue, setup_queue
-from kronicle.utils.logger import log_d
+from kronicle.utils.dev_logs import log_d
 
 
 async def consume_setup_logs():

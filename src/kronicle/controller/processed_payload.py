@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
 from kronicle.controller.input_payloads import InputPayload
 from kronicle.db.sensor_metadata import SensorMetadata
@@ -153,9 +153,7 @@ if __name__ == "__main__":
     here = "in_payload.test"
     from uuid import uuid4
 
-    from pydantic import ValidationError
-
-    from kronicle.utils.logger import log_d
+    from kronicle.utils.dev_logs import log_d
 
     log_d(here, "=== sensor_payloads.py main test ===")
 

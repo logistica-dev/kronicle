@@ -147,7 +147,7 @@ if __name__ == "__main__":
 
     from pydantic import BaseModel
 
-    from kronicle.utils.logger import log_d
+    from kronicle.utils.dev_logs import log_d
 
     log_d(here, "=== iso_datetime.py main test ===")
 

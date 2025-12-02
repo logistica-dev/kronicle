@@ -12,7 +12,7 @@ from kronicle.db.sensor_metadata import SensorMetadata
 from kronicle.db.sensor_schema import SensorSchema
 from kronicle.types.errors import DatabaseConnectionError, NotFoundError
 from kronicle.types.iso_datetime import IsoDateTime
-from kronicle.utils.logger import log_d, log_w
+from kronicle.utils.dev_logs import log_d, log_w
 
 mod = "db"
 
@@ -52,6 +52,18 @@ class DatabaseManager:
     # ----------------------------------------------------------------------------------------------
     # Context manager
     # ----------------------------------------------------------------------------------------------
+    async def _set_jsonb_codec(self, connection: Connection):
+        await connection.set_type_codec(
+            "jsonb",
+            schema="pg_catalog",
+            # format="binary",
+            encoder=dumps,
+            decoder=loads,
+        )
+
+    async def _reset_and_register_jsonb(self, conn):
+        await conn.execute("DISCARD ALL")
+        await self._set_jsonb_codec(conn)
 
     async def _enter(self) -> "DatabaseManager":
         """Establish connection or pool and register JSONB codec."""
@@ -60,16 +72,19 @@ class DatabaseManager:
                 dsn=self.db_url,
                 min_size=self.min_size,
                 max_size=self.max_size,
+                statement_cache_size=0,
+                init=self._reset_and_register_jsonb,
             )
-            # Register JSONB codec for all pooled connections
-            assert self._pool
+            assert isinstance(self._pool, Pool)
+            # Ensure JSONB codec is registered immediately on a sample connection
             async with self._pool.acquire() as conn:
-                await conn.set_type_codec("jsonb", encoder=dumps, decoder=loads, schema="pg_catalog")
+                assert isinstance(conn, Connection)
+                await self._set_jsonb_codec(conn)
         else:
             self._conn = await connect(self.db_url)
             # Register JSONB codec for single connection
-            assert self._conn is not None
-            await self._conn.set_type_codec("jsonb", encoder=dumps, decoder=loads, schema="pg_catalog")
+            assert isinstance(self._conn, Connection)
+            await self._set_jsonb_codec(self._conn)
         log_d(mod, "Database connection established")
         return self
 
@@ -126,14 +141,18 @@ class DatabaseManager:
     # Unified connection
     # ----------------------------------------------------------------------------------------------
     @asynccontextmanager
-    async def get_connector(self) -> AsyncIterator[Connection]:
+    async def _get_connector(self) -> AsyncIterator[Connection]:
         """Yield an active connection (from pool or single)."""
         if self._pool:
             async with self._pool.acquire() as conn:
+                log_d(mod, f"Acquired pool connection {id(conn)}")
                 yield conn
+                log_d(mod, f"Released pool connection {id(conn)}")
                 return
         if self._conn:
+            log_d(mod, f"Acquired sngl connection {id(self._conn)}")
             yield self._conn
+            log_d(mod, f"Released sngl connection {id(self._conn)}")
             return
         raise DatabaseConnectionError(self._no_conn_err)
 
@@ -144,7 +163,7 @@ class DatabaseManager:
         Raises if the connection is down.
         """
         try:
-            async with self.get_connector() as conn:
+            async with self._get_connector() as conn:
                 # Use a trivial query; no table required
                 await conn.execute("SELECT 1;")
             return True
@@ -169,23 +188,23 @@ class DatabaseManager:
     # Generic SQL helpers
     # ----------------------------------------------------------------------------------------------
     async def execute(self, sql: str, *params):
-        async with self.get_connector() as conn:
+        async with self._get_connector() as conn:
             return await conn.execute(sql, *params)
 
     async def fetch(self, sql: str, *params):
-        async with self.get_connector() as conn:
+        async with self._get_connector() as conn:
             return await conn.fetch(sql, *params)
 
     async def fetch_row(self, sql: str, *params):
-        async with self.get_connector() as conn:
+        async with self._get_connector() as conn:
             return await conn.fetchrow(sql, *params)
 
     async def fetch_val(self, sql: str, *params):
-        async with self.get_connector() as conn:
+        async with self._get_connector() as conn:
             return await conn.fetchval(sql, *params)
 
     async def execute_many(self, sql: str, seq_of_params: list[tuple]):
-        async with self.get_connector() as conn:
+        async with self._get_connector() as conn:
             return await conn.executemany(sql, seq_of_params)
 
     # ------------------------------------------------------
@@ -197,7 +216,7 @@ class DatabaseManager:
         if self._metadata_ensured:
             return
         here = f"{mod}.ensure_metadata_table"
-
+        log_d(here)
         existing_cols_rows = await conn.fetch(
             f"SELECT column_name FROM information_schema.columns WHERE table_name = '{METADATA_TABLE_NAME}';"
         )
@@ -295,7 +314,7 @@ class DatabaseManager:
         """Run DB bootstrap: ensure user, DB, metadata table, TimescaleDB extension."""
         here = f"{mod}.startup"
         await self.ensure_user_and_db()
-        async with self.get_connector() as conn:
+        async with self._get_connector() as conn:
             await conn.execute("CREATE EXTENSION IF NOT EXISTS timescaledb;")
             await self._ensure_metadata_table(conn)
         log_d(here, "Startup completed: metadata table ensured")
@@ -306,7 +325,7 @@ class DatabaseManager:
     async def fetch_all_metadata(self) -> list[SensorMetadata]:
         here = f"{mod}.fetch_all_metadata"
         try:
-            async with self.get_connector() as conn:
+            async with self._get_connector() as conn:
                 rows = await conn.fetch("SELECT * FROM sensor_metadata ORDER BY received_at DESC")
                 return [SensorMetadata.from_db(dict(r)) for r in rows]
         except UndefinedTableError:
@@ -316,7 +335,7 @@ class DatabaseManager:
     async def fetch_metadata(self, sensor_id: UUID) -> SensorMetadata | None:
         here = f"{mod}.fetch_metadata"
         try:
-            async with self.get_connector() as conn:
+            async with self._get_connector() as conn:
                 row = await conn.fetchrow("SELECT * FROM sensor_metadata WHERE sensor_id = $1", sensor_id)
                 return SensorMetadata.from_db(dict(row)) if row else None
         except UndefinedTableError:
@@ -329,7 +348,7 @@ class DatabaseManager:
         """
         here = f"{mod}.fetch_metadata_by_tag"
         try:
-            async with self.get_connector() as conn:
+            async with self._get_connector() as conn:
                 # JSONB extraction: tags->>'key' = 'value'
                 # Cast tag_value to text because JSONB stores everything as JSON
                 query = """
@@ -351,7 +370,7 @@ class DatabaseManager:
         """
         here = f"{mod}.fetch_metadata_by_name"
         try:
-            async with self.get_connector() as conn:
+            async with self._get_connector() as conn:
                 # JSONB extraction: tags->>'key' = 'value'
                 # Cast tag_value to text because JSONB stores everything as JSON
                 query = """
@@ -369,20 +388,28 @@ class DatabaseManager:
 
     async def _upsert_metadata(self, conn: Connection, metadata: SensorMetadata):
         """Internal helper for insert-or-update behavior."""
+        here = "db._upsert_metadata"
+        log_d(here)
         cols = list(SensorMetadata.get_table_schema().keys())
+        log_d(here, "cols", cols)
+
         placeholders = [f"${i+1}" for i in range(len(cols))]
+        log_d(here, "placeholders", placeholders)
+
         sql = (
             f"INSERT INTO sensor_metadata ({', '.join(cols)}) "
             f"VALUES ({', '.join(placeholders)}) "
             f"ON CONFLICT (sensor_id) DO UPDATE SET "
             + ", ".join(f"{c} = EXCLUDED.{c}" for c in cols if c != "sensor_id")
         )
+        log_d(here, "sql", sql)
+        log_d(here, "db ready values", metadata.db_ready_values())
         await conn.execute(sql, *metadata.db_ready_values())
 
     async def create_metadata(self, metadata: SensorMetadata):
         """Insert new sensor metadata. Fail if sensor_id already exists."""
         here = f"{mod}.create_metadata"
-        async with self.get_connector() as conn:
+        async with self._get_connector() as conn:
             await self._ensure_metadata_table(conn)
             try:
                 cols = list(SensorMetadata.get_table_schema().keys())
@@ -397,7 +424,7 @@ class DatabaseManager:
     async def update_metadata(self, metadata: SensorMetadata):
         """Update existing sensor metadata. Fail if sensor_id does not exist."""
         here = f"{mod}.update_metadata"
-        async with self.get_connector() as conn:
+        async with self._get_connector() as conn:
             await self._ensure_metadata_table(conn)
             existing = await conn.fetchrow("SELECT 1 FROM sensor_metadata WHERE sensor_id = $1", metadata.sensor_id)
             if not existing:
@@ -413,8 +440,12 @@ class DatabaseManager:
 
     async def insert_or_update_metadata(self, metadata: SensorMetadata):
         """Compatibility wrapper (kept for now). Always upserts."""
-        async with self.get_connector() as conn:
+        here = "db.insert_or_update_metadata"
+        log_d(here)
+        async with self._get_connector() as conn:
+            log_d(here, "conn", conn)
             await self._ensure_metadata_table(conn)
+            log_d(here, "table ensured for ", metadata.sensor_id)
             await self._upsert_metadata(conn, metadata)
 
     # ----------------------------------------------------------------------------------------------
@@ -429,7 +460,7 @@ class DatabaseManager:
         table_name = metadata.data_table_name
         sql = f'SELECT COUNT(*) FROM "{table_name}"'
         try:
-            async with self.get_connector() as conn:
+            async with self._get_connector() as conn:
                 result = await conn.fetchval(sql)
                 return int(result) if result is not None else 0
         except UndefinedTableError:
@@ -452,7 +483,7 @@ class DatabaseManager:
         if not rows:
             return
         here = f"{mod}.insert_sensor_rows"
-        async with self.get_connector() as conn:
+        async with self._get_connector() as conn:
             # --- Ensure metadata first ---
             await self._ensure_metadata_table(conn)
             sensor_id = metadata.sensor_id
@@ -515,7 +546,7 @@ class DatabaseManager:
         limit_sql = f"LIMIT {limit}" if limit else ""
         sql_req = f'SELECT * FROM "{table_name}" {where_sql} ORDER BY time ASC {limit_sql}'
         try:
-            async with self.get_connector() as conn:
+            async with self._get_connector() as conn:
                 rows = await conn.fetch(sql_req, *params)
                 return [metadata.sensor_schema.validate_row(dict(r), from_user=False) for r in rows]
         except UndefinedTableError:
@@ -531,7 +562,7 @@ class DatabaseManager:
         - Removes the table from in-memory cache.
         """
         table_name = SensorMetadata.get_table_name_for_sensor(sensor_id)
-        async with self.get_connector() as conn:
+        async with self._get_connector() as conn:
             # Delete metadata row
             await conn.execute("DELETE FROM sensor_metadata WHERE sensor_id = $1", sensor_id)
 
@@ -557,7 +588,7 @@ class DatabaseManager:
         delete_sql = f'DELETE FROM "{table_name}"'
 
         try:
-            async with self.get_connector() as conn:
+            async with self._get_connector() as conn:
                 # count rows before deletion
                 row_count: int = await conn.fetchval(count_sql) or 0
                 if row_count == 0:
@@ -596,7 +627,7 @@ if __name__ == "__main__":
 
     from kronicle.db.sensor_metadata import SensorMetadata
     from kronicle.db.sensor_schema import SensorSchema
-    from kronicle.utils.logger import log_d
+    from kronicle.utils.dev_logs import log_d
 
     db_mgr: DatabaseManager
 

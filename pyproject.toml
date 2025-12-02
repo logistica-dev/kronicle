@@ -73,9 +73,9 @@ optional-dependencies = { dev = { file = ["requirements-dev.txt"] } }
 
 # ----- Tool: pyright
 [tool.pyright]
-exclude = ["**/__pycache__", "**/.venv", "**/.env"]
+exclude = ["**/__pycache__", "**/.env"]
 executionEnvironments = [{ root = ".", extraPaths = ["src"] }]
-extraPaths = ["src"]
+extraPaths = ["src", ".venv/lib/python3.12/site-packages"]
 include = ["src", "tests"]
 pythonVersion = "3.12"
 reportArgumentType = "warning"

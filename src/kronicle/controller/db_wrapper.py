@@ -10,7 +10,7 @@ from kronicle.db.db_manager import DatabaseManager
 from kronicle.db.sensor_metadata import SensorMetadata
 from kronicle.types.errors import BadRequestError, DatabaseConnectionError, DatabaseInstructionError, NotFoundError
 from kronicle.types.iso_datetime import IsoDateTime
-from kronicle.utils.logger import log_e, log_w
+from kronicle.utils.dev_logs import log_e, log_w
 
 
 def db_error_handler(func):

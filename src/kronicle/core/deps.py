@@ -4,7 +4,7 @@ import asyncio
 from kronicle.controller.db_wrapper import DatabaseWrapper
 from kronicle.controller.sensor_controller import SensorController
 from kronicle.types.errors import AppStartupError, DatabaseConnectionError
-from kronicle.utils.logger import log_d, log_w
+from kronicle.utils.dev_logs import log_d, log_w
 
 _db_wrapper: DatabaseWrapper | None = None
 _sensor_controller: SensorController | None = None

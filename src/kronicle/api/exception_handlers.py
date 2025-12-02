@@ -7,7 +7,7 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 
 from kronicle.types.errors import AppError
-from kronicle.utils.logger import log_e
+from kronicle.utils.dev_logs import log_e
 
 
 # ---------------------------

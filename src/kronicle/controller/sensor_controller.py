@@ -11,7 +11,7 @@ from kronicle.db.sensor_metadata import SensorMetadata
 from kronicle.db.sensor_schema import SensorSchema
 from kronicle.types.errors import BadRequestError, NotFoundError
 from kronicle.types.iso_datetime import IsoDateTime
-from kronicle.utils.logger import log_d
+from kronicle.utils.dev_logs import log_d
 from kronicle.utils.str_utils import ensure_uuid4
 
 
@@ -82,13 +82,20 @@ class SensorController:
             - processed_payload: ProcessedMetadata or ProcessedPayload depending on `with_rows`.
             - SensorMetadata: ready for insertion/upsert in the DB.
         """
+        here = "_prepare_metadata_for_upsert"
+        log_d(here)
+
         sensor_id: UUID = payload.ensure_sensor_id()
+        log_d(here, "sensor_id", sensor_id)
         existing: SensorMetadata | None = await self._db.fetch_metadata(sensor_id)
+        log_d(here, "existing meta", existing)
 
         if existing:
             # Validate schema if provided
             if payload.sensor_schema:
+                log_d(here, "payload.sensor_schema", payload.sensor_schema)
                 input_schema = SensorSchema.from_user_json(payload.sensor_schema)
+                log_d(here, "input_schema", input_schema)
 
                 if not existing.sensor_schema.equivalent_to(input_schema):
                     raise BadRequestError(
@@ -102,13 +109,17 @@ class SensorController:
             schema = existing.sensor_schema
         else:
             schema = payload.ensure_sensor_schema()
+        log_d(here, "schema", schema)
 
         if with_rows:
             processed = ProcessedPayload.from_input(payload, schema, strict=payload.strict)
         else:
             processed = ProcessedMetadata.from_input(payload, schema)
+        log_d(here, "processed", processed)
 
         meta = processed.to_db_metadata()
+        log_d(here, "meta", meta)
+
         return processed, meta
 
     async def upsert_metadata(self, payload: InputPayload) -> ResponsePayload:
@@ -213,15 +224,24 @@ class SensorController:
         - Metadata is validated first; if invalid, no rows are inserted.
         - Rows are validated; warnings collected if strict=False, error raised with every detail otherwise
         """
+        here = "insert_rows"
+        log_d(here)
         # Prepare metadata & processed payload
         processed, meta = await self._prepare_metadata_for_upsert(payload, with_rows=True)
+        log_d(here, "meta", meta)
         assert isinstance(processed, ProcessedPayload)  # Always OK
+        log_d(here, "processed", processed)
 
         # Insert rows after metadata upsert
         await self._db.insert_or_update_metadata(meta)
-        await self._db.insert_sensor_rows(meta, processed.rows)  # TODO: retrieve DB insertion errors!
+        log_d(here, "insert_or_update_metadata", "done")
 
-        return ResponsePayload.from_processing_and_insertion(processed, meta)
+        await self._db.insert_sensor_rows(meta, processed.rows)  # TODO: retrieve DB insertion errors!
+        log_d(here, "insert_sensor_rows", "done")
+
+        res = ResponsePayload.from_processing_and_insertion(processed, meta)
+        log_d(here, "op_status", res.op_status)
+        return res
 
     async def fetch_rows(
         self,

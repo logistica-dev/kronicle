@@ -66,9 +66,11 @@ class SchemaType:
     Represents a canonical column type.
     Converts from user input, validates values, and maps to DB types.
     Immutable and hashable for safe dict/set usage.
+    Supports optional fields: 'optional[str]', 'optional[int]', etc.
     """
 
     name: str
+    optional: bool = False  # True if nullable
 
     def __post_init__(self):
         normalized = str(self.name).lower()
@@ -88,11 +90,18 @@ class SchemaType:
     @classmethod
     def from_user_type(cls, user_type: str) -> "SchemaType":
         normalized = str(user_type).lower()
+        optional = False
+
+        if normalized.startswith("optional[") and normalized.endswith("]"):
+            inner = normalized[len("optional[") : -1].strip()
+            normalized = inner
+            optional = True
+
         if normalized not in USER_TYPE_MAP:
             raise BadRequestError(
                 f"Unsupported user type: '{user_type}', " f"expected one of {list(USER_TYPE_MAP.keys())}"
             )
-        return cls(USER_TYPE_MAP[normalized])
+        return cls(name=USER_TYPE_MAP[normalized], optional=optional)
 
     # ----------------------------------------------------------------------------------------------
     # Validation & mapping
@@ -120,6 +129,11 @@ class SchemaType:
         - Raises BadRequestError if invalid user value
         - Raises TypeError if developer misuse (wrong SchemaType class setup)
         """
+        if value is None:
+            if self.optional:
+                return None
+            raise BadRequestError(f"Expected value of type '{self.name}' for column '{col_name}', got None")
+
         try:
             expected = self.py_type
         except KeyError as e:
@@ -182,7 +196,7 @@ class SchemaType:
 # Main test / sanity check
 # --------------------------------------------------------------------------------------------------
 if __name__ == "__main__":
-    from kronicle.utils.logger import log_d
+    from kronicle.utils.dev_logs import log_d
 
     here = "schema_types.test"
 

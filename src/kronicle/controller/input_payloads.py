@@ -4,13 +4,13 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, ValidationInfo, field_validator, model_validator
 
 from kronicle.db.sensor_schema import SensorSchema
 from kronicle.types.errors import BadRequestError
 from kronicle.types.iso_datetime import IsoDateTime
+from kronicle.utils.dev_logs import log_d, log_w
 from kronicle.utils.dict_utils import ensure_dict_or_none
-from kronicle.utils.logger import log_d
 from kronicle.utils.str_utils import ensure_uuid4, tiny_id, uuid4_str
 
 
@@ -47,24 +47,40 @@ class InputPayload(BaseModel):
     sensor_schema: dict[str, str] | None = None
     name: str | None = None
     metadata: dict[str, Any] | None = None
-    tags: dict[str, str | int | float | list] | None = None
+    tags: dict[str, str | int | float | bool | list] | None = None
     rows: list[dict[str, Any]] | None = None
     strict: bool = Field(default=False, description="If true, any validation error aborts the entire request.")
 
     model_config = example_payload()
 
+    # --------------------------------------------------------------------------
+    # Ensure dict fields
+    # --------------------------------------------------------------------------
     @field_validator("sensor_schema", "metadata", "tags", mode="before")
     @classmethod
     def ensure_dict_or_none(cls, d, info: ValidationInfo) -> dict:
         return ensure_dict_or_none(d, info.field_name)
 
+    # --------------------------------------------------------------------------
+    # Populate name from sensor_name (safe)
+    # --------------------------------------------------------------------------
     @model_validator(mode="before")
     @classmethod
-    def _populate_sensor_name(cls, values: dict[str, Any]):
-        if not values.get("name") and values.get("sensor_name"):
+    def _populate_sensor_name(cls, values):
+        # Only operate on dictionaries
+        if not isinstance(values, dict):
+            log_w("InputPayload._populate_sensor_name", f"'values' should be a dict, not {type(values)}", values)
+            return values
+
+        # Accept user-provided alias
+        log_d("InputPayload._populate_sensor_name", "values", values)
+        if "name" not in values and "sensor_name" in values:
             values["name"] = values["sensor_name"]
         return values
 
+    # --------------------------------------------------------------------------
+    # Runtime validation helpers
+    # --------------------------------------------------------------------------
     def ensure_sensor_id(self) -> UUID:
         if not self.sensor_id:
             raise BadRequestError(
@@ -119,9 +135,7 @@ if __name__ == "__main__":
     here = "in_payload.test"
     from uuid import uuid4
 
-    from pydantic import ValidationError
-
-    from kronicle.utils.logger import log_d
+    from kronicle.utils.dev_logs import log_d
 
     log_d(here, "=== sensor_payloads.py main test ===")
 

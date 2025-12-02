@@ -18,7 +18,7 @@ from kronicle.api.routes.write_routes import writer_router
 from kronicle.core.deps import close_db, get_sensor_controller
 from kronicle.core.ini_settings import conf
 from kronicle.types.errors import AppError
-from kronicle.utils.logger import log_d, request_logger
+from kronicle.utils.dev_logs import log_d, request_logger
 
 mod = "main"
 

@@ -6,8 +6,8 @@ from dataclasses import dataclass, fields
 from json import dumps
 from typing import Any, TypeVar
 
+from kronicle.utils.dev_logs import log_d
 from kronicle.utils.file_utils import check_is_file, expand_file_path
-from kronicle.utils.logger import log_d
 from kronicle.utils.str_utils import strip_quotes
 
 log_d("-------------------------—------------------------—----------------------[ Launching... ]--")
