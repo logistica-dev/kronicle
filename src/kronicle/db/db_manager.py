@@ -145,14 +145,14 @@ class DatabaseManager:
         """Yield an active connection (from pool or single)."""
         if self._pool:
             async with self._pool.acquire() as conn:
-                log_d(mod, f"Acquired pool connection {id(conn)}")
+                # log_d(mod, f"Acquired pool connection {id(conn)}")
                 yield conn
-                log_d(mod, f"Released pool connection {id(conn)}")
+                # log_d(mod, f"Released pool connection {id(conn)}")
                 return
         if self._conn:
-            log_d(mod, f"Acquired sngl connection {id(self._conn)}")
+            # log_d(mod, f"Acquired sngl connection {id(self._conn)}")
             yield self._conn
-            log_d(mod, f"Released sngl connection {id(self._conn)}")
+            # log_d(mod, f"Released sngl connection {id(self._conn)}")
             return
         raise DatabaseConnectionError(self._no_conn_err)
 

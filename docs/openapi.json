@@ -2053,8 +2053,8 @@
               "time": "2025-01-04T00:00:00Z"
             }
           ],
-          "sensor_id": "2628467c-6548-4183-bdb2-ffda40d75a5f",
-          "sensor_name": "thermo-9881a",
+          "sensor_id": "49ab93fe-d548-45bc-9a11-15b84c76f372",
+          "sensor_name": "thermo-7811e",
           "sensor_schema": {
             "humidity": "float",
             "temperature": "float",
