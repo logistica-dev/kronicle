@@ -11,6 +11,7 @@ from kronicle.db.sensor_metadata import SensorMetadata
 from kronicle.db.sensor_schema import SensorSchema
 from kronicle.types.errors import BadRequestError
 from kronicle.types.iso_datetime import IsoDateTime
+from kronicle.utils.dev_logs import log_d
 from kronicle.utils.str_utils import ensure_uuid4, normalize_to_snake_case
 
 
@@ -46,7 +47,7 @@ class ProcessedMetadata(BaseModel):
     @classmethod
     def from_input(cls, payload: InputPayload, schema: SensorSchema | None = None) -> ProcessedMetadata:
         sensor_id = ensure_uuid4(payload.sensor_id)
-        sensor_schema = schema if schema else payload.ensure_sensor_schema()
+        sensor_schema: SensorSchema = schema if schema else payload.ensure_sensor_schema()
         sensor_name = normalize_to_snake_case(payload.name) if payload.name else ""
         metadata = cls.sanitize_dict(payload.metadata, "metadata", cast_values=False)
         tags = cls.sanitize_dict(payload.tags, "tags", cast_values=True)
@@ -92,16 +93,21 @@ class ProcessedPayload(ProcessedMetadata):
         Strict mode: raises BadRequestError on any row validation error.
         Non-strict mode: stores warnings in op_status/op_details.
         """
+        here = "ProcessedPayload.from_input"
         base = ProcessedMetadata.from_input(payload, schema)
 
         # Ensure rows exist
         if not payload.rows:
             raise BadRequestError("No rows to process", details={"sensor_id": str(payload.sensor_id)})
 
+        log_d(here, "input payload", payload)
+
         processed = cls(**base.model_dump(), rows=payload.rows)
+        log_d(here, "processed payload", processed)
 
         # Validate rows
         warnings = processed._validate_rows(strict=strict)
+        log_d(here, "warnings", warnings)
 
         # Store warnings in op_status/op_details if not strict
         if warnings:
@@ -117,6 +123,8 @@ class ProcessedPayload(ProcessedMetadata):
         Private helper to validate rows against sensor_schema.
         Updates self.rows to validated rows.
         """
+        here = "ProcessedPayload._validate_rows"
+        log_d(here)
         if not self.rows:
             raise BadRequestError("No rows to validate", details={"sensor_id": str(self.sensor_id)})
         if not self.sensor_schema:
@@ -130,6 +138,7 @@ class ProcessedPayload(ProcessedMetadata):
 
         for idx, row in enumerate(self.rows, start=1):
             try:
+                assert isinstance(self.sensor_schema, SensorSchema)
                 validated_rows.append(self.sensor_schema.validate_row(row, from_user=True))
             except ValueError as e:
                 warnings[f"row_{str(idx).zfill(pad_width)}"] = str(e)

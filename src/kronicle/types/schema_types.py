@@ -6,6 +6,7 @@ from typing import Any
 
 from kronicle.types.errors import BadRequestError
 from kronicle.types.iso_datetime import IsoDateTime
+from kronicle.utils.dev_logs import log_d
 
 # --------------------------------------------------------------------------------------------------
 # UserType -> SchemaType -> DBType mappings
@@ -129,7 +130,10 @@ class SchemaType:
         - Raises BadRequestError if invalid user value
         - Raises TypeError if developer misuse (wrong SchemaType class setup)
         """
+        here = "SchemaType.validate"
         if value is None:
+            log_d(here, "value is None; self.optional is", self.optional)
+            log_d(here, "self", self)
             if self.optional:
                 return None
             raise BadRequestError(f"Expected value of type '{self.name}' for column '{col_name}', got None")
@@ -189,7 +193,7 @@ class SchemaType:
         return f"SchemaType({self.name!r})"
 
     def __str__(self):
-        return self.name
+        return f"optional[{self.name}]" if self.optional else self.name
 
 
 # --------------------------------------------------------------------------------------------------

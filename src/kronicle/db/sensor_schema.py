@@ -226,6 +226,8 @@ class SensorSchema(BaseModel):
             else:
                 log_w(here, "Missing column", db_col)
                 log_w(here, "Row content", row)
+                if col_type.optional:
+                    continue
                 raise ValueError(f"Missing column '{user_col or db_col}' in row")
 
             val = row[key_in_row]
