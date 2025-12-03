@@ -9,7 +9,6 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, ValidationIn
 from kronicle.db.sensor_schema import SensorSchema
 from kronicle.types.errors import BadRequestError
 from kronicle.types.iso_datetime import IsoDateTime
-from kronicle.utils.dev_logs import log_d, log_w
 from kronicle.utils.dict_utils import ensure_dict_or_none
 from kronicle.utils.str_utils import ensure_uuid4, tiny_id, uuid4_str
 
@@ -69,11 +68,9 @@ class InputPayload(BaseModel):
     def _populate_sensor_name(cls, values):
         # Only operate on dictionaries
         if not isinstance(values, dict):
-            log_w("InputPayload._populate_sensor_name", f"'values' should be a dict, not {type(values)}", values)
             return values
 
         # Accept user-provided alias
-        log_d("InputPayload._populate_sensor_name", "values", values)
         if "name" not in values and "sensor_name" in values:
             values["name"] = values["sensor_name"]
         return values

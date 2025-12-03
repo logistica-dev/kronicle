@@ -93,21 +93,16 @@ class ProcessedPayload(ProcessedMetadata):
         Strict mode: raises BadRequestError on any row validation error.
         Non-strict mode: stores warnings in op_status/op_details.
         """
-        here = "ProcessedPayload.from_input"
         base = ProcessedMetadata.from_input(payload, schema)
 
         # Ensure rows exist
         if not payload.rows:
             raise BadRequestError("No rows to process", details={"sensor_id": str(payload.sensor_id)})
 
-        log_d(here, "input payload", payload)
-
         processed = cls(**base.model_dump(), rows=payload.rows)
-        log_d(here, "processed payload", processed)
 
         # Validate rows
         warnings = processed._validate_rows(strict=strict)
-        log_d(here, "warnings", warnings)
 
         # Store warnings in op_status/op_details if not strict
         if warnings:
@@ -123,8 +118,6 @@ class ProcessedPayload(ProcessedMetadata):
         Private helper to validate rows against sensor_schema.
         Updates self.rows to validated rows.
         """
-        here = "ProcessedPayload._validate_rows"
-        log_d(here)
         if not self.rows:
             raise BadRequestError("No rows to validate", details={"sensor_id": str(self.sensor_id)})
         if not self.sensor_schema:

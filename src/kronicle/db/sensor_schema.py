@@ -184,7 +184,6 @@ class SensorSchema(BaseModel):
         - db_cols: {col_name: db_type, ...} from information_schema
         """
         here = f"{mod}.compare_with_db_columns"
-        log_d(here)
         for col, col_type in self.column_types.items():
             db_type = db_cols.get(col)
             expected = col_type.db_type.upper()

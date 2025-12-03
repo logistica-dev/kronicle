@@ -10,7 +10,6 @@ from kronicle.controller.processed_payload import ProcessedPayload
 from kronicle.db.sensor_metadata import SensorMetadata
 from kronicle.db.sensor_schema import SensorSchema
 from kronicle.types.iso_datetime import IsoDateTime
-from kronicle.utils.dev_logs import log_d
 from kronicle.utils.dict_utils import ensure_dict_or_none, rows_to_columns, strip_nulls
 
 
@@ -175,6 +174,7 @@ if __name__ == "__main__":
     from uuid import uuid4
 
     from kronicle.controller.input_payloads import InputPayload
+    from kronicle.utils.dev_logs import log_d
 
     input_schema = {"temperature": "number", "humidity": "float", "time": "datetime"}
 

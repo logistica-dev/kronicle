@@ -9,7 +9,6 @@ from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
 from kronicle.db.sensor_schema import SensorSchema
 from kronicle.types.iso_datetime import IsoDateTime
-from kronicle.utils.dev_logs import log_d
 from kronicle.utils.str_utils import check_is_uuid4, ensure_uuid4, normalize_to_snake_case
 
 mod = "sensor_metadata"
@@ -101,10 +100,6 @@ class SensorMetadata(BaseModel):
         Return the values in a format ready to be inserted into PostgreSQL.
         JSONB fields are passed as dicts, not strings.
         """
-        here = "meta.db_ready_values"
-        log_d(here, "sensor_id", self.sensor_id)
-        log_d(here, "sensor_schema", self.sensor_schema)
-        log_d(here, "sensor_schema.to_user_json", self.sensor_schema.to_user_json())
 
         return [
             self.sensor_id,

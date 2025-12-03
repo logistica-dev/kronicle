@@ -33,7 +33,8 @@ from rich.logging import RichHandler
 # }
 
 # dictConfig(LOGGING_CONFIG)
-SHOULD_LOG = bool(getenv("DTS_LOGS")) or True
+LOG_LEVEL = int(getenv("DTS_LOG_LEVEL") or 3)
+print("LOG_LEVEL:", LOG_LEVEL)
 
 
 # ------------------------------------------------------
@@ -100,23 +101,27 @@ def format_input(here: str, *args) -> str:  # pragma: no cover
 
 
 def log_e(here, *args):  # pragma: no cover
-    basic_logger.error("[bold red]" + format_input(here, *args) + "[/]", extra={"markup": True})
+    if LOG_LEVEL > -1:
+        basic_logger.error("[bold red]" + format_input(here, *args) + "[/]", extra={"markup": True})
 
 
 def log_w(here, *args):  # pragma: no cover
-    basic_logger.warning("[yellow]" + format_input(here, *args) + "[/]", extra={"markup": True})
+    if LOG_LEVEL > 0:
+        basic_logger.warning("[yellow]" + format_input(here, *args) + "[/]", extra={"markup": True})
 
 
 def log_i(here, *args):  # pragma: no cover
-    basic_logger.info("[blue]" + format_input(here, *args) + "[/]", extra={"markup": True})
+    if LOG_LEVEL > 1:
+        basic_logger.info("[blue]" + format_input(here, *args) + "[/]", extra={"markup": True})
 
 
 def log_d(here, *args):  # pragma: no cover
-    basic_logger.debug(format_input(here, *args))
+    if LOG_LEVEL > 2:
+        basic_logger.debug(format_input(here, *args))
 
 
 def log_d_if(here, should_print: bool = False, *args):  # pragma: no cover
-    if should_print:
+    if LOG_LEVEL > 2 and should_print:
         basic_logger.debug(format_input(here, *args))
 
 
