@@ -380,7 +380,6 @@ class DatabaseManager:
                 """
                 # Ensure tag_value is a string for comparison
                 rows = await conn.fetch(query, str(sensor_name))
-                # log_d(here, "result", rows)
                 return [SensorMetadata.from_db(dict(r)) for r in rows]
         except UndefinedTableError:
             log_w(here, "Table 'sensor_metadata' not found, returning empty list")
@@ -388,13 +387,8 @@ class DatabaseManager:
 
     async def _upsert_metadata(self, conn: Connection, metadata: SensorMetadata):
         """Internal helper for insert-or-update behavior."""
-        here = "db._upsert_metadata"
-        log_d(here)
         cols = list(SensorMetadata.get_table_schema().keys())
-        log_d(here, "cols", cols)
-
         placeholders = [f"${i+1}" for i in range(len(cols))]
-        log_d(here, "placeholders", placeholders)
 
         sql = (
             f"INSERT INTO sensor_metadata ({', '.join(cols)}) "
@@ -402,8 +396,6 @@ class DatabaseManager:
             f"ON CONFLICT (sensor_id) DO UPDATE SET "
             + ", ".join(f"{c} = EXCLUDED.{c}" for c in cols if c != "sensor_id")
         )
-        log_d(here, "sql", sql)
-        log_d(here, "db ready values", metadata.db_ready_values())
         await conn.execute(sql, *metadata.db_ready_values())
 
     async def create_metadata(self, metadata: SensorMetadata):
@@ -440,12 +432,8 @@ class DatabaseManager:
 
     async def insert_or_update_metadata(self, metadata: SensorMetadata):
         """Compatibility wrapper (kept for now). Always upserts."""
-        here = "db.insert_or_update_metadata"
-        log_d(here)
         async with self._get_connector() as conn:
-            log_d(here, "conn", conn)
             await self._ensure_metadata_table(conn)
-            log_d(here, "table ensured for ", metadata.sensor_id)
             await self._upsert_metadata(conn, metadata)
 
     # ----------------------------------------------------------------------------------------------
