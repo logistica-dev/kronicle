@@ -78,7 +78,7 @@ class SchemaType:
             raise ValueError(
                 f"Developer error: Unknown SchemaType '{self.name}'. " f"Expected one of {self.get_py_values()}"
             )
-        object.__setattr__(self, "sensor_name", normalized)
+        object.__setattr__(self, "channel_name", normalized)
 
     # ----------------------------------------------------------------------------------------------
     # Construction helpers

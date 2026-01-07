@@ -48,7 +48,7 @@ def ensure_uuid4(id) -> UUID:
     except Exception as e:
         raise ValueError(f"Invalid UUID format: {id}") from e
     if uid.version != 4:
-        raise ValueError(f"sensor_id must be a UUIDv4, got v{uid.version}")
+        raise ValueError(f"channel_id must be a UUIDv4, got v{uid.version}")
     return uid
 
 

@@ -1,13 +1,13 @@
 # Kronicle API
 
-Kronicle is a FastAPI-based time-series storage service with strict separation of admin, writer, and reader permissions.
-The API is organized into three main route groups: **Setup/Admin**, **Writer/Data**, and **Reader/API**.
+Kronicle is a FastAPI-based time-series measurements storage service with strict separation of admin, writer, and reader permissions.
+The API is organized into three main route groups: **Reader/API**, **Writer/Data** and **Setup/Admin**.
 
 Base URL prefixes include the API version:
 
-- `/setup/v1` → Admin/setup routes
-- `/data/v1` → Writer/data routes
 - `/api/v1` → Reader/read-only routes
+- `/data/v1` → Writer/data routes
+- `/setup/v1` → Admin/setup routes
 
 Here is the full updated [API (as an OpenAPI JSON)](docs/openapi.json)
 
@@ -19,38 +19,38 @@ If the server is launched, you can get an interactive Swagger at http://localhos
 
 These routes are intended for administrators or users with full access to manage channels.
 
-| Method | Path                          | Description                                                                   |
-| ------ | ----------------------------- | ----------------------------------------------------------------------------- |
-| POST   | `/channels`                   | Create a new channel with metadata and schema. Fails if the channel exists.   |
-| PUT    | `/channels/{sensor_id}`       | Upsert a channel: updates metadata if exists, otherwise creates it.           |
-| PATCH  | `/channels/{sensor_id}`       | Partially update a channel’s metadata, tags, or schema.                       |
-| DELETE | `/channels/{sensor_id}`       | Delete a channel and its metadata. All associated data rows are also removed. |
-| GET    | `/channels`                   | List all channels with metadata and row counts (admin view).                  |
-| DELETE | `/channels/{sensor_id}/rows`  | Delete all data rows for a channel, keeping metadata intact.                  |
-| POST   | `/channels/{sensor_id}/clone` | Clone a channel’s schema and optionally metadata. Does not copy data rows.    |
-| GET    | `/channels/columns/types`     | List the types available to describe the columns.                             |
+| Method | Path                           | Description                                                                   |
+| ------ | ------------------------------ | ----------------------------------------------------------------------------- |
+| POST   | `/channels`                    | Create a new channel with metadata and schema. Fails if the channel exists.   |
+| PUT    | `/channels/{channel_id}`       | Upsert a channel: updates metadata if exists, otherwise creates it.           |
+| PATCH  | `/channels/{channel_id}`       | Partially update a channel’s metadata, tags, or schema.                       |
+| DELETE | `/channels/{channel_id}`       | Delete a channel and its metadata. All associated data rows are also removed. |
+| GET    | `/channels`                    | List all channels with metadata and row counts (admin view).                  |
+| DELETE | `/channels/{channel_id}/rows`  | Delete all data rows for a channel, keeping metadata intact.                  |
+| POST   | `/channels/{channel_id}/clone` | Clone a channel’s schema and optionally metadata. Does not copy data rows.    |
+| GET    | `/channels/columns/types`      | List the types available to describe the columns.                             |
 
 ---
 
 ## Writer / Data Routes (`/data/{api_version}`)
 
-These routes are primarily for appending sensor data and managing metadata safely. Writers have read-only access for exploration.
+These routes are primarily for appending channel data and managing metadata safely. Writers have read-only access for exploration.
 
 ### Append-only Endpoints
 
-| Method | Path                         | Description                                                       |
-| ------ | ---------------------------- | ----------------------------------------------------------------- |
-| POST   | `/channels`                  | Upsert metadata and insert rows. Auto-creates channel if missing. |
-| POST   | `/channels/{sensor_id}/rows` | Insert new rows for an existing sensor. Metadata is not modified. |
+| Method | Path                          | Description                                                        |
+| ------ | ----------------------------- | ------------------------------------------------------------------ |
+| POST   | `/channels`                   | Upsert metadata and insert rows. Auto-creates channel if missing.  |
+| POST   | `/channels/{channel_id}/rows` | Insert new rows for an existing channel. Metadata is not modified. |
 
 ### Read-only Endpoints (accessible to writers)
 
-| Method | Path                            | Description                                           |
-| ------ | ------------------------------- | ----------------------------------------------------- |
-| GET    | `/channels`                     | Fetch metadata for all sensors.                       |
-| GET    | `/channels/{sensor_id}`         | Fetch metadata for a specific sensor.                 |
-| GET    | `/channels/{sensor_id}/rows`    | Fetch all rows and metadata for a specific sensor.    |
-| GET    | `/channels/{sensor_id}/columns` | Fetch all columns and metadata for a specific sensor. |
+| Method | Path                             | Description                                            |
+| ------ | -------------------------------- | ------------------------------------------------------ |
+| GET    | `/channels`                      | Fetch metadata for all channels.                       |
+| GET    | `/channels/{channel_id}`         | Fetch metadata for a specific channel.                 |
+| GET    | `/channels/{channel_id}/rows`    | Fetch all rows and metadata for a specific channel.    |
+| GET    | `/channels/{channel_id}/columns` | Fetch all columns and metadata for a specific channel. |
 
 ---
 
@@ -58,19 +58,19 @@ These routes are primarily for appending sensor data and managing metadata safel
 
 These routes are read-only and safe for public or restricted clients.
 
-| Method | Path                            | Description                                                  |
-| ------ | ------------------------------- | ------------------------------------------------------------ |
-| GET    | `/channels`                     | List all available sensor channels with metadata (no rows).  |
-| GET    | `/channels/{sensor_id}`         | Fetch metadata for a specific sensor (no rows).              |
-| GET    | `/channels/{sensor_id}/rows`    | Fetch stored rows along with metadata for a specific sensor. |
-| GET    | `/channels/{sensor_id}/columns` | Fetch stored rows along with metadata for a specific sensor. |
+| Method | Path                             | Description                                                   |
+| ------ | -------------------------------- | ------------------------------------------------------------- |
+| GET    | `/channels`                      | List all available channel channels with metadata (no rows).  |
+| GET    | `/channels/{channel_id}`         | Fetch metadata for a specific channel (no rows).              |
+| GET    | `/channels/{channel_id}/rows`    | Fetch stored rows along with metadata for a specific channel. |
+| GET    | `/channels/{channel_id}/columns` | Fetch stored rows along with metadata for a specific channel. |
 
 ---
 
 ## Notes
 
-- **Immutable Data:** Sensor data rows are append-only once inserted.
-- **Metadata:** Includes schema, tags, and additional sensor metadata.
+- **Immutable Data:** channel data rows are append-only once inserted.
+- **Metadata:** Includes schema, tags, and additional channel metadata.
 - **Permissions:**
   - Setup routes require admin access.
   - Writer routes allow appending data plus safe reads.

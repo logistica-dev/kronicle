@@ -100,7 +100,7 @@ class AppSettings(IniSection):
     version: str = "0.0.0"
     name: str = "Kronicle"
     id: str = "ffffffff-62dd-490a-8f7e-b168c68da4a7"
-    description: str = "FastAPI-powered TimescaleDB microservice for storing time-series"
+    description: str = "FastAPI-powered TimescaleDB microservice for storing time-series measurements"
     host: str = "localhost"
     port: int | str = 8080
     openapi_url: str = "/openapi"

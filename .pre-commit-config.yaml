@@ -28,6 +28,7 @@ repos:
       - id: check-yaml
       - id: detect-private-key
       - id: end-of-file-fixer
+        exclude: openapi\.json
       - id: trailing-whitespace
   # - repo: https://github.com/RobertCraigie/pyright-python
   #   rev: v1.1.367

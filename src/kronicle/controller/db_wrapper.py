@@ -6,8 +6,8 @@ from typing import Any, Optional
 from uuid import UUID
 
 from kronicle.core.ini_settings import conf
+from kronicle.db.channel_metadata import ChannelMetadata
 from kronicle.db.db_manager import DatabaseManager
-from kronicle.db.sensor_metadata import SensorMetadata
 from kronicle.types.errors import BadRequestError, DatabaseConnectionError, DatabaseInstructionError, NotFoundError
 from kronicle.types.iso_datetime import IsoDateTime
 from kronicle.utils.dev_logs import log_e, log_w
@@ -52,7 +52,7 @@ def db_error_handler(func):
 
 class DatabaseWrapper:
     """
-    Encapsulates all DatabaseManager calls for SensorController.
+    Encapsulates all DatabaseManager calls for OperationGate.
     Provides functional checks (ensure_metadata / ensure_no_metadata)
     and consistent exception handling.
     """
@@ -117,69 +117,69 @@ class DatabaseWrapper:
     # Metadata operations
     # ----------------------------------------
     @db_error_handler
-    async def fetch_metadata(self, sensor_id: UUID) -> SensorMetadata | None:
-        return await self._db.fetch_metadata(sensor_id)
+    async def fetch_metadata(self, channel_id: UUID) -> ChannelMetadata | None:
+        return await self._db.fetch_metadata(channel_id)
 
     @db_error_handler
-    async def ensure_metadata(self, sensor_id: UUID) -> SensorMetadata:
-        meta = await self.fetch_metadata(sensor_id)
+    async def ensure_metadata(self, channel_id: UUID) -> ChannelMetadata:
+        meta = await self.fetch_metadata(channel_id)
         if not meta:
-            raise NotFoundError("Sensor metadata not found", details={"sensor_id": str(sensor_id)})
+            raise NotFoundError("Channel metadata not found", details={"channel_id": str(channel_id)})
         return meta
 
     @db_error_handler
-    async def ensure_no_metadata(self, sensor_id: UUID) -> None:
-        meta = await self.fetch_metadata(sensor_id)
+    async def ensure_no_metadata(self, channel_id: UUID) -> None:
+        meta = await self.fetch_metadata(channel_id)
         if meta:
-            raise BadRequestError("Sensor metadata already exists", details={"sensor_id": str(sensor_id)})
+            raise BadRequestError("Channel metadata already exists", details={"channel_id": str(channel_id)})
 
     @db_error_handler
-    async def insert_or_update_metadata(self, metadata: SensorMetadata) -> None:
+    async def insert_or_update_metadata(self, metadata: ChannelMetadata) -> None:
         await self._db.insert_or_update_metadata(metadata)
 
     @db_error_handler
-    async def fetch_all_metadata(self) -> list[SensorMetadata]:
+    async def fetch_all_metadata(self) -> list[ChannelMetadata]:
         return await self._db.fetch_all_metadata()
 
     @db_error_handler
-    async def fetch_metadata_by_name(self, name: str) -> list[SensorMetadata]:
-        return await self._db.fetch_metadata_by_name(sensor_name=name)
+    async def fetch_metadata_by_name(self, name: str) -> list[ChannelMetadata]:
+        return await self._db.fetch_metadata_by_name(channel_name=name)
 
     @db_error_handler
-    async def fetch_metadata_by_tag(self, tag_key: str, tag_value: Any) -> list[SensorMetadata]:
+    async def fetch_metadata_by_tag(self, tag_key: str, tag_value: Any) -> list[ChannelMetadata]:
         return await self._db.fetch_metadata_by_tag(tag_key, tag_value)
 
     @db_error_handler
-    async def delete_metadata_and_table(self, sensor_id: UUID, drop_table: bool = True) -> SensorMetadata | None:
-        return await self._db.delete_metadata_and_table(sensor_id, drop_table=drop_table)
+    async def delete_metadata_and_table(self, channel_id: UUID, drop_table: bool = True) -> ChannelMetadata | None:
+        return await self._db.delete_metadata_and_table(channel_id, drop_table=drop_table)
 
     @db_error_handler
-    async def count_sensor_rows(self, metadata: SensorMetadata) -> int:
-        return await self._db.count_sensor_rows(metadata)
+    async def count_channel_rows(self, metadata: ChannelMetadata) -> int:
+        return await self._db.count_channel_rows(metadata)
 
     # ----------------------------------------
     # Row operations
     # ----------------------------------------
     @db_error_handler
-    async def insert_sensor_rows(self, metadata: SensorMetadata, rows: list[dict]) -> None:
-        await self._db.insert_sensor_rows(metadata, rows)
+    async def insert_channel_rows(self, metadata: ChannelMetadata, rows: list[dict]) -> None:
+        await self._db.insert_channel_rows(metadata, rows)
 
     @db_error_handler
-    async def fetch_sensor_rows(
+    async def fetch_channel_rows(
         self,
-        metadata: SensorMetadata,
+        metadata: ChannelMetadata,
         from_date: IsoDateTime | None = None,
         to_date: IsoDateTime | None = None,
     ) -> list[dict]:
-        return await self._db.fetch_sensor_rows(metadata, from_date=from_date, to_date=to_date)
+        return await self._db.fetch_channel_rows(metadata, from_date=from_date, to_date=to_date)
 
     @db_error_handler
-    async def delete_all_rows_for_sensor(self, sensor_id: UUID) -> None:
-        await self._db.delete_all_rows_for_sensor(sensor_id)
+    async def delete_all_rows_for_channel(self, channel_id: UUID) -> None:
+        await self._db.delete_all_rows_for_channel(channel_id)
 
     # ----------------------------------------
     # Optional operations (setup / clone)
     # ----------------------------------------
     @db_error_handler
-    async def clone_metadata(self, source: SensorMetadata, new_metadata: SensorMetadata) -> None:
+    async def clone_metadata(self, source: ChannelMetadata, new_metadata: ChannelMetadata) -> None:
         await self._db.insert_or_update_metadata(new_metadata)

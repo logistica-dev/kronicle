@@ -6,7 +6,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, ValidationInfo, field_validator, model_validator
 
-from kronicle.db.sensor_schema import SensorSchema
+from kronicle.db.channel_schema import ChannelSchema
 from kronicle.types.errors import BadRequestError
 from kronicle.types.iso_datetime import IsoDateTime
 from kronicle.utils.dict_utils import ensure_dict_or_none
@@ -17,9 +17,9 @@ def example_payload():
     return ConfigDict(
         json_schema_extra={
             "example": {
-                "sensor_id": uuid4_str(),
-                "sensor_schema": {"time": "datetime", "temperature": "float", "humidity": "float"},
-                "sensor_name": f"thermo-{tiny_id(5)}",
+                "channel_id": uuid4_str(),
+                "channel_schema": {"time": "datetime", "temperature": "float", "humidity": "float"},
+                "channel_name": f"thermo-{tiny_id(5)}",
                 "metadata": {"unit": "C"},
                 "tags": {"location": "lab", "floor": 3},
                 "rows": [
@@ -38,12 +38,12 @@ def example_payload():
 # --------------------------------------------------------------------------------------------------
 class InputPayload(BaseModel):
     """
-    User-provided payload for a sensor.
-    The 'sensor_schema' field is a dict of column_name -> type string.
+    User-provided payload for a channel.
+    The 'channel_schema' field is a dict of column_name -> type string.
     """
 
-    sensor_id: UUID | None = None
-    sensor_schema: dict[str, str] | None = None
+    channel_id: UUID | None = None
+    channel_schema: dict[str, str] | None = None
     name: str | None = None
     metadata: dict[str, Any] | None = None
     tags: dict[str, str | int | float | bool | list] | None = None
@@ -55,38 +55,38 @@ class InputPayload(BaseModel):
     # --------------------------------------------------------------------------
     # Ensure dict fields
     # --------------------------------------------------------------------------
-    @field_validator("sensor_schema", "metadata", "tags", mode="before")
+    @field_validator("channel_schema", "metadata", "tags", mode="before")
     @classmethod
     def ensure_dict_or_none(cls, d, info: ValidationInfo) -> dict:
         return ensure_dict_or_none(d, info.field_name)
 
     # --------------------------------------------------------------------------
-    # Populate name from sensor_name (safe)
+    # Populate name from channel_name (safe)
     # --------------------------------------------------------------------------
     @model_validator(mode="before")
     @classmethod
-    def _populate_sensor_name(cls, values):
+    def _populate_channel_name(cls, values):
         # Only operate on dictionaries
         if not isinstance(values, dict):
             return values
 
         # Accept user-provided alias
-        if "name" not in values and "sensor_name" in values:
-            values["name"] = values["sensor_name"]
+        if "name" not in values and "channel_name" in values:
+            values["name"] = values["channel_name"]
         return values
 
     # --------------------------------------------------------------------------
     # Runtime validation helpers
     # --------------------------------------------------------------------------
-    def ensure_sensor_id(self) -> UUID:
-        if not self.sensor_id:
+    def ensure_channel_id(self) -> UUID:
+        if not self.channel_id:
             raise BadRequestError(
                 "Missing required parameter",
-                details={"sensor_id": "Provide a valid sensor_id UUID in the request payload"},
+                details={"channel_id": "Provide a valid channel_id UUID in the request payload"},
             )
-        return ensure_uuid4(self.sensor_id)
+        return ensure_uuid4(self.channel_id)
 
-    def ensure_sensor_rows(self) -> list[dict[str, Any]]:
+    def ensure_channel_rows(self) -> list[dict[str, Any]]:
         if not self.rows:
             raise BadRequestError(
                 "Missing required type for field 'rows'",
@@ -99,16 +99,16 @@ class InputPayload(BaseModel):
             )
         return self.rows
 
-    def ensure_sensor_schema(self) -> SensorSchema:
-        if not self.sensor_schema:
+    def ensure_channel_schema(self) -> ChannelSchema:
+        if not self.channel_schema:
             raise BadRequestError(
-                "Missing required parameter", details={"sensor_schema": "Provide a schema in the request payload"}
+                "Missing required parameter", details={"channel_schema": "Provide a schema in the request payload"}
             )
-        if not isinstance(self.sensor_schema, dict):
+        if not isinstance(self.channel_schema, dict):
             raise BadRequestError(
-                "Incorrect type for field 'sensor_schema", details={"sensor_schema": "Should be a json/dict"}
+                "Incorrect type for field 'channel_schema", details={"channel_schema": "Should be a json/dict"}
             )
-        return SensorSchema.from_user_json(self.sensor_schema)
+        return ChannelSchema.from_user_json(self.channel_schema)
 
 
 # --------------------------------------------------------------------------------------------------
@@ -116,12 +116,12 @@ class InputPayload(BaseModel):
 # --------------------------------------------------------------------------------------------------
 # class Payload(BaseModel):
 #     """
-#     Base payload object for sensor operations.
-#     - sensor_id: UUID of the sensor
-#     - sensor_schema: optional schema (used for new sensors)
-#     - metadata: key -> value describing the sensor (str|int|float)
+#     Base payload object for channel operations.
+#     - channel_id: UUID of the channel
+#     - channel_schema: optional schema (used for new channels)
+#     - metadata: key -> value describing the channel (str|int|float)
 #     - tags: key -> value for indexing/searching (str|int|float)
-#     - rows: optional list of sensor data rows
+#     - rows: optional list of channel data rows
 #     """
 
 
@@ -134,15 +134,15 @@ if __name__ == "__main__":
 
     from kronicle.utils.dev_logs import log_d
 
-    log_d(here, "=== sensor_payloads.py main test ===")
+    log_d(here, "=== channel_payloads.py main test ===")
 
     # --- create sample schema from InputSchema ---
     input_schema = {"temperature": "number", "humidity": "float", "time": "datetime"}
 
     # --- create input payload ---
     payload = InputPayload(
-        sensor_id=uuid4(),
-        sensor_schema=input_schema,
+        channel_id=uuid4(),
+        channel_schema=input_schema,
         metadata={"location": "lab", "unit": "C"},
         tags={"room": 101},
         rows=[
@@ -154,22 +154,22 @@ if __name__ == "__main__":
 
     # --- test sanitization: bad metadata key ---
     try:
-        bad_payload = InputPayload(sensor_id=uuid4(), metadata={"": "empty key"})
+        bad_payload = InputPayload(channel_id=uuid4(), metadata={"": "empty key"})
     except ValueError as e:
         log_d(here, "Caught expected sanitization error :", e)
 
     # --- test validator: tags must be dict ---
     try:
-        InputPayload(sensor_id=uuid4(), tags=["not", "a", "dict"])  # type: ignore
+        InputPayload(channel_id=uuid4(), tags=["not", "a", "dict"])  # type: ignore
     except (ValidationError, TypeError) as e:
         log_d(here, "Caught expected validation error :")
         log_d(here, e)
 
     # --- test validator: empty dicts default ---
-    empty_payload = InputPayload(sensor_id=uuid4())
+    empty_payload = InputPayload(channel_id=uuid4())
     log_d(here, "Empty InputPayload (metadata/tags default to dict) :", empty_payload.model_dump())
 
-    log_d(here, "=== End of sensor_payloads.py test ===")
+    log_d(here, "=== End of channel_payloads.py test ===")
 
     # --- test validator: no uuid ---
     empty_payload = InputPayload()  # type: ignore

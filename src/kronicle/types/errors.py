@@ -31,7 +31,7 @@ class AppError(HTTPException):
             "status": self.status,
             "error": self.error,
             "message": self.message,
-            "details": self.details,  # e.g. {"sensor_id": "Provide a valid sensor_id"}
+            "details": self.details,  # e.g. {"channel_id": "Provide a valid channel_id"}
         }
 
 

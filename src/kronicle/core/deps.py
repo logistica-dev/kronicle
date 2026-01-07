@@ -2,26 +2,26 @@
 import asyncio
 
 from kronicle.controller.db_wrapper import DatabaseWrapper
-from kronicle.controller.sensor_controller import SensorController
+from kronicle.controller.operation_gate import OperationGate
 from kronicle.types.errors import AppStartupError, DatabaseConnectionError
 from kronicle.utils.dev_logs import log_d, log_w
 
 _db_wrapper: DatabaseWrapper | None = None
-_sensor_controller: SensorController | None = None
+_operation_gate: OperationGate | None = None
 _lock = asyncio.Lock()  # prevent race conditions
 
 
-async def get_sensor_controller(retries: int = 5, delay: float = 2.0) -> SensorController:
+async def get_operation_gate(retries: int = 5, delay: float = 2.0) -> OperationGate:
     """
-    Return the singleton SensorController, ensuring DB is reachable with retries.
+    Return the singleton OperationGate, ensuring DB is reachable with retries.
     The DatabaseManager is initialized once and kept alive for the app lifetime.
     """
-    global _db_wrapper, _sensor_controller
+    global _db_wrapper, _operation_gate
     here = "deps"
 
     async with _lock:  # prevent multiple concurrent initializations
-        if _sensor_controller:
-            return _sensor_controller
+        if _operation_gate:
+            return _operation_gate
 
         if _db_wrapper is None:
             # Retry loop to ensure DB is reachable
@@ -40,8 +40,8 @@ async def get_sensor_controller(retries: int = 5, delay: float = 2.0) -> SensorC
                         raise AppStartupError("Cannot connect to database after multiple retries") from last_exception
         assert _db_wrapper
         # DB is reachable, create singleton controller
-        _sensor_controller = SensorController(db=_db_wrapper)
-        return _sensor_controller
+        _operation_gate = OperationGate(db=_db_wrapper)
+        return _operation_gate
 
 
 async def close_db():
@@ -49,7 +49,7 @@ async def close_db():
     Safely close the global DatabaseManager connection/pool.
     Can be called on shutdown or in tests.
     """
-    global _db_wrapper, _sensor_controller
+    global _db_wrapper, _operation_gate
     async with _lock:
         if _db_wrapper is not None:
             try:
@@ -59,14 +59,14 @@ async def close_db():
                 log_w("deps", f"Error closing database: {e}")
             finally:
                 _db_wrapper = None
-                _sensor_controller = None
+                _operation_gate = None
 
 
 async def main():
     try:
-        log_d("test_main", "Starting test of SensorController and DBManager...")
-        controller = await get_sensor_controller(retries=3, delay=1.0)
-        log_d("test_main", f"SensorController initialized: {controller}")
+        log_d("test_main", "Starting test of OperationGate and DBManager...")
+        controller = await get_operation_gate(retries=3, delay=1.0)
+        log_d("test_main", f"OperationGate initialized: {controller}")
 
         # Optionally test a simple fetch
         rows = await controller.fetch_all_metadata()

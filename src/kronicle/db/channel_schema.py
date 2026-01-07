@@ -1,4 +1,4 @@
-# kronicle/db/sensor_schema.py
+# kronicle/db/channel_schema.py
 from __future__ import annotations
 
 from datetime import datetime
@@ -12,7 +12,7 @@ from kronicle.types.schema_types import SchemaType
 from kronicle.utils.dev_logs import log_d, log_w
 from kronicle.utils.str_utils import normalize_column_name
 
-mod = "sensor_schema"
+mod = "channel_schema"
 
 # fmt: off
 RESERVED_SQL_KEYWORDS = {
@@ -25,9 +25,9 @@ RESERVED_SQL_KEYWORDS = {
 
 
 # --------------------------------------------------------------------------------------------------
-# SensorSchema
+# ChannelSchema
 # --------------------------------------------------------------------------------------------------
-class SensorSchema(BaseModel):
+class ChannelSchema(BaseModel):
     """
     Stores application-level schema.
     columns: dict[column_name, SchemaType]
@@ -59,7 +59,7 @@ class SensorSchema(BaseModel):
         return ["row_id", "time"] + list(self.user_columns.keys()) + ["received_at"]
 
     @classmethod
-    def sanitize_user_schema(cls, schema_dict: dict[str, str]) -> "SensorSchema":
+    def sanitize_user_schema(cls, schema_dict: dict[str, str]) -> "ChannelSchema":
         """
         Sanitize a user-provided schema before storing:
         - Validates column names (non-empty, no whitespace-only, normalized)
@@ -105,7 +105,7 @@ class SensorSchema(BaseModel):
         return cls(column_types=sanitized_col_types, db_to_usr=db_to_usr)
 
     @classmethod
-    def from_user_json(cls, schema_dict: dict[str, str]) -> "SensorSchema":
+    def from_user_json(cls, schema_dict: dict[str, str]) -> "ChannelSchema":
         """
         Convert user schema (user names + type strings) to DB-safe names and SchemaType.
         """
@@ -134,18 +134,18 @@ class SensorSchema(BaseModel):
         # Optional: also flatten for JSON dumps
         return dumps(self.model_dump(flatten=flatten, **kwargs))
 
-    def equivalent_to(self, other: SensorSchema) -> bool:
+    def equivalent_to(self, other: ChannelSchema) -> bool:
         """
         Compare this schema to another, ignoring user-defined names.
         Returns True if the set of normalized column names and their types match.
         """
-        if not isinstance(other, SensorSchema):
+        if not isinstance(other, ChannelSchema):
             return False
 
         # Compare column names and types only
         return self.column_types == other.column_types
 
-    def diff(self, other: SensorSchema) -> dict[str, tuple[str, str]]:
+    def diff(self, other: ChannelSchema) -> dict[str, tuple[str, str]]:
         """
         Return a diff mapping for mismatched columns:
         {column_name: (this_type, other_type)}
@@ -340,7 +340,7 @@ if __name__ == "__main__":
 
     from kronicle.utils.dev_logs import log_d
 
-    here = "sensor_schema tests"
+    here = "channel_schema tests"
 
     # Define a user schema with mixed-case type names
     user_schema = {
@@ -350,7 +350,7 @@ if __name__ == "__main__":
         "tags": "LIST",
     }
 
-    schema = SensorSchema.from_user_json(user_schema)
+    schema = ChannelSchema.from_user_json(user_schema)
 
     log_d(here, "User JSON", schema.to_user_json())
     log_d(here, "DB JSON", schema.to_db_json())

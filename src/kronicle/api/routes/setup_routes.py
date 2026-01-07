@@ -7,9 +7,9 @@ from fastapi import APIRouter, Body, Depends
 from kronicle.api.routes.shared_read_routes import shared_read_router
 from kronicle.api.routes.shared_write_routes import shared_writer_router
 from kronicle.controller.input_payloads import InputPayload
+from kronicle.controller.operation_gate import OperationGate
 from kronicle.controller.response_payload import ResponsePayload
-from kronicle.controller.sensor_controller import SensorController
-from kronicle.core.deps import get_sensor_controller
+from kronicle.core.deps import get_operation_gate
 from kronicle.types.schema_types import COL_TO_DB_TYPE
 
 """
@@ -38,14 +38,13 @@ setup_router.include_router(shared_writer_router)
     "/channels",
     summary="Create a new channel",
     description=(
-        "Create a new sensor channel with metadata and schema."
-        " Does not add rows, and fails if the channel already exists."
+        "Create a new channel with metadata and schema." " Does not add rows, and fails if the channel already exists."
     ),
     response_model=ResponsePayload,
 )
 async def create_channel(
     payload: InputPayload,
-    controller: SensorController = Depends(get_sensor_controller),  # noqa: B008
+    controller: OperationGate = Depends(get_operation_gate),  # noqa: B008
 ):
     return await controller.create_metadata(payload)
 
@@ -61,44 +60,44 @@ async def create_channel(
 )
 async def update_channel(
     payload: InputPayload,
-    controller: SensorController = Depends(get_sensor_controller),  # noqa: B008
+    controller: OperationGate = Depends(get_operation_gate),  # noqa: B008
 ):
     return await controller.upsert_metadata(payload)
 
 
 @setup_router.patch(
-    "/channels/{sensor_id}",
+    "/channels/{channel_id}",
     summary="Partially update a channel",
     description="Update only a subset of metadata, tags, or schema for the specified channel.",
     response_model=ResponsePayload,
 )
 async def patch_channel(
     payload: InputPayload,
-    controller: SensorController = Depends(get_sensor_controller),  # noqa: B008
+    controller: OperationGate = Depends(get_operation_gate),  # noqa: B008
 ):
     return await controller.patch_metadata(payload)
 
 
 @setup_router.post(
-    "/channels/{sensor_id}/clone",
+    "/channels/{channel_id}/clone",
     summary="Clone a channel",
     description="Creates a new channel by cloning an existing channel's schema and optionally metadata. "
     "Does not copy data rows.",
     response_model=ResponsePayload,
 )
 async def clone_channel(
-    sensor_id: UUID,
+    channel_id: UUID,
     payload: InputPayload,
-    controller: SensorController = Depends(get_sensor_controller),  # noqa: B008
+    controller: OperationGate = Depends(get_operation_gate),  # noqa: B008
 ):
-    return await controller.clone_channel(sensor_id, payload)
+    return await controller.clone_channel(channel_id, payload)
 
 
 # --------------------------------------------------------------------------------------------------
 # DELETE routes
 # --------------------------------------------------------------------------------------------------
 @setup_router.delete(
-    "/channels/{sensor_id}",
+    "/channels/{channel_id}",
     summary="Delete a channel",
     description=(
         "Deletes a channel and its metadata. "
@@ -108,23 +107,23 @@ async def clone_channel(
     response_model=ResponsePayload,
 )
 async def delete_channel(
-    sensor_id: UUID,
-    controller: SensorController = Depends(get_sensor_controller),  # noqa: B008
+    channel_id: UUID,
+    controller: OperationGate = Depends(get_operation_gate),  # noqa: B008
 ):
-    return await controller.delete_sensor(sensor_id)
+    return await controller.delete_channel(channel_id)
 
 
 @setup_router.delete(
-    "/channels/{sensor_id}/rows",
+    "/channels/{channel_id}/rows",
     summary="Delete all rows for a channel",
     description="Removes all data rows for the specified channel, while keeping its metadata intact.",
     response_model=ResponsePayload,
 )
 async def delete_channel_rows(
-    sensor_id: UUID,
-    controller: SensorController = Depends(get_sensor_controller),  # noqa: B008
+    channel_id: UUID,
+    controller: OperationGate = Depends(get_operation_gate),  # noqa: B008
 ):
-    return await controller.delete_all_rows_for_sensor(sensor_id)
+    return await controller.delete_all_rows_for_channel(channel_id)
 
 
 @setup_router.post(
@@ -133,10 +132,10 @@ async def delete_channel_rows(
     response_model=list[ResponsePayload],
 )
 async def batch_delete_channels(
-    payload: dict = Body(..., example={"sensor_ids": ["uuid1", "uuid2"]}),  # noqa
-    controller: SensorController = Depends(get_sensor_controller),  # noqa: B008
+    payload: dict = Body(..., example={"channel_ids": ["uuid1", "uuid2"]}),  # noqa
+    controller: OperationGate = Depends(get_operation_gate),  # noqa: B008
 ):
-    return await controller.delete_sensors(payload["sensor_ids"])
+    return await controller.delete_channels(payload["channel_ids"])
 
 
 @setup_router.get(

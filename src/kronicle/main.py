@@ -15,7 +15,7 @@ from kronicle.api.routes.health_check import health_check
 from kronicle.api.routes.read_routes import reader_router
 from kronicle.api.routes.setup_routes import setup_router
 from kronicle.api.routes.write_routes import writer_router
-from kronicle.core.deps import close_db, get_sensor_controller
+from kronicle.core.deps import close_db, get_operation_gate
 from kronicle.core.ini_settings import conf
 from kronicle.types.errors import AppError
 from kronicle.utils.dev_logs import log_d, request_logger
@@ -35,7 +35,7 @@ async def lifespan(app: FastAPI):
     # log_d("Log consumers started")
 
     log_d(here, "Startup: initializing the DB controller...")
-    await get_sensor_controller()
+    await get_operation_gate()
     log_d(here, "DB is ready.")
     log_d(here, f"Swagger docs available at: http://{app_settings.host}:{app_settings.port}/docs")
     log_d("------------------------—------------------------—------------------------—---[ Init OK ]--")

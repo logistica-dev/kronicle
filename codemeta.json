@@ -10,7 +10,7 @@
   ],
   "@type": "SoftwareSourceCode",
   "name": "kronicle",
-  "description": "FastAPI-powered TimescaleDB microservice for storing time-series sensor data, with strict admin/writer/reader route separation.",
+  "description": "FastAPI-powered TimescaleDB microservice for storing time-series measurements, with strict admin/writer/reader route separation.",
 
   "version": "0.0.2",
   "license": "https://spdx.org/licenses/AGPL-3.0-only",

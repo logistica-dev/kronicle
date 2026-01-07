@@ -2,8 +2,8 @@
 
 from fastapi import APIRouter, Depends
 
-from kronicle.controller.sensor_controller import SensorController
-from kronicle.core.deps import get_sensor_controller
+from kronicle.controller.operation_gate import OperationGate
+from kronicle.core.deps import get_operation_gate
 
 health_check = APIRouter()
 
@@ -15,7 +15,7 @@ def liveness():
 
 @health_check.get("/ready", include_in_schema=True)
 async def readiness(
-    controller: SensorController = Depends(get_sensor_controller),  # noqa: B008
+    controller: OperationGate = Depends(get_operation_gate),  # noqa: B008
 ):
     try:
         # Minimal DB probe
