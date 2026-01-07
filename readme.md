@@ -136,9 +136,11 @@ brew services restart postgresql@17
 
 Verify TimescaleDB
 
-````sql
+```sql
 -- inside psql
 \dx
+```
+
 # Launch
 
 ## FastAPI server
@@ -148,7 +150,7 @@ cd src
 # nodemon-like reload-on-code-change server launch
 # instead of `fastapi run kronicle/main.py`
 uvicorn kronicle.main:app --reload --host 0.0.0.0 --port 8000
-````
+```
 
 You can then test the API with Swagger:
 http://localhost:8000/docs
