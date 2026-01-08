@@ -1,6 +1,6 @@
 [project]
 name = "kronicle"
-version = "0.0.2"
+version = "0.0.5"
 authors = [{ name = "Olivier Martineau", email = "olivier.martineau@irisa.fr" }]
 maintainers = [
     { name = "Olivier Martineau", email = "olivier.martineau@irisa.fr" },
@@ -45,8 +45,8 @@ target-version = ['py312']
 # ----- Tool: commitizen
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "0.0.5"
-version_files = ["pyproject.toml:version"]
+version_provider = "pep621"
+version_files = ["pyproject.toml:project.version"]
 
 # ----- Tool: pytest
 [tool.pytest.ini_options]
