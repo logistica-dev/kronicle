@@ -1,0 +1,19 @@
+black  # latest: 25.9.0
+nbstripout  # latest: 0.8.1
+pip-upgrade-outdated
+pre-commit
+ruff  # latest: 0.14.1
+# aiohttp; extra == "d" # Installed as dependency for black
+# click # Installed as dependency for black
+# colorama; extra == "colorama" # Installed as dependency for black
+# ipython; extra == "jupyter" # Installed as dependency for black
+# mypy_extensions # Installed as dependency for black
+# nbformat # Installed as dependency for nbstripout
+# packaging==25.0 # Installed as dependency for black
+# pathspec # Installed as dependency for black
+# platformdirs # Installed as dependency for black
+# pytokens # Installed as dependency for black
+# tokenize_rt; extra == "jupyter" # Installed as dependency for black
+# tomli==2.3.0; python_version < "3.11" # Installed as dependency for black
+# typing_extensions; python_version < "3.11" # Installed as dependency for black
+# uvloop; extra == "uvloop" # Installed as dependency for black

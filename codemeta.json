@@ -1,0 +1,48 @@
+{
+  "@context": [
+    "https://doi.org/10.5063/schema/codemeta-2.0",
+    {
+      "numpex-catalog": "https://numpex.github.io/sw-catalog/terms-1.0/index.jsonld#",
+      "Role": "https://schema.org/Role",
+      "roleName": "https://schema.org/roleName",
+      "url": "https://schema.org/url"
+    }
+  ],
+  "@type": "SoftwareSourceCode",
+  "name": "kronicle",
+  "description": "FastAPI-powered TimescaleDB microservice for storing time-series measurements, with strict admin/writer/reader route separation.",
+
+  "version": "0.0.2",
+  "license": "https://spdx.org/licenses/AGPL-3.0-only",
+  "programmingLanguage": ["Python"],
+
+  "author": {
+    "@type": "Organization",
+    "name": "Logistica",
+    "url": "https://github.com/logistica-dev"
+  },
+
+  "codeRepository": "https://github.com/logistica-dev/kronicle",
+  "homepage": "https://github.com/logistica-dev/kronicle",
+  "funding": "https://github.com/logistica-dev/kronicle#readme",
+
+  "dependencies": ["FastAPI", "TimescaleDB", "uvicorn", "pydantic"],
+
+  "numpex-catalog:annotatedLink": [
+    {
+      "@type": "Role",
+      "roleName": "numpex-catalog:documentation",
+      "url": "https://github.com/logistica-dev/kronicle#readme"
+    },
+    {
+      "@type": "Role",
+      "roleName": "numpex-catalog:discussion",
+      "url": "https://github.com/logistica-dev/kronicle/issues"
+    }
+  ],
+
+  "relatedLink": [
+    "https://github.com/logistica-dev/kronicle#readme",
+    "https://github.com/logistica-dev/kronicle/issues"
+  ]
+}
