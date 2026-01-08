@@ -10,7 +10,7 @@ from asyncpg.exceptions import InvalidAuthorizationSpecificationError, Undefined
 from kronicle.core.ini_settings import conf
 from kronicle.db.channel_metadata import ChannelMetadata
 from kronicle.db.channel_schema import ChannelSchema
-from kronicle.types.errors import DatabaseConnectionError, NotFoundError
+from kronicle.errors.error_types import DatabaseConnectionError, NotFoundError
 from kronicle.types.iso_datetime import IsoDateTime
 from kronicle.utils.dev_logs import log_d, log_w
 

@@ -139,7 +139,7 @@ async def batch_delete_channels(
 
 
 @setup_router.get(
-    "/schemas/columns_types",
+    "/schemas/column_types",
     summary="list the types available to describe the columns",
     description=("Retrieves every Python-like type that can be used to describe the type of a data column"),
     response_model=list[str],

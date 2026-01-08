@@ -7,7 +7,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, ValidationInfo, field_validator, model_validator
 
 from kronicle.db.channel_schema import ChannelSchema
-from kronicle.types.errors import BadRequestError
+from kronicle.errors.error_types import BadRequestError
 from kronicle.types.iso_datetime import IsoDateTime
 from kronicle.utils.dict_utils import ensure_dict_or_none
 from kronicle.utils.str_utils import ensure_uuid4, tiny_id, uuid4_str

@@ -10,7 +10,7 @@ from jose import ExpiredSignatureError, JWTError, jwt
 from passlib.context import CryptContext
 
 from kronicle.core.ini_settings import conf
-from kronicle.types.errors import UnauthorizedError
+from kronicle.errors.error_types import UnauthorizedError
 from kronicle.types.iso_datetime import IsoDateTime
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

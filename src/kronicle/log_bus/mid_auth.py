@@ -9,7 +9,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
 from kronicle.core.security import verify_jwt_token
-from kronicle.types.errors import UnauthorizedError
+from kronicle.errors.error_types import UnauthorizedError
 
 
 class AuthenticationMiddleware(BaseHTTPMiddleware):

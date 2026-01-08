@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Query
 from kronicle.controller.operation_gate import OperationGate
 from kronicle.controller.response_payload import ResponsePayload
 from kronicle.core.deps import get_operation_gate
-from kronicle.types.errors import BadRequestError
+from kronicle.errors.error_types import BadRequestError
 from kronicle.types.iso_datetime import IsoDateTime
 
 """

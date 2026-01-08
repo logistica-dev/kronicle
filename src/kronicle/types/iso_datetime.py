@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime, timezone, tzinfo
 from typing import Any
 
-from kronicle.types.errors import BadRequestError
+from kronicle.errors.error_types import BadRequestError
 
 # --------------------------------------------------------------------------------------------------
 # System local timezone

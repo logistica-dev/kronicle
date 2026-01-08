@@ -9,7 +9,7 @@ from kronicle.controller.processed_payload import ProcessedMetadata, ProcessedPa
 from kronicle.controller.response_payload import ResponsePayload
 from kronicle.db.channel_metadata import ChannelMetadata
 from kronicle.db.channel_schema import ChannelSchema
-from kronicle.types.errors import BadRequestError, NotFoundError
+from kronicle.errors.error_types import BadRequestError, NotFoundError
 from kronicle.types.iso_datetime import IsoDateTime
 from kronicle.utils.dev_logs import log_d
 from kronicle.utils.str_utils import ensure_uuid4

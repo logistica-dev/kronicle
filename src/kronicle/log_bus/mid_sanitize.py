@@ -8,7 +8,7 @@ from fastapi import Request, Response
 from secure import Secure
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from kronicle.types.errors import UnauthorizedError
+from kronicle.errors.error_types import UnauthorizedError
 
 secure_headers = Secure.with_default_headers()
 

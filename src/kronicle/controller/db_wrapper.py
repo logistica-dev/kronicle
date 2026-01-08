@@ -8,7 +8,12 @@ from uuid import UUID
 from kronicle.core.ini_settings import conf
 from kronicle.db.channel_metadata import ChannelMetadata
 from kronicle.db.db_manager import DatabaseManager
-from kronicle.types.errors import BadRequestError, DatabaseConnectionError, DatabaseInstructionError, NotFoundError
+from kronicle.errors.error_types import (
+    BadRequestError,
+    DatabaseConnectionError,
+    DatabaseInstructionError,
+    NotFoundError,
+)
 from kronicle.types.iso_datetime import IsoDateTime
 from kronicle.utils.dev_logs import log_e, log_w
 
@@ -44,7 +49,7 @@ def db_error_handler(func):
             if kwargs:
                 log_e(here, "kwargs", **kwargs)
 
-            # Raise a generic 500-style AppError for the client
+            # Raise a generic 500-style KronicleAppError for the client
             raise DatabaseInstructionError("Unexpected database error") from e
 
     return wrapper

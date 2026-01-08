@@ -3,7 +3,7 @@ import asyncio
 
 from kronicle.controller.db_wrapper import DatabaseWrapper
 from kronicle.controller.operation_gate import OperationGate
-from kronicle.types.errors import AppStartupError, DatabaseConnectionError
+from kronicle.errors.error_types import AppStartupError, DatabaseConnectionError
 from kronicle.utils.dev_logs import log_d, log_w
 
 _db_wrapper: DatabaseWrapper | None = None

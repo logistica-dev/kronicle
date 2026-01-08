@@ -1,24 +1,26 @@
-# kronicle/main.py
 from contextlib import asynccontextmanager
 from json import dump
 from pathlib import Path
 
 from fastapi import FastAPI, Request
+from fastapi import HTTPException as FastApiHttpException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from starlette.exceptions import HTTPException as StarletteHttpException
 
-from kronicle.api.exception_handlers import (
-    app_error_handler,
-    generic_exception_handler,
-)
 from kronicle.api.routes.health_check import health_check
 from kronicle.api.routes.read_routes import reader_router
 from kronicle.api.routes.setup_routes import setup_router
 from kronicle.api.routes.write_routes import writer_router
 from kronicle.core.deps import close_db, get_operation_gate
 from kronicle.core.ini_settings import conf
-from kronicle.types.errors import AppError
-from kronicle.utils.dev_logs import log_d, request_logger
+from kronicle.errors.error_types import KronicleAppError
+from kronicle.errors.exception_handlers import (
+    app_error_adapter,
+    fastapi_exception_adapter,
+    generic_exception_handler,
+)
+from kronicle.utils.dev_logs import log_d, request_logger  # kronicle/main.py
 
 mod = "main"
 
@@ -68,7 +70,10 @@ app = FastAPI(
     redirect_slashes=False,
 )
 
-app.add_exception_handler(AppError, app_error_handler)
+
+app.add_exception_handler(KronicleAppError, app_error_adapter)
+app.add_exception_handler(StarletteHttpException, fastapi_exception_adapter)
+app.add_exception_handler(FastApiHttpException, fastapi_exception_adapter)
 app.add_exception_handler(Exception, generic_exception_handler)
 
 

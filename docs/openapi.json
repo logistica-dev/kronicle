@@ -1878,14 +1878,14 @@
         }
       }
     },
-    "/setup/v1/schemas/columns_types": {
+    "/setup/v1/schemas/column_types": {
       "get": {
         "tags": [
           "Setup data channels"
         ],
         "summary": "list the types available to describe the columns",
         "description": "Retrieves every Python-like type that can be used to describe the type of a data column",
-        "operationId": "get_column_types_setup_v1_schemas_columns_types_get",
+        "operationId": "get_column_types_setup_v1_schemas_column_types_get",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -1896,7 +1896,7 @@
                     "type": "string"
                   },
                   "type": "array",
-                  "title": "Response Get Column Types Setup V1 Schemas Columns Types Get"
+                  "title": "Response Get Column Types Setup V1 Schemas Column Types Get"
                 }
               }
             }
@@ -2054,8 +2054,8 @@
         "title": "InputPayload",
         "description": "User-provided payload for a channel.\nThe 'channel_schema' field is a dict of column_name -> type string.",
         "example": {
-          "channel_id": "5e3e2b6d-3614-49ca-b2dc-3670edd85cd8",
-          "channel_name": "thermo-5c1bd",
+          "channel_id": "625d3a99-099c-417b-96ef-7fce218bd9aa",
+          "channel_name": "thermo-fe59b",
           "channel_schema": {
             "humidity": "float",
             "temperature": "float",
