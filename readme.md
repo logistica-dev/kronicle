@@ -102,9 +102,9 @@ source ~/.zshrc
 
 
 # By default, postgres role is created. You can create your own user and DB
-createuser --interactive            # prompts for username & superuser? yes/no
-createdb mydb              # creates a database owned by your new user
-psql mydb                  # now you can connect to it in psql
+createuser --interactive    # prompts for username & superuser? yes/no
+createdb mydb               # creates a database owned by your new user
+psql mydb                   # now you can connect to it in psql
 ```
 
 Inside psql

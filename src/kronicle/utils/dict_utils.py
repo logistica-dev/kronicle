@@ -42,13 +42,13 @@ def strip_nulls(obj, recursive: bool = False):
     return obj
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     here = "dict_utils.tests"
     print(here, "strip_nulls list:", strip_nulls([3, 0, 5, None]))
     print(
         here,
         "strip_nulls dict:",
-        strip_nulls({"a": 3, "b": 0, "5": "zeruiogh", "d": None, "e": {"g": None, "h": "totot"}}, True),
+        strip_nulls({"a": 3, "b": 0, "5": "zeruiogh", "d": None, "e": {"g": None, "h": "testsingt"}}, True),
     )
     print(here, "strip_nulls tutu:", strip_nulls("tutu"))
     print(here, "strip_nulls None:", strip_nulls(None))

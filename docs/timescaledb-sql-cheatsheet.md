@@ -4,6 +4,14 @@ Handy SQL patterns for working with time-series data in TimescaleDB.
 
 ---
 
+# Cleaning
+
+```sql
+DROP DATABASE IF EXISTS kronicle;
+```
+
+---
+
 # Time bucketing & aggregation
 
 Group data into fixed intervals with `time_bucket`.

@@ -2,14 +2,12 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone, tzinfo
-from typing import Any
-
-from kronicle.errors.error_types import BadRequestError
+from typing import Any, Literal
 
 # --------------------------------------------------------------------------------------------------
 # System local timezone
 # --------------------------------------------------------------------------------------------------
-_LOCAL_TZ = datetime.now().astimezone().tzinfo
+TimeSpec = Literal["seconds", "milliseconds", "microseconds"]
 
 
 # --------------------------------------------------------------------------------------------------
@@ -22,6 +20,10 @@ class IsoDateTime(datetime):
     """
 
     def __new__(cls, *args, **kwargs):
+        if len(args) == 0 or not args[0]:
+            return cls.to_iso_datetime(super().now())
+        if len(args) == 1 and not kwargs:
+            return cls.normalize_value(args[0])
         dt = super().__new__(cls, *args, **kwargs)
         # If naive, default to local tz
         return cls.to_iso_datetime(dt)
@@ -52,6 +54,10 @@ class IsoDateTime(datetime):
         return self.astimezone().isoformat()
 
     @classmethod
+    def local_tz(cls):
+        return datetime.now().astimezone().tzinfo
+
+    @classmethod
     def now(cls, tz: tzinfo | None = None) -> IsoDateTime:
         return cls.to_iso_datetime(super().now(tz))
 
@@ -61,16 +67,22 @@ class IsoDateTime(datetime):
 
     @classmethod
     def now_local(cls) -> IsoDateTime:
-        return cls.now(_LOCAL_TZ)
+        return cls.now(cls.local_tz())
 
     @classmethod
     def now_log(cls) -> str:
         return cls.now_local().strftime("%Y-%m-%d %H:%M:%S")
 
     @classmethod
+    def now_iso_str(cls, timespec: TimeSpec = "seconds") -> str:
+        return cls.now().astimezone(timezone.utc).isoformat(timespec=timespec)
+
+    @classmethod
     def to_iso_datetime(cls, dt: datetime) -> IsoDateTime:
+        if dt is None:
+            dt = super().now()
         if isinstance(dt, IsoDateTime):
-            return dt
+            return dt if dt.tzinfo is not None else dt.replace(tzinfo=cls.local_tz())
         return cls(
             dt.year,
             dt.month,
@@ -79,7 +91,7 @@ class IsoDateTime(datetime):
             dt.minute,
             dt.second,
             dt.microsecond,
-            tzinfo=_LOCAL_TZ if dt.tzinfo is None else dt.tzinfo,
+            tzinfo=cls.local_tz() if dt.tzinfo is None else dt.tzinfo,
         )
 
     @classmethod
@@ -88,7 +100,7 @@ class IsoDateTime(datetime):
         year = int(parts[0])
         month = int(parts[1]) if len(parts) > 1 else 1
         day = int(parts[2]) if len(parts) > 2 else 1
-        return IsoDateTime(year, month, day)
+        return IsoDateTime(year, month, day, tzinfo=cls.local_tz())
 
     @classmethod
     def normalize_value(cls, value: Any, to_local_tz: bool = False) -> IsoDateTime:
@@ -98,6 +110,8 @@ class IsoDateTime(datetime):
         - datetime: convert to IsoDateTime, preserve tz if present, else default local
         - str: parse ISO string, naive -> local tz
         """
+        if not value:
+            return cls.now()
         if isinstance(value, IsoDateTime):
             dt = value
             return dt.astimezone() if to_local_tz else dt
@@ -117,7 +131,7 @@ class IsoDateTime(datetime):
                     return cls._parse_partial_iso(value)
                 except ValueError as e:
                     raise ValueError(f"Cannot parse datetime from '{value}'") from e
-        raise BadRequestError(f"Cannot normalize type '{type(value).__name__}' to datetime")
+        raise ValueError(f"Cannot normalize type '{type(value).__name__}' to datetime")
 
     # ------------------------------------------------------------------
     # Pydantic v2 integration
@@ -141,7 +155,7 @@ class IsoDateTime(datetime):
 # --------------------------------------------------------------------------------------------------
 # Main test
 # --------------------------------------------------------------------------------------------------
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     here = "iso_datetime.test"
     from time import sleep
 
@@ -209,16 +223,24 @@ if __name__ == "__main__":
     log_d(here, "Pydantic JSON serialization", json_out)
 
     # Normalization
-    log_d(here, "Normalization from datetime", IsoDateTime.normalize_value(e1.timestamp))
-    log_d(here, "Normalization from datetime", IsoDateTime.normalize_value(e2.timestamp))
-    log_d(here, "Normalization from datetime", IsoDateTime.normalize_value(e3.timestamp))
-    log_d(here, "Normalization from datetime", IsoDateTime.normalize_value("2025-09-17T20:00:00+02:00"))
-    log_d(here, "Normalization from datetime", IsoDateTime.normalize_value("2025-09-17 20:00+00:00"))
-    log_d(here, "Normalization from datetime", IsoDateTime.normalize_value("2025-09-17 20:00+00"))
-    log_d(here, "Normalization from datetime", IsoDateTime.normalize_value("2025-09-17 20:00"))
-    log_d(here, "Normalization from datetime", IsoDateTime.normalize_value("2025-09-17 20"))
 
-    d = IsoDateTime.normalize_value("2025-09-17 20")
+    log_d(here, "Normalization from event", IsoDateTime(e1.timestamp))
+    log_d(here, "Normalization from event", IsoDateTime(e2.timestamp))
+    log_d(here, "Normalization from event", IsoDateTime(e3.timestamp))
+
+    log_d(here, "Normalization from datetime", IsoDateTime("2025-09-17T20:00:00+02:00"))
+    log_d(here, "Normalization from datetime", IsoDateTime("2025-09-17 20:00+00:00"))
+    log_d(here, "Normalization from datetime", IsoDateTime("2025-09-17 20:00+00"))
+    log_d(here, "Normalization from datetime", IsoDateTime("2025-09-17 20:00"))
+    log_d(here, "Normalization from datetime", IsoDateTime("2025-09-17 20"))
+    log_d(here, "Normalization from datetime", IsoDateTime("2025-09-17"))
+    log_d(here, "Normalization from datetime", IsoDateTime("2025-09"))
+    log_d(here, "Normalization from datetime", IsoDateTime("2025"))
+    log_d(here, "Normalization from datetime", IsoDateTime(""))
+
+    log_d(here, "Normalization from None", IsoDateTime())
+
+    d = IsoDateTime("2025-09-17 20")
     log_d(here, "Simple", d)
     now = IsoDateTime.now_local()
     log_d(here, "Now", now)

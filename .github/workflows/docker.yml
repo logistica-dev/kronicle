@@ -1,0 +1,70 @@
+name: Build, Test & Push Docker Image
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # Step 2: Set up QEMU for multi-arch builds
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      # Step 3: Set up Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Step 4: Log in to GitHub Container Registry
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Step 5: Start temporary TimescaleDB for testing
+      - name: Start temporary TimescaleDB
+        run: |
+          docker run -d \
+            --name kronicle-test-db \
+            -e POSTGRES_USER=${{ secrets.TEST_DB_USER }} \
+            -e POSTGRES_PASSWORD=${{ secrets.TEST_DB_PASSWORD }} \
+            -e POSTGRES_DB=${{ secrets.TEST_DB_NAME }} \
+            -p 5433:5432 \
+            timescale/timescaledb:latest-pg16
+          echo "Waiting for DB to be ready..."
+          until docker exec kronicle-test-db pg_isready -U ${{ secrets.TEST_DB_USER }}; do sleep 1; done
+
+      # Step 6: Run Kronicle DB initialization
+      - name: Run Kronicle DB init
+        run: |
+          export DATABASE_URL="postgresql://${{ secrets.TEST_DB_USER }}:${{ secrets.TEST_DB_PASSWORD }}@localhost:5433/${{ secrets.TEST_DB_NAME }}"
+          python -m kronicle.db.init
+
+      # Step 7: Tear down the temporary DB
+      - name: Stop temporary DB
+        run: docker stop kronicle-test-db && docker rm kronicle-test-db
+
+      # Step 8: Build and push the multi-arch Docker image
+      - name: Build and Push Kronicle
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/app/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/kronicle:latest
+            ghcr.io/${{ github.repository_owner }}/kronicle:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/kronicle:${{ github.ref_name }}
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/kronicle:cache
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/kronicle:cache,mode=max

@@ -1,0 +1,39 @@
+version: "3.9"
+
+services:
+  # --------------------------
+  # TimescaleDB / PostgreSQL
+  # --------------------------
+  db:
+    image: timescale/timescaledb:latest-pg15
+    container_name: kronicle-ci-db
+    ports:
+      - "5433:5432" # optional, local access
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 2s
+      retries: 15
+      timeout: 2s
+
+  # --------------------------
+  # Kronicle DB/init container
+  # --------------------------
+  init:
+    build:
+      context: .
+      dockerfile: docker/db/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      KRONICLE_RBAC_URL: ${KRONICLE_RBAC_URL}
+      KRONICLE_SU_NAME: ${KRONICLE_SU_NAME}
+      KRONICLE_SU_EMAIL: ${KRONICLE_SU_EMAIL}
+      KRONICLE_SU_PWD: ${KRONICLE_SU_PWD}
+    restart: "no"
+    entrypoint:
+      ["/opt/kronicle/.venv/bin/python", "/opt/kronicle/scripts/init/init.py"]

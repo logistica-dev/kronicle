@@ -23,10 +23,14 @@ reports
 
 # Local credentials folder
 creds
+.creds
+.conf
+.env
+.secrets
 
 # Local download folder
 dwnld/*
-data
+
 
 #========== [ gitignore.io ] ===========================================================================================
 #
@@ -156,7 +160,6 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-.env
 .venv
 env/
 venv/

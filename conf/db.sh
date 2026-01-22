@@ -8,7 +8,7 @@ PORT=5432
 DB_USR=kronicle_usr
 DB_PWD=kronicle_pwd
 DB_NAME=kronicle_db
-DB_DIR="$HOME/kronicle/psql"
+DB_DIR="$HOME/kronicle_db/psql"
 
 # Launch the Timescale DB
 podman run -d                       \

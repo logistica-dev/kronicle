@@ -54,6 +54,7 @@ pythonpath = ["src"]
 norecursedirs = ["*.egg", ".eggs", "dist", "build", "wip"]
 filterwarnings = ["ignore:.*pkg_resources.*:DeprecationWarning"]
 addopts = [
+    "--cov=kronicle",
     "--cov-report=term-missing",
     "--cov-report=html:reports/html_dir",
     "--cov-report=xml:reports/coverage.xml",
@@ -75,7 +76,7 @@ optional-dependencies = { dev = { file = ["requirements-dev.txt"] } }
 [tool.pyright]
 exclude = ["**/__pycache__", "**/.env"]
 executionEnvironments = [{ root = ".", extraPaths = ["src"] }]
-extraPaths = ["src", ".venv/lib/python3.12/site-packages"]
+extraPaths = ["src"]
 include = ["src", "tests"]
 pythonVersion = "3.12"
 reportArgumentType = "warning"
@@ -101,3 +102,7 @@ exclude = ["**/.venv", "**/__pycache__", "**/.env"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "C"]
 ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["kronicle"]
+known-third-party = ["asyncpg", "casbin_sqlalchemy_adapter", "casbin"]

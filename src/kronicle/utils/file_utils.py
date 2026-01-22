@@ -202,7 +202,7 @@ if __name__ == "__main__":  # pragma: no cover
     # tar_gz_file = test_file_dir + "rudi-node-read.tar.gz"
     # txt_file = test_file_dir + "RUDI producer internal API - 1.3.0.yml"
     # csv_file = test_file_dir + "dummy.csv"
-    # wrong_path = test_file_dir + "toto"
+    # wrong_path = test_file_dir + "testsing"
     # unicode_file_path = test_file_dir + "unicode_chars.txt"
     # write_file(unicode_file_path, "tut0156êµîƒﬁÌπÏ“{ëôøÇ¡¶{µœ≤é≤")
     ini_file = "../.conf/config.ini"

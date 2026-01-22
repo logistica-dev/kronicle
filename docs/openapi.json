@@ -8,6 +8,9 @@
   "paths": {
     "/health/live": {
       "get": {
+        "tags": [
+          "Check health"
+        ],
         "summary": "Liveness",
         "operationId": "liveness_health_live_get",
         "responses": {
@@ -24,30 +27,40 @@
     },
     "/health/ready": {
       "get": {
+        "tags": [
+          "Check health"
+        ],
         "summary": "Readiness",
         "operationId": "readiness_health_ready_get",
-        "parameters": [
-          {
-            "name": "retries",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 5,
-              "title": "Retries"
-            }
-          },
-          {
-            "name": "delay",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "number",
-              "default": 2.0,
-              "title": "Delay"
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
             }
           }
+        }
+      }
+    },
+    "/auth/v1/login": {
+      "post": {
+        "tags": [
+          "Auth"
         ],
+        "summary": "Login",
+        "operationId": "login_auth_v1_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InputUserLogin"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -78,6 +91,11 @@
         "summary": "list all available channels",
         "description": "Fetches metadata for all registered channels.\nEach entry includes schema, metadata, tags, and the number of available rows.\nNo data rows are returned in this endpoint.\nOptionally, filter by a name or tag_key/tag_value pair.",
         "operationId": "fetch_all_channels_metadata_api_v1_channels_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "name",
@@ -98,69 +116,18 @@
             "description": "Optional name to filter by"
           },
           {
-            "name": "tag_key",
+            "name": "tags",
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Optional tag key to filter by",
-              "title": "Tag Key"
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Optional tags as key:value pairs, e.g., color:red",
+              "title": "Tags"
             },
-            "description": "Optional tag key to filter by"
-          },
-          {
-            "name": "tag_value",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "number"
-                },
-                {
-                  "type": "boolean"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Optional tag value to filter by",
-              "title": "Tag Value"
-            },
-            "description": "Optional tag value to filter by"
-          },
-          {
-            "name": "retries",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 5,
-              "title": "Retries"
-            }
-          },
-          {
-            "name": "delay",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "number",
-              "default": 2.0,
-              "title": "Delay"
-            }
+            "description": "Optional tags as key:value pairs, e.g., color:red"
           }
         ],
         "responses": {
@@ -199,6 +166,11 @@
         "summary": "Fetch metadata for a specific channel",
         "description": "Retrieves metadata for the specified `channel_id`, including schema, tags, and metadata.\nThe response also includes the number of rows stored for that channel but does not include the row data itself.",
         "operationId": "fetch_channel_api_v1_channels__channel_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "channel_id",
@@ -208,26 +180,6 @@
               "type": "string",
               "format": "uuid",
               "title": "Channel Id"
-            }
-          },
-          {
-            "name": "retries",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 5,
-              "title": "Retries"
-            }
-          },
-          {
-            "name": "delay",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "number",
-              "default": 2.0,
-              "title": "Delay"
             }
           }
         ],
@@ -261,8 +213,13 @@
           "Read data"
         ],
         "summary": "Fetch stored rows for a specific channel",
-        "description": "Retrieves all stored time-series rows for the specified `channel_id`.\nThe response includes both metadata and data rows according to the channel\u2019s schema.",
+        "description": "Retrieves all stored time-series rows for the specified `channel_id`.\nFiltering, ordering, pagination, and column selection are supported via query parameters.\nThe response includes both metadata and data rows according to the channel\u2019s schema.",
         "operationId": "fetch_channel_rows_api_v1_channels__channel_id__rows_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "channel_id",
@@ -275,60 +232,124 @@
             }
           },
           {
-            "name": "skip_received",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "description": "Optional flag, True to display data reception date",
-              "default": true,
-              "title": "Skip Received"
-            },
-            "description": "Optional flag, True to display data reception date"
-          },
-          {
             "name": "from_date",
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string",
-              "description": "Optional date string, return rows from this date",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
               "title": "From Date"
-            },
-            "description": "Optional date string, return rows from this date"
+            }
           },
           {
             "name": "to_date",
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string",
-              "description": "Optional date string, return rows up to this date",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
               "title": "To Date"
-            },
-            "description": "Optional date string, return rows up to this date"
-          },
-          {
-            "name": "retries",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 5,
-              "title": "Retries"
             }
           },
           {
-            "name": "delay",
+            "name": "limit",
             "in": "query",
             "required": false,
             "schema": {
-              "type": "number",
-              "default": 2.0,
-              "title": "Delay"
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "asc",
+                    "desc"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": "asc",
+              "title": "Order"
+            }
+          },
+          {
+            "name": "skip_received",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Skip Received"
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Columns"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -361,6 +382,11 @@
         "summary": "Fetch the data as columns for a specific channel",
         "description": "Retrieves all stored time-series rows for the specified `channel_id` and present them as columns.\nThe response includes both metadata and data columns according to the channel\u2019s schema.",
         "operationId": "fetch_channel_columns_api_v1_channels__channel_id__columns_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "channel_id",
@@ -377,44 +403,120 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string",
-              "description": "Optional date string, return rows from this date",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
               "title": "From Date"
-            },
-            "description": "Optional date string, return rows from this date"
+            }
           },
           {
             "name": "to_date",
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string",
-              "description": "Optional date string, return rows up to this date",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
               "title": "To Date"
-            },
-            "description": "Optional date string, return rows up to this date"
-          },
-          {
-            "name": "retries",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 5,
-              "title": "Retries"
             }
           },
           {
-            "name": "delay",
+            "name": "limit",
             "in": "query",
             "required": false,
             "schema": {
-              "type": "number",
-              "default": 2.0,
-              "title": "Delay"
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "asc",
+                    "desc"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": "asc",
+              "title": "Order"
+            }
+          },
+          {
+            "name": "skip_received",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Skip Received"
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Columns"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -447,6 +549,11 @@
         "summary": "list all available channels",
         "description": "Fetches metadata for all registered channels.\nEach entry includes schema, metadata, tags, and the number of available rows.\nNo data rows are returned in this endpoint.\nOptionally, filter by a name or tag_key/tag_value pair.",
         "operationId": "fetch_all_channels_metadata_data_v1_channels_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "name",
@@ -467,69 +574,18 @@
             "description": "Optional name to filter by"
           },
           {
-            "name": "tag_key",
+            "name": "tags",
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Optional tag key to filter by",
-              "title": "Tag Key"
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Optional tags as key:value pairs, e.g., color:red",
+              "title": "Tags"
             },
-            "description": "Optional tag key to filter by"
-          },
-          {
-            "name": "tag_value",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "number"
-                },
-                {
-                  "type": "boolean"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Optional tag value to filter by",
-              "title": "Tag Value"
-            },
-            "description": "Optional tag value to filter by"
-          },
-          {
-            "name": "retries",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 5,
-              "title": "Retries"
-            }
-          },
-          {
-            "name": "delay",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "number",
-              "default": 2.0,
-              "title": "Delay"
-            }
+            "description": "Optional tags as key:value pairs, e.g., color:red"
           }
         ],
         "responses": {
@@ -566,6 +622,11 @@
         "summary": "Upsert metadata and insert rows",
         "description": "Append-only operation: creates new metadata if missing and inserts channel data rows",
         "operationId": "upsert_metadata_and_rows_data_v1_channels_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "strict",
@@ -578,26 +639,6 @@
               "title": "Strict"
             },
             "description": "If true, abort on any validation error"
-          },
-          {
-            "name": "retries",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 5,
-              "title": "Retries"
-            }
-          },
-          {
-            "name": "delay",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "number",
-              "default": 2.0,
-              "title": "Delay"
-            }
           }
         ],
         "requestBody": {
@@ -642,6 +683,11 @@
         "summary": "Fetch metadata for a specific channel",
         "description": "Retrieves metadata for the specified `channel_id`, including schema, tags, and metadata.\nThe response also includes the number of rows stored for that channel but does not include the row data itself.",
         "operationId": "fetch_channel_data_v1_channels__channel_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "channel_id",
@@ -651,26 +697,6 @@
               "type": "string",
               "format": "uuid",
               "title": "Channel Id"
-            }
-          },
-          {
-            "name": "retries",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 5,
-              "title": "Retries"
-            }
-          },
-          {
-            "name": "delay",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "number",
-              "default": 2.0,
-              "title": "Delay"
             }
           }
         ],
@@ -704,8 +730,13 @@
           "Input data"
         ],
         "summary": "Fetch stored rows for a specific channel",
-        "description": "Retrieves all stored time-series rows for the specified `channel_id`.\nThe response includes both metadata and data rows according to the channel\u2019s schema.",
+        "description": "Retrieves all stored time-series rows for the specified `channel_id`.\nFiltering, ordering, pagination, and column selection are supported via query parameters.\nThe response includes both metadata and data rows according to the channel\u2019s schema.",
         "operationId": "fetch_channel_rows_data_v1_channels__channel_id__rows_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "channel_id",
@@ -718,60 +749,124 @@
             }
           },
           {
-            "name": "skip_received",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "description": "Optional flag, True to display data reception date",
-              "default": true,
-              "title": "Skip Received"
-            },
-            "description": "Optional flag, True to display data reception date"
-          },
-          {
             "name": "from_date",
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string",
-              "description": "Optional date string, return rows from this date",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
               "title": "From Date"
-            },
-            "description": "Optional date string, return rows from this date"
+            }
           },
           {
             "name": "to_date",
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string",
-              "description": "Optional date string, return rows up to this date",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
               "title": "To Date"
-            },
-            "description": "Optional date string, return rows up to this date"
-          },
-          {
-            "name": "retries",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 5,
-              "title": "Retries"
             }
           },
           {
-            "name": "delay",
+            "name": "limit",
             "in": "query",
             "required": false,
             "schema": {
-              "type": "number",
-              "default": 2.0,
-              "title": "Delay"
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "asc",
+                    "desc"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": "asc",
+              "title": "Order"
+            }
+          },
+          {
+            "name": "skip_received",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Skip Received"
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Columns"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -802,6 +897,11 @@
         "summary": "Insert rows for a  channel",
         "description": "Append-only operation: insert new rows for an existing channel. Does not modify metadata or schema.",
         "operationId": "insert_rows_data_v1_channels__channel_id__rows_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "channel_id",
@@ -824,26 +924,6 @@
               "title": "Strict"
             },
             "description": "If true, abort on any validation error"
-          },
-          {
-            "name": "retries",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 5,
-              "title": "Retries"
-            }
-          },
-          {
-            "name": "delay",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "number",
-              "default": 2.0,
-              "title": "Delay"
-            }
           }
         ],
         "requestBody": {
@@ -888,6 +968,11 @@
         "summary": "Fetch the data as columns for a specific channel",
         "description": "Retrieves all stored time-series rows for the specified `channel_id` and present them as columns.\nThe response includes both metadata and data columns according to the channel\u2019s schema.",
         "operationId": "fetch_channel_columns_data_v1_channels__channel_id__columns_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "channel_id",
@@ -904,44 +989,120 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string",
-              "description": "Optional date string, return rows from this date",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
               "title": "From Date"
-            },
-            "description": "Optional date string, return rows from this date"
+            }
           },
           {
             "name": "to_date",
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string",
-              "description": "Optional date string, return rows up to this date",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
               "title": "To Date"
-            },
-            "description": "Optional date string, return rows up to this date"
-          },
-          {
-            "name": "retries",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 5,
-              "title": "Retries"
             }
           },
           {
-            "name": "delay",
+            "name": "limit",
             "in": "query",
             "required": false,
             "schema": {
-              "type": "number",
-              "default": 2.0,
-              "title": "Delay"
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "asc",
+                    "desc"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": "asc",
+              "title": "Order"
+            }
+          },
+          {
+            "name": "skip_received",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Skip Received"
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Columns"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -974,6 +1135,11 @@
         "summary": "list all available channels",
         "description": "Fetches metadata for all registered channels.\nEach entry includes schema, metadata, tags, and the number of available rows.\nNo data rows are returned in this endpoint.\nOptionally, filter by a name or tag_key/tag_value pair.",
         "operationId": "fetch_all_channels_metadata_setup_v1_channels_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "name",
@@ -994,69 +1160,18 @@
             "description": "Optional name to filter by"
           },
           {
-            "name": "tag_key",
+            "name": "tags",
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Optional tag key to filter by",
-              "title": "Tag Key"
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Optional tags as key:value pairs, e.g., color:red",
+              "title": "Tags"
             },
-            "description": "Optional tag key to filter by"
-          },
-          {
-            "name": "tag_value",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "number"
-                },
-                {
-                  "type": "boolean"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Optional tag value to filter by",
-              "title": "Tag Value"
-            },
-            "description": "Optional tag value to filter by"
-          },
-          {
-            "name": "retries",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 5,
-              "title": "Retries"
-            }
-          },
-          {
-            "name": "delay",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "number",
-              "default": 2.0,
-              "title": "Delay"
-            }
+            "description": "Optional tags as key:value pairs, e.g., color:red"
           }
         ],
         "responses": {
@@ -1093,26 +1208,9 @@
         "summary": "Create a new channel",
         "description": "Create a new channel with metadata and schema. Does not add rows, and fails if the channel already exists.",
         "operationId": "create_channel_setup_v1_channels_post",
-        "parameters": [
+        "security": [
           {
-            "name": "retries",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 5,
-              "title": "Retries"
-            }
-          },
-          {
-            "name": "delay",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "number",
-              "default": 2.0,
-              "title": "Delay"
-            }
+            "HTTPBearer": []
           }
         ],
         "requestBody": {
@@ -1155,26 +1253,9 @@
         "summary": "Update or create a channel",
         "description": "Upsert a channel: if it exists, updates metadata (schema must match if provided); if it does not exist, creates it with the given schema and metadata.",
         "operationId": "update_channel_setup_v1_channels_put",
-        "parameters": [
+        "security": [
           {
-            "name": "retries",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 5,
-              "title": "Retries"
-            }
-          },
-          {
-            "name": "delay",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "number",
-              "default": 2.0,
-              "title": "Delay"
-            }
+            "HTTPBearer": []
           }
         ],
         "requestBody": {
@@ -1219,6 +1300,11 @@
         "summary": "Fetch metadata for a specific channel",
         "description": "Retrieves metadata for the specified `channel_id`, including schema, tags, and metadata.\nThe response also includes the number of rows stored for that channel but does not include the row data itself.",
         "operationId": "fetch_channel_setup_v1_channels__channel_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "channel_id",
@@ -1228,26 +1314,6 @@
               "type": "string",
               "format": "uuid",
               "title": "Channel Id"
-            }
-          },
-          {
-            "name": "retries",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 5,
-              "title": "Retries"
-            }
-          },
-          {
-            "name": "delay",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "number",
-              "default": 2.0,
-              "title": "Delay"
             }
           }
         ],
@@ -1281,26 +1347,9 @@
         "summary": "Partially update a channel",
         "description": "Update only a subset of metadata, tags, or schema for the specified channel.",
         "operationId": "patch_channel_setup_v1_channels__channel_id__patch",
-        "parameters": [
+        "security": [
           {
-            "name": "retries",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 5,
-              "title": "Retries"
-            }
-          },
-          {
-            "name": "delay",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "number",
-              "default": 2.0,
-              "title": "Delay"
-            }
+            "HTTPBearer": []
           }
         ],
         "requestBody": {
@@ -1343,6 +1392,11 @@
         "summary": "Delete a channel",
         "description": "Deletes a channel and its metadata. All data associated with the channel is also removed. Returns the metadata of the deleted channel.",
         "operationId": "delete_channel_setup_v1_channels__channel_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "channel_id",
@@ -1352,26 +1406,6 @@
               "type": "string",
               "format": "uuid",
               "title": "Channel Id"
-            }
-          },
-          {
-            "name": "retries",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 5,
-              "title": "Retries"
-            }
-          },
-          {
-            "name": "delay",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "number",
-              "default": 2.0,
-              "title": "Delay"
             }
           }
         ],
@@ -1405,8 +1439,13 @@
           "Setup data channels"
         ],
         "summary": "Fetch stored rows for a specific channel",
-        "description": "Retrieves all stored time-series rows for the specified `channel_id`.\nThe response includes both metadata and data rows according to the channel\u2019s schema.",
+        "description": "Retrieves all stored time-series rows for the specified `channel_id`.\nFiltering, ordering, pagination, and column selection are supported via query parameters.\nThe response includes both metadata and data rows according to the channel\u2019s schema.",
         "operationId": "fetch_channel_rows_setup_v1_channels__channel_id__rows_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "channel_id",
@@ -1419,60 +1458,124 @@
             }
           },
           {
-            "name": "skip_received",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "description": "Optional flag, True to display data reception date",
-              "default": true,
-              "title": "Skip Received"
-            },
-            "description": "Optional flag, True to display data reception date"
-          },
-          {
             "name": "from_date",
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string",
-              "description": "Optional date string, return rows from this date",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
               "title": "From Date"
-            },
-            "description": "Optional date string, return rows from this date"
+            }
           },
           {
             "name": "to_date",
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string",
-              "description": "Optional date string, return rows up to this date",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
               "title": "To Date"
-            },
-            "description": "Optional date string, return rows up to this date"
-          },
-          {
-            "name": "retries",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 5,
-              "title": "Retries"
             }
           },
           {
-            "name": "delay",
+            "name": "limit",
             "in": "query",
             "required": false,
             "schema": {
-              "type": "number",
-              "default": 2.0,
-              "title": "Delay"
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "asc",
+                    "desc"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": "asc",
+              "title": "Order"
+            }
+          },
+          {
+            "name": "skip_received",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Skip Received"
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Columns"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -1503,6 +1606,11 @@
         "summary": "Insert rows for a  channel",
         "description": "Append-only operation: insert new rows for an existing channel. Does not modify metadata or schema.",
         "operationId": "insert_rows_setup_v1_channels__channel_id__rows_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "channel_id",
@@ -1525,26 +1633,6 @@
               "title": "Strict"
             },
             "description": "If true, abort on any validation error"
-          },
-          {
-            "name": "retries",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 5,
-              "title": "Retries"
-            }
-          },
-          {
-            "name": "delay",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "number",
-              "default": 2.0,
-              "title": "Delay"
-            }
           }
         ],
         "requestBody": {
@@ -1587,6 +1675,11 @@
         "summary": "Delete all rows for a channel",
         "description": "Removes all data rows for the specified channel, while keeping its metadata intact.",
         "operationId": "delete_channel_rows_setup_v1_channels__channel_id__rows_delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "channel_id",
@@ -1596,26 +1689,6 @@
               "type": "string",
               "format": "uuid",
               "title": "Channel Id"
-            }
-          },
-          {
-            "name": "retries",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 5,
-              "title": "Retries"
-            }
-          },
-          {
-            "name": "delay",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "number",
-              "default": 2.0,
-              "title": "Delay"
             }
           }
         ],
@@ -1651,6 +1724,11 @@
         "summary": "Fetch the data as columns for a specific channel",
         "description": "Retrieves all stored time-series rows for the specified `channel_id` and present them as columns.\nThe response includes both metadata and data columns according to the channel\u2019s schema.",
         "operationId": "fetch_channel_columns_setup_v1_channels__channel_id__columns_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "channel_id",
@@ -1667,44 +1745,120 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string",
-              "description": "Optional date string, return rows from this date",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
               "title": "From Date"
-            },
-            "description": "Optional date string, return rows from this date"
+            }
           },
           {
             "name": "to_date",
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string",
-              "description": "Optional date string, return rows up to this date",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
               "title": "To Date"
-            },
-            "description": "Optional date string, return rows up to this date"
-          },
-          {
-            "name": "retries",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 5,
-              "title": "Retries"
             }
           },
           {
-            "name": "delay",
+            "name": "limit",
             "in": "query",
             "required": false,
             "schema": {
-              "type": "number",
-              "default": 2.0,
-              "title": "Delay"
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "asc",
+                    "desc"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": "asc",
+              "title": "Order"
+            }
+          },
+          {
+            "name": "skip_received",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Skip Received"
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Columns"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -1737,47 +1891,15 @@
         "summary": "Clone a channel",
         "description": "Creates a new channel by cloning an existing channel's schema and optionally metadata. Does not copy data rows.",
         "operationId": "clone_channel_setup_v1_channels__channel_id__clone_post",
-        "parameters": [
-          {
-            "name": "channel_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Channel Id"
-            }
-          },
-          {
-            "name": "retries",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 5,
-              "title": "Retries"
-            }
-          },
-          {
-            "name": "delay",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "number",
-              "default": 2.0,
-              "title": "Delay"
-            }
-          }
-        ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/InputPayload"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
@@ -1800,7 +1922,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/setup/v1/channels/batch-delete": {
@@ -1810,35 +1937,12 @@
         ],
         "summary": "Delete multiple channels",
         "operationId": "batch_delete_channels_setup_v1_channels_batch_delete_post",
-        "parameters": [
-          {
-            "name": "retries",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 5,
-              "title": "Retries"
-            }
-          },
-          {
-            "name": "delay",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "number",
-              "default": 2.0,
-              "title": "Delay"
-            }
-          }
-        ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
                 "additionalProperties": true,
+                "type": "object",
                 "title": "Payload"
               },
               "example": {
@@ -1848,7 +1952,8 @@
                 ]
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
@@ -1856,10 +1961,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/ResponsePayload"
                   },
+                  "type": "array",
                   "title": "Response Batch Delete Channels Setup V1 Channels Batch Delete Post"
                 }
               }
@@ -1875,7 +1980,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/setup/v1/schemas/column_types": {
@@ -1901,7 +2011,86 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/rbac/v1/users": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "List Users",
+        "operationId": "list_users_rbac_v1_users_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OutputUser"
+                  },
+                  "type": "array",
+                  "title": "Response List Users Rbac V1 Users Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Create User",
+        "operationId": "create_user_rbac_v1_users_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InputUser"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutputUser"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     }
   },
@@ -1926,12 +2115,13 @@
             "description": "DB column name mapping -> User-defined column name"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "column_types"
         ],
         "title": "ChannelSchema",
-        "description": "Stores application-level schema.\ncolumns: dict[column_name, SchemaType]\ndb_to_usr: dict[db_column_name, user_column_name]"
+        "description": "ChannelSchema is a pure structural definition of a channel's timeseries layout.\n\nResponsibilities:\n- Define user-facing column names and their types.\n- Provide validation rules for rows.\n- Provide deterministic user\u2194internal column normalization.\n- Offer structural comparison (e.g. for migration/versioning).\n\nIt is:\n- Storage-agnostic (no table name, no SQL, no DB types).\n- Immutable (once created, structure does not change).\n- Safe to serialize and embed in API payloads (part of ChannelMetadata).\n\nIt does NOT:\n- Know about channel_id.\n- Generate SQL.\n- Know about row id or received_at.\n- Compare itself to a live database table.\n\nDatabase materialization is handled by ChannelTimeseries."
       },
       "HTTPValidationError": {
         "properties": {
@@ -2003,6 +2193,9 @@
                 "additionalProperties": {
                   "anyOf": [
                     {
+                      "type": "boolean"
+                    },
+                    {
                       "type": "string"
                     },
                     {
@@ -2010,13 +2203,6 @@
                     },
                     {
                       "type": "number"
-                    },
-                    {
-                      "type": "boolean"
-                    },
-                    {
-                      "items": {},
-                      "type": "array"
                     }
                   ]
                 },
@@ -2054,8 +2240,7 @@
         "title": "InputPayload",
         "description": "User-provided payload for a channel.\nThe 'channel_schema' field is a dict of column_name -> type string.",
         "example": {
-          "channel_id": "625d3a99-099c-417b-96ef-7fce218bd9aa",
-          "channel_name": "thermo-fe59b",
+          "channel_id": "ea606ed9-1bb7-4a32-9e42-f02234f00f72",
           "channel_schema": {
             "humidity": "float",
             "temperature": "float",
@@ -2064,6 +2249,7 @@
           "metadata": {
             "unit": "C"
           },
+          "name": "thermo-27679",
           "rows": [
             {
               "humidity": 55.1,
@@ -2091,6 +2277,123 @@
             "location": "lab"
           }
         }
+      },
+      "InputUser": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "full_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "InputUser",
+        "description": "Represents raw input data for user creation.\nValidates and sanitizes user-provided data before processing.\nMay reject invalid data (e.g., weak passwords, invalid emails)."
+      },
+      "InputUserLogin": {
+        "properties": {
+          "login": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 4,
+            "title": "Login",
+            "description": "Username or email used to login"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Password",
+            "description": "User password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "login",
+          "password"
+        ],
+        "title": "InputUserLogin"
+      },
+      "OutputUser": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "full_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Name"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details",
+            "default": {
+              "auth_method": "local"
+            }
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email"
+        ],
+        "title": "OutputUser",
+        "description": "Represents validated and processed user data ready for database insertion.\nContains derived fields (e.g., hashed passwords) and metadata."
       },
       "ResponsePayload": {
         "properties": {
@@ -2131,6 +2434,9 @@
                 "additionalProperties": {
                   "anyOf": [
                     {
+                      "type": "boolean"
+                    },
+                    {
                       "type": "string"
                     },
                     {
@@ -2138,10 +2444,6 @@
                     },
                     {
                       "type": "number"
-                    },
-                    {
-                      "items": {},
-                      "type": "array"
                     }
                   ]
                 },
@@ -2182,23 +2484,6 @@
               }
             ],
             "title": "Columns"
-          },
-          "available_rows": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Available Rows"
-          },
-          "op_status": {
-            "type": "string",
-            "title": "Op Status",
-            "description": "Overall operation status: success/warning/error",
-            "default": "success"
           },
           "op_details": {
             "additionalProperties": true,
@@ -2264,6 +2549,12 @@
           "type"
         ],
         "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "scheme": "bearer"
       }
     }
   }

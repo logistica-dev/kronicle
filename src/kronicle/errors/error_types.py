@@ -33,7 +33,7 @@ class KronicleHTTPErrorPayload(BaseModel):
     status: int
     error: str
     message: str
-    details: dict[str, Any] = Field(default_factory=dict)
+    details: dict[str, Any] | None = Field(default=None)
     path: str
     method: str
     request_id: str
@@ -48,7 +48,7 @@ class KronicleHTTPErrorPayload(BaseModel):
             status=exc.status,
             error=exc.error,
             message=exc.message,
-            details=exc.details if isinstance(exc.details, dict) else {},
+            details=exc.details if isinstance(exc.details, dict) else None,
             path=request.url.path,
             method=request.method.upper() if isinstance(request.method, str) else request.method,
             request_id=request_id,
@@ -75,7 +75,6 @@ class KronicleHTTPErrorPayload(BaseModel):
             status=exc.status_code,
             error="HTTPError",
             message=str(exc.detail),
-            details={},
             path=request.url.path,
             method=request.method.upper() if isinstance(request.method, str) else request.method,
             request_id=request_id,
@@ -112,9 +111,9 @@ class KronicleHTTPErrorPayload(BaseModel):
         exc_details = details or getattr(exc, "details", {}) or getattr(exc, "detail", {})
         return KronicleHTTPErrorPayload(
             status=exc_status if isinstance(exc_status, int) else 500,
-            error="Error",
+            error=error if isinstance(error, str) else "Error",
             message=exc_message if isinstance(exc_message, str) else str(exc_message),
-            details=exc_details if isinstance(exc_details, dict) else {},
+            details=exc_details if isinstance(exc_details, dict) else None,
             path=request.url.path,
             method=request.method.upper() if isinstance(request.method, str) else request.method,
             request_id=request_id,
@@ -125,7 +124,10 @@ class KronicleHTTPErrorPayload(BaseModel):
         Convert the error model into a FastAPI JSONResponse
         with the correct HTTP status code.
         """
-        return JSONResponse(status_code=self.status, content=self.model_dump())
+        # return JSONResponse(status_code=self.status, content=self.model_dump())
+        data = self.model_dump()
+        filtered = {k: v for k, v in data.items() if v not in (None, {}, [], "")}
+        return JSONResponse(status_code=self.status, content=filtered)
 
 
 class KronicleAppError(HTTPException):
@@ -168,22 +170,22 @@ class KronicleAppError(HTTPException):
 
 class BadRequestError(KronicleAppError):
     def __init__(self, message: str, details: dict[str, Any] | None = None):
-        super().__init__(status.HTTP_400_BAD_REQUEST, "BadRequest", message, details)
+        super().__init__(status=status.HTTP_400_BAD_REQUEST, error="BadRequest", message=message, details=details)
 
 
 class UnauthorizedError(KronicleAppError):
     def __init__(self, message: str, details: dict[str, Any] | None = None):
-        super().__init__(status.HTTP_401_UNAUTHORIZED, "Unauthorized", message, details)
+        super().__init__(status=status.HTTP_401_UNAUTHORIZED, error="Unauthorized", message=message, details=details)
 
 
 class NotFoundError(KronicleAppError):
     def __init__(self, message: str, details: dict[str, Any] | None = None):
-        super().__init__(status.HTTP_404_NOT_FOUND, "NotFound", message, details)
+        super().__init__(status=status.HTTP_404_NOT_FOUND, error="NotFound", message=message, details=details)
 
 
 class ConflictError(KronicleAppError):
     def __init__(self, message: str, details: dict[str, Any] | None = None):
-        super().__init__(status.HTTP_409_CONFLICT, "Conflict", message, details)
+        super().__init__(status=status.HTTP_409_CONFLICT, error="Conflict", message=message, details=details)
 
 
 class AppStartupError(KronicleAppError):
@@ -193,14 +195,31 @@ class AppStartupError(KronicleAppError):
     """
 
     def __init__(self, message: str, details: dict[str, Any] | None = None):
-        super().__init__(status.HTTP_500_INTERNAL_SERVER_ERROR, "AppStartupError", message, details)
+        super().__init__(
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR, error="AppStartupError", message=message, details=details
+        )
 
 
 class DatabaseConnectionError(KronicleAppError):
     def __init__(self, message: str, details: dict[str, Any] | None = None):
-        super().__init__(status.HTTP_502_BAD_GATEWAY, "DatabaseConnectionError", message, details)
+        super().__init__(
+            status=status.HTTP_502_BAD_GATEWAY, error="DatabaseConnectionError", message=message, details=details
+        )
 
 
 class DatabaseInstructionError(KronicleAppError):
     def __init__(self, message: str = "Unexpected database error", details: dict[str, Any] | None = None):
-        super().__init__(status.HTTP_500_INTERNAL_SERVER_ERROR, "DatabaseInstructionError", message, details)
+        super().__init__(
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            error="DatabaseInstructionError",
+            message=message,
+            details=details,
+        )
+
+
+async def kronicle_app_error_handler(request: Request, exc: KronicleAppError):
+    """
+    Global handler for all KronicleAppError exceptions.
+    Converts them into KronicleHTTPErrorPayload and returns JSONResponse.
+    """
+    return exc.to_http_model(request=request).to_error_json()
