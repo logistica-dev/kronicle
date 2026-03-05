@@ -1,3 +1,4 @@
+alembic==1.18.4
 black  # latest: 25.9.0
 nbstripout  # latest: 0.8.1
 pip-upgrade-outdated

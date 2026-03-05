@@ -2,11 +2,12 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from json import dumps, loads
 from typing import Any, AsyncIterator, Callable, Optional
 
-import asyncpg
-from asyncpg import Connection, Pool
+from asyncpg import Connection, Pool, create_pool
 from asyncpg.exceptions import PostgresError
+from asyncpg.pool import PoolConnectionProxy
 
 from kronicle.errors.error_types import DatabaseConnectionError
 from kronicle.utils.dev_logs import log_d, log_e, log_w
@@ -19,14 +20,14 @@ class ChannelDbSession:
     Singleton DB session manager with async init, error interception, and transactions.
 
     Responsibilities:
-    - Maintain a single connection or pool
+    - Connection pooling
     - Async initialization
     - JSONB codec setup
     - Transaction context manager
     - Optional automatic error interception/logging
     """
 
-    _instance: Optional["ChannelDbSession"] = None
+    _instance: Optional[ChannelDbSession] = None
     _initialized: bool = False
 
     def __new__(cls, db_url: str | None = None):
@@ -38,12 +39,21 @@ class ChannelDbSession:
         self,
         db_url: str | None = None,
         *,
-        use_pool: bool = True,
         min_size: int = 1,
         max_size: int = 10,
         intercept_errors: bool = True,
         logger: Callable[[str, str], None] | None = None,
     ):
+        """
+        Initialize the singleton DB session manager.
+
+        Args:
+            db_url: Database URL (postgresql://user:pass@host/db)
+            min_size: Minimum pool connections
+            max_size: Maximum pool connections
+            intercept_errors: Whether to catch and log DB errors automatically
+            logger: Optional logging callable (module, message)
+        """
         if getattr(self, "_initialized", False):
             return
 
@@ -51,63 +61,69 @@ class ChannelDbSession:
         if not self.db_url:
             raise ValueError("DBSession must be initialized with a db_url")
 
-        self.use_pool = use_pool
         self.min_size = min_size
         self.max_size = max_size
         self.intercept_errors = intercept_errors
         self.logger = logger or log_w
 
         self._pool: Optional[Pool] = None
-        self._conn: Optional[Connection] = None
         self._initialized = True
 
     # ----------------------------------------------------------------------------------------------
-    # Async init
+    # Async init / connection setup
     # ----------------------------------------------------------------------------------------------
     async def init_async(self):
-        """Async initialization: establishes connection/pool and sets JSONB codec."""
-        if self.use_pool:
-            self._pool = await asyncpg.create_pool(
-                dsn=self.db_url,
-                min_size=self.min_size,
-                max_size=self.max_size,
-                statement_cache_size=0,
-                init=self._set_jsonb_codec,
-            )
-            async with self._pool.acquire() as conn:
-                await self._set_jsonb_codec(conn)
-        else:
-            self._conn = await asyncpg.connect(self.db_url)
-            if not self._conn:
-                raise DatabaseConnectionError("Could not establish DB connection")
-            await self._set_jsonb_codec(self._conn)
-        # log_d(mod, "DBSession initialized")
+        """
+        Async initialization: establishes connection/pool and sets JSONB codec.
+        """
+        self._pool = await create_pool(
+            dsn=self.db_url,
+            min_size=self.min_size,
+            max_size=self.max_size,
+            statement_cache_size=0,
+            init=self._set_jsonb_codec,
+        )
+        log_d(mod, "DBSession pool initialized")
 
-    async def _set_jsonb_codec(self, conn: Connection):
+    async def _set_jsonb_codec(self, conn: Connection | PoolConnectionProxy):
+        """
+        Initialize JSONB codec for a connection.
+
+        Args:
+            conn: Connection or PoolConnectionProxy
+        """
         await conn.set_type_codec(
             "jsonb",
             schema="pg_catalog",
-            encoder=lambda v: v,  # asyncpg handles dict -> JSONB
-            decoder=lambda v: v,
+            encoder=dumps,  # asyncpg handles dict -> JSONB
+            decoder=loads,
         )
 
     # ----------------------------------------------------------------------------------------------
     # Connection / transaction
     # ----------------------------------------------------------------------------------------------
     @asynccontextmanager
-    async def connection(self) -> AsyncIterator[Connection]:
-        """Yield a live connection (pool or single)."""
-        if self._pool:
-            async with self._pool.acquire() as conn:
-                yield conn
-        elif self._conn:
-            yield self._conn
-        else:
+    async def connection(self) -> AsyncIterator[PoolConnectionProxy]:
+        """
+        Yield a live connection from the pool
+
+        Yields:
+            asyncpg.Connection
+        """
+        if not self._pool:
             raise DatabaseConnectionError("DBSession is not initialized")
 
+        async with self._pool.acquire() as conn:
+            yield conn
+
     @asynccontextmanager
-    async def transaction(self) -> AsyncIterator[Connection]:
-        """Yield a connection inside a transaction context."""
+    async def transaction(self) -> AsyncIterator[PoolConnectionProxy]:
+        """
+        Acquire a connection inside a transaction context.
+
+        Yields:
+            asyncpg.Connection
+        """
         async with self.connection() as conn:
             async with conn.transaction():
                 yield conn
@@ -118,7 +134,8 @@ class ChannelDbSession:
     async def ping(self) -> bool:
         """
         Check if the database connection is alive.
-        Returns True if successful, False if an error occurs.
+        Returns:
+            True if successful, False if an error occurs.
         """
         try:
             async with self.connection() as conn:
@@ -136,7 +153,7 @@ class ChannelDbSession:
     # ----------------------------------------------------------------------------------------------
     async def execute(
         self,
-        func: Callable[[Connection], Any],
+        func: Callable[[PoolConnectionProxy], Any],
         *,
         catch_errors: bool | None = None,
     ) -> Any:
@@ -170,7 +187,3 @@ class ChannelDbSession:
             await self._pool.close()
             self._pool = None
             log_d(mod, "DBSession pool closed")
-        if self._conn:
-            await self._conn.close()
-            self._conn = None
-            log_d(mod, "DBSession connection closed")

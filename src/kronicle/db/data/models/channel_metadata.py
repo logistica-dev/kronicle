@@ -5,7 +5,8 @@ from json import dumps, loads
 from typing import Any, ClassVar
 from uuid import UUID, uuid4
 
-from asyncpg import Connection, Record, UniqueViolationError
+from asyncpg import Record, UniqueViolationError
+from asyncpg.pool import PoolConnectionProxy
 from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
 from kronicle.db.data.models.channel_schema import ChannelSchema
@@ -200,7 +201,7 @@ class ChannelMetadata(BaseModel):
     # DB operations: table
     # ----------------------------------------------------------------------------------------------
     @classmethod
-    async def table_exists(cls, conn: Connection) -> bool:
+    async def table_exists(cls, conn: PoolConnectionProxy) -> bool:
         """Return True if the ChannelMetadata table exists."""
         return await table_exists(conn, namespace=cls.namespace(), table_name=cls.table_name())
 
@@ -210,7 +211,7 @@ class ChannelMetadata(BaseModel):
         return f"CREATE TABLE {cls.namespace()}.{cls.table_name()} ({cls.get_schema_defs()});"
 
     @classmethod
-    async def ensure_table(cls, conn: Connection):
+    async def ensure_table(cls, conn: PoolConnectionProxy):
         """Ensure the table exists in the database."""
         if await cls.table_exists(conn):
             return
@@ -220,11 +221,11 @@ class ChannelMetadata(BaseModel):
     # ----------------------------------------------------------------------------------------------
     # DB operations: read/fetch
     # ----------------------------------------------------------------------------------------------
-    async def exists(self, conn: Connection):
+    async def exists(self, conn: PoolConnectionProxy):
         return (await self.fetch_by_id(conn, self.channel_id)) is not None
 
     @classmethod
-    async def fetch_by_id(cls, conn: Connection, channel_id: UUID) -> ChannelMetadata | None:
+    async def fetch_by_id(cls, conn: PoolConnectionProxy, channel_id: UUID) -> ChannelMetadata | None:
         """
         Fetch a metadata row by channel_id.
 
@@ -244,7 +245,7 @@ class ChannelMetadata(BaseModel):
         return cls.from_db(dict(row))
 
     @classmethod
-    async def fetch_by_name(cls, conn: Connection, name: str) -> ChannelMetadata | None:
+    async def fetch_by_name(cls, conn: PoolConnectionProxy, name: str) -> ChannelMetadata | None:
         """
         Fetch a metadata row by name.
 
@@ -266,7 +267,7 @@ class ChannelMetadata(BaseModel):
         return cls.from_db(dict(row))
 
     @classmethod
-    async def fetch_by_tags(cls, conn: Connection, tags: dict[str, TagType]) -> list[ChannelMetadata]:
+    async def fetch_by_tags(cls, conn: PoolConnectionProxy, tags: dict[str, TagType]) -> list[ChannelMetadata]:
         """
         Fetch metadata rows that match all specified tags.
 
@@ -295,7 +296,7 @@ class ChannelMetadata(BaseModel):
         return [cls.from_db(dict(r)) for r in rows]
 
     @classmethod
-    async def fetch_all(cls, conn: Connection) -> list[ChannelMetadata]:
+    async def fetch_all(cls, conn: PoolConnectionProxy) -> list[ChannelMetadata]:
         """
         Fetch all metadata rows, ordered by received_at descending.
 
@@ -315,7 +316,7 @@ class ChannelMetadata(BaseModel):
     # ----------------------------------------------------------------------------------------------
     # DB operations: create
     # ----------------------------------------------------------------------------------------------
-    async def create(self, conn: Connection) -> ChannelMetadata:
+    async def create(self, conn: PoolConnectionProxy) -> ChannelMetadata:
         """
         Insert a new ChannelMetadata row.
         Raises an error if the channel_id already exists.
@@ -359,7 +360,7 @@ class ChannelMetadata(BaseModel):
     # ----------------------------------------------------------------------------------------------
     # DB operations: update
     # ----------------------------------------------------------------------------------------------
-    async def update(self, conn: Connection) -> ChannelMetadata:
+    async def update(self, conn: PoolConnectionProxy) -> ChannelMetadata:
         """
         Update mutable fields of an existing ChannelMetadata.
         Immutable fields: channel_id, channel_schema
@@ -404,7 +405,7 @@ class ChannelMetadata(BaseModel):
     # ----------------------------------------------------------------------------------------------
     # DB operations: delete
     # ----------------------------------------------------------------------------------------------
-    async def delete(self, conn: Connection) -> ChannelMetadata | None:
+    async def delete(self, conn: PoolConnectionProxy) -> ChannelMetadata | None:
         """
         Delete this channel from the database.
 

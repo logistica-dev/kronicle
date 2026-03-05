@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from asyncpg import Connection
+from asyncpg.pool import PoolConnectionProxy
 
 from kronicle.db.data.models.channel_metadata import ChannelMetadata
 from kronicle.db.data.models.channel_schema import ChannelSchema
@@ -259,11 +259,11 @@ class ChannelTimeseries:
     # ----------------------------------------------------------------------------------------------
     # DB operations
     # ----------------------------------------------------------------------------------------------
-    async def table_exists(self, conn: Connection) -> bool:
+    async def table_exists(self, conn: PoolConnectionProxy) -> bool:
         """Return True if the ChannelMetadata table exists."""
         return await table_exists(conn, namespace=self._NAMESPACE, table_name=self.table_name)
 
-    async def ensure_table(self, conn: Connection):
+    async def ensure_table(self, conn: PoolConnectionProxy):
         """Ensure the table exists in the database."""
         here = f"{mod}.ensure_table"
         if await self.table_exists(conn):
@@ -271,7 +271,7 @@ class ChannelTimeseries:
         await conn.execute(self.create_table_sql())
         log_d(here, "Table created:", self.table_name)
 
-    async def count_rows(self, conn: Connection) -> int:
+    async def count_rows(self, conn: PoolConnectionProxy) -> int:
         """
         Return the total number of rows in the channel's timeseries table.
         """
@@ -281,7 +281,7 @@ class ChannelTimeseries:
         result = await conn.fetchval(query)
         return result or 0
 
-    async def fetch(self, conn: Connection, *, filter: RequestFilter | None = None) -> ChannelTimeseries:
+    async def fetch(self, conn: PoolConnectionProxy, *, filter: RequestFilter | None = None) -> ChannelTimeseries:
         """
         Fetch rows from the timeseries table for this channel.
 
@@ -313,7 +313,7 @@ class ChannelTimeseries:
         return self
 
     async def insert(
-        self, conn: Connection, *, strict: bool = False, warnings: dict[str, str] | None = None
+        self, conn: PoolConnectionProxy, *, strict: bool = False, warnings: dict[str, str] | None = None
     ) -> ChannelTimeseries:
         """
         Insert all rows currently held in the ChannelTimeseries into the DB.
@@ -363,7 +363,7 @@ class ChannelTimeseries:
             )
         return self
 
-    async def delete(self, conn: Connection, *, filter: RequestFilter | None = None) -> ChannelTimeseries:
+    async def delete(self, conn: PoolConnectionProxy, *, filter: RequestFilter | None = None) -> ChannelTimeseries:
         """
         Delete rows in the timeseries table based on filter.
 
@@ -391,7 +391,7 @@ class ChannelTimeseries:
         self.set_rows([dict(r) for r in rows])
         return self
 
-    async def drop(self, conn: Connection) -> ChannelTimeseries | None:
+    async def drop(self, conn: PoolConnectionProxy) -> ChannelTimeseries | None:
         """
         Drop the entire timeseries table for this channel.
 

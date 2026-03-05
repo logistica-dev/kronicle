@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from asyncpg import Connection
+from asyncpg.pool import PoolConnectionProxy
 
 from kronicle.db.data.models.channel_metadata import ChannelMetadata
 from kronicle.db.data.models.channel_schema import ChannelSchema
@@ -139,12 +139,12 @@ class ChannelResource:
     def metadata_table_name(self) -> str:
         return ChannelMetadata.table_name()
 
-    async def metadata_table_exists(self, conn: Connection) -> bool:
+    async def metadata_table_exists(self, conn: PoolConnectionProxy) -> bool:
         """Return True if the ChannelMetadata table exists."""
         return await self.metadata.table_exists(conn)
 
     @classmethod
-    async def _fetch_metadata(cls, conn: Connection, channel_id: UUID) -> ChannelResource:
+    async def _fetch_metadata(cls, conn: PoolConnectionProxy, channel_id: UUID) -> ChannelResource:
         metadata = await ChannelMetadata.fetch_by_id(conn, channel_id)
         if not metadata:
             raise NotFoundError(f"No metadata found for UUID {channel_id}")
@@ -159,18 +159,18 @@ class ChannelResource:
     def timeseries_table_name(self) -> str:
         return self.timeseries.table_name
 
-    async def timeseries_table_exists(self, conn: Connection) -> bool:
+    async def timeseries_table_exists(self, conn: PoolConnectionProxy) -> bool:
         """Return True if the ChannelMetadata table exists."""
         return await self.timeseries.table_exists(conn)
 
-    async def ensure_timeseries_table(self, conn: Connection) -> None:
+    async def ensure_timeseries_table(self, conn: PoolConnectionProxy) -> None:
         await self.timeseries.ensure_table(conn)
 
-    async def count_rows(self, conn: Connection) -> int:
+    async def count_rows(self, conn: PoolConnectionProxy) -> int:
         self.row_nb = await self.timeseries.count_rows(conn)
         return self.row_nb
 
-    async def fetch_rows(self, conn: Connection, *, filter: RequestFilter | None = None) -> ChannelResource:
+    async def fetch_rows(self, conn: PoolConnectionProxy, *, filter: RequestFilter | None = None) -> ChannelResource:
         await self.count_rows(conn)
         if self.row_nb:
             await self.timeseries.fetch(conn, filter=filter)
@@ -178,7 +178,7 @@ class ChannelResource:
 
     async def insert_rows(
         self,
-        conn: Connection,
+        conn: PoolConnectionProxy,
         *,
         strict: bool = False,
     ):
@@ -187,7 +187,7 @@ class ChannelResource:
         await self.count_rows(conn)
         return self
 
-    async def delete_rows(self, conn: Connection, *, filter: RequestFilter | None = None):
+    async def delete_rows(self, conn: PoolConnectionProxy, *, filter: RequestFilter | None = None):
         await self.timeseries.delete(conn, filter=filter)
         await self.count_rows(conn)
         return self
@@ -197,7 +197,7 @@ class ChannelResource:
     # ----------------------------------------------------------------------------------------------
     async def create(
         self,
-        conn: Connection,
+        conn: PoolConnectionProxy,
         *,
         strict: bool = False,
     ) -> ChannelResource:
@@ -212,14 +212,18 @@ class ChannelResource:
         return self
 
     @classmethod
-    async def fetch(cls, conn: Connection, channel_id: UUID, *, filter: RequestFilter | None = None) -> ChannelResource:
+    async def fetch(
+        cls, conn: PoolConnectionProxy, channel_id: UUID, *, filter: RequestFilter | None = None
+    ) -> ChannelResource:
         resource = await cls._fetch_metadata(conn, channel_id)
         if resource.row_nb:
             await resource.fetch_rows(conn, filter=filter)
         return resource
 
     @classmethod
-    async def fetch_all(cls, conn: Connection, *, filter: RequestFilter | None = None) -> list[ChannelResource]:
+    async def fetch_all(
+        cls, conn: PoolConnectionProxy, *, filter: RequestFilter | None = None
+    ) -> list[ChannelResource]:
         metadata_list = await ChannelMetadata.fetch_all(conn)
         channel_list = []
         for metadata in metadata_list:
@@ -228,7 +232,7 @@ class ChannelResource:
             channel_list.append(channel)
         return channel_list
 
-    async def delete(self, conn: Connection) -> ChannelResource | None:
+    async def delete(self, conn: PoolConnectionProxy) -> ChannelResource | None:
         existing = await self.metadata.delete(conn)
         if not existing:
             return None
@@ -237,6 +241,6 @@ class ChannelResource:
         return self
 
     @classmethod
-    async def delete_channel_with_id(cls, conn: Connection, channel_id: UUID) -> ChannelResource | None:
+    async def delete_channel_with_id(cls, conn: PoolConnectionProxy, channel_id: UUID) -> ChannelResource | None:
         resource = await cls._fetch_metadata(conn, channel_id)
         return await resource.delete(conn)

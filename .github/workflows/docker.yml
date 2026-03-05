@@ -1,4 +1,5 @@
-name: Build, Test & Push Docker Image
+# .github/workflows/docker.yml
+name: Build, test & push Kronicle Docker image
 
 on:
   push:
@@ -31,30 +32,85 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Step 5: Start temporary TimescaleDB for testing
+      # Step 5: Build a temporary "init" image for DB initialization
+      - name: Build Kronicle Init Image
+        run: |
+          docker build \
+            -f docker/init/Dockerfile \
+            -t kronicle-init:latest \
+            .
+
+      # Step 6: Create a dedicated Docker network for DB + init container
+      - name: Create Docker network
+        run: docker network create kronicle-net || true
+
+      # Step 7: Start temporary TimescaleDB for testing
       - name: Start temporary TimescaleDB
         run: |
           docker run -d \
             --name kronicle-test-db \
-            -e POSTGRES_USER=${{ secrets.TEST_DB_USER }} \
-            -e POSTGRES_PASSWORD=${{ secrets.TEST_DB_PASSWORD }} \
-            -e POSTGRES_DB=${{ secrets.TEST_DB_NAME }} \
+            --network kronicle-net \
+            -e POSTGRES_USER=${{ secrets.POSTGRES_USER }} \
+            -e POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} \
+            -e POSTGRES_DB=${{ secrets.POSTGRES_DB }} \
             -p 5433:5432 \
+            --health-cmd="pg_isready -U $${POSTGRES_USER}" \
+            --health-interval=2s \
+            --health-timeout=2s \
+            --health-retries=30 \
             timescale/timescaledb:latest-pg16
-          echo "Waiting for DB to be ready..."
-          until docker exec kronicle-test-db pg_isready -U ${{ secrets.TEST_DB_USER }}; do sleep 1; done
 
-      # Step 6: Run Kronicle DB initialization
+          echo "Waiting for DB to be ready..."
+          MAX_WAIT=60
+          WAITED=0
+          while true; do
+            STATUS=$(docker inspect --format='{{.State.Health.Status}}' kronicle-test-db)
+            if [ "$STATUS" = "healthy" ]; then
+              echo "DB is ready"
+              break
+            elif [ "$STATUS" = "unhealthy" ]; then
+              echo "DB failed to start"
+              docker logs kronicle-test-db
+              exit 1
+            fi
+            sleep 1
+            WAITED=$((WAITED + 1))
+            if [ "$WAITED" -ge "$MAX_WAIT" ]; then
+              echo "DB did not become healthy within ${MAX_WAIT}s"
+              docker logs kronicle-test-db
+              exit 1
+            fi
+          done
+
+      # Step 8: Run Kronicle DB initialization inside the image
+      - name: Prepare env file
+        run: |
+          cat <<EOF > kronicle.env
+          KRONICLE_DB_HOST=${{ secrets.KRONICLE_DB_HOST }}
+          KRONICLE_DB_PORT=${{ secrets.KRONICLE_DB_PORT }}
+          KRONICLE_DB_NAME=${{ secrets.KRONICLE_DB_NAME }}
+
+          KRONICLE_DB_SU_CREDS=${{ secrets.KRONICLE_DB_SU_CREDS }}
+          KRONICLE_CHAN_CREDS=${{ secrets.KRONICLE_CHAN_CREDS }}
+          KRONICLE_RBAC_CREDS=${{ secrets.KRONICLE_RBAC_CREDS }}
+
+          KRONICLE_SU_INFO=${{ secrets.KRONICLE_SU_INFO }}
+
+          POSTGRES_DB=${{ secrets.POSTGRES_DB }}
+          POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+
+          DATABASE_URL="postgresql://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@host.docker.internal:5433/${{ secrets.POSTGRES_DB }}"
+          EOF
       - name: Run Kronicle DB init
         run: |
-          export DATABASE_URL="postgresql://${{ secrets.TEST_DB_USER }}:${{ secrets.TEST_DB_PASSWORD }}@localhost:5433/${{ secrets.TEST_DB_NAME }}"
-          python -m kronicle.db.init
+          docker run --rm --network kronicle-net --env-file kronicle.env kronicle-init:latest
 
-      # Step 7: Tear down the temporary DB
+      # Step 9: Tear down the temporary DB
       - name: Stop temporary DB
         run: docker stop kronicle-test-db && docker rm kronicle-test-db
 
-      # Step 8: Build and push the multi-arch Docker image
+      # Step 10: Build and push the multi-arch Docker image
       - name: Build and Push Kronicle
         uses: docker/build-push-action@v6
         with:

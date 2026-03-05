@@ -2,6 +2,7 @@
 from re import match
 
 from asyncpg import Connection, connect
+from asyncpg.pool import PoolConnectionProxy
 
 from kronicle.utils.dev_logs import log_d
 
@@ -61,7 +62,7 @@ async def verify_connection(dsn: str):
     return db_usr, host, db_name
 
 
-async def table_exists(conn: Connection, namespace: str, table_name: str) -> bool:
+async def table_exists(conn: Connection | PoolConnectionProxy, namespace: str, table_name: str) -> bool:
     """Return True if the table exists."""
     exists = await conn.fetchval(
         """

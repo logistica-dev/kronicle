@@ -1,4 +1,6 @@
 # kronicle/deps/settings.py
+from __future__ import annotations
+
 from configparser import ConfigParser, ExtendedInterpolation
 from functools import lru_cache
 from json import dumps
@@ -304,7 +306,7 @@ class Settings(BaseSettings):
         return "v1"
 
     @classmethod
-    def from_parser(cls, parser: ConfigParser) -> "Settings":
+    def from_parser(cls, parser: ConfigParser) -> Settings:
         """Create settings from a ConfigParser, with environment variable fallback."""
         return cls(
             app=AppSettings.from_parser(parser),
@@ -315,7 +317,7 @@ class Settings(BaseSettings):
         )
 
     @classmethod
-    def load_ini_file(cls, ini_path: str) -> "Settings":
+    def load_ini_file(cls, ini_path: str) -> Settings:
         """Load and parse INI file into a flat dictionary."""
         from configparser import ConfigParser
 

@@ -1,0 +1,53 @@
+# Python cache and virtualenvs
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+*.egg
+*.egg-info/
+dist/
+build/
+*.venv/
+.venv/
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+
+# Logs
+logs/
+*.log
+
+# Dev
+requirements-dev.txt
+prereq-install/
+.vscode
+*.code-workwpace
+pyright*
+.env
+reports
+codemeta.json
+conf/
+
+# Dev
+rbac_design/
+
+# Tests / local development
+tests/
+wip/
+
+# OS and editor files
+*.swp
+*.swo
+*.DS_Store
+Thumbs.db
+
+# Nextcloud / other unrelated folders (if any)
+nextcloud-data/
+npm-data/
+npm-letsencrypt/

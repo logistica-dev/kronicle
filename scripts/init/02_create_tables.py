@@ -16,29 +16,32 @@ from kronicle.db.base.kronicle_hierarchy import KronicleHierarchyMixin
 from kronicle.db.core.models import ALL_CORE_TABLES, CORE_NAMESPACE
 from kronicle.db.data.models import ALL_DATA_TABLES, DATA_NAMESPACE
 from kronicle.db.rbac.models import ALL_RBAC_TABLES, RBAC_NAMESPACE
-from kronicle.deps.settings import Settings
-from kronicle.utils.dev_logs import log_d, log_e, log_w
 from kronicle.utils.str_utils import validate_pg_identifier
-from scripts.utils.script_utils import get_conf, get_su_connection  # type:ignore
+from scripts.utils.logger import log_d, log_e, log_w  # type: ignore
+from scripts.utils.read_conf import KronicleConf, UserCreds  # type: ignore
 
 mod = "init.02_create_tables"
 
 
-def get_namespace_owners(conf: Settings):
+def get_namespace_owners(chan_usr: UserCreds, rbac_usr: UserCreds):
     """
     Map namespace -> owning user
     It is important to have Core namespace before RBAC one,
     so that the tables are created in this order.
     """
     namespace_owners = {
-        DATA_NAMESPACE: conf.db.usr,
-        CORE_NAMESPACE: conf.rbac.usr,  # <--- Core first
-        RBAC_NAMESPACE: conf.rbac.usr,  # <--- RBAC second
+        DATA_NAMESPACE: chan_usr,
+        CORE_NAMESPACE: rbac_usr,  # <--- Core first
+        RBAC_NAMESPACE: rbac_usr,  # <--- RBAC second
     }
     return namespace_owners
 
 
-async def create_namespaces_if_missing(su_conn, namespace_owners: dict[str, str], fail_on_owner_mismatch: bool = True):
+async def create_namespaces_if_missing(
+    db,
+    namespace_owners: dict[str, UserCreds],
+    fail_on_owner_mismatch: bool = True,
+):
     """
     Ensure schemas exist in the application database with the correct owner.
 
@@ -49,37 +52,38 @@ async def create_namespaces_if_missing(su_conn, namespace_owners: dict[str, str]
     """
     here = "create_namespaces_if_missing"
     for namespace, owner in namespace_owners.items():
+        username = owner.username
         validate_pg_identifier(namespace)
-        validate_pg_identifier(owner)
+        validate_pg_identifier(owner.username)
 
         log_d(here, "Check if schema exists...")
-        exists = await su_conn.fetchval("SELECT 1 FROM pg_namespace WHERE nspname=$1", namespace)
+        exists = await db.fetchval("SELECT 1 FROM pg_namespace WHERE nspname=$1", namespace)
 
         if not exists:
             # Schema does not exist: create it with the intended owner
-            await su_conn.execute(f'CREATE SCHEMA "{namespace}" AUTHORIZATION "{owner}"')
-            log_d(mod, f"Created schema '{namespace}' with owner '{owner}'")
+            await db.execute(f'CREATE SCHEMA "{namespace}" AUTHORIZATION "{username}"')
+            log_d(mod, f"Created schema '{namespace}' with owner '{username}'")
         else:
             log_d(here, "Schema exists: check actual owner...")
-            current_owner = await su_conn.fetchval(
+            current_owner = await db.fetchval(
                 "SELECT nspowner::regrole::text FROM pg_namespace WHERE nspname=$1",
                 namespace,
             )
-            if current_owner != owner:
-                msg = f"Schema '{namespace}' exists but is owned by '{current_owner}', expected '{owner}'"
+            if current_owner != owner.username:
+                msg = f"Schema '{namespace}' exists but is owned by '{current_owner}', expected '{username}'"
                 if fail_on_owner_mismatch:
                     log_w(mod, msg + " (owner left unchanged, failing)")
                     raise RuntimeError(msg)
                 else:
                     # Optionally, alter the owner instead of failing:
-                    await su_conn.execute(f'ALTER SCHEMA "{namespace}" OWNER TO "{owner}"')
+                    await db.execute(f'ALTER SCHEMA "{namespace}" OWNER TO "{username}"')
                     log_w(mod, msg + " (owner changed)")
             else:
-                log_d(mod, f"Schema '{namespace}' already exists with correct owner '{owner}'")
+                log_d(mod, f"Schema '{namespace}' already exists with correct owner '{username}'")
 
 
-def table_exists(conn, namespace, table_name):
-    return conn.execute(
+def table_exists(db, namespace, table_name):
+    return db.execute(
         text(
             """
                 SELECT EXISTS (
@@ -93,21 +97,21 @@ def table_exists(conn, namespace, table_name):
     ).scalar()
 
 
-def create_pydantic_tables(conn, models, namespace):
+def create_pydantic_tables(db, models, namespace):
     """Create tables from Pydantic models (like ChannelMetadata)"""
     here = f"{mod}.create_pydantic_tables"
     validate_pg_identifier(namespace)
-    conn.execute(text(f'SET search_path TO "{namespace}", public'))
+    db.execute(text(f'SET search_path TO "{namespace}", public'))
     for model in models:
         table_name = model.table_name()
-        if table_exists(conn, namespace, table_name):
+        if table_exists(db, namespace, table_name):
             log_d(here, f"Table '{namespace}.{table_name}' already exists")
             continue
-        conn.execute(text(model.create_table_sql()))
+        db.execute(text(model.create_table_sql()))
         log_d(here, f"Created table '{namespace}.{table_name}'")
 
 
-def create_sqlalchemy_tables(conn, tables, namespace):
+def create_sqlalchemy_tables(db, tables, namespace):
     """
     Create SQLAlchemy tables or views for a given namespace.
 
@@ -119,7 +123,7 @@ def create_sqlalchemy_tables(conn, tables, namespace):
     validate_pg_identifier(namespace)
 
     # Ensure search_path is set for this connection
-    conn.execute(text(f'SET search_path TO "{namespace}", public'))
+    db.execute(text(f'SET search_path TO "{namespace}", public'))
 
     for table in tables:
         # Declarative models have __table__, standalone Table objects do not
@@ -135,14 +139,14 @@ def create_sqlalchemy_tables(conn, tables, namespace):
         is_view = getattr(table_cls, "is_view", False)
 
         # --- Create table or view ---
-        if table_exists(conn, namespace, table_name):
+        if table_exists(db, namespace, table_name):
             log_d(here, "View" if is_view else "Table", f"'{namespace}.{table_name}' already exists")
         else:
 
             if is_view:
                 # Create view if KronicleView
                 log_d(here, f"Creating view '{namespace}.{table_name}' ({cls_name})...")
-                conn.execute(text(table_cls.create_view_sql()))
+                db.execute(text(table_cls.create_view_sql()))
                 log_d(here, f"Created view '{namespace}.{table_name}'")
                 continue  # No hierarchy setup needed, we can skip the rest
             else:
@@ -152,7 +156,7 @@ def create_sqlalchemy_tables(conn, tables, namespace):
                 table_obj.schema = namespace
                 # Create the table (DDL) and commit immediately
                 try:
-                    table_obj.create(bind=conn, checkfirst=True)
+                    table_obj.create(bind=db, checkfirst=True)
                     log_d(here, f"Created table '{namespace}.{table_name}'")
                 except Exception as e:
                     log_e(here, f"Table creation failed for '{namespace}.{table_name}'")
@@ -166,51 +170,51 @@ def create_sqlalchemy_tables(conn, tables, namespace):
 
             hierarchy_table = getattr(table_cls, "_hierarchy_table", None)
             if hierarchy_table is not None:
-                if table_exists(conn, namespace, hierarchy_table.name):
+                if table_exists(db, namespace, hierarchy_table.name):
                     log_d(here, f"Hierarchy table '{namespace}.{hierarchy_table.name}' already exists")
                 else:
                     log_d(here, f"Creating hierarchy table '{namespace}.{hierarchy_table.name}'")
                     hierarchy_table.schema = namespace
-                    create_sqlalchemy_tables(conn, [hierarchy_table], namespace)
+                    create_sqlalchemy_tables(db, [hierarchy_table], namespace)
 
 
 async def main():
-    log_d(mod, "Retrieve conf...")
-    conf = get_conf()
-
-    log_d(mod, "Ensure superuser exists...")
-    su_conn = await get_su_connection(conf.db)
+    log_d(mod, "Loading configuration...")
+    conf = KronicleConf.read_conf()
+    namespace_owners = get_namespace_owners(chan_usr=conf.chan_creds, rbac_usr=conf.rbac_creds)
 
     log_d("----- Step 1: ensure schemas exist with correct owners")
     log_d(mod, "Create namespaces if missing...")
-    namespace_owners = get_namespace_owners(conf)
-    await create_namespaces_if_missing(su_conn, namespace_owners, fail_on_owner_mismatch=False)
+    async with conf.db.session() as su_conn:
+        await create_namespaces_if_missing(su_conn, namespace_owners, fail_on_owner_mismatch=False)
     await su_conn.close()
     log_d(mod, "Superuser connection closed after schema verification")
 
     log_d("----- Step 2: create tables using the owning users")
     # --- Create tables per owner ---
     for namespace, owner in namespace_owners.items():
-        db_url = conf.db.connection_url if owner == conf.db.usr else conf.rbac.connection_url
-        log_d(mod, f"Connecting as '{owner}' to create tables in '{namespace}'...")
+        dsn = conf.db.dsn(owner)
+
+        log_d(mod, f"Connecting as '{owner.username}' to create tables in '{namespace}'...")
         engine = create_engine(
-            db_url,
+            dsn,
             connect_args={"options": f"-c search_path={namespace},public"},
             isolation_level="AUTOCOMMIT",
             future=True,
         )
 
-        with engine.connect() as conn:
+        with engine.connect() as db:
             # Set search_path for this connection
-            conn.execute(text(f"SET search_path TO {namespace}, public"))
+            db.execute(text(f"SET search_path TO {namespace}, public"))
 
             # Data namespace: Pydantic
             if namespace == DATA_NAMESPACE:
-                create_pydantic_tables(conn, ALL_DATA_TABLES, namespace)
+                create_pydantic_tables(db, ALL_DATA_TABLES, namespace)
+
             # Core/RBAC: SQLAlchemy
             else:
                 tables = ALL_CORE_TABLES if namespace == CORE_NAMESPACE else ALL_RBAC_TABLES
-                create_sqlalchemy_tables(conn, tables, namespace)
+                create_sqlalchemy_tables(db, tables, namespace)
 
     log_d(mod, "Tables initialization complete.")
 

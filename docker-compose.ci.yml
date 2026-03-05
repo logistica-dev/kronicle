@@ -1,3 +1,4 @@
+# ./docker-compose.ci.yml
 version: "3.9"
 
 services:
@@ -25,15 +26,19 @@ services:
   init:
     build:
       context: .
-      dockerfile: docker/db/Dockerfile
+      dockerfile: docker/init/Dockerfile
     depends_on:
       db:
         condition: service_healthy
     environment:
-      KRONICLE_RBAC_URL: ${KRONICLE_RBAC_URL}
-      KRONICLE_SU_NAME: ${KRONICLE_SU_NAME}
-      KRONICLE_SU_EMAIL: ${KRONICLE_SU_EMAIL}
-      KRONICLE_SU_PWD: ${KRONICLE_SU_PWD}
+      KRONICLE_DB_HOST: ${KRONICLE_DB_HOST}
+      KRONICLE_DB_PORT: ${KRONICLE_DB_PORT}
+      KRONICLE_DB_NAME: ${KRONICLE_DB_NAME}
+
+      KRONICLE_CHAN_CREDS: ${KRONICLE_CHAN_CREDS}
+      KRONICLE_RBAC_CREDS: ${KRONICLE_RBAC_CREDS}
+
+      KRONICLE_SU_INFO: ${KRONICLE_SU_INFO}
     restart: "no"
     entrypoint:
       ["/opt/kronicle/.venv/bin/python", "/opt/kronicle/scripts/init/init.py"]

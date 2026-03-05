@@ -105,4 +105,4 @@ ignore = ["E501"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["kronicle"]
-known-third-party = ["asyncpg", "casbin_sqlalchemy_adapter", "casbin"]
+known-third-party = ["asyncpg"]
