@@ -195,3 +195,7 @@ class KronicleConf:
 
 def log_d(here, *args):
     print(f"[{here}]", *args)
+
+
+if __name__ == "__main__":  # pragma: no cover
+    pass

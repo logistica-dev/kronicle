@@ -8,11 +8,14 @@ services:
   db:
     image: timescale/timescaledb:latest-pg16 # Use latest TimescaleDB image (PostgreSQL 16)
     container_name: kronicle-db
+    env_file:
+      - .secrets
+      - .env
     environment:
       # Set from env file or .env
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-kronicle}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - kronicle-db-data:/var/lib/postgresql/data # Persist DB data
     ports:
@@ -32,7 +35,9 @@ services:
   app:
     image: ghcr.io/logistica-dev/kronicle:latest
     container_name: kronicle-app
-
+    env_file:
+      - .secrets
+      - .env
     build:
       context: .
       dockerfile: docker/init/Dockerfile
@@ -40,11 +45,13 @@ services:
       db:
         condition: service_healthy
     environment:
-      KRONICLE_DB_HOST: ${KRONICLE_DB_HOST}
-      KRONICLE_DB_PORT: ${KRONICLE_DB_PORT}
-      KRONICLE_DB_NAME: ${KRONICLE_DB_NAME}
+      KRONICLE_DB_HOST: db
+      KRONICLE_DB_PORT: 5432
+      KRONICLE_DB_NAME: ${POSTGRES_DB}
 
-      KRONICLE_DB_SU_CREDS: ${KRONICLE_DB_SU_CREDS}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
       KRONICLE_CHAN_CREDS: ${KRONICLE_CHAN_CREDS}
       KRONICLE_RBAC_CREDS: ${KRONICLE_RBAC_CREDS}
 
