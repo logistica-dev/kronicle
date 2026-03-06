@@ -21,6 +21,7 @@ Expected environment variables:
 
     KRONICLE_CHAN_CREDS   : Base64 encoded "chan_usr:chan_pwd"
     KRONICLE_RBAC_CREDS   : Base64 encoded "rbac_usr:rbac_pwd"
+
 """
 
 DB_HOST = "KRONICLE_DB_HOST"
