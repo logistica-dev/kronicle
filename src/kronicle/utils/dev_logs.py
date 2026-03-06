@@ -6,6 +6,7 @@ from time import time
 
 from rich.logging import RichHandler
 from rich.markup import escape
+from rich.text import Text
 
 from kronicle.utils.str_utils import enforce_length
 
@@ -22,6 +23,13 @@ LEVEL_SHORT = {
     ERROR: "E",
     CRITICAL: "C",
 }
+
+
+# Subclass RichHandler to remove the padding
+class OneLetterRichHandler(RichHandler):
+    def get_level_text(self, record):
+        # Don't pad with spaces; keep the levelname as-is
+        return Text.styled(record.levelname, f"logging.level.{record.levelname.lower()}")
 
 
 class SingleLetterFormatter(Formatter):
@@ -54,7 +62,7 @@ def setup_logging():
     basic_formatter = SingleLetterFormatter("%(message)s")
     basic_formatter.datefmt = DATE_FORMAT
 
-    basic_handler = RichHandler(
+    basic_handler = OneLetterRichHandler(
         show_time=True,
         rich_tracebacks=True,
         markup=True,
