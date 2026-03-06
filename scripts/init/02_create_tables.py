@@ -102,7 +102,7 @@ def create_pydantic_tables(db, models, namespace):
     namespace = normalize_pg_identifier(namespace)
     db.execute(text(f"SET search_path TO {namespace}, public"))
     for model in models:
-        table_name = model.table_name()
+        table_name = model.tablename()
         if table_exists(db, namespace, table_name):
             log_d(here, f"Table '{namespace}.{table_name}' already exists")
             continue

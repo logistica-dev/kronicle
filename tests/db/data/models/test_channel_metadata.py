@@ -107,9 +107,9 @@ def test_received_at_tzinfo(sample_metadata):
 # --------------------------------------------------------------------------------------
 
 
-def test_namespace_and_table_name():
+def test_namespace_and_tablename():
     assert ChannelMetadata.namespace() == "data"
-    assert ChannelMetadata.table_name() == "channel_metadata"
+    assert ChannelMetadata.tablename() == "channel_metadata"
 
 
 def test_table_schema_is_copy():

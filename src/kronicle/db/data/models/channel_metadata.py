@@ -97,7 +97,7 @@ class ChannelMetadata(BaseModel):
     #     return {"schema": cls.namespace()}
 
     @classmethod
-    def table_name(cls):
+    def tablename(cls):
         return str(cls._TABLE_NAME)
 
     @classmethod
@@ -203,13 +203,13 @@ class ChannelMetadata(BaseModel):
     @classmethod
     async def table_exists(cls, conn: PoolConnectionProxy) -> bool:
         """Return True if the ChannelMetadata table exists."""
-        return await table_exists(conn, namespace=cls.namespace(), table_name=cls.table_name())
+        return await table_exists(conn, namespace=cls.namespace(), table_name=cls.tablename())
 
     @classmethod
     def create_table_sql(cls) -> str:
         """Return SQL to create table in Postgres."""
         namespace = normalize_pg_identifier(cls.namespace())
-        tablename = normalize_pg_identifier(cls.table_name())
+        tablename = normalize_pg_identifier(cls.tablename())
         return f"CREATE TABLE {namespace}.{tablename} ({cls.get_schema_defs()});"
 
     @classmethod
@@ -218,7 +218,7 @@ class ChannelMetadata(BaseModel):
         if await cls.table_exists(conn):
             return
         await conn.execute(cls.create_table_sql())
-        log_d("ChannelMetadata.ensure_table", "Table created:", cls.table_name())
+        log_d("ChannelMetadata.ensure_table", "Table created:", cls.tablename())
 
     # ----------------------------------------------------------------------------------------------
     # DB operations: read/fetch
@@ -239,7 +239,7 @@ class ChannelMetadata(BaseModel):
         """
         ensure_uuid4(channel_id)
         sql = f"""
-        SELECT * FROM {cls.namespace()}.{cls.table_name()} WHERE channel_id = $1
+        SELECT * FROM {cls.namespace()}.{cls.tablename()} WHERE channel_id = $1
         """
         row = await conn.fetchrow(sql, channel_id)
         if not row:
@@ -260,7 +260,7 @@ class ChannelMetadata(BaseModel):
         """
         normalized_name = normalize_to_snake_case(name)
         sql = f"""
-        SELECT * FROM {cls.namespace()}.{cls.table_name()}
+        SELECT * FROM {cls.namespace()}.{cls.tablename()}
         WHERE name = $1
         """
         row = await conn.fetchrow(sql, normalized_name)
@@ -290,7 +290,7 @@ class ChannelMetadata(BaseModel):
         tag_filter = dumps(normalized_tags)
 
         sql = f"""
-        SELECT * FROM {cls.namespace()}.{cls.table_name()}
+        SELECT * FROM {cls.namespace()}.{cls.tablename()}
         WHERE tags @> $1
         ORDER BY received_at DESC
         """
@@ -310,7 +310,7 @@ class ChannelMetadata(BaseModel):
             List of ChannelMetadata objects
         """
         sql = f"""
-        SELECT * FROM {cls.namespace()}.{cls.table_name()} ORDER BY received_at DESC
+        SELECT * FROM {cls.namespace()}.{cls.tablename()} ORDER BY received_at DESC
         """
         rows = await conn.fetch(sql)
         return [cls.from_db(dict(r)) for r in rows]
@@ -332,7 +332,7 @@ class ChannelMetadata(BaseModel):
         columns = list(self.table_schema().keys())
         placeholders = [f"${i + 1}" for i in range(len(columns))]
         sql = f"""
-        INSERT INTO {self.namespace()}.{self.table_name()} ({", ".join(columns)})
+        INSERT INTO {self.namespace()}.{self.tablename()} ({", ".join(columns)})
         VALUES ({", ".join(placeholders)});
         RETURNING *;
         """
@@ -346,11 +346,11 @@ class ChannelMetadata(BaseModel):
         except UniqueViolationError as e:
             # Determine which field caused the violation
             constraint = getattr(e, "constraint_name", "")  # asyncpg sets this if the DB reports the constraint name
-            if constraint == f"{self.table_name()}_pkey":
+            if constraint == f"{self.tablename()}_pkey":
                 raise ConflictError(
                     "ChannelMetadata with this ID already exists", details={"channel_id": str(self.channel_id)}
                 ) from e
-            elif constraint == f"{self.table_name()}_name_key":
+            elif constraint == f"{self.tablename()}_name_key":
                 raise ConflictError("ChannelMetadata with this name already exists", details={"name": self.name}) from e
             else:
                 # fallback: include original error args
@@ -379,7 +379,7 @@ class ChannelMetadata(BaseModel):
         placeholders = [f"${i + 1}" for i in range(len(columns) + 1)]  # +1 for WHERE
 
         sql = f"""
-            UPDATE {self.namespace()}.{self.table_name()}
+            UPDATE {self.namespace()}.{self.tablename()}
             SET {", ".join(f"{col} = {placeholders[idx]}" for idx, col in enumerate(columns))}
             WHERE channel_id = {placeholders[-1]}
             RETURNING *;
@@ -396,7 +396,7 @@ class ChannelMetadata(BaseModel):
             return self.update_with_db(row)
         except UniqueViolationError as e:
             constraint = getattr(e, "constraint_name", "")
-            if constraint == f"{self.table_name()}_name_key":
+            if constraint == f"{self.tablename()}_name_key":
                 raise ConflictError("Another channel with this name already exists", details={"name": self.name}) from e
             else:
                 raise ConflictError(
@@ -419,7 +419,7 @@ class ChannelMetadata(BaseModel):
             return None
 
         sql = f"""
-        DELETE FROM {self.namespace()}.{self.table_name()}
+        DELETE FROM {self.namespace()}.{self.tablename()}
         WHERE channel_id = $1
         RETURNING *;
         """

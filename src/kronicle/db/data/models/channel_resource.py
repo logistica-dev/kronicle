@@ -137,7 +137,7 @@ class ChannelResource:
     # ----------------------------------------------------------------------------------------------
     @property
     def metadata_table_name(self) -> str:
-        return ChannelMetadata.table_name()
+        return ChannelMetadata.tablename()
 
     async def metadata_table_exists(self, conn: PoolConnectionProxy) -> bool:
         """Return True if the ChannelMetadata table exists."""
