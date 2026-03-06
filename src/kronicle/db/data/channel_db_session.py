@@ -95,8 +95,8 @@ class ChannelDbSession:
         await conn.set_type_codec(
             "jsonb",
             schema="pg_catalog",
-            encoder=dumps,  # asyncpg handles dict -> JSONB
-            decoder=loads,
+            encoder=dumps,  # converts Python dict -> JSON string # asyncpg handles dict -> JSONB
+            decoder=loads,  # converts JSON string -> Python dict
         )
 
     # ----------------------------------------------------------------------------------------------

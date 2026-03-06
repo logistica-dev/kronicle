@@ -22,7 +22,10 @@ def app_error_handler(request: Request, exc: KronicleAppError) -> JSONResponse:
     Returns:
         JSONResponse with standardized error payload
     """
-    log_e(f"KronicleAppError '{exc.status_code}' at {request.method.upper()} {request.url.path}: {exc.detail}")
+    log_e(
+        "app_err_handler",
+        f"KronicleAppError '{exc.status_code}' at {request.method.upper()} {request.url.path}: {exc.detail}",
+    )
     return exc.to_error_json(request=request)
 
 

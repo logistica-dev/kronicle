@@ -18,7 +18,9 @@ _ALLOWED_CHARS = "A-Za-z0-9_ .@-"
 _USERNAME_MIN_LENGTH = 4
 _USERNAME_MAX_LENGTH = 64
 # Regex: first char is letter, rest are from ALLOWED_CHARS, total length 4–64
-_USERNAME_REGEX = rf"[A-Za-z][{_ALLOWED_CHARS}]{{{_USERNAME_MIN_LENGTH-1},{_USERNAME_MAX_LENGTH-1}}}"
+_USERNAME_REGEX = rf"[A-Za-z][{_ALLOWED_CHARS}]{{{_USERNAME_MIN_LENGTH - 1},{_USERNAME_MAX_LENGTH - 1}}}"
+
+mod = "outusr"
 
 
 class InputUserLogin(BaseModel):
@@ -123,6 +125,8 @@ class ProcessedUser(BaseModel):
 
     @classmethod
     def from_input(cls, data: InputUser):
+        here = "proc.from_input"
+        log_d(here)
         hashed = pwd_manager.hash_password(data.password)  # password validation takes place there.
         return ProcessedUser(
             email=data.email,
@@ -168,9 +172,9 @@ class OutputUser(BaseModel):
     @classmethod
     def from_db_user(cls, db_user: RbacUser) -> "OutputUser":
         """Convert this processed user data into a RbacUser for persistence."""
-        here = "outuser.from_db_user"
-        log_d(here, "db_user", db_user)
-        log_d(here, "db_user.is_superuser", db_user.is_superuser)
+        # here = f"{mod}.from_db_user"
+        # log_d(here, "db_user", db_user)
+        # log_d(here, "db_user.is_superuser", db_user.is_superuser)
         usr = cls(
             id=db_user.id,
             email=db_user.email,
@@ -179,8 +183,7 @@ class OutputUser(BaseModel):
         )
         if db_user.is_superuser:
             usr._set_su()
-        log_d(here, "usr.is_superuser", usr.is_su)
-
+        # log_d(here, "usr.is_superuser", usr.is_su)
         return usr
 
     # Include is_su in dict/json output

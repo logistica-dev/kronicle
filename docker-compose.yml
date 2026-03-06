@@ -1,4 +1,4 @@
-# ./docker-compose.ci.yml
+# ./docker-compose.yml
 version: "3.9"
 
 services:
@@ -6,13 +6,15 @@ services:
   # TimescaleDB / PostgreSQL
   # --------------------------
   db:
-    image: timescale/timescaledb:latest-pg15
+    image: timescale/timescaledb:latest-pg16 # Use latest TimescaleDB image (PostgreSQL 16)
     container_name: kronicle-db
-    restart: always
     environment:
+      # Set from env file or .env
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-kronicle}
+    volumes:
+      - kronicle-db-data:/var/lib/postgresql/data # Persist DB data
     ports:
       - "5432:5432" # optional, local access
     healthcheck:
@@ -20,11 +22,17 @@ services:
       interval: 2s
       retries: 15
       timeout: 2s
+    networks:
+      - kronicle-net # Shared network for app <> db communication
+    restart: unless-stopped # Automatically restart unless stopped manually
 
   # --------------------------
   # Kronicle DB/init container
   # --------------------------
-  init:
+  app:
+    image: ghcr.io/logistica-dev/kronicle:latest
+    container_name: kronicle-app
+
     build:
       context: .
       dockerfile: docker/init/Dockerfile
@@ -36,10 +44,23 @@ services:
       KRONICLE_DB_PORT: ${KRONICLE_DB_PORT}
       KRONICLE_DB_NAME: ${KRONICLE_DB_NAME}
 
+      KRONICLE_DB_SU_CREDS: ${KRONICLE_DB_SU_CREDS}
       KRONICLE_CHAN_CREDS: ${KRONICLE_CHAN_CREDS}
       KRONICLE_RBAC_CREDS: ${KRONICLE_RBAC_CREDS}
 
       KRONICLE_SU_INFO: ${KRONICLE_SU_INFO}
-    restart: "no"
-    entrypoint:
-      ["/opt/kronicle/.venv/bin/python", "/opt/kronicle/scripts/init/init.py"]
+    networks:
+      - kronicle-net # Same network as db
+    restart: unless-stopped # Keep container running unless manually stopped
+
+# ------------------------------
+# Persisted volumes
+# ------------------------------
+volumes:
+  kronicle-db-data: # Persistent data for TimescaleDB
+
+# ------------------------------
+# Shared network
+# ------------------------------
+networks:
+  kronicle-net: # Custom network for container communication

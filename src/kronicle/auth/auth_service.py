@@ -1,12 +1,11 @@
 # kronicle/auth/auth_service.py
-
-
 from kronicle.auth.jwt_service import JWTService
 from kronicle.auth.pwd.pwd_manager import PasswordManager
 from kronicle.db.rbac.models.rbac_user import RbacUser
 from kronicle.errors.error_types import UnauthorizedError
 from kronicle.schemas.rbac.user_schemas import InputUserLogin, OutputUser
 from kronicle.services.rbac_service import RbacService
+from kronicle.utils.dev_logs import log_w
 
 
 class AuthService:
@@ -36,15 +35,20 @@ class AuthService:
 
         Raises UnauthorizedError if credentials are invalid.
         """
+        here = "login"
         db_user: RbacUser | None = self._rbac_service.fetch_user_for_auth(login_input)
 
         if not db_user or not db_user.is_active or not db_user.password_hash:
+            log_w(here, "User does not exist")
             raise UnauthorizedError("Invalid credentials")
 
         # Verify raw password against stored hash
-        if not self._pwd_manager.verify_password(db_user.password_hash, login_input.password):
-            raise UnauthorizedError("Invalid credentials")
-
+        try:
+            if not self._pwd_manager.verify_password(db_user.password_hash, login_input.password):
+                raise UnauthorizedError("Invalid credentials")
+        except Exception as e:
+            log_w(here, "Password verification failed (mismatch)")
+            raise UnauthorizedError("Invalid credentials") from e
         # Rehash if Argon2 parameters changed
         if self._pwd_manager.needs_rehash(db_user.password_hash):
             new_hash = self._pwd_manager.rehash_password(db_user.password_hash, login_input.password)

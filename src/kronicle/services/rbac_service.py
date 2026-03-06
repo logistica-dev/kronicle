@@ -7,6 +7,7 @@ from kronicle.db.rbac.rbac_db_session import RbacDbSession
 from kronicle.db.rbac.rbac_engine import RbacEngine
 from kronicle.errors.error_types import NotFoundError, UnauthorizedError
 from kronicle.schemas.rbac.user_schemas import InputUserLogin, OutputUser, ProcessedUser
+from kronicle.utils.dev_logs import log_d
 
 """
 FastAPI validates inputs.
@@ -15,6 +16,8 @@ RbacDbSession provides session/connection context.
 RbacEngine orchestrates multi-table actions using the session.
 Table classes perform simple CRUD and return results.
 """
+
+mod = "rbacs"
 
 
 class RbacService:
@@ -63,11 +66,16 @@ class RbacService:
     # Write: create user
     # ----------------------------------------------------------------------------------------------
     def create_user(self, user: ProcessedUser) -> OutputUser:
+        here = f"{mod}.create_usr"
+        log_d(here, "user", user.name)
         rbac_user = user.to_db_user()
+        log_d(here, "rbac_user", rbac_user.name)
+
         with self._db.transaction() as db:
             existing = self._engine.fetch_user_by_email(db=db, email=rbac_user.email)
             if existing:
                 raise UnauthorizedError("User already exists")
+            log_d(here, rbac_user.name)
             db_user = self._engine.create_user(db=db, user=rbac_user)
         out_user = OutputUser.from_db_user(db_user)
         return out_user

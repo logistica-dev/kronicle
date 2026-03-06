@@ -31,6 +31,7 @@ COPY requirements.txt .
 # Create venv and install dependencies
 # -----------------------------
 RUN python -m venv .venv
+ENV PYTHONPATH="/opt/kronicle/src:/opt/kronicle"
 ENV PATH="/opt/kronicle/.venv/bin:$PATH"
 RUN . .venv/bin/activate \
     && pip install --upgrade pip \
@@ -50,4 +51,4 @@ RUN chmod -R +x scripts/init
 # Entrypoint
 # ------------------------------------------------------------------------------
 # Activate venv and run Python bootstrap script
-ENTRYPOINT ["python", "/opt/kronicle/docker/app/entrypoint.sh"]
+ENTRYPOINT ["python", "/opt/kronicle/docker/app/entrypoint.py"]
