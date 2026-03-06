@@ -1,4 +1,5 @@
-# scripts/utils/read_conf.py
+# kronicle/deps/env_var.py
+
 from __future__ import annotations
 
 import os
@@ -18,29 +19,22 @@ Expected environment variables:
     KRONICLE_DB_PORT
     KRONICLE_DB_NAME
 
-    KRONICLE_DB_SU_CREDS  : Base64 encoded "db_su_usr:db_su_pwd"
     KRONICLE_CHAN_CREDS   : Base64 encoded "chan_usr:chan_pwd"
     KRONICLE_RBAC_CREDS   : Base64 encoded "rbac_usr:rbac_pwd"
-
-    KRONICLE_SU_INFO      : Base64 encoded "adminuser:admin@example.com:encryptedpwd"
 """
 
 DB_HOST = "KRONICLE_DB_HOST"
 DB_PORT = "KRONICLE_DB_PORT"
 DB_NAME = "KRONICLE_DB_NAME"
 
-DB_SU_CREDS = "KRONICLE_DB_SU_CREDS"  # b64(db_su_usr:db_su_pwd)
 CHAN_CREDS = "KRONICLE_CHAN_CREDS"  # b64(chan_usr:chan_pwd)
 RBAC_CREDS = "KRONICLE_RBAC_CREDS"  # b64(rbac_usr:rbac_pwd)
-
-APP_SU_INFO = "KRONICLE_SU_INFO"  # b64(adminuser:admin@example.com:encryptedpwd)
 
 
 @dataclass
 class UserCreds:
     username: str
     password: str
-    email: str | None = None
 
     @property
     def creds(self):
@@ -85,26 +79,6 @@ class ChanneDbCreds(EnvUserCreds):
 class RbacDbCreds(EnvUserCreds):
     _env = RBAC_CREDS
     _how = "must be b64(rbac_usr:rbac_pwd)"
-
-
-class DbSuCreds(EnvUserCreds):
-    _env = DB_SU_CREDS
-    _how = "must be b64(db_su_usr:db_su_pwd)"
-
-
-@dataclass
-class AppSuperuser(EnvUserCreds):
-    _env = APP_SU_INFO
-    _how = "must be b64(username:email:argon_encrypted_password)"
-
-    @classmethod
-    def from_env(cls):
-        su_decoded = cls.get_env()
-        try:
-            su_usr, su_email, su_pwd = su_decoded.split(":", 2)
-        except ValueError as e:
-            raise RuntimeError(f"{cls._env} {cls._how}") from e
-        return AppSuperuser(username=su_usr, email=su_email, password=su_pwd)
 
 
 @dataclass
@@ -167,31 +141,15 @@ class DbAccess:
 
 
 @dataclass
-class KronicleConf:
-    db_su: DbSuCreds
+class KronicleDbConf:
     chan_creds: ChanneDbCreds
     rbac_creds: RbacDbCreds
-    app_su: AppSuperuser
     db: DbAccess
 
     @classmethod
-    def read_conf(cls) -> KronicleConf:
-        pg_usr = os.getenv("POSTGRES_USER", "postgres")
-        pg_pwd = os.getenv("POSTGRES_PASSWORD", "postgres")
-        if pg_usr and pg_pwd:
-            db_su = DbSuCreds(username=pg_usr, password=pg_pwd)
-        else:
-            db_su = DbSuCreds.from_env()
+    def from_env(cls) -> KronicleDbConf:
+        rbac_creds = RbacDbCreds.from_env()
+        chan_creds = ChanneDbCreds.from_env()
 
-        db_access = DbAccess.from_env(default_creds=db_su)
-        return cls(
-            db_su=db_su,
-            db=db_access,
-            chan_creds=ChanneDbCreds.from_env(),
-            rbac_creds=RbacDbCreds.from_env(),
-            app_su=AppSuperuser.from_env(),
-        )
-
-
-def log_d(here, *args):
-    print(f"[{here}]", *args)
+        db_access = DbAccess.from_env(default_creds=chan_creds)
+        return cls(db=db_access, rbac_creds=rbac_creds, chan_creds=chan_creds)

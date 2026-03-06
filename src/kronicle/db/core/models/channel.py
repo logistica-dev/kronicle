@@ -20,6 +20,6 @@ if __name__ == "__main__":  # pragma: no cover
     print(Channel.namespace())  # prints core => OK
     print(Channel.table_args())  # prints {'schema': 'core'} => OK
     conf = get_settings(".conf/config.ini")
-    engine = create_engine(conf.rbac.connection_url, future=True)
+    engine = create_engine(conf.rbac.channel_connection_url, future=True)
 
     Channel.validate_table(engine)

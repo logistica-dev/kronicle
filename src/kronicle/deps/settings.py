@@ -8,12 +8,13 @@ from os import getenv
 from typing import Any, ClassVar, TypeVar
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, ConfigDict, Field, PostgresDsn, SecretStr, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from kronicle.deps.env_var import KronicleDbConf
 from kronicle.utils.dev_logs import log_d
 from kronicle.utils.file_utils import check_is_file, expand_file_path
-from kronicle.utils.str_utils import normalize_pg_identifier, strip_quotes
+from kronicle.utils.str_utils import strip_quotes
 
 # --------------------------------------------------------------------------------------------------
 # Constants
@@ -158,69 +159,41 @@ class JWTSettings(IniSection):
         return v
 
 
-class DBSettings(IniSection):
-    """Channel/metadata database settings."""
+class DBSettings:
+    """
+    Channel/metadata database settings.
+    These are extracted from environment variables.
+    """
 
-    section = "db"
+    def __init__(self) -> None:
+        _env = KronicleDbConf.from_env()
+        self._env = _env
 
-    db_usr: str = Field(min_length=6)
-    db_pwd: SecretStr = Field(min_length=6)
-    db_name: str = Field(min_length=1)
-    db_host: str = "localhost"
-    db_port: int = Field(ge=1024, le=65535, default=5432)
-    db_connection_url: SecretStr | None = None
-    su_url: SecretStr | None = None
+        self._host: str = _env.db.host
+        self._port: int = _env.db.port
+        self._name: str = _env.db.name  # already gone through normalize_pg_identifier
 
-    @field_validator("db_usr", "db_name")
-    @classmethod
-    def normalize_pg_identifier(cls, v: str) -> str:
-        """
-        Ensure the DB username and database name contain only safe characters.
-        Only letters, numbers, and underscores are allowed.
-        """
-        return normalize_pg_identifier(v)
+        self._chan_usr: str = _env.chan_creds.username  # already gone through normalize_pg_identifier
+        self._chan_pwd: SecretStr = SecretStr(_env.chan_creds.password)
 
-    @property
-    def usr(self) -> str:
-        return self.db_usr
+        self._rbac_usr: str = _env.rbac_creds.username  # already gone through normalize_pg_identifier
+        self._rbac_pwd: SecretStr = SecretStr(_env.rbac_creds.password)
+
+    def get_connection_url(self, usr: str, pwd: str) -> str:
+        return f"postgresql://{usr}:{pwd}@{self._host}:{self._port}/{self._name}"
 
     @property
-    def pwd(self) -> str:
-        return self.db_pwd.get_secret_value()
+    def channel_connection_url(self) -> str:
+        return self.get_connection_url(usr=self._chan_usr, pwd=self._chan_pwd.get_secret_value())
 
     @property
-    def host(self) -> str:
-        return self.db_host
-
-    @property
-    def port(self) -> int:
-        return self.db_port
-
-    @property
-    def name(self) -> str:
-        return self.db_name
-
-    @property
-    def connection_url(self) -> str:
-        if self.db_connection_url:
-            return str(self.db_connection_url.get_secret_value())
-        return f"postgresql://{self.usr}:{self.pwd}@{self.host}:{self.port}/{self.name}"
-
-    def get_connection_url(self, usr: str | None, pwd: str | None) -> str:
-        return f"postgresql://{usr}:{pwd}@{self.host}:{self.port}/{self.name}"
-
-    @property
-    def su_connection_url(self) -> str:
-        if self.su_url:
-            return str(self.su_url.get_secret_value())
-        raise ValueError("SU Postgres URL is missing")
+    def rbac_connection_url(self) -> str:
+        return self.get_connection_url(usr=self._rbac_usr, pwd=self._rbac_pwd.get_secret_value())
 
     @property
     def masked_connection_url(self) -> str | None:
         """Return URL safe for logging (password hidden)"""
-        if not self.db_connection_url:
-            return None
-        url = self.connection_url
+        url = self.channel_connection_url
         if "@" in url and ":" in url.split("//")[1]:
             scheme, rest = url.split("://", 1)
             user_pass, host = rest.split("@", 1)
@@ -230,44 +203,18 @@ class DBSettings(IniSection):
             return f"{scheme}://{user_pass}@{host}"
         return url
 
-    @classmethod
-    def _is_valid_pg_url(cls, url):
-        # Ensure url is a SecretStr
-        if not isinstance(url, SecretStr):
-            url = SecretStr(url)
-        # Validate format as PostgresDsn
-        # simple validation using PostgresDsn
-        try:
-            PostgresDsn(url.get_secret_value())
-        except Exception as e:
-            raise ValueError(f"Invalid Postgres URL: {url}") from e
-        return url
-
-    @field_validator("db_connection_url", mode="before")
-    @classmethod
-    def wrap_and_validate_url(cls, url):
-        if url is None:
-            return url
-        return cls._is_valid_pg_url(url)
-
-    @field_validator("su_url", mode="before")
-    @classmethod
-    def wrap_and_validate_su_url(cls, url):
-        if url is None:
-            raise ValueError("SU Postgres URL is missing in config")
-        return cls._is_valid_pg_url(url)
-
-    @model_validator(mode="after")
-    def validate_db_settings(self) -> "DBSettings":
-        """Validate that we have either connection URL or credentials."""
-        if not self.db_connection_url and not all([self.db_usr, self.db_pwd, self.db_name]):
-            raise ValueError("Either db_connection_url or db_usr/db_pwd/db_name must be provided")
-        return self
-
-
-class RbacSettings(DBSettings):
-    section = "rbac"
-    pass
+    # @classmethod
+    # def _is_valid_pg_url(cls, url):
+    #     # Ensure url is a SecretStr
+    #     if not isinstance(url, SecretStr):
+    #         url = SecretStr(url)
+    #     # Validate format as PostgresDsn
+    #     # simple validation using PostgresDsn
+    #     try:
+    #         PostgresDsn(url.get_secret_value())
+    #     except Exception as e:
+    #         raise ValueError(f"Invalid Postgres URL: {url}") from e
+    #     return url
 
 
 # --------------------------------------------------------------------------------------------------
@@ -298,7 +245,6 @@ class Settings(BaseSettings):
     db: DBSettings
     auth: AuthSettings
     jwt: JWTSettings
-    rbac: RbacSettings
     max_retries: int = Field(default=10, ge=0)
 
     @property
@@ -312,8 +258,7 @@ class Settings(BaseSettings):
             app=AppSettings.from_parser(parser),
             auth=AuthSettings.from_parser(parser),
             jwt=JWTSettings.from_parser(parser),
-            db=DBSettings.from_parser(parser),
-            rbac=RbacSettings.from_parser(parser),
+            db=DBSettings(),
         )
 
     @classmethod
@@ -375,9 +320,9 @@ if __name__ == "__main__":  # pragma: no cover
     conf = get_settings("./.conf/config.ini")
     log_d(here, "App name", conf.app.name)
     log_d(here, "JWT expiration (minutes)", conf.jwt.expiration_minutes)
-    log_d(here, "DB URL:", conf.db.connection_url)
+    log_d(here, "DB URL:", conf.db.channel_connection_url)
     log_d(here, "Full config as dict\n", conf.as_dict())
     log_d(here, "Full config as JSON:\n", conf.json(indent=2))
 
-    db_url = conf.db.connection_url
+    db_url = conf.db.channel_connection_url
     log_d(here, "DB connection url:", db_url)

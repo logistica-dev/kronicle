@@ -109,7 +109,7 @@ class KronicleApp:
         here = f"{mod}.lifespan"
 
         with log_block(here, "Channel DB"):
-            channel_db = ChannelDbSession(db_url=self.conf.db.connection_url)
+            channel_db = ChannelDbSession(db_url=self.conf.db.channel_connection_url)
             await channel_db.init_async()
             self.channel_db = channel_db
         with log_block(here, "Channel deps"):
@@ -117,7 +117,7 @@ class KronicleApp:
             app.state.channel_service = ChannelService(channel_repository)
 
         with log_block(here, "RBAC session manager"):
-            self.rbac_db = RbacDbSession(db_url=self.conf.rbac.connection_url, echo=False)
+            self.rbac_db = RbacDbSession(db_url=self.conf.db.rbac_connection_url, echo=False)
         with log_block(here, "RBAC mappers"):
             configure_mappers()
         with log_block(here, "RBAC tables validation"):

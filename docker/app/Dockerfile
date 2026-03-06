@@ -4,7 +4,7 @@
 # Kronicle application image
 # Multi-arch: amd64 + arm64
 # ------------------------------------------------------------------------------
-FROM --platform=$BUILDPLATFORM python:3.12-slim as builder
+FROM --platform=$BUILDPLATFORM python:3.12-slim AS builder
 # -----------------------------
 # Build dependencies
 # -----------------------------
@@ -50,4 +50,4 @@ RUN chmod -R +x scripts/init
 # Entrypoint
 # ------------------------------------------------------------------------------
 # Activate venv and run Python bootstrap script
-ENTRYPOINT ["/opt/kronicle/.venv/bin/python", "/opt/kronicle/scripts/init/init.py"]
+ENTRYPOINT ["python", "/opt/kronicle/docker/app/entrypoint.sh"]
