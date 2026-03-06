@@ -36,6 +36,8 @@ psql -U postgres -d dts_db
 
 - `\dt` — list tables in current schema
 - `\d tablename` — describe table (columns, indexes, constraints)
+- `\dt rbac.*` - alternative
+- `\d+ rbac.users` - deeper
 - `\dx` — list installed extensions
 - `\dx+` — list extensions with more detail
 

@@ -19,7 +19,7 @@ def main():
     conf: KronicleConf = KronicleConf.read_conf()
     su_name, su_pwd = conf.app_su.creds
     su_email = conf.app_su.email
-
+    log_d(here, "SU hashed pwd:", su_pwd)
     rbac_db_url = conf.db.dsn(creds=conf.rbac_creds)
 
     table_name = f"{RbacUser.namespace()}.{RbacUser.tablename()}"
