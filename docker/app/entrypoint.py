@@ -12,7 +12,6 @@ from kronicle.db.core.models.zone import Zone
 from kronicle.db.data.channel_repository import ChannelMetadata
 from kronicle.db.rbac.models.rbac_entity import RbacEntity
 from kronicle.db.rbac.models.rbac_user import RbacUser
-from kronicle.main import app  # your FastAPI instance
 from scripts.init.init import main as init_script  # type: ignore
 from scripts.utils.read_conf import KronicleConf  # type: ignore
 
@@ -92,7 +91,7 @@ async def tables_exist():
 # --------------------------------------------------------------------------------------------------
 # Entrypoint
 # --------------------------------------------------------------------------------------------------
-async def main():
+async def wait_and_init():
     print("[entry] Waiting for Postrgesql...")
     await wait_for_db_server()
 
@@ -106,14 +105,16 @@ async def main():
     else:
         print(f"[entry] Database '{DB_NAME}' already exists. Skipping init.")
 
+
+if __name__ == "__main__":
+    run(wait_and_init())
+
     print("[entry] Launching Uvicorn/FastAPI server...")
+    from kronicle.main import app  # your FastAPI instance
+
     uvicorn.run(
         app,
         host="0.0.0.0",
         port=int(os.environ.get("KRONICLE_PORT", 8000)),
         log_level="info",
     )
-
-
-if __name__ == "__main__":
-    run(main())
