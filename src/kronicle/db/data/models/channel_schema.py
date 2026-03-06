@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 from kronicle.db.data.models.schema_types import SchemaType
 from kronicle.types.iso_datetime import IsoDateTime
 from kronicle.utils.dev_logs import log_d
-from kronicle.utils.str_utils import normalize_name
+from kronicle.utils.str_utils import normalize_name, normalize_pg_identifier
 
 mod = "chan_schm"
 
@@ -127,7 +127,7 @@ class ChannelSchema(BaseModel):
         if db_col in RESERVED_SQL_KEYWORDS:
             raise ValueError(f"Column name '{db_col}' is reserved")  # by SQL/TimescaleDB
 
-        return db_col, SchemaType.from_str(usr_type)
+        return normalize_pg_identifier(db_col), SchemaType.from_str(usr_type)
 
     @classmethod
     def from_user_json(cls, schema_dict: dict[str, str]) -> ChannelSchema:

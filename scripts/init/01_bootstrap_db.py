@@ -14,7 +14,7 @@ import asyncio
 from kronicle.db.core.models import CORE_NAMESPACE
 from kronicle.db.data.models import DATA_NAMESPACE
 from kronicle.db.rbac.models import RBAC_NAMESPACE
-from kronicle.deps.settings import validate_pg_identifier
+from kronicle.deps.settings import normalize_pg_identifier
 from scripts.utils.logger import log_d  # type: ignore
 from scripts.utils.read_conf import KronicleConf  # type: ignore
 
@@ -23,22 +23,23 @@ mod = "init.01_bootstrap_db"
 NAMESPACES = [CORE_NAMESPACE, RBAC_NAMESPACE, DATA_NAMESPACE]
 
 
-async def ensure_user_exists(db, username: str, password: str):
+async def ensure_user_exists(db, username: str, password: str) -> str:
     """Ensure a Postgres role exists; create if missing."""
-    validate_pg_identifier(username)
+    username = normalize_pg_identifier(username)
     exists = await db.fetchval("SELECT 1 FROM pg_catalog.pg_user WHERE usename=$1", username)
     if not exists:
-        await db.execute(f"CREATE USER {username} WITH PASSWORD $2", password)
+        await db.execute(f"CREATE USER {username} WITH PASSWORD $1", password)
         log_d(mod, f"Created user '{username}'")
     else:
         log_d(mod, f"User '{username}' already exists")
+    return username
 
 
 async def ensure_database_exists(db, db_name: str, owner: str):
     """Ensure a database exists; create if missing."""
     exists = await db.fetchval("SELECT 1 FROM pg_database WHERE datname=$1", db_name)
-    validate_pg_identifier(db_name)
-    validate_pg_identifier(owner)
+    db_name = normalize_pg_identifier(db_name)
+    owner = normalize_pg_identifier(owner)
     if not exists:
         await db.execute(f"CREATE DATABASE {db_name} OWNER {owner}")
         log_d(mod, f"Created database '{db_name}' owned by '{owner}'")

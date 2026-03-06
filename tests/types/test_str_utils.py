@@ -165,6 +165,7 @@ def test_q_ident_escapes_quotes():
     "inp,valid",
     [
         ("valid_name", True),
+        ("ValidName", True),
         ("_underscore123", True),
         ("123start", False),
         ("has-dash", False),
@@ -172,9 +173,9 @@ def test_q_ident_escapes_quotes():
         ("$dollar", False),
     ],
 )
-def test_validate_pg_identifier(inp, valid):
+def test_normalize_pg_identifier(inp, valid):
     if valid:
-        assert str_utils.validate_pg_identifier(inp) == inp
+        assert str_utils.normalize_pg_identifier(inp) == inp
     else:
         with raises(ValueError):
-            str_utils.validate_pg_identifier(inp)
+            str_utils.normalize_pg_identifier(inp)

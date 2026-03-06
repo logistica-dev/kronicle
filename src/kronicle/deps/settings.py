@@ -13,7 +13,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from kronicle.utils.dev_logs import log_d
 from kronicle.utils.file_utils import check_is_file, expand_file_path
-from kronicle.utils.str_utils import strip_quotes, validate_pg_identifier
+from kronicle.utils.str_utils import normalize_pg_identifier, strip_quotes
 
 # --------------------------------------------------------------------------------------------------
 # Constants
@@ -173,12 +173,12 @@ class DBSettings(IniSection):
 
     @field_validator("db_usr", "db_name")
     @classmethod
-    def validate_pg_identifier(cls, v: str) -> str:
+    def normalize_pg_identifier(cls, v: str) -> str:
         """
         Ensure the DB username and database name contain only safe characters.
         Only letters, numbers, and underscores are allowed.
         """
-        return validate_pg_identifier(v)
+        return normalize_pg_identifier(v)
 
     @property
     def usr(self) -> str:

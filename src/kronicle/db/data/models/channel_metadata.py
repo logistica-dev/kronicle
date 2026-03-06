@@ -16,7 +16,7 @@ from kronicle.types.iso_datetime import IsoDateTime
 from kronicle.types.tag_type import TagType
 from kronicle.utils.asyncpg_utils import table_exists
 from kronicle.utils.dev_logs import log_d, log_e
-from kronicle.utils.str_utils import ensure_uuid4, normalize_name, normalize_to_snake_case
+from kronicle.utils.str_utils import ensure_uuid4, normalize_name, normalize_pg_identifier, normalize_to_snake_case
 
 mod = "chan_meta"
 
@@ -45,8 +45,8 @@ class ChannelMetadata(BaseModel):
     tags: dict[str, TagType] | None = Field(default_factory=dict)
     received_at: IsoDateTime = Field(default_factory=lambda: IsoDateTime.now_local())
 
-    _NAMESPACE: ClassVar[str] = "data"
-    _TABLE_NAME: ClassVar[str] = "channel_metadata"
+    _NAMESPACE: ClassVar[str] = normalize_pg_identifier("data")
+    _TABLE_NAME: ClassVar[str] = normalize_pg_identifier("channel_metadata")
     _TABLE_SCHEMA: ClassVar[dict[str, str]] = {
         "channel_id": "UUID PRIMARY KEY",
         "channel_schema": "JSONB NOT NULL",
@@ -54,7 +54,7 @@ class ChannelMetadata(BaseModel):
         "user_metadata": "JSONB",
         "tags": "JSONB",
         "received_at": "TIMESTAMPTZ NOT NULL DEFAULT now()",
-    }
+    }  # column names should always be in [a-z_]+ !!!
 
     # ----------------------------------------------------------------------------------------------
     # Field validators
@@ -108,7 +108,7 @@ class ChannelMetadata(BaseModel):
     @classmethod
     def get_schema_defs(cls) -> str:
         """Return SQL column definitions for CREATE TABLE."""
-        return ", ".join(f"{col} {typ}" for col, typ in cls.table_schema().items())
+        return ", ".join(f"{normalize_pg_identifier(col)} {typ}" for col, typ in cls.table_schema().items())
 
     @classmethod
     def get_schema_columns(cls) -> list[tuple[str, str]]:
@@ -208,7 +208,9 @@ class ChannelMetadata(BaseModel):
     @classmethod
     def create_table_sql(cls) -> str:
         """Return SQL to create table in Postgres."""
-        return f"CREATE TABLE {cls.namespace()}.{cls.table_name()} ({cls.get_schema_defs()});"
+        namespace = normalize_pg_identifier(cls.namespace())
+        tablename = normalize_pg_identifier(cls.table_name())
+        return f"CREATE TABLE {namespace}.{tablename} ({cls.get_schema_defs()});"
 
     @classmethod
     async def ensure_table(cls, conn: PoolConnectionProxy):

@@ -16,7 +16,7 @@ from kronicle.db.base.kronicle_hierarchy import KronicleHierarchyMixin
 from kronicle.db.core.models import ALL_CORE_TABLES, CORE_NAMESPACE
 from kronicle.db.data.models import ALL_DATA_TABLES, DATA_NAMESPACE
 from kronicle.db.rbac.models import ALL_RBAC_TABLES, RBAC_NAMESPACE
-from kronicle.utils.str_utils import validate_pg_identifier
+from kronicle.utils.str_utils import normalize_pg_identifier
 from scripts.utils.logger import log_d, log_e, log_w  # type: ignore
 from scripts.utils.read_conf import KronicleConf, UserCreds  # type: ignore
 
@@ -52,16 +52,15 @@ async def create_namespaces_if_missing(
     """
     here = "create_namespaces_if_missing"
     for namespace, owner in namespace_owners.items():
-        username = owner.username
-        validate_pg_identifier(namespace)
-        validate_pg_identifier(owner.username)
+        namespace = normalize_pg_identifier(namespace)
+        username = normalize_pg_identifier(owner.username)
 
         log_d(here, "Check if schema exists...")
         exists = await db.fetchval("SELECT 1 FROM pg_namespace WHERE nspname=$1", namespace)
 
         if not exists:
             # Schema does not exist: create it with the intended owner
-            await db.execute(f'CREATE SCHEMA "{namespace}" AUTHORIZATION "{username}"')
+            await db.execute(f"CREATE SCHEMA {namespace} AUTHORIZATION {username}")
             log_d(mod, f"Created schema '{namespace}' with owner '{username}'")
         else:
             log_d(here, "Schema exists: check actual owner...")
@@ -76,7 +75,7 @@ async def create_namespaces_if_missing(
                     raise RuntimeError(msg)
                 else:
                     # Optionally, alter the owner instead of failing:
-                    await db.execute(f'ALTER SCHEMA "{namespace}" OWNER TO "{username}"')
+                    await db.execute(f"ALTER SCHEMA {namespace} OWNER TO {username}")
                     log_w(mod, msg + " (owner changed)")
             else:
                 log_d(mod, f"Schema '{namespace}' already exists with correct owner '{username}'")
@@ -100,8 +99,8 @@ def table_exists(db, namespace, table_name):
 def create_pydantic_tables(db, models, namespace):
     """Create tables from Pydantic models (like ChannelMetadata)"""
     here = f"{mod}.create_pydantic_tables"
-    validate_pg_identifier(namespace)
-    db.execute(text(f'SET search_path TO "{namespace}", public'))
+    namespace = normalize_pg_identifier(namespace)
+    db.execute(text(f"SET search_path TO {namespace}, public"))
     for model in models:
         table_name = model.table_name()
         if table_exists(db, namespace, table_name):
@@ -120,10 +119,10 @@ def create_sqlalchemy_tables(db, tables, namespace):
     - Idempotent: checks if table/view exists first
     """
     here = f"{mod}.create_sqlalchemy_tables"
-    validate_pg_identifier(namespace)
+    namespace = normalize_pg_identifier(namespace)
 
     # Ensure search_path is set for this connection
-    db.execute(text(f'SET search_path TO "{namespace}", public'))
+    db.execute(text(f"SET search_path TO {namespace}, public"))
 
     for table in tables:
         # Declarative models have __table__, standalone Table objects do not

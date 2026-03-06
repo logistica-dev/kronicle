@@ -14,7 +14,7 @@ from kronicle.schemas.payload.op_feedback import OpFeedback
 from kronicle.schemas.payload.request_filter import RequestFilter
 from kronicle.utils.asyncpg_utils import table_exists
 from kronicle.utils.dev_logs import log_d, log_i, log_w
-from kronicle.utils.str_utils import check_is_uuid4
+from kronicle.utils.str_utils import ensure_uuid4
 
 mod = "chan_ts"
 
@@ -59,7 +59,7 @@ class ChannelTimeseries:
         channel_schema: ChannelSchema,
         op_feedback: OpFeedback | None = None,
     ):
-        self.channel_id = check_is_uuid4(channel_id)
+        self.channel_id = ensure_uuid4(channel_id)
         self.channel_schema = channel_schema
         self._rows: list[dict[str, Any]] = []
         self.op_feedback: OpFeedback = op_feedback or OpFeedback()
@@ -69,7 +69,7 @@ class ChannelTimeseries:
     # ----------------------------------------------------------------------------------------------
     @property
     def table_name(self) -> str:
-        return f"channel_{str(self.channel_id).replace('-', '')}"
+        return f"channel_{self.channel_id.hex}"
 
     # ----------------------------------------------------------------------------------------------
     # DB Column Layout
@@ -344,7 +344,7 @@ class ChannelTimeseries:
         placeholders = [f"${i+1}" for i in range(len(cols))]
 
         sql = f"""
-        INSERT INTO "{self.table_name}" ({', '.join(cols)})
+        INSERT INTO {self.table_name} ({', '.join(cols)})
         VALUES ({', '.join(placeholders)});
         """
 
@@ -386,7 +386,7 @@ class ChannelTimeseries:
         filter = filter or RequestFilter()
         sql_fragment, params = filter.to_sql_clauses(start_idx=1)
 
-        sql_req = f'DELETE FROM "{self.table_name}" {sql_fragment} RETURNING *'
+        sql_req = f"DELETE FROM {self.table_name} {sql_fragment} RETURNING *"
         rows = await conn.fetch(sql_req, *params)
         self.set_rows([dict(r) for r in rows])
         return self
@@ -402,11 +402,11 @@ class ChannelTimeseries:
         if not await self.table_exists(conn):
             log_w(here, f"Table '{self.table_name}' not found, nothing to drop")
             return
-        sql_fetch = f'SELECT * FROM "{self.table_name}"'
+        sql_fetch = f"SELECT * FROM {self.table_name}"
         rows = await conn.fetch(sql_fetch)
         rows_data = [dict(r) for r in rows]
 
-        sql_drop = f'DROP TABLE "{self.table_name}"'
+        sql_drop = f"DROP TABLE {self.table_name}"
         await conn.execute(sql_drop)
         log_i(here, f"Table '{self.table_name}' dropped, {len(rows_data)} rows were removed")
         self.clear_rows()

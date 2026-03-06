@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 from asyncpg import connect
 
-from kronicle.utils.str_utils import decode_b64url, validate_pg_identifier
+from kronicle.utils.str_utils import decode_b64url, normalize_pg_identifier
 
 DB_HOST = "KRONICLE_DB_HOST"
 DB_PORT = "KRONICLE_DB_PORT"
@@ -67,7 +67,7 @@ class EnvUserCreds(UserCreds):
             usr, pwd = decoded.split(":", 1)
         except ValueError as e:
             raise RuntimeError(f"{cls._env} {cls._how}") from e
-        return cls(username=validate_pg_identifier(usr), password=pwd)
+        return cls(username=normalize_pg_identifier(usr), password=pwd)
 
 
 class ChanneDbCreds(EnvUserCreds):
@@ -126,7 +126,7 @@ class DbAccess:
         return DbAccess(
             host=host,
             port=port,
-            name=validate_pg_identifier(name),
+            name=normalize_pg_identifier(name),
             usr=default_creds.username,
             pwd=default_creds.password,
         )
