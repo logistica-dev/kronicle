@@ -32,7 +32,6 @@ pyright*
 .env
 reports
 codemeta.json
-conf/
 
 # Dev
 rbac_design/

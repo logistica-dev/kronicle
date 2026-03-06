@@ -135,7 +135,7 @@ class AuthSettings(IniSection):
         invalid_chars = [c for c in v if c in forbidden]
 
         if invalid_chars:
-            raise ValueError(f"Special characters {v} contain forbidden character { invalid_chars} : {forbidden}")
+            raise ValueError(f"Special characters {v} contain forbidden character {invalid_chars} : {forbidden}")
         return v
 
 
@@ -296,7 +296,7 @@ class Settings(BaseSettings):
 
 
 @lru_cache
-def get_settings(ini_path: str = "../.conf/config.ini") -> Settings:
+def get_settings(ini_path: str = "../conf/default-conf.ini") -> Settings:
     """Load settings from INI file and environment variables."""
     here = "ini.load"
 
@@ -317,12 +317,8 @@ def get_settings(ini_path: str = "../.conf/config.ini") -> Settings:
 # --------------------------------------------------------------------------------------------------
 if __name__ == "__main__":  # pragma: no cover
     here = "conf"
-    conf = get_settings("./.conf/config.ini")
+    conf = get_settings("./conf/default-conf.ini")
     log_d(here, "App name", conf.app.name)
     log_d(here, "JWT expiration (minutes)", conf.jwt.expiration_minutes)
-    log_d(here, "DB URL:", conf.db.channel_connection_url)
     log_d(here, "Full config as dict\n", conf.as_dict())
     log_d(here, "Full config as JSON:\n", conf.json(indent=2))
-
-    db_url = conf.db.channel_connection_url
-    log_d(here, "DB connection url:", db_url)
