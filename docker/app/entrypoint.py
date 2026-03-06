@@ -96,12 +96,20 @@ async def wait_and_init():
     await wait_for_db_server()
 
     print("[entry] Initialize DB if needed (synchronous scripts)")
+    init_needed = False
     if not await db_exists():
-        print("[entry] DB does not exist. Running init script...")
-        init_script()
+        print("[entry] DB does not exist.")
+        init_needed = True
     elif not await tables_exist():
-        print("[entry] DB not initialized. Running init script...")
-        init_script()
+        print("[entry] DB not initialized.")
+        init_needed = True
+    if init_needed:
+        print(" [entry] Running init script...")
+        try:
+            init_script()
+        except Exception as e:
+            print(f"[entry] DB init script failed: {e}", file=stderr)
+            exit(1)
     else:
         print(f"[entry] Database '{DB_NAME}' already exists. Skipping init.")
 
