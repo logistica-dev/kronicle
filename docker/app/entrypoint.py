@@ -26,18 +26,11 @@ async def wait_for_db(timeout: int = 60):
     raise RuntimeError(f"DB not ready after {timeout}s")
 
 
-async def main():
-    await wait_for_db()
-    # run your init or app code here
-    print("Init done")
-
+if __name__ == "__main__":
+    run(wait_for_db())
     uvicorn.run(
         app,
         host="0.0.0.0",
-        port=int(os.environ.get("KRONICLE_PORT", 8000)),  # default fallback
+        port=int(os.environ.get("KRONICLE_PORT", 8000)),
         log_level="info",
     )
-
-
-if __name__ == "__main__":
-    run(main())
