@@ -254,11 +254,3 @@ if __name__ == "__main__":  # pragma: no cover
         print(normalize_name("6", ""))
     except ValueError:
         print("OK: ValueError caught")
-
-    print(
-        here,
-        "PHVzcj46PHB3ZD4 ->",
-        decode_b64url(
-            "S3JvbmljbGVBcmNob246bG9naXN0aWNhLXRlY0BpbnJpYS5mcjo9MTk9NjU1MzYsdD0zLHA9NEdtaUIzZUdLMkp5UTF2YkNjL09BK2h4QlRjVEdwaTJBelZNSEFyc2daME9GTUtBVWFsaE1pR1N3"
-        ),
-    )
