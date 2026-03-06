@@ -3,7 +3,7 @@ import os
 from asyncio import run, sleep
 
 import uvicorn
-from asyncpg import exceptions
+from asyncpg import CannotConnectNowError, ConnectionDoesNotExistError, InvalidCatalogNameError, PostgresError
 
 from kronicle.db.core.models.channel import Channel
 from kronicle.db.core.models.core_entity import CoreEntity
@@ -23,14 +23,18 @@ async def wait_for_db(timeout: int = 60):
     waited = 0
     while waited < timeout:
         try:
-            async with db.session() as conn:
+            async with db.session(db_name="postgres") as conn:
                 await conn.fetchval("SELECT 1")
-                print("DB is ready")
+                print("[entry] PostgreSQL server is ready")
                 return
-        except exceptions.CannotConnectNowError:
+        except (
+            CannotConnectNowError,
+            ConnectionDoesNotExistError,
+            InvalidCatalogNameError,
+        ):
             await sleep(1)
             waited += 1
-    raise RuntimeError(f"DB not ready after {timeout}s")
+    raise RuntimeError(f"DB server not ready after {timeout}s")
 
 
 SCHEMAS_TO_CHECK = {
@@ -43,28 +47,47 @@ SCHEMAS_TO_CHECK = {
 async def db_initialized():
     """Return True if the DB is already initialized (example: channel metadata table exists)."""
     conf = KronicleConf.read_conf()
-    async with conf.db.session() as conn:
-        for schema, tables in SCHEMAS_TO_CHECK.items():
-            for table in tables:
-                qualified_name = f"{schema}.{table}"
-                try:
-                    result = await conn.fetchrow(f"SELECT to_regclass('{qualified_name}') AS table_exists;")
-                    if result["table_exists"] is None:
-                        print(f"[entry] Table missing: {qualified_name}")
+    db_name = conf.db.db_name
+
+    # --------------------------------------------------
+    # Check if the database exists
+    # --------------------------------------------------
+    try:
+        async with conf.db.session(db_name="postgres") as conn:
+            exists = await conn.fetchval("SELECT 1 FROM pg_database WHERE datname=$1", db_name)
+            if not exists:
+                print(f"[entry] Database '{db_name}' does not exist")
+                return False
+    except PostgresError as e:
+        print(f"[entry] Error checking database existence: {e}")
+        return False
+    # --------------------------------------------------
+    # Check required tables
+    # --------------------------------------------------
+    try:
+        async with conf.db.session() as conn:
+            for schema, tables in SCHEMAS_TO_CHECK.items():
+                for table in tables:
+                    qualified = f"{schema}.{table}"
+                    exists = await conn.fetchval("SELECT to_regclass($1)", qualified)
+                    if exists is None:
+                        print(f"[entry] Missing table: {qualified}")
                         return False
-                except exceptions.PostgresError as e:
-                    print(f"Error checking table {qualified_name}: {e}")
-                    return False
+
+    except PostgresError as e:
+        print(f"[entry] Error checking schema objects: {e}")
+        return False
+
     return True
 
 
 async def main():
-    print("[entry] Awaiting for DB...")
+    print("[entry] Waiting for Postrgesql...")
     await wait_for_db()
 
     print("[entry] Initialize DB if needed (synchronous scripts)")
     if not await db_initialized():
-        print("[entry] Database not initialized. Running init script...")
+        print("[entry] DB not initialized. Running init script...")
         init_script()
 
     print("[entry] Launching the FastAPI server...")

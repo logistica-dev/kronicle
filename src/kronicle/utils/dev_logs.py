@@ -103,7 +103,7 @@ def format_input(here: str, *args, **kwargs) -> str:  # pragma: no cover
         parts.append(kv)
 
     # Escape brackets for Rich
-    here_str = f"[ {(enforce_length(here, 15))} ]"
+    here_str = f"[{(enforce_length(here, 10))}]"
     content = " | ".join(parts) if parts else ""
     raw = f"{here_str} {content}" if content else f"{here_str} <"
     return escape(raw)
@@ -164,7 +164,7 @@ def log_block(here, message):
         yield
     finally:
         elapsed = time() - start_time
-        log_d(here, f"      > Finished {message} init in {elapsed:.3f}s", stacklevel=4)
+        log_d(here, f"  >{message} init in {elapsed:.3f}s", stacklevel=4)
 
 
 if __name__ == "__main__":  # pragma: no cover
