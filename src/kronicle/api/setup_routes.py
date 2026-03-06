@@ -39,7 +39,7 @@ setup_router.include_router(shared_writer_router)
     "/channels",
     summary="Create a new channel",
     description=(
-        "Create a new channel with metadata and schema." " Does not add rows, and fails if the channel already exists."
+        "Create a new channel with metadata and schema. Does not add rows, and fails if the channel already exists."
     ),
     response_model=ResponsePayload,
 )
@@ -132,7 +132,7 @@ async def delete_channel_rows(
     response_model=list[ResponsePayload],
 )
 async def batch_delete_channels(
-    payload: dict = Body(..., example={"channel_ids": ["uuid1", "uuid2"]}),  # noqa
+    payload: dict = Body(..., examples=[{"channel_ids": ["uuid1", "uuid2"]}]),  # noqa
     controller: ChannelService = Depends(channel_service),  # noqa: B008
 ):
     return await controller.delete_channels(payload["channel_ids"])

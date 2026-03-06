@@ -309,7 +309,7 @@ def get_settings(ini_path: str = "../conf/default-conf.ini") -> Settings:
     check_is_file(ini_file, f"Configuration file not found: '{ini_file}'")
 
     # Load from INI file
-    return Settings.load_ini_file(ini_path)
+    return Settings.load_ini_file(ini_file)
 
 
 # --------------------------------------------------------------------------------------------------
