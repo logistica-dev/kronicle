@@ -9,12 +9,12 @@ Idempotent DB bootstrap:
 5. Create SQL schemas
 """
 
-import asyncio
+from asyncio import run
 
 from kronicle.db.core.models import CORE_NAMESPACE
 from kronicle.db.data.models import DATA_NAMESPACE
 from kronicle.db.rbac.models import RBAC_NAMESPACE
-from kronicle.deps.settings import normalize_pg_identifier
+from kronicle.utils.str_utils import normalize_pg_identifier
 from scripts.utils.logger import log_d  # type: ignore
 from scripts.utils.read_conf import KronicleConf  # type: ignore
 
@@ -85,4 +85,4 @@ async def main():
 
 
 if __name__ == "__main__":  # pragma: no cover
-    asyncio.run(main())
+    run(main())
