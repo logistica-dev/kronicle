@@ -172,7 +172,7 @@ class OutputUser(BaseModel):
     @classmethod
     def from_db_user(cls, db_user: RbacUser) -> "OutputUser":
         """Convert this processed user data into a RbacUser for persistence."""
-        # here = f"{mod}.from_db_user"
+        # here = "from_db_user"
         # log_d(here, "db_user", db_user)
         # log_d(here, "db_user.is_superuser", db_user.is_superuser)
         usr = cls(

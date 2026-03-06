@@ -98,7 +98,7 @@ def table_exists(db, namespace, table_name):
 
 def create_pydantic_tables(db, models, namespace):
     """Create tables from Pydantic models (like ChannelMetadata)"""
-    here = f"{mod}.create_pydantic_tables"
+    here = "create_pydantic_tables"
     namespace = normalize_pg_identifier(namespace)
     db.execute(text(f"SET search_path TO {namespace}, public"))
     for model in models:
@@ -118,7 +118,7 @@ def create_sqlalchemy_tables(db, tables, namespace):
     - Supports KronicleHierarchyMixin tables
     - Idempotent: checks if table/view exists first
     """
-    here = f"{mod}.create_sqlalchemy_tables"
+    here = "create_sqlalchemy_tables"
     namespace = normalize_pg_identifier(namespace)
 
     # Ensure search_path is set for this connection

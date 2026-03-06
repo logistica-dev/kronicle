@@ -42,7 +42,7 @@ mod = "main"
 class KronicleApp:
     def __init__(self):
         print("-------------------------------------------------------------------------------------------------------")
-        here = f"{mod}.init"
+        here = "init"
         # Setup logging
         setup_logging()
         log_d(here, "Logger ready")
@@ -106,7 +106,7 @@ class KronicleApp:
     @asynccontextmanager
     async def lifespan(self, app: FastAPI) -> AsyncIterator[None]:
         """Application lifecycle management."""
-        here = f"{mod}.lifespan"
+        here = "lifespan"
 
         with log_block(here, "Channel DB"):
             channel_db = ChannelDbSession(db_url=self.conf.db.channel_connection_url)

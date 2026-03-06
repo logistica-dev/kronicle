@@ -324,16 +324,16 @@ class ChannelMetadata(BaseModel):
         Raises an error if the channel_id already exists.
         """
         # ChannelMetadata table is supposed to exist (checked at bootstrap)
-        here = f"{mod}.create"
+        here = "create"
         # Check if metadata exists
         exists = await self.fetch_by_id(conn, self.channel_id)
         if exists:
             raise ConflictError("ChannelMetadata already exists", details={"channel_id": str(self.channel_id)})
         columns = list(self.table_schema().keys())
-        placeholders = [f"${i+1}" for i in range(len(columns))]
+        placeholders = [f"${i + 1}" for i in range(len(columns))]
         sql = f"""
-        INSERT INTO {self.namespace()}.{self.table_name()} ({', '.join(columns)})
-        VALUES ({', '.join(placeholders)});
+        INSERT INTO {self.namespace()}.{self.table_name()} ({", ".join(columns)})
+        VALUES ({", ".join(placeholders)});
         RETURNING *;
         """
         try:
@@ -376,11 +376,11 @@ class ChannelMetadata(BaseModel):
             raise ValueError(f"No ChannelMetadata found for id {self.channel_id}")
 
         columns = ["name", "user_metadata", "tags"]
-        placeholders = [f"${i+1}" for i in range(len(columns) + 1)]  # +1 for WHERE
+        placeholders = [f"${i + 1}" for i in range(len(columns) + 1)]  # +1 for WHERE
 
         sql = f"""
             UPDATE {self.namespace()}.{self.table_name()}
-            SET {', '.join(f"{col} = {placeholders[idx]}" for idx, col in enumerate(columns))}
+            SET {", ".join(f"{col} = {placeholders[idx]}" for idx, col in enumerate(columns))}
             WHERE channel_id = {placeholders[-1]}
             RETURNING *;
             """
@@ -433,7 +433,6 @@ class ChannelMetadata(BaseModel):
 # Main test
 # --------------------------------------------------------------------------------------------------
 if __name__ == "__main__":  # pragma: no cover
-
     here = "channel_schema tests"
 
     user_schema = {

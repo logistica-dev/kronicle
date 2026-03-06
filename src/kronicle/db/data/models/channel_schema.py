@@ -209,7 +209,7 @@ class ChannelSchema(BaseModel):
     # ---------------------------------------------------------------------
 
     def validate_row(self, row: dict, now: datetime | None = None, from_user: bool = True) -> dict:
-        here = f"{mod}.validate_row"
+        here = "validate_row"
         now = now or IsoDateTime.now_local()
 
         # Handle `time` column

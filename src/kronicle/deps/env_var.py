@@ -26,6 +26,7 @@ Expected environment variables:
 DB_HOST = "KRONICLE_DB_HOST"
 DB_PORT = "KRONICLE_DB_PORT"
 DB_NAME = "KRONICLE_DB_NAME"
+DB_NAME_ALT = "POSTGRES_DB"
 
 CHAN_CREDS = "KRONICLE_CHAN_CREDS"  # b64(chan_usr:chan_pwd)
 RBAC_CREDS = "KRONICLE_RBAC_CREDS"  # b64(rbac_usr:rbac_pwd)
@@ -103,7 +104,7 @@ class DbAccess:
     def from_env(cls, default_creds: UserCreds) -> DbAccess:
         host = cls._get_env(DB_HOST)
         port = int(cls._get_env(DB_PORT))
-        name = cls._get_env(DB_NAME)
+        name = os.getenv(DB_NAME) or os.getenv(DB_NAME_ALT, "kronicle")
         return DbAccess(
             host=host,
             port=port,

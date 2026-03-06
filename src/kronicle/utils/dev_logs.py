@@ -103,38 +103,38 @@ def format_input(here: str, *args, **kwargs) -> str:  # pragma: no cover
         parts.append(kv)
 
     # Escape brackets for Rich
-    here_str = f"[ {(enforce_length(here,15))} ]"
+    here_str = f"[ {(enforce_length(here, 15))} ]"
     content = " | ".join(parts) if parts else ""
     raw = f"{here_str} {content}" if content else f"{here_str} <"
     return escape(raw)
 
 
-def log_e(here, *args, **kwargs):  # pragma: no cover
+def log_e(here, *args, stacklevel=2, **kwargs):  # pragma: no cover
     if LOG_LEVEL > -1:
         msg = format_input(here, *args, **kwargs)
-        basic_logger.error(f"[bold red]{msg}[/bold red]")
+        basic_logger.error(f"[bold red]{msg}[/bold red]", stacklevel=stacklevel)
 
 
-def log_w(here, *args, **kwargs):  # pragma: no cover
+def log_w(here, *args, stacklevel=2, **kwargs):  # pragma: no cover
     if LOG_LEVEL > 0:
         msg = format_input(here, *args, **kwargs)
-        basic_logger.warning(f"[yellow]{msg}[/yellow]")
+        basic_logger.warning(f"[yellow]{msg}[/yellow]", stacklevel=stacklevel)
 
 
-def log_i(here, *args, **kwargs):  # pragma: no cover
+def log_i(here, *args, stacklevel=2, **kwargs):  # pragma: no cover
     if LOG_LEVEL > 1:
         msg = format_input(here, *args, **kwargs)
-        basic_logger.info(f"[blue]{msg}[/blue]")
+        basic_logger.info(f"[blue]{msg}[/blue]", stacklevel=stacklevel)
 
 
-def log_d(here, *args, **kwargs):  # pragma: no cover
+def log_d(here, *args, stacklevel=2, **kwargs):  # pragma: no cover
     if LOG_LEVEL > 2:
-        basic_logger.debug(format_input(here, *args, **kwargs))
+        basic_logger.debug(format_input(here, *args, **kwargs), stacklevel=stacklevel)
 
 
 def log_d_if(here, should_print: bool = False, *args, **kwargs):  # pragma: no cover
     if LOG_LEVEL > 2 and should_print:
-        basic_logger.debug(format_input(here, *args, **kwargs))
+        basic_logger.debug(format_input(here, *args, **kwargs), stacklevel=2)
 
 
 def decorator_timer(some_function):  # pragma: no cover
@@ -158,13 +158,13 @@ def log_assert(cond: bool, ok_tag: str = "OK", ko_tag: str = "!! KO !!"):  # pra
 # Context manager for logging
 @contextmanager
 def log_block(here, message):
-    log_d(here, f"Starting {message}...")
+    log_d(here, f"Starting {message}...", stacklevel=4)
     start_time = time()
     try:
         yield
     finally:
         elapsed = time() - start_time
-        log_d(here, f"      > Finished {message} init in {elapsed:.3f}s")
+        log_d(here, f"      > Finished {message} init in {elapsed:.3f}s", stacklevel=4)
 
 
 if __name__ == "__main__":  # pragma: no cover

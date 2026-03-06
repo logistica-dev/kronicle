@@ -21,7 +21,6 @@ mod = "rbacs"
 
 
 class RbacService:
-
     def __init__(
         self,
         rbac_db_session: RbacDbSession,
@@ -66,7 +65,7 @@ class RbacService:
     # Write: create user
     # ----------------------------------------------------------------------------------------------
     def create_user(self, user: ProcessedUser) -> OutputUser:
-        here = f"{mod}.create_usr"
+        here = "create_usr"
         log_d(here, "user", user.name)
         rbac_user = user.to_db_user()
         log_d(here, "rbac_user", rbac_user.name)

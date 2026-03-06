@@ -30,7 +30,7 @@ class JWTService:
         return payload
 
     def create_access_token(self, user: OutputUser) -> str:
-        here = f"{mod}.create_jwt"
+        here = "create_jwt"
         payload = self._get_payload_from_out_user(user)
         log_d(here, "payload", payload)
         return jwt.encode(payload, self._secret, algorithm=self._algo)

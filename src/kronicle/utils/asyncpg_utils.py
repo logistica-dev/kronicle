@@ -42,7 +42,7 @@ async def verify_connection(dsn: str):
     Check that the app user can connect to the DB.
     Returns (db_usr, host_port, db_name)
     """
-    here = f"{mod}.verify_connection"
+    here = "verify_connection"
     if not dsn:
         raise ValueError("Input connection string should not be null")
     try:

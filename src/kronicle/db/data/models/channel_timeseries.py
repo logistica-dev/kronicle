@@ -245,13 +245,13 @@ class ChannelTimeseries:
         """
         user_columns_sql = []
         for col, col_type in self.channel_schema.user_columns.items():
-            user_columns_sql.append(f"{col} {col_type.db_type}{'' if col_type.optional else ' NOT NULL' }")
+            user_columns_sql.append(f"{col} {col_type.db_type}{'' if col_type.optional else ' NOT NULL'}")
 
         return f"""
         CREATE TABLE IF NOT EXISTS {self.table_name} (
             row_id BIGSERIAL PRIMARY KEY,
             time TIMESTAMPTZ NOT NULL,
-            {', '.join(user_columns_sql)},
+            {", ".join(user_columns_sql)},
             received_at TIMESTAMPTZ NOT NULL
         );
         """.strip()
@@ -265,7 +265,7 @@ class ChannelTimeseries:
 
     async def ensure_table(self, conn: PoolConnectionProxy):
         """Ensure the table exists in the database."""
-        here = f"{mod}.ensure_table"
+        here = "ensure_table"
         if await self.table_exists(conn):
             return
         await conn.execute(self.create_table_sql())
@@ -297,7 +297,7 @@ class ChannelTimeseries:
         self : ChannelTimeseries
             Instance with rows populated from DB
         """
-        here = f"{mod}.fetch_rows"
+        here = "fetch_rows"
 
         if not await self.table_exists(conn):
             log_w(here, f"Table '{self.table_name}' not found, returning empty list")
@@ -331,7 +331,7 @@ class ChannelTimeseries:
         self : ChannelTimeseries
             Instance with successfully inserted rows
         """
-        here = f"{mod}.insert"
+        here = "insert"
 
         if not self._rows:
             return self
@@ -341,11 +341,11 @@ class ChannelTimeseries:
 
         tuples = self.get_db_tuples()
         cols = self._sql_insert_columns
-        placeholders = [f"${i+1}" for i in range(len(cols))]
+        placeholders = [f"${i + 1}" for i in range(len(cols))]
 
         sql = f"""
-        INSERT INTO {self.table_name} ({', '.join(cols)})
-        VALUES ({', '.join(placeholders)});
+        INSERT INTO {self.table_name} ({", ".join(cols)})
+        VALUES ({", ".join(placeholders)});
         """
 
         await self.ensure_table(conn)
@@ -377,7 +377,7 @@ class ChannelTimeseries:
         self : ChannelTimeseries
             Instance containing the rows that were deleted
         """
-        here = f"{mod}.delete"
+        here = "delete"
 
         if not await self.table_exists(conn):
             log_w(here, f"Table '{self.table_name}' not found, cannot delete")
@@ -398,7 +398,7 @@ class ChannelTimeseries:
         Warning:
             This permanently deletes all rows and the table itself.
         """
-        here = f"{mod}.drop"
+        here = "drop"
         if not await self.table_exists(conn):
             log_w(here, f"Table '{self.table_name}' not found, nothing to drop")
             return
