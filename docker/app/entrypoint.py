@@ -1,6 +1,7 @@
 # docker/app/entrypoint.py
 import os
 from asyncio import run, sleep
+from sys import exit, stderr
 
 import uvicorn
 from asyncpg import CannotConnectNowError, ConnectionDoesNotExistError, InvalidCatalogNameError, PostgresError
@@ -15,10 +16,24 @@ from kronicle.main import app  # your FastAPI instance
 from scripts.init.init import main as init_script  # type: ignore
 from scripts.utils.read_conf import KronicleConf  # type: ignore
 
+# --------------------------------------------------------------------------------------------------
+# Config
+# --------------------------------------------------------------------------------------------------
 conf = KronicleConf.read_conf()
+DB_NAME = conf.db.name
 
 
-async def wait_for_db(timeout: int = 60):
+SCHEMAS_TO_CHECK = {
+    CoreEntity.namespace(): [Channel.tablename(), Zone.tablename()],  # example key tables in core schema
+    RbacEntity.namespace(): [RbacUser.tablename()],  # example key tables in rbac schema
+    ChannelMetadata.namespace(): [ChannelMetadata.tablename()],  # example key tables in data schema
+}
+
+
+# --------------------------------------------------------------------------------------------------
+# Wait for DB server
+# --------------------------------------------------------------------------------------------------
+async def wait_for_db_server(timeout: int = 60):
     db = conf.db
     waited = 0
     while waited < timeout:
@@ -34,36 +49,29 @@ async def wait_for_db(timeout: int = 60):
         ):
             await sleep(1)
             waited += 1
-    raise RuntimeError(f"DB server not ready after {timeout}s")
+            print(f"[entry] Waiting for DB server... {waited}s")
+    print(f"[entry] ERROR: DB server not ready after {timeout}s", file=stderr)
+    exit(1)
 
 
-SCHEMAS_TO_CHECK = {
-    CoreEntity.namespace(): [Channel.tablename(), Zone.tablename()],  # example key tables in core schema
-    RbacEntity.namespace(): [RbacUser.tablename()],  # example key tables in rbac schema
-    ChannelMetadata.namespace(): [ChannelMetadata.tablename()],  # example key tables in data schema
-}
-
-
-async def db_initialized():
-    """Return True if the DB is already initialized (example: channel metadata table exists)."""
-    conf = KronicleConf.read_conf()
-    db_name = conf.db.db_name
-
-    # --------------------------------------------------
-    # Check if the database exists
-    # --------------------------------------------------
+# --------------------------------------------------------------------------------------------------
+# Check if target DB exists
+# --------------------------------------------------------------------------------------------------
+async def db_exists() -> bool:
     try:
         async with conf.db.session(db_name="postgres") as conn:
-            exists = await conn.fetchval("SELECT 1 FROM pg_database WHERE datname=$1", db_name)
-            if not exists:
-                print(f"[entry] Database '{db_name}' does not exist")
-                return False
+            exists = await conn.fetchval("SELECT 1 FROM pg_database WHERE datname = $1", DB_NAME)
+            return exists is not None
     except PostgresError as e:
         print(f"[entry] Error checking database existence: {e}")
         return False
-    # --------------------------------------------------
-    # Check required tables
-    # --------------------------------------------------
+
+
+# --------------------------------------------------------------------------------------------------
+# Check if required tables exist
+# --------------------------------------------------------------------------------------------------
+async def tables_exist():
+    """Return True if the DB is already initialized (example: channel metadata table exists)."""
     try:
         async with conf.db.session() as conn:
             for schema, tables in SCHEMAS_TO_CHECK.items():
@@ -81,16 +89,24 @@ async def db_initialized():
     return True
 
 
+# --------------------------------------------------------------------------------------------------
+# Entrypoint
+# --------------------------------------------------------------------------------------------------
 async def main():
     print("[entry] Waiting for Postrgesql...")
-    await wait_for_db()
+    await wait_for_db_server()
 
     print("[entry] Initialize DB if needed (synchronous scripts)")
-    if not await db_initialized():
+    if not await db_exists():
+        print("[entry] DB does not exist. Running init script...")
+        init_script()
+    elif not await tables_exist():
         print("[entry] DB not initialized. Running init script...")
         init_script()
+    else:
+        print(f"[entry] Database '{DB_NAME}' already exists. Skipping init.")
 
-    print("[entry] Launching the FastAPI server...")
+    print("[entry] Launching Uvicorn/FastAPI server...")
     uvicorn.run(
         app,
         host="0.0.0.0",
