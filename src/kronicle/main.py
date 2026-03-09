@@ -25,13 +25,14 @@ from kronicle.auth.pwd.pwd_policy import PasswordPolicy
 from kronicle.db.data.channel_db_session import ChannelDbSession
 from kronicle.db.data.channel_repository import ChannelRepository
 from kronicle.db.rbac.rbac_db_session import RbacDbSession
-from kronicle.deps.settings import get_settings
+from kronicle.deps.settings import Settings
 from kronicle.errors.error_types import KronicleAppError
 from kronicle.errors.exception_handlers import (
     app_error_adapter,
     fastapi_exception_adapter,
     generic_exception_handler,
 )
+from kronicle.logging.log_bus.mid_sanitize import RequestSanitizerMiddleware
 from kronicle.services.channel_service import ChannelService
 from kronicle.services.rbac_service import RbacService
 from kronicle.utils.dev_logs import log_block, log_d, request_logger, setup_logging
@@ -48,10 +49,12 @@ class KronicleApp:
         log_d(here, "Logger ready")
 
         # Retrieving the configuration settings
-        self.conf = get_settings()
+        with log_block(here, "Configuration"):
+            self.conf = Settings()
 
         # Initialize application logging
-        log_d(here, f"{self.conf.app.name} v{self.conf.app.version}", self.conf.app.description)
+        log_d(here, self.conf.app.name, f"v{self.conf.app.version}", self.conf.app.description)
+        log_d(here, f"Launching on {self.conf.server.host}:{self.conf.server.port}")
 
         # Lifespan takes care of the RBAC DB service right bellow
         self.rbac_service: RbacService
@@ -80,9 +83,9 @@ class KronicleApp:
                 debug=False,
                 version=self.conf.app.version,
                 summary=self.conf.app.description,
-                openapi_url=self.conf.app.openapi_url if not self.conf.app.is_prod_env else None,
-                docs_url="/docs" if not self.conf.app.is_prod_env else None,
-                redoc_url="/redoc" if not self.conf.app.is_prod_env else None,
+                openapi_url=self.conf.app.openapi_url if not self.conf.is_prod_env else None,
+                docs_url="/docs" if not self.conf.is_prod_env else None,
+                redoc_url="/redoc" if not self.conf.is_prod_env else None,
                 redirect_slashes=False,
             )
 
@@ -99,15 +102,16 @@ class KronicleApp:
             self.init_routes()
 
         # Generating OpenAPI doc
-        if self.conf.app.is_dev_env:
+        if self.conf.is_dev_env:
             with log_block(here, "Doc generation"):
                 self.generate_doc()
 
     @asynccontextmanager
     async def lifespan(self, app: FastAPI) -> AsyncIterator[None]:
         """Application lifecycle management."""
-        here = "lifespan"
-
+        here = "app.launch"
+        # log_d(here, "Channel DB:", f"{self.conf.db._host}:{self.conf.db._port}/{self.conf.db._name}")
+        log_d(here, "Connection url:", self.conf.db.masked_connection_url)
         with log_block(here, "Channel DB"):
             channel_db = ChannelDbSession(db_url=self.conf.db.channel_connection_url)
             await channel_db.init_async()
@@ -136,7 +140,7 @@ class KronicleApp:
         # api_task = asyncio.create_task(consume_api_logs())
         # log_d("Log consumers started")
 
-        log_d(here, f"Swagger docs available at: http://{self.conf.app.host}:{self.conf.app.port}/docs")
+        log_d(here, f"Swagger docs available at: http://{self.conf.server.host}:{self.conf.server.port}/docs")
         log_d(here, "Kronicle server ready")
         print("------------------------------------------------------------------------------------------[ Init OK ]--")
 
@@ -185,13 +189,16 @@ class KronicleApp:
         """Initialize application middleware."""
 
         # Add authentication middleware
-        # app.add_middleware(RequestSanitizerMiddleware)
+        self.app.add_middleware(
+            RequestSanitizerMiddleware,
+            are_docs_public=not self.conf.is_prod_env,
+        )
 
         # Add authentication middleware
         self.app.add_middleware(
             AuthenticationMiddleware,
             jwt_service=self.jwt_service,
-            are_docs_public=not self.conf.app.is_prod_env,
+            are_docs_public=not self.conf.is_prod_env,
         )
 
         # Add our own log pipelining middleware

@@ -1,5 +1,4 @@
 # ./docker-compose.yml
-version: "3.9"
 
 services:
   # --------------------------
@@ -8,9 +7,6 @@ services:
   db:
     image: timescale/timescaledb:latest-pg16 # Use latest TimescaleDB image (PostgreSQL 16)
     container_name: kronicle-db
-    env_file:
-      - .secrets
-      - .env
     environment:
       # Set from env file or .env
       POSTGRES_USER: ${POSTGRES_USER}
@@ -18,35 +14,31 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - kronicle-db-data:/var/lib/postgresql/data # Persist DB data
-    ports:
-      - "5432:5432" # optional, local access
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 2s
-      retries: 15
       timeout: 2s
+      retries: 15
+    ports:
+      - "5432:5432" # optional, local access
     networks:
       - kronicle-net # Shared network for app <> db communication
     restart: unless-stopped # Automatically restart unless stopped manually
 
   # --------------------------
-  # Kronicle DB/init container
+  # Kronicle App container
   # --------------------------
   app:
     image: ghcr.io/logistica-dev/kronicle:latest
     container_name: kronicle-app
-    env_file:
-      - .secrets
-      - .env
     build:
       context: .
-      dockerfile: docker/init/Dockerfile
+      dockerfile: docker/app/Dockerfile
     depends_on:
-      db:
-        condition: service_healthy
+      - db
     environment:
-      KRONICLE_DB_HOST: db
-      KRONICLE_DB_PORT: 5432
+      KRONICLE_DB_HOST: db # <- directly reference the db service
+      KRONICLE_DB_PORT: 5432 # fixed port inside network
       KRONICLE_DB_NAME: ${POSTGRES_DB}
 
       POSTGRES_USER: ${POSTGRES_USER}
@@ -55,10 +47,18 @@ services:
       KRONICLE_CHAN_CREDS: ${KRONICLE_CHAN_CREDS}
       KRONICLE_RBAC_CREDS: ${KRONICLE_RBAC_CREDS}
 
+      KRONICLE_APP_PORT: 8000
+
       KRONICLE_SU_INFO: ${KRONICLE_SU_INFO}
+
+      KRONICLE_CONF: /opt/kronicle/conf/default-conf.ini
+      KRONICLE_ENV: dev
+      KRONICLE_LOG_LEVEL: 3
+    ports:
+      - "8000:8000"
     networks:
       - kronicle-net # Same network as db
-    restart: unless-stopped # Keep container running unless manually stopped
+    restart: "no" # unless-stopped # Keep container running unless manually stopped
 
 # ------------------------------
 # Persisted volumes

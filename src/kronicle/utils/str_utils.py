@@ -192,6 +192,10 @@ def is_base64_url(sb) -> bool:
         return False
 
 
+def encode_b64url(s: str) -> str:
+    return urlsafe_b64encode(s.encode("utf-8")).decode("utf-8")
+
+
 def decode_b64url(b64_str: str) -> str:
     padded_str = pad_b64_str(b64_str)
     if not is_base64_url(padded_str):

@@ -16,22 +16,45 @@ from kronicle.errors.exception_handlers import app_error_adapter
 from kronicle.utils.dev_logs import log_d
 
 
-class AuthenticationMiddleware(BaseHTTPMiddleware):
-    """Middleware to handle JWT authentication for protected routes"""
-
+class ExcludedPaths:
     # Routes that don't require authentication
-    _EXCLUDED_PATHS = {
+    EXCLUDED_PATHS = {
         "/",
+        "/favicon.ico",
     }
-    _EXCLUDED_PREFIXES = (
+    EXCLUDED_PREFIXES = (
         "/static/",
         "/health/",
         "/auth/v1/",
     )
-    _DOCS_PREFIXES = (
+    DOCS_PREFIXES = (
         "/docs",
+        "/redoc",
+        "/static-docs",
         "/openapi",
     )
+
+    def __init__(self, are_docs_public: bool = False):
+        if are_docs_public:
+            self.EXCLUDED_PREFIXES += self.DOCS_PREFIXES
+
+    @classmethod
+    def normalize_path(cls, path: str) -> str:
+        return path.rstrip("/")
+
+    def is_excluded_path(self, path: str) -> bool:
+        """Check if path is excluded from authentication"""
+        # Normalize trailing slash
+        normalized_path = self.normalize_path(path)
+
+        # Exact matches
+        return normalized_path in self.EXCLUDED_PATHS or any(
+            normalized_path.startswith(prefix) for prefix in self.EXCLUDED_PREFIXES
+        )
+
+
+class AuthenticationMiddleware(BaseHTTPMiddleware):
+    """Middleware to handle JWT authentication for protected routes"""
 
     def __init__(self, app, jwt_service: JWTService, are_docs_public: bool = False):
         if jwt_service is None:
@@ -40,31 +63,21 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self._jwt_service = jwt_service
 
-        if are_docs_public:
-            self._EXCLUDED_PREFIXES += self._DOCS_PREFIXES
+        self._safe_paths = ExcludedPaths(are_docs_public)
 
         log_d("auth.init", f"Docs are {'' if are_docs_public else 'not '}public")
-        log_d("auth.init", "Authorized paths", self._EXCLUDED_PREFIXES)
 
-    def _normalize_path(self, path: str) -> str:
-        return path.rstrip("/")
+        log_d("auth.init", "Authorized paths", self._safe_paths.EXCLUDED_PREFIXES)
 
-    def _is_excluded_path(self, path: str) -> bool:
+    def is_excluded_path(self, path: str) -> bool:
         """Check if path is excluded from authentication"""
         # Normalize trailing slash
-        normalized_path = path.rstrip("/")
-
-        # Exact matches
-        if normalized_path in self._EXCLUDED_PATHS:
-            return True
-
-        # Prefix matches
-        return any(normalized_path.startswith(prefix) for prefix in self._EXCLUDED_PREFIXES)
+        return self._safe_paths.is_excluded_path(path)
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         try:
             # Check if path requires authentication
-            if self._is_excluded_path(request.url.path):
+            if self.is_excluded_path(request.url.path):
                 return await call_next(request)
 
             # Extract Authorization header

@@ -175,6 +175,18 @@ def write_json_file(destination_file_path: str, json_dict):  # pragma: no cover
         dump(json_dict, file, ensure_ascii=False)
 
 
+def load_ini_file(ini_path: str) -> ConfigParser:
+    """Load and parse INI file into a flat dictionary."""
+    from configparser import ConfigParser
+
+    path = expand_file_path(ini_path)
+    check_is_file(path, f"Configuration file not found: '{path}'")
+
+    parser = ConfigParser(interpolation=ExtendedInterpolation())
+    parser.read(path)
+    return parser
+
+
 # class FileDetails(Serializable):
 #     def __init__(self, file_local_path: str):
 #         check_is_file(file_local_path)

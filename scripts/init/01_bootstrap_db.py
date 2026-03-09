@@ -75,7 +75,7 @@ async def main():
         log_d(mod, "Ensure RBAC user exists...")
         await ensure_user_exists(db, conf.rbac_creds.username, conf.rbac_creds.password)
 
-        log_d(mod, "Ensure application database exists...")
+        log_d(mod, f"Ensure application database '{conf.db.name}' exists...")
         await ensure_database_exists(db, conf.db.name, conf.chan_creds.username)
 
     # --- Connect to application database as app user ---

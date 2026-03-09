@@ -1,6 +1,72 @@
-# Kronicle API
+# Kronicle
 
 Kronicle is a FastAPI-based time-series measurements storage service with strict separation of admin, writer, and reader permissions.
+
+## Launching the app
+
+The app can run itself in init mode if it detects that no base is present in the database.
+In such condition, here are the resquested information:
+
+- POSTGRES_USER: name of the DB superuser
+- POSTGRES_PASSWORD: password of the DB superuser (in clear)
+- POSTGRES_DB: name of the DB to create
+
+- KRONICLE_SU_INFO: credentials for the Kronicle app superuser that will be needed to interact with the API
+  This is a base64url-encoded triplet of <su_name>:<su_email>:<argon2_hashed_pwd>
+  A script is provided to help with this this easier:
+
+```sh
+python3 ./scripts/utils/hash_creds.py su_name su_email "SU_passw0rd"
+```
+
+These informations are also required by the init phase. They will need to be provided in a production run as well:
+
+- KRONICLE_CHAN_CREDS: base64url-encoded <usr>:<pwd> credentials of the user that will manage the data (metadata, timeseries) in the DB
+- KRONICLE_RBAC_CREDS:base64url-encoded <usr>:<pwd> credentials of the user that will manage the RBAC in the DB ("role-base access control" = authorization in this app)
+
+- KRONICLE_HOST (defaulted to 0.0.0.0): host for the app server
+- KRONICLEPORT (defaulted to 8000): listening port for the app server
+- KRONICLE_ENV: set to test for the docs to be
+
+You can for instance set all these variables in a `.env` file
+
+```sh
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DB=kronicle_db
+
+KRONICLE_SU_INFO=S3JvbmljbGVBZG1pbjphZG1pbkBrcm9uaWNsZS5hcHA6JGFyZ29uMmlkJHY9MTkkbT02NTUzNix0PTMscD00JGVkSE56VDc2YjRXUitiMEowTDRObFEkbkZRNVJqclkreG56QkMzbnZma2Z2OEI0N1YvY2lwbGF5Y1VGUUtzS2pZaw
+
+KRONICLE_CHAN_CREDS=Y2hhbl91c3JfbmFtZTpjaGFuX3Vzcl9wYXNz
+KRONICLE_RBAC_CREDS=cmJhY191c3JfbmFtZTpyYmFjX3Vzcl9wYXNz
+
+KRONICLE_PORT=8765
+KRONICLE_HOST=localhost
+KRONICLE_ENV=test
+```
+
+Then launch docker-compose (or alternatively podman-compose, whichever you have installed already)
+
+```sh
+podman-compose --env-file .env up # -d
+```
+
+## OpenAPI/Swagger doc
+
+Launching the app with the environment variable above will display some logs.
+You should see a phase of table validation and in the end:
+
+```
+D [app.launch] Swagger docs available at: http://localhost:8765/docs
+D [app.launch] Kronicle server ready
+```
+
+You can go to the URL above to access the OpenAPI documentation: it is powered with the Swagger UI and let you interact with the Kronicle API.
+You will need to log as a user: if the app was initialized with the credentials for the Kronicle app superuser given in the example above, try login with KronicleAdmin / KronicleAdmin_Passw0rd
+Once logged in, you can copy the access token string, click on one of the locks of the requests bellow, and enter the token.
+
+## API
+
 The API is organized into three main route groups: **Reader/API**, **Writer/Data** and **Setup/Admin**.
 
 Base URL prefixes include the API version:
@@ -15,7 +81,7 @@ If the server is launched, you can get an interactive Swagger at http://localhos
 
 ---
 
-## Setup / Admin Routes (`/setup/{api_version}`)
+### Setup / Admin Routes (`/setup/{api_version}`)
 
 These routes are intended for administrators or users with full access to manage channels.
 
@@ -32,18 +98,18 @@ These routes are intended for administrators or users with full access to manage
 
 ---
 
-## Writer / Data Routes (`/data/{api_version}`)
+### Writer / Data Routes (`/data/{api_version}`)
 
 These routes are primarily for appending channel data and managing metadata safely. Writers have read-only access for exploration.
 
-### Append-only Endpoints
+#### Append-only Endpoints
 
 | Method | Path                          | Description                                                        |
 | ------ | ----------------------------- | ------------------------------------------------------------------ |
 | POST   | `/channels`                   | Upsert metadata and insert rows. Auto-creates channel if missing.  |
 | POST   | `/channels/{channel_id}/rows` | Insert new rows for an existing channel. Metadata is not modified. |
 
-### Read-only Endpoints (accessible to writers)
+#### Read-only Endpoints (accessible to writers)
 
 | Method | Path                             | Description                                            |
 | ------ | -------------------------------- | ------------------------------------------------------ |

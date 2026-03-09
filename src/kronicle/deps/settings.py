@@ -1,54 +1,29 @@
 # kronicle/deps/settings.py
 from __future__ import annotations
 
-from configparser import ConfigParser, ExtendedInterpolation
-from functools import lru_cache
+from configparser import ConfigParser
 from json import dumps
-from os import getenv
 from typing import Any, ClassVar, TypeVar
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from kronicle.deps.env_var import KronicleDbConf
-from kronicle.utils.dev_logs import log_d
-from kronicle.utils.file_utils import check_is_file, expand_file_path
+from kronicle.deps.env_var import ConnectionSettings, KronicleEnvConf
+from kronicle.utils.file_utils import is_file, load_ini_file
 from kronicle.utils.str_utils import strip_quotes
 
 # --------------------------------------------------------------------------------------------------
 # Constants
 # --------------------------------------------------------------------------------------------------
-KRONICLE_CONF = "KRONICLE_CONF"
-KRONICLE_ENV = "KRONICLE_ENV"
+DEFAULT_CONF_FILE_PATH = "./conf/default-conf.ini"
+ALT_CONF_FILE_PATH = "../conf/default-conf.ini"
 
-_ENV_DEV = "dev"
-_ENV_PROD = "prod"
-_ENV_STAGE = "stage"
-
-
-# --------------------------------------------------------------------------------------------------
-# Helpers
-# --------------------------------------------------------------------------------------------------
-def _get_env() -> str:
-    kronicle_env = getenv(KRONICLE_ENV, _ENV_PROD).lower().strip()
-    mapping = {
-        "dev": _ENV_DEV,
-        "development": _ENV_DEV,
-        "prod": _ENV_PROD,
-        "production": _ENV_PROD,
-        "stage": _ENV_STAGE,
-    }
-    if kronicle_env not in mapping:
-        raise ValueError(f"Invalid KRONICLE_ENV value: '{kronicle_env}'. Must be one of {list(mapping.values())}")
-    return mapping[kronicle_env]
-
+T = TypeVar("T", bound="IniSection")
 
 # --------------------------------------------------------------------------------------------------
 # Section models
 # --------------------------------------------------------------------------------------------------
-
-T = TypeVar("T", bound="IniSection")
 
 
 class IniSection(BaseModel):
@@ -91,10 +66,7 @@ class AppSettings(IniSection):
     name: str = Field(default="Kronicle")
     id: UUID = Field(default_factory=lambda: UUID("ffffffff-62dd-490a-8f7e-b168c68da4a7"))
     description: str = Field(default="FastAPI-powered TimescaleDB microservice for storing time-series measurements")
-    host: str = Field(default="localhost")
-    port: int = Field(ge=1, le=65535, default=8080)
     openapi_url: str = Field(default="/openapi")
-    env: str = Field(default_factory=_get_env)
 
     @property
     def tinyid(self) -> str:
@@ -104,18 +76,6 @@ class AppSettings(IniSection):
     @property
     def prefix(self) -> str:
         return f"krcl_{self.tinyid}"
-
-    @property
-    def is_dev_env(self) -> bool:
-        return self.env == _ENV_DEV
-
-    @property
-    def is_prod_env(self) -> bool:
-        return self.env == _ENV_PROD
-
-    @property
-    def is_stage_env(self) -> bool:
-        return self.env == _ENV_STAGE
 
 
 class AuthSettings(IniSection):
@@ -165,19 +125,18 @@ class DBSettings:
     These are extracted from environment variables.
     """
 
-    def __init__(self) -> None:
-        _env = KronicleDbConf.from_env()
-        self._env = _env
+    def __init__(self, conf: KronicleEnvConf) -> None:
+        self.env = conf
 
-        self._host: str = _env.db.host
-        self._port: int = _env.db.port
-        self._name: str = _env.db.name  # already gone through normalize_pg_identifier
+        self._host: str = conf.db.host
+        self._port: int = conf.db.port
+        self._name: str = conf.db.name  # already gone through normalize_pg_identifier
 
-        self._chan_usr: str = _env.chan_creds.username  # already gone through normalize_pg_identifier
-        self._chan_pwd: SecretStr = SecretStr(_env.chan_creds.password)
+        self._chan_usr: str = conf.chan_creds.username  # already gone through normalize_pg_identifier
+        self._chan_pwd: SecretStr = SecretStr(conf.chan_creds.password)
 
-        self._rbac_usr: str = _env.rbac_creds.username  # already gone through normalize_pg_identifier
-        self._rbac_pwd: SecretStr = SecretStr(_env.rbac_creds.password)
+        self._rbac_usr: str = conf.rbac_creds.username  # already gone through normalize_pg_identifier
+        self._rbac_pwd: SecretStr = SecretStr(conf.rbac_creds.password)
 
     def get_connection_url(self, usr: str, pwd: str) -> str:
         return f"postgresql://{usr}:{pwd}@{self._host}:{self._port}/{self._name}"
@@ -232,6 +191,9 @@ class Settings(BaseSettings):
     - Nested fields using "__"
     """
 
+    _env_conf = KronicleEnvConf.from_env()
+    server: ConnectionSettings = _env_conf.server
+
     model_config = SettingsConfigDict(
         env_prefix="KRONICLE_",
         env_nested_delimiter="__",
@@ -239,41 +201,19 @@ class Settings(BaseSettings):
         extra="forbid",
         frozen=True,
     )
+    _parser = load_ini_file(
+        _env_conf.conf_file or DEFAULT_CONF_FILE_PATH if is_file(DEFAULT_CONF_FILE_PATH) else ALT_CONF_FILE_PATH
+    )
 
     # These will be populated from the INI file
-    app: AppSettings
-    db: DBSettings
-    auth: AuthSettings
-    jwt: JWTSettings
-    max_retries: int = Field(default=10, ge=0)
+    app: AppSettings = AppSettings.from_parser(_parser)
+    auth: AuthSettings = AuthSettings.from_parser(_parser)
+    jwt: JWTSettings = JWTSettings.from_parser(_parser)
+    db: DBSettings = DBSettings(_env_conf)
 
     @property
     def api_version(self) -> str:
         return "v1"
-
-    @classmethod
-    def from_parser(cls, parser: ConfigParser) -> Settings:
-        """Create settings from a ConfigParser, with environment variable fallback."""
-        return cls(
-            app=AppSettings.from_parser(parser),
-            auth=AuthSettings.from_parser(parser),
-            jwt=JWTSettings.from_parser(parser),
-            db=DBSettings(),
-        )
-
-    @classmethod
-    def load_ini_file(cls, ini_path: str) -> Settings:
-        """Load and parse INI file into a flat dictionary."""
-        from configparser import ConfigParser
-
-        log_d("ini.load", "Reading conf file", ini_path)
-        path = expand_file_path(ini_path)
-        check_is_file(path, f"Configuration file not found: '{path}'")
-
-        parser = ConfigParser(interpolation=ExtendedInterpolation())
-        parser.read(path)
-
-        return cls.from_parser(parser)
 
     def safe_dump(self) -> dict[str, Any]:
         return self.model_dump()
@@ -294,31 +234,14 @@ class Settings(BaseSettings):
     def json(self, *, indent: int = 2, **kwargs) -> str:
         return self.model_dump_json(indent=indent, **kwargs)
 
+    @property
+    def is_prod_env(self) -> bool:
+        return self._env_conf.env.is_prod_env
 
-@lru_cache
-def get_settings(ini_path: str = "../conf/default-conf.ini") -> Settings:
-    """Load settings from INI file and environment variables."""
-    here = "ini.load"
+    @property
+    def is_dev_env(self) -> bool:
+        return self._env_conf.env.is_dev_env
 
-    # Get config file path from environment variable or use default
-    conf_file = getenv(KRONICLE_CONF, ini_path)
-    log_d(here, "Conf file path set to", conf_file)
-
-    # Expand and validate the file path
-    ini_file = expand_file_path(conf_file)
-    check_is_file(ini_file, f"Configuration file not found: '{ini_file}'")
-
-    # Load from INI file
-    return Settings.load_ini_file(ini_file)
-
-
-# --------------------------------------------------------------------------------------------------
-# Example usage / debug
-# --------------------------------------------------------------------------------------------------
-if __name__ == "__main__":  # pragma: no cover
-    here = "conf"
-    conf = get_settings("./conf/default-conf.ini")
-    log_d(here, "App name", conf.app.name)
-    log_d(here, "JWT expiration (minutes)", conf.jwt.expiration_minutes)
-    log_d(here, "Full config as dict\n", conf.as_dict())
-    log_d(here, "Full config as JSON:\n", conf.json(indent=2))
+    @property
+    def is_stage_env(self) -> bool:
+        return self._env_conf.env.is_stage_env
