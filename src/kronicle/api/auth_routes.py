@@ -1,5 +1,5 @@
 # kronicle/api/auth_routes.py
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Body, Depends
 from fastapi.security import OAuth2PasswordBearer
 
 from kronicle.auth.auth_service import AuthService
@@ -11,10 +11,10 @@ auth_router = APIRouter(tags=["Auth"])
 
 @auth_router.post("/login")
 def login(
-    user_input: InputUserLogin,
+    creds: InputUserLogin = Body(...),  # noqa: B008
     auth: AuthService = Depends(auth_service),  # noqa: B008
 ):
-    token = auth.login(user_input)
+    token = auth.login(creds)
     return {"access_token": token, "token_type": "bearer"}
 
 
