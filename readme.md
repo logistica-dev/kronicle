@@ -7,11 +7,11 @@ Kronicle is a FastAPI-based time-series measurements storage service with strict
 The app can run itself in init mode if it detects that no base is present in the database.
 In such condition, here are the resquested information:
 
-- POSTGRES_USER: name of the DB superuser
-- POSTGRES_PASSWORD: password of the DB superuser (in clear)
-- POSTGRES_DB: name of the DB to create
+- `POSTGRES_USER`: name of the DB superuser
+- `POSTGRES_PASSWORD`: password of the DB superuser (in clear)
+- `POSTGRES_DB`: name of the DB to create
 
-- KRONICLE_SU_INFO: credentials for the Kronicle app superuser that will be needed to interact with the API
+- `KRONICLE_SU_INFO`: credentials for the Kronicle app superuser that will be needed to interact with the API
   This is a base64url-encoded triplet of <su_name>:<su_email>:<argon2_hashed_pwd>
   A script is provided to help with this this easier:
 
@@ -21,12 +21,12 @@ python3 ./scripts/utils/hash_creds.py su_name su_email "SU_passw0rd"
 
 These informations are also required by the init phase. They will need to be provided in a production run as well:
 
-- KRONICLE_CHAN_CREDS: base64url-encoded <usr>:<pwd> credentials of the user that will manage the data (metadata, timeseries) in the DB
-- KRONICLE_RBAC_CREDS:base64url-encoded <usr>:<pwd> credentials of the user that will manage the RBAC in the DB ("role-base access control" = authorization in this app)
+- `KRONICLE_CHAN_CREDS`: base64url-encoded <usr>:<pwd> credentials of the user that will manage the data (metadata, timeseries) in the DB
+- `KRONICLE_RBAC_CREDS`:base64url-encoded <usr>:<pwd> credentials of the user that will manage the RBAC in the DB ("role-base access control" = authorization in this app)
 
-- KRONICLE_HOST (defaulted to 0.0.0.0): host for the app server
-- KRONICLEPORT (defaulted to 8000): listening port for the app server
-- KRONICLE_ENV: set to test for the docs to be
+- `KRONICLE_HOST` (defaulted to 0.0.0.0): host for the app server
+- `KRONICLE_PORT` (defaulted to 8000): listening port for the app server
+- `KRONICLE_ENV`: set to test for the docs to be
 
 You can for instance set all these variables in a `.env` file
 
@@ -43,6 +43,7 @@ KRONICLE_RBAC_CREDS=cmJhY191c3JfbmFtZTpyYmFjX3Vzcl9wYXNz
 KRONICLE_PORT=8765
 KRONICLE_HOST=localhost
 KRONICLE_ENV=test
+KRONICLE_LOG_LEVEL=3 # 3=debug, 2=info, 1=warn, 0=error
 ```
 
 Then launch docker-compose (or alternatively podman-compose, whichever you have installed already)

@@ -13,7 +13,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
-      - kronicle-db-data:/var/lib/postgresql/data # Persist DB data
+      - ./kronicle-db-data:/var/lib/postgresql/data # Persist DB data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 2s
@@ -47,12 +47,13 @@ services:
       KRONICLE_CHAN_CREDS: ${KRONICLE_CHAN_CREDS}
       KRONICLE_RBAC_CREDS: ${KRONICLE_RBAC_CREDS}
 
-      KRONICLE_APP_PORT: 8000
+      KRONICLE_PORT: 8000
+      KRONICLE_HOST: 0.0.0.0
 
       KRONICLE_SU_INFO: ${KRONICLE_SU_INFO}
 
       KRONICLE_CONF: /opt/kronicle/conf/default-conf.ini
-      KRONICLE_ENV: dev
+      KRONICLE_ENV: test
       KRONICLE_LOG_LEVEL: 3
     ports:
       - "8000:8000"

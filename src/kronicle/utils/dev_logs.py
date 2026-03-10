@@ -13,7 +13,7 @@ from kronicle.utils.str_utils import enforce_length
 # ------------------------------------------------------
 # Configuration
 # ------------------------------------------------------
-LOG_LEVEL = int(getenv("KRONICLE_LOG_LEVEL") or 3)
+LOG_LEVEL = int(getenv("KRONICLE_LOG_LEVEL", 3))
 print("LOG_LEVEL:", LOG_LEVEL)
 
 LEVEL_SHORT = {
