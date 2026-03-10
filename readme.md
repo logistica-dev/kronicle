@@ -22,7 +22,7 @@ python3 ./scripts/utils/hash_creds.py su_name su_email "SU_passw0rd"
 These informations are also required by the init phase. They will need to be provided in a production run as well:
 
 - `KRONICLE_CHAN_CREDS`: base64url-encoded <usr>:<pwd> credentials of the user that will manage the data (metadata, timeseries) in the DB
-- `KRONICLE_RBAC_CREDS`:base64url-encoded <usr>:<pwd> credentials of the user that will manage the RBAC in the DB ("role-base access control" = authorization in this app)
+- `KRONICLE_RBAC_CREDS`: base64url-encoded <usr>:<pwd> credentials of the user that will manage the RBAC in the DB ("role-base access control" = authorization in this app)
 
 - `KRONICLE_HOST` (defaulted to 0.0.0.0): host for the app server
 - `KRONICLE_PORT` (defaulted to 8000): listening port for the app server

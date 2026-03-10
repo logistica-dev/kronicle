@@ -1,0 +1,144 @@
+stages:
+  - build
+  - test
+  - publish
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ''
+  IMAGE_NAME: $CI_REGISTRY_IMAGE/kronicle
+
+default:
+  image: docker:25
+  services:
+    - docker:25-dind
+
+before_script:
+  - docker info
+
+# ---------------------------------------------------------
+# Build temporary init image
+# ---------------------------------------------------------
+build_init_image:
+  stage: build
+  script:
+    - docker build -f docker/init/Dockerfile -t kronicle-init:latest .
+  artifacts:
+    expire_in: 1 hour
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+# ---------------------------------------------------------
+# Test DB initialization
+# ---------------------------------------------------------
+test_db_init:
+  stage: test
+  needs: ['build_init_image']
+
+  script:
+    # Create network
+    - docker network create kronicle-net || true
+
+    # Start TimescaleDB
+    - |
+      docker run -d \
+        --name kronicle-test-db \
+        --network kronicle-net \
+        -e POSTGRES_USER=$POSTGRES_USER \
+        -e POSTGRES_PASSWORD=$POSTGRES_PASSWORD \
+        -e POSTGRES_DB=$POSTGRES_DB \
+        -p 5433:5432 \
+        --health-cmd="pg_isready -U $POSTGRES_USER" \
+        --health-interval=2s \
+        --health-timeout=2s \
+        --health-retries=30 \
+        timescale/timescaledb:latest-pg16
+
+    # Wait for DB
+    - |
+      echo "Waiting for DB..."
+      MAX_WAIT=60
+      WAITED=0
+
+      while true; do
+        STATUS=$(docker inspect --format='{{.State.Health.Status}}' kronicle-test-db)
+
+        if [ "$STATUS" = "healthy" ]; then
+          echo "DB ready"
+          break
+        elif [ "$STATUS" = "unhealthy" ]; then
+          docker logs kronicle-test-db
+          exit 1
+        fi
+
+        sleep 1
+        WAITED=$((WAITED+1))
+
+        if [ "$WAITED" -ge "$MAX_WAIT" ]; then
+          echo "Timeout waiting for DB"
+          docker logs kronicle-test-db
+          exit 1
+        fi
+      done
+
+    # Prepare env file
+    - |
+      cat <<EOF > kronicle.env
+      KRONICLE_DB_HOST=$KRONICLE_DB_HOST
+      KRONICLE_DB_PORT=$KRONICLE_DB_PORT
+      KRONICLE_DB_NAME=$KRONICLE_DB_NAME
+
+      KRONICLE_DB_SU_CREDS=$KRONICLE_DB_SU_CREDS
+      KRONICLE_CHAN_CREDS=$KRONICLE_CHAN_CREDS
+      KRONICLE_RBAC_CREDS=$KRONICLE_RBAC_CREDS
+
+      KRONICLE_SU_INFO=$KRONICLE_SU_INFO
+
+      POSTGRES_DB=$POSTGRES_DB
+      POSTGRES_USER=$POSTGRES_USER
+      POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+
+      DATABASE_URL="postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@host.docker.internal:5433/$POSTGRES_DB"
+      EOF
+
+    # Run DB initialization
+    - docker run --rm --network kronicle-net --env-file kronicle.env kronicle-init:latest
+
+    # Stop DB
+    - docker stop kronicle-test-db
+    - docker rm kronicle-test-db
+
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+# ---------------------------------------------------------
+# Build & push final image
+# ---------------------------------------------------------
+publish_image:
+  stage: publish
+  needs: ['test_db_init']
+
+  script:
+    # Login to GitLab registry
+    - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
+
+    # Enable buildx
+    - docker buildx create --use
+    - docker buildx inspect --bootstrap
+
+    # Build and push
+    - |
+      docker buildx build \
+        --platform linux/amd64,linux/arm64 \
+        -f docker/app/Dockerfile \
+        -t $IMAGE_NAME:latest \
+        -t $IMAGE_NAME:$CI_COMMIT_SHA \
+        -t $IMAGE_NAME:$CI_COMMIT_REF_NAME \
+        --push \
+        .
+
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_TAG =~ /^0\..*/
