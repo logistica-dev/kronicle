@@ -73,7 +73,7 @@ class KronicleBase(Base):
         Validate that the table exists and matches the declared columns.
         Raises RuntimeError if the table is missing or columns are mismatched.
         """
-        here = "validate_table"
+        here = "valid_tbl"
         namespace = cls.namespace()
         tablename = cls.tablename()
         table_columns = cls.__table__.columns

@@ -1,9 +1,11 @@
 # kronicle/utils/dev_logs.py
 from contextlib import contextmanager
 from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING, Formatter, StreamHandler, getLogger
+from logging.handlers import SysLogHandler
 from os import getenv
 from time import time
 
+from rich.console import Console
 from rich.logging import RichHandler
 from rich.markup import escape
 from rich.text import Text
@@ -23,6 +25,9 @@ LEVEL_SHORT = {
     ERROR: "E",
     CRITICAL: "C",
 }
+
+HERE_LEN = 12
+LOG_LINE_LEN = 140
 
 
 # Subclass RichHandler to remove the padding
@@ -63,11 +68,12 @@ def setup_logging():
     basic_formatter.datefmt = DATE_FORMAT
 
     basic_handler = OneLetterRichHandler(
+        console=Console(width=LOG_LINE_LEN),
         show_time=True,
         rich_tracebacks=True,
         markup=True,
-        tracebacks_width=120,
-        tracebacks_code_width=120,
+        tracebacks_width=LOG_LINE_LEN,
+        tracebacks_code_width=LOG_LINE_LEN,
     )
     basic_handler.setFormatter(basic_formatter)
 
@@ -87,6 +93,20 @@ def setup_logging():
     request_logger.propagate = False
     request_logger.addHandler(request_handler)
 
+    # ---------------------
+    # Syslog
+    # ---------------------
+    syslog_handler = SysLogHandler(address="/dev/log")  # or ('host', port) for remote syslog
+    syslog_formatter = Formatter(
+        "%(asctime)s %(name)s %(levelname)s: %(message)s",
+        datefmt="%b %d %H:%M:%S",  # standard syslog date format
+    )
+    syslog_handler.setFormatter(syslog_formatter)
+
+    logger = getLogger("kronicle")
+    logger.addHandler(syslog_handler)
+    logger.setLevel(DEBUG)
+
 
 # ------------------------------------------------------
 # Utility functions
@@ -99,7 +119,7 @@ def format_input(here: str, *args, **kwargs) -> str:
     if kwargs:
         parts.append(" ".join(f"{k}={v}" for k, v in kwargs.items()))
 
-    here_str = f"[{enforce_length(here, 10)}]"
+    here_str = f"[{enforce_length(here, HERE_LEN)}]"
     content = " | ".join(parts) if parts else ""
     raw = f"{here_str} {content}" if content else f"{here_str} <"
     return escape(raw)

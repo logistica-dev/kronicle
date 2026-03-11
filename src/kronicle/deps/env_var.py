@@ -51,7 +51,7 @@ KRONICLE_ENV = "KRONICLE_ENV"
 
 
 def get_env_var(env_var: str, default_val: Any):
-    here = "_get_env_var"
+    here = "get_env_var"
     env_val = getenv(env_var)
     if env_val is None:
         log_w(here, f"Environment variable not set: {env_var}, defaulting to {default_val}")
@@ -60,7 +60,7 @@ def get_env_var(env_var: str, default_val: Any):
 
 
 def ensure_env_var(env_var: str):
-    here = "_ensure_env_var"
+    here = "ensure_env_var"
     try:
         env_val = getenv(env_var)
         if not env_val:
