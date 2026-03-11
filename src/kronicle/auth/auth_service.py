@@ -2,7 +2,7 @@
 from kronicle.auth.jwt_service import JWTService
 from kronicle.auth.pwd.pwd_manager import PasswordManager
 from kronicle.db.rbac.models.rbac_user import RbacUser
-from kronicle.errors.error_types import UnauthorizedError
+from kronicle.errors.error_types import NotFoundError, UnauthorizedError
 from kronicle.schemas.rbac.user_schemas import InputUserLogin, OutputUser
 from kronicle.services.rbac_service import RbacService
 from kronicle.utils.dev_logs import log_w
@@ -36,7 +36,11 @@ class AuthService:
         Raises UnauthorizedError if credentials are invalid.
         """
         here = "login"
-        db_user: RbacUser | None = self._rbac_service.fetch_user_for_auth(login_input)
+        try:
+            db_user: RbacUser | None = self._rbac_service.fetch_user_for_auth(login_input)
+        except NotFoundError as e:
+            log_w(here, "User not found")
+            raise UnauthorizedError("Invalid credentials") from e
 
         if not db_user or not db_user.is_active or not db_user.password_hash:
             log_w(here, "User does not exist")
