@@ -4,7 +4,8 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator
 
 from kronicle.types.iso_datetime import IsoDateTime
-from kronicle.utils.str_utils import normalize_name
+from kronicle.utils.dev_logs import log_w
+from kronicle.utils.str_utils import normalize_name, normalize_pg_identifier
 
 DEFAULT_LIMIT = 100
 DEFAULT_OFFSET = 0
@@ -71,9 +72,22 @@ class RequestFilter(BaseModel):
     # --------------------------------------------------------------------------
     # SQL generation
     # --------------------------------------------------------------------------
-    def to_sql_clauses(self, start_idx: int = 1) -> tuple[str, list]:
+    def safe_order_by(self, column_name: str | None, desc: bool = True) -> str:
+        if column_name:
+            try:
+                return f"ORDER BY {normalize_pg_identifier(column_name)} {'DESC' if desc else 'ASC'}"
+            except Exception:
+                log_w("order_by", "Wrong input for order_by")
+        return ""
+
+    def to_sql_clauses(
+        self,
+        start_idx: int = 1,
+        order_by: str | None = None,
+        desc: bool = True,
+    ) -> tuple[str, list]:
         """
-        Generate WHERE, LIMIT, OFFSET SQL fragments and parameters.
+        Generate WHERE, ORDER BY, LIMIT, OFFSET SQL fragments and parameters.
 
         Returns:
             sql_fragment: str
@@ -83,6 +97,7 @@ class RequestFilter(BaseModel):
         params: list = []
         idx = start_idx
 
+        # WHERE conditions
         if self.from_date:
             clauses.append(f"time >= ${idx}")
             params.append(self.from_date)
@@ -92,9 +107,17 @@ class RequestFilter(BaseModel):
             params.append(self.to_date)
             idx += 1
 
+        # Combine WHERE
         where_sql = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+
+        # ORDER BY
+        order_sql = self.safe_order_by(order_by, desc)
+
+        # LIMIT/OFFSET
         limit_sql = f"LIMIT {self.limit}" if self.limit is not None else ""
         offset_sql = f"OFFSET {self.offset}" if self.offset is not None else ""
 
-        sql_fragment = " ".join(filter(None, [where_sql, limit_sql, offset_sql]))
+        # Always generate in Postgres-valid order: WHERE → ORDER BY → LIMIT → OFFSET
+        sql_fragment = " ".join(filter(None, [where_sql, order_sql, limit_sql, offset_sql]))
+
         return sql_fragment, params

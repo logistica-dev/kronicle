@@ -50,6 +50,7 @@ class ChannelService:
         # These are done in `ProcessedPayload.from_input(payload)``
         #   ensure_uuid4(payload.channel_id)
         #   payload.ensure_channel_schema()
+        # log_d("create_channel")
         processed = ProcessedPayload.from_input(payload)
         channel = await self._repo.create_channel(processed)
         return ResponsePayload.from_channel_resource(channel)
@@ -73,7 +74,7 @@ class ChannelService:
         try:
             channel = await self._repo.fetch_metadata(ensure_uuid4(payload.channel_id))
         except Exception:
-            log_d(f"{mod}.upsert_metadata", "Channel does not exist, creating")
+            log_d("upsert_metadata", "Channel does not exist, creating")
             return await self.create_channel(payload)
 
         processed_payload = ProcessedPayload.from_input(payload, channel_schema=channel.channel_schema)
@@ -151,11 +152,11 @@ class ChannelService:
         """
         Insert new rows for an existing_meta channel.
         Validates rows first; in strict mode, aborts on any validation errors.
+        The metadata is not updated.
         """
         processed = await self._process_payload_for_insertion(payload, strict=strict)
         updated_resource = await self._repo.insert_rows(
             processed=processed,
-            update_metadata=False,  # Metadata not updated!
             strict=strict,
         )
         return ResponsePayload.from_channel_resource(updated_resource)
@@ -166,12 +167,15 @@ class ChannelService:
         - Metadata is validated first; if invalid, no rows are inserted.
         - Rows are validated; warnings collected if strict=False, error raised with every detail otherwise
         """
+        here = "up_meta_add_rows"
+        # log_d(here)
         processed = await self._process_payload_for_insertion(payload, strict=strict)
         updated_resource = await self._repo.insert_rows(
             processed=processed,
-            update_metadata=True,  # Metadata will be updated!
             strict=strict,
         )
+        log_d(here, "updated resource", updated_resource.channel_id)
+
         return ResponsePayload.from_channel_resource(updated_resource)
 
     async def fetch_rows(

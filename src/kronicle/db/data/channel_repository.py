@@ -10,6 +10,7 @@ from kronicle.errors.error_types import BadRequestError, NotFoundError
 from kronicle.schemas.payload.processed_payload import ProcessedPayload
 from kronicle.schemas.payload.request_filter import RequestFilter
 from kronicle.types.tag_type import TagType
+from kronicle.utils.dev_logs import log_d, log_e
 
 
 class ChannelRepository:
@@ -35,16 +36,16 @@ class ChannelRepository:
     # ----------------------------------------------------------------------------------------------
     # Helper
     # ----------------------------------------------------------------------------------------------
-    async def _metadata_to_channel(self, conn, metadata: ChannelMetadata) -> ChannelResource:
+    async def _metadata_to_channel(self, db, metadata: ChannelMetadata) -> ChannelResource:
         channel = ChannelResource(metadata)
-        await channel.count_rows(conn)
+        await channel.count_rows(db)
         return channel
 
-    async def _list_metadata_to_channels(self, conn, metadata_list: list[ChannelMetadata]) -> list[ChannelResource]:
+    async def _list_metadata_to_channels(self, db, metadata_list: list[ChannelMetadata]) -> list[ChannelResource]:
         channel_list = []
         for meta in metadata_list:
             channel_resource = ChannelResource(meta)
-            await channel_resource.count_rows(conn)
+            await channel_resource.count_rows(db)
             channel_list.append(channel_resource)
         return channel_list
 
@@ -52,52 +53,52 @@ class ChannelRepository:
     # Pure ChannelMetadata operations
     # ----------------------------------------------------------------------------------------------
     async def fetch_metadata(self, channel_id: UUID) -> ChannelResource:
-        async with self._db.transaction() as conn:
-            metadata = await ChannelMetadata.fetch_by_id(conn, channel_id)
+        async with self._db.transaction() as db:
+            metadata = await ChannelMetadata.fetch_by_id(db, channel_id)
             if not metadata:
                 raise NotFoundError("No metadata found", details={"channel_id": channel_id})
             channel = ChannelResource(metadata)
-            await channel.count_rows(conn)
+            await channel.count_rows(db)
             return channel
 
     async def fetch_all_metadata(self) -> list[ChannelResource]:
-        async with self._db.transaction() as conn:
-            metadata_list = await ChannelMetadata.fetch_all(conn)
-            return await self._list_metadata_to_channels(conn, metadata_list)
+        async with self._db.transaction() as db:
+            metadata_list = await ChannelMetadata.fetch_all(db)
+            return await self._list_metadata_to_channels(db, metadata_list)
 
     async def fetch_metadata_by_name(self, name: str) -> ChannelResource:
-        async with self._db.transaction() as conn:
-            metadata = await ChannelMetadata.fetch_by_name(conn, name=name)
+        async with self._db.transaction() as db:
+            metadata = await ChannelMetadata.fetch_by_name(db, name=name)
             if not metadata:
                 raise NotFoundError("No channel was found", details={"name": name})
-            return await self._metadata_to_channel(conn, metadata)
+            return await self._metadata_to_channel(db, metadata)
 
     async def fetch_metadata_by_tags(self, tags: dict[str, TagType]) -> list[ChannelResource]:
         if not tags:
             return []
-        async with self._db.transaction() as conn:
-            metadata_list = await ChannelMetadata.fetch_by_tags(conn, tags)
+        async with self._db.transaction() as db:
+            metadata_list = await ChannelMetadata.fetch_by_tags(db, tags)
             if not metadata_list:
                 return []
-            return await self._list_metadata_to_channels(conn, metadata_list)
+            return await self._list_metadata_to_channels(db, metadata_list)
 
     async def create_metadata(self, processed: ProcessedPayload) -> ChannelResource:
-        async with self._db.transaction() as conn:
+        async with self._db.transaction() as db:
             metadata = ChannelMetadata.from_processed(processed)
-            await metadata.create(conn)
-            return await self._metadata_to_channel(conn, metadata)
+            await metadata.create(db)
+            return await self._metadata_to_channel(db, metadata)
 
     async def update_metadata(self, processed: ProcessedPayload) -> ChannelResource:
-        async with self._db.transaction() as conn:
-            existing = await ChannelMetadata.fetch_by_id(conn, processed.channel_id)
+        async with self._db.transaction() as db:
+            existing = await ChannelMetadata.fetch_by_id(db, processed.channel_id)
             if not existing:
                 raise NotFoundError(f"No metadata for channel '{processed.channel_id}'")
             metadata = ChannelMetadata.from_processed(processed, channel_truth=existing.channel_schema)
-            await metadata.update(conn)
-            return await self._metadata_to_channel(conn, metadata)
+            await metadata.update(db)
+            return await self._metadata_to_channel(db, metadata)
 
     async def patch_metadata(self, processed: ProcessedPayload) -> ChannelResource:
-        async with self._db.transaction() as conn:
+        async with self._db.transaction() as db:
             channel = await self.fetch_metadata(processed.channel_id)
 
             # Update metadata fields if provided
@@ -118,36 +119,72 @@ class ChannelRepository:
                 if processed.channel_schema != channel.channel_schema:
                     channel.metadata.channel_schema = processed.channel_schema
 
-            await channel.metadata.update(conn)
-            return await self._metadata_to_channel(conn, channel.metadata)
+            await channel.metadata.update(db)
+            return await self._metadata_to_channel(db, channel.metadata)
 
     # ----------------------------------------------------------------------------------------------
     # ChannelResource operations (timeseries + metadata)
     # ----------------------------------------------------------------------------------------------
-    async def insert_rows(self, processed: ProcessedPayload, *, update_metadata: bool = True, strict: bool = False):
+    async def insert_rows(self, processed: ProcessedPayload, *, strict: bool = False) -> ChannelResource:
         """
         Append rows to an existing channel
         """
+        here = "insert_rows"
+        log_d(here)
         if not processed.rows:
             raise BadRequestError("The payload contains no row to insert")
         channel = ChannelResource.from_processed(processed)
-        async with self._db.transaction() as conn:
-            if update_metadata:
-                await channel.metadata.update(conn)
-            await channel.insert_rows(conn, strict=strict)  # Here we want to get a list of the rows
+        async with self._db.transaction() as db:
+            await channel.insert_rows(db, strict=strict)  # Here we want to get a list of the rows
+
+        return channel
+
+    async def upsert_metadata_and_insert_rows(
+        self,
+        processed: ProcessedPayload,
+        *,
+        strict: bool = False,
+    ) -> ChannelResource:
+        """
+        Upsert metadata and insert rows in one operation.
+        """
+        here = "up_meta_add_rows"
+        # log_d(here)
+        # if not processed.rows:
+        #     raise BadRequestError("The payload contains no row to insert")
+        # log_d(here, "Payload has rows")
+        channel = ChannelResource.from_processed(processed)
+        async with self._db.transaction() as db:
+            existing = await channel.metadata.exists(db=db)
+            try:
+                if existing:
+                    await channel.metadata.update(db)
+                else:
+                    await channel.metadata.create(db)
+            except Exception as e:
+                log_e(here, "Metadata upsert failed", e)
+                raise
+            if processed.rows:
+                try:
+                    await channel.insert_rows(db, strict=strict)
+                except Exception as e:
+                    log_e(here, "Rows insertion failed", e)
+                    raise
+            else:
+                channel.op_feedback.add_detail("No rows to insert", "rows")
         return channel
 
     async def delete_rows(self, channel: ChannelResource, *, filter: RequestFilter | None = None):
-        async with self._db.transaction() as conn:
-            return await channel.delete_rows(conn, filter=filter)
+        async with self._db.transaction() as db:
+            return await channel.delete_rows(db, filter=filter)
 
     # ----------------------------------------------------------------------------------------------
     # Channel operations (timeseries + metadata)
     # ----------------------------------------------------------------------------------------------
 
     async def fetch_channel(self, channel_id: UUID, *, filter: RequestFilter | None = None) -> ChannelResource:
-        async with self._db.transaction() as conn:
-            channel = await ChannelResource.fetch(conn, channel_id, filter=filter)
+        async with self._db.transaction() as db:
+            channel = await ChannelResource.fetch(db, channel_id, filter=filter)
         if not channel:
             raise NotFoundError("No channel found", details={"channel_id": channel_id})
         return channel
@@ -157,14 +194,14 @@ class ChannelRepository:
         Create metadata and ensure timeseries table exists.
         """
         channel = ChannelResource.from_processed(processed)
-        async with self._db.transaction() as conn:
-            db_resource = await channel.create(conn)
+        async with self._db.transaction() as db:
+            db_resource = await channel.create(db)
         return db_resource
 
     async def delete_channel_with_id(self, channel_id: UUID) -> ChannelResource | None:
-        async with self._db.transaction() as conn:
-            return await ChannelResource.delete_channel_with_id(conn, channel_id)
+        async with self._db.transaction() as db:
+            return await ChannelResource.delete_channel_with_id(db, channel_id)
 
     async def fetch_all_channels(self, *, filter: RequestFilter | None = None) -> list[ChannelResource]:
-        async with self._db.transaction() as conn:
-            return await ChannelResource.fetch_all(conn, filter=filter)
+        async with self._db.transaction() as db:
+            return await ChannelResource.fetch_all(db, filter=filter)

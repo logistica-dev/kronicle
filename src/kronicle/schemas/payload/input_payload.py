@@ -72,8 +72,8 @@ class InputPayload(BaseModel):
             return values
 
         # Accept user-provided alias
-        if "name" not in values and "name" in values:
-            values["name"] = values["name"]
+        if "name" not in values and "channel_name" in values:
+            values["name"] = values["channel_name"]
         return values
 
     @field_validator("name", mode="before")

@@ -85,14 +85,14 @@ class ChannelDbSession:
         )
         log_d(mod, "DBSession pool initialized")
 
-    async def _set_jsonb_codec(self, conn: Connection | PoolConnectionProxy):
+    async def _set_jsonb_codec(self, co: Connection | PoolConnectionProxy):
         """
         Initialize JSONB codec for a connection.
 
         Args:
-            conn: Connection or PoolConnectionProxy
+            co: Connection or PoolConnectionProxy
         """
-        await conn.set_type_codec(
+        await co.set_type_codec(
             "jsonb",
             schema="pg_catalog",
             encoder=dumps,  # converts Python dict -> JSON string # asyncpg handles dict -> JSONB
@@ -113,8 +113,8 @@ class ChannelDbSession:
         if not self._pool:
             raise DatabaseConnectionError("DBSession is not initialized")
 
-        async with self._pool.acquire() as conn:
-            yield conn
+        async with self._pool.acquire() as co:
+            yield co
 
     @asynccontextmanager
     async def transaction(self) -> AsyncIterator[PoolConnectionProxy]:
@@ -124,9 +124,13 @@ class ChannelDbSession:
         Yields:
             asyncpg.Connection
         """
-        async with self.connection() as conn:
-            async with conn.transaction():
-                yield conn
+        try:
+            async with self.connection() as co:
+                async with co.transaction():
+                    yield co
+        except PostgresError as e:
+            log_w(mod, f"Transaction rolled back due to DB error: {e}")
+            raise
 
     # ----------------------------------------------------------------------------------------------
     # Health check
@@ -138,14 +142,14 @@ class ChannelDbSession:
             True if successful, False if an error occurs.
         """
         try:
-            async with self.connection() as conn:
-                await conn.execute("SELECT 1")
+            async with self.connection() as co:
+                await co.execute("SELECT 1")
             return True
         except PostgresError as e:
-            log_e(f"{mod}.ping", f"Database ping failed: {e}")
+            log_e("ping", f"Database ping failed: {e}")
             return False
         except Exception as e:
-            log_e(f"{mod}.ping", f"Unexpected ping error: {e}")
+            log_e("ping", f"Unexpected ping error: {e}")
             return False
 
     # ----------------------------------------------------------------------------------------------
@@ -161,12 +165,12 @@ class ChannelDbSession:
         Execute a coroutine using a connection, optionally intercepting DB errors.
 
         Example:
-            result = await db_session.execute(lambda conn: MyModel.fetch_all(conn))
+            result = await db_session.execute(lambda co: MyModel.fetch_all(co))
         """
         catch = self.intercept_errors if catch_errors is None else catch_errors
         try:
-            async with self.connection() as conn:
-                return await func(conn)
+            async with self.connection() as co:
+                return await func(co)
         except PostgresError as e:
             if catch:
                 self.logger(mod, f"Database error intercepted: {e}")

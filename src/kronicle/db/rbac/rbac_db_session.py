@@ -81,7 +81,7 @@ class RbacDbSession:
                 return func(session)
         except Exception as e:
             if catch_errors:
-                log_e(f"{mod}.execute", f"Error intercepted: {e}")
+                log_e("execute", f"Error intercepted: {e}")
                 return None
             raise
 
@@ -98,7 +98,7 @@ class RbacDbSession:
                 session.execute(select(literal(1)))
             return True
         except Exception as e:
-            log_e(f"{mod}.ping", f"Ping failed: {e}")
+            log_e("ping", f"Ping failed: {e}")
             return False
 
     # ----------------------------------------------------------------------------------------------

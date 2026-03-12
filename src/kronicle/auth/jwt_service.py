@@ -6,7 +6,6 @@ from jose import jwt
 from kronicle.deps.settings import JWTSettings
 from kronicle.errors.error_types import UnauthorizedError
 from kronicle.schemas.rbac.user_schemas import OutputUser
-from kronicle.utils.dev_logs import log_d
 
 mod = "jwt"
 
@@ -30,9 +29,7 @@ class JWTService:
         return payload
 
     def create_access_token(self, user: OutputUser) -> str:
-        here = "create_jwt"
         payload = self._get_payload_from_out_user(user)
-        log_d(here, "payload", payload)
         return jwt.encode(payload, self._secret, algorithm=self._algo)
 
     def decode_token(self, token: str) -> dict:

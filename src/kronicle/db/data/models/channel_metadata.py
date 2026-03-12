@@ -101,6 +101,10 @@ class ChannelMetadata(BaseModel):
         return str(cls._TABLE_NAME)
 
     @classmethod
+    def table(cls):
+        return f"{cls._NAMESPACE}.{cls._TABLE_NAME}"
+
+    @classmethod
     def table_schema(cls) -> dict[str, str]:
         """Read-only access to the table schema dict."""
         return dict(cls._TABLE_SCHEMA)  # return a copy to avoid mutation
@@ -116,6 +120,23 @@ class ChannelMetadata(BaseModel):
         return list(cls.table_schema().items())
 
     # ----------------------------------------------------------------------------------------------
+    # Serialization
+    # ----------------------------------------------------------------------------------------------
+    def to_json(self) -> dict:
+        meta = {
+            "channel_id": str(self.channel_id),
+            "channel_schema": self.channel_schema.to_user_json(),
+            "name": self.name,
+            "user_metadata": self.user_metadata,
+            "tags": self.tags,
+            "received_at": str(self.received_at),
+        }
+        return {k: v for k, v in meta.items() if v is not None}
+
+    def __str__(self) -> str:
+        return str(self.to_json())
+
+    # ----------------------------------------------------------------------------------------------
     # DB row helpers
     # ----------------------------------------------------------------------------------------------
     def db_ready_values(self) -> list:
@@ -126,7 +147,7 @@ class ChannelMetadata(BaseModel):
         return [
             self.channel_id,
             self.channel_schema.to_db_json(),  # asyncpg will handle dict -> JSONB
-            self.name or "",
+            self.name or None,
             self.user_metadata or {},  # dict for JSONB
             self.tags or {},  # dict for JSONB
             self.received_at,
@@ -201,58 +222,56 @@ class ChannelMetadata(BaseModel):
     # DB operations: table
     # ----------------------------------------------------------------------------------------------
     @classmethod
-    async def table_exists(cls, conn: PoolConnectionProxy) -> bool:
+    async def table_exists(cls, db: PoolConnectionProxy) -> bool:
         """Return True if the ChannelMetadata table exists."""
-        return await table_exists(conn, namespace=cls.namespace(), table_name=cls.tablename())
+        return await table_exists(db, namespace=cls.namespace(), table_name=cls.tablename())
 
     @classmethod
     def create_table_sql(cls) -> str:
-        """Return SQL to create table in Postgres."""
-        namespace = normalize_pg_identifier(cls.namespace())
-        tablename = normalize_pg_identifier(cls.tablename())
-        return f"CREATE TABLE {namespace}.{tablename} ({cls.get_schema_defs()});"
+        return f"CREATE TABLE {cls.table()} ({cls.get_schema_defs()});"
 
     @classmethod
-    async def ensure_table(cls, conn: PoolConnectionProxy):
+    async def ensure_table(cls, db: PoolConnectionProxy):
         """Ensure the table exists in the database."""
-        if await cls.table_exists(conn):
+        if await cls.table_exists(db):
             return
-        await conn.execute(cls.create_table_sql())
-        log_d("ChannelMetadata.ensure_table", "Table created:", cls.tablename())
+        await db.execute(cls.create_table_sql())
+        log_d("ensure_table", "Table created", cls.table())
 
     # ----------------------------------------------------------------------------------------------
     # DB operations: read/fetch
     # ----------------------------------------------------------------------------------------------
-    async def exists(self, conn: PoolConnectionProxy):
-        return (await self.fetch_by_id(conn, self.channel_id)) is not None
+    async def exists(self, db: PoolConnectionProxy):
+        res = await self.fetch_by_id(db, self.channel_id)
+        return res is not None
 
     @classmethod
-    async def fetch_by_id(cls, conn: PoolConnectionProxy, channel_id: UUID) -> ChannelMetadata | None:
+    async def fetch_by_id(cls, db: PoolConnectionProxy, channel_id: UUID) -> ChannelMetadata | None:
         """
         Fetch a metadata row by channel_id.
 
         Args:
-            conn: asyncpg.Connection object
+            db: asyncpg.Connection object
             channel_id: UUID of the channel
         Returns:
             ChannelMetadata instance or None if not found
         """
         ensure_uuid4(channel_id)
         sql = f"""
-        SELECT * FROM {cls.namespace()}.{cls.tablename()} WHERE channel_id = $1
+        SELECT * FROM {cls.table()} WHERE channel_id = $1
         """
-        row = await conn.fetchrow(sql, channel_id)
+        row = await db.fetchrow(sql, channel_id)
         if not row:
             return None
         return cls.from_db(dict(row))
 
     @classmethod
-    async def fetch_by_name(cls, conn: PoolConnectionProxy, name: str) -> ChannelMetadata | None:
+    async def fetch_by_name(cls, db: PoolConnectionProxy, name: str) -> ChannelMetadata | None:
         """
         Fetch a metadata row by name.
 
         Args:
-            conn: asyncpg.Connection object
+            db: asyncpg.Connection object
             name: str, name of the channel (will be normalized)
 
         Returns:
@@ -260,21 +279,21 @@ class ChannelMetadata(BaseModel):
         """
         normalized_name = normalize_to_snake_case(name)
         sql = f"""
-        SELECT * FROM {cls.namespace()}.{cls.tablename()}
+        SELECT * FROM {cls.table()}
         WHERE name = $1
         """
-        row = await conn.fetchrow(sql, normalized_name)
+        row = await db.fetchrow(sql, normalized_name)
         if not row:
             return None
         return cls.from_db(dict(row))
 
     @classmethod
-    async def fetch_by_tags(cls, conn: PoolConnectionProxy, tags: dict[str, TagType]) -> list[ChannelMetadata]:
+    async def fetch_by_tags(cls, db: PoolConnectionProxy, tags: dict[str, TagType]) -> list[ChannelMetadata]:
         """
         Fetch metadata rows that match all specified tags.
 
         Args:
-            conn: asyncpg.Connection object
+            db: asyncpg.Connection object
             tags: dict of tag_key -> tag_value to match (all must match)
 
         Returns:
@@ -290,54 +309,56 @@ class ChannelMetadata(BaseModel):
         tag_filter = dumps(normalized_tags)
 
         sql = f"""
-        SELECT * FROM {cls.namespace()}.{cls.tablename()}
+        SELECT * FROM {cls.table()}
         WHERE tags @> $1
         ORDER BY received_at DESC
         """
-        rows = await conn.fetch(sql, tag_filter)
+        rows = await db.fetch(sql, tag_filter)
         return [cls.from_db(dict(r)) for r in rows]
 
     @classmethod
-    async def fetch_all(cls, conn: PoolConnectionProxy) -> list[ChannelMetadata]:
+    async def fetch_all(cls, db: PoolConnectionProxy) -> list[ChannelMetadata]:
         """
         Fetch all metadata rows, ordered by received_at descending.
 
         Args:
-            conn: asyncpg.Connection object
+            db: asyncpg.Connection object
             filter: optional RequestFilter to limit rows or paginate results
 
         Returns:
             List of ChannelMetadata objects
         """
         sql = f"""
-        SELECT * FROM {cls.namespace()}.{cls.tablename()} ORDER BY received_at DESC
+        SELECT * FROM {cls.table()} ORDER BY received_at DESC
         """
-        rows = await conn.fetch(sql)
+        rows = await db.fetch(sql)
         return [cls.from_db(dict(r)) for r in rows]
 
     # ----------------------------------------------------------------------------------------------
     # DB operations: create
     # ----------------------------------------------------------------------------------------------
-    async def create(self, conn: PoolConnectionProxy) -> ChannelMetadata:
+    async def create(self, db: PoolConnectionProxy) -> ChannelMetadata:
         """
         Insert a new ChannelMetadata row.
         Raises an error if the channel_id already exists.
         """
         # ChannelMetadata table is supposed to exist (checked at bootstrap)
         here = "create"
+        # log_d(here)
         # Check if metadata exists
-        exists = await self.fetch_by_id(conn, self.channel_id)
-        if exists:
+        if await self.exists(db):
             raise ConflictError("ChannelMetadata already exists", details={"channel_id": str(self.channel_id)})
         columns = list(self.table_schema().keys())
         placeholders = [f"${i + 1}" for i in range(len(columns))]
         sql = f"""
         INSERT INTO {self.namespace()}.{self.tablename()} ({", ".join(columns)})
-        VALUES ({", ".join(placeholders)});
+        VALUES ({", ".join(placeholders)})
         RETURNING *;
         """
+        # log_d(here, "sql", sql)
+        # log_d(here, "db_ready_values", self.db_ready_values())
         try:
-            row = await conn.fetchrow(sql, *self.db_ready_values())
+            row = await db.fetchrow(sql, *self.db_ready_values())
             if row is None:
                 log_e(here, f"INSERT did not return a row - channel_id={self.channel_id}")
                 raise DatabaseInstructionError("INSERT did not return a row", details={"channel_id": self.channel_id})
@@ -362,7 +383,7 @@ class ChannelMetadata(BaseModel):
     # ----------------------------------------------------------------------------------------------
     # DB operations: update
     # ----------------------------------------------------------------------------------------------
-    async def update(self, conn: PoolConnectionProxy) -> ChannelMetadata:
+    async def update(self, db: PoolConnectionProxy) -> ChannelMetadata:
         """
         Update mutable fields of an existing ChannelMetadata.
         Immutable fields: channel_id, channel_schema
@@ -371,7 +392,7 @@ class ChannelMetadata(BaseModel):
         # ChannelMetadata table is supposed to exist (checked at bootstrap)
 
         # Fetch existing metadata
-        existing = await self.fetch_by_id(conn, self.channel_id)
+        existing = await self.fetch_by_id(db, self.channel_id)
         if not existing:
             raise ValueError(f"No ChannelMetadata found for id {self.channel_id}")
 
@@ -388,7 +409,7 @@ class ChannelMetadata(BaseModel):
         values.append(self.channel_id)
 
         try:
-            row = await conn.fetchrow(sql, *values)
+            row = await db.fetchrow(sql, *values)
             if row is None:
                 raise NotFoundError("No ChannelMetadata found", details={"channel_id": self.channel_id})
             log_d(mod, f"ChannelMetadata updated: {self.channel_id}")
@@ -407,23 +428,23 @@ class ChannelMetadata(BaseModel):
     # ----------------------------------------------------------------------------------------------
     # DB operations: delete
     # ----------------------------------------------------------------------------------------------
-    async def delete(self, conn: PoolConnectionProxy) -> ChannelMetadata | None:
+    async def delete(self, db: PoolConnectionProxy) -> ChannelMetadata | None:
         """
         Delete this channel from the database.
 
         Returns:
             The deleted ChannelMetadata instance, or None if it didn't exist.
         """
-        existing = await self.fetch_by_id(conn, self.channel_id)
+        existing = await self.fetch_by_id(db, self.channel_id)
         if not existing:
             return None
 
         sql = f"""
-        DELETE FROM {self.namespace()}.{self.tablename()}
+        DELETE FROM {self.table()}
         WHERE channel_id = $1
         RETURNING *;
         """
-        row = await conn.fetchrow(sql, self.channel_id)
+        row = await db.fetchrow(sql, self.channel_id)
         if not row:
             return None  # row didn't exist
         return self.update_with_db(row)

@@ -13,20 +13,17 @@ REGEX_UUID = compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[
 
 
 def enforce_length(here: str, length=12) -> str:
-    if len(here) < length:
-        return here.ljust(length, " ")
-    else:
-        return here[0:length]
+    return here.ljust(length, " ") if len(here) < length else here[0:length]
 
 
 def uuid4_str() -> str:
     return str(uuid4())
 
 
-def tiny_id(n: int = 8) -> str:
-    if n < 1:
+def tiny_id(n: int | None = 8) -> str:
+    if not n or n < 1:
         n = 8
-    return uuid4_str().replace("-", "")[0:n]
+    return uuid4().hex[0:n]
 
 
 def is_uuid_v4(id: str | UUID) -> bool:

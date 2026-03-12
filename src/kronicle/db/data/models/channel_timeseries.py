@@ -13,7 +13,7 @@ from kronicle.errors.error_types import BadRequestError, NotFoundError
 from kronicle.schemas.payload.op_feedback import OpFeedback
 from kronicle.schemas.payload.request_filter import RequestFilter
 from kronicle.utils.asyncpg_utils import table_exists
-from kronicle.utils.dev_logs import log_d, log_i, log_w
+from kronicle.utils.dev_logs import log_i, log_w
 from kronicle.utils.str_utils import ensure_uuid4
 
 mod = "chan_ts"
@@ -65,11 +65,25 @@ class ChannelTimeseries:
         self.op_feedback: OpFeedback = op_feedback or OpFeedback()
 
     # ----------------------------------------------------------------------------------------------
+    # Serialization
+    # ----------------------------------------------------------------------------------------------
+    def to_json(self) -> dict:
+        return {"row_nb": len(self._rows)}
+
+    # ----------------------------------------------------------------------------------------------
     # Table Identity
     # ----------------------------------------------------------------------------------------------
     @property
     def table_name(self) -> str:
         return f"channel_{self.channel_id.hex}"
+
+    @property
+    def namespace(self) -> str:
+        return self._NAMESPACE
+
+    @property
+    def table(self) -> str:
+        return f"{self.namespace}.{self.table_name}"
 
     # ----------------------------------------------------------------------------------------------
     # DB Column Layout
@@ -106,7 +120,7 @@ class ChannelTimeseries:
         Responsibilities:
         - Validates each row against the associated ChannelSchema.
         - Stores all successfully validated rows in-memory.
-        - Collects per-row validation errors as warnings.
+        - Collects per-row validation errors in op_feedback field.
 
         Parameters:
         -----------
@@ -115,16 +129,12 @@ class ChannelTimeseries:
         strict : bool, default=False
             If True, raises BadRequestError after validating all rows
             if any row failed validation.
-            If False, stores valid rows and returns a warnings dictionary for invalid rows.
-        warnings : dict[str, str] | None, optional
-            Dictionary to collect row-level warnings when `strict=False`.
-            Keys are 1-based, zero-padded row indices (e.g., 'row_01') and values are error messages.
+            If False, stores valid rows and adds a warnings in op_feedback field.
 
         Returns:
         --------
-        warnings : dict[str, str]
-            Mapping of row indices to error messages for rows that failed validation.
-            Empty if all rows were successfully validated.
+        self : ChannelTimeseries
+            self with updated op_feedback field
 
         Raises:
         -------
@@ -192,13 +202,13 @@ class ChannelTimeseries:
         for col, expected in expected_types.items():
             actual = db_columns.get(col)
             if actual is None:
-                raise ValueError(f"Missing column '{col}' in DB table {self.table_name}")
+                raise ValueError(f"Missing column '{col}' in DB table {self.table}")
             if actual.upper() != expected.upper():
                 raise ValueError(f"Column '{col}' type mismatch (expected {expected}, found {actual})")
 
         extra_cols = set(db_columns) - set(expected_types)
         if extra_cols:
-            raise ValueError(f"Unexpected columns in DB table {self.table_name}: {extra_cols}")
+            raise ValueError(f"Unexpected columns in DB table {self.table}: {extra_cols}")
 
     # ----------------------------------------------------------------------------------------------
     # User-facing rows
@@ -248,7 +258,7 @@ class ChannelTimeseries:
             user_columns_sql.append(f"{col} {col_type.db_type}{'' if col_type.optional else ' NOT NULL'}")
 
         return f"""
-        CREATE TABLE IF NOT EXISTS {self.table_name} (
+        CREATE TABLE IF NOT EXISTS {self.table} (
             row_id BIGSERIAL PRIMARY KEY,
             time TIMESTAMPTZ NOT NULL,
             {", ".join(user_columns_sql)},
@@ -259,35 +269,33 @@ class ChannelTimeseries:
     # ----------------------------------------------------------------------------------------------
     # DB operations
     # ----------------------------------------------------------------------------------------------
-    async def table_exists(self, conn: PoolConnectionProxy) -> bool:
+    async def table_exists(self, db: PoolConnectionProxy) -> bool:
         """Return True if the ChannelMetadata table exists."""
-        return await table_exists(conn, namespace=self._NAMESPACE, table_name=self.table_name)
+        return await table_exists(db, namespace=self.namespace, table_name=self.table_name)
 
-    async def ensure_table(self, conn: PoolConnectionProxy):
+    async def ensure_table(self, db: PoolConnectionProxy):
         """Ensure the table exists in the database."""
-        here = "ensure_table"
-        if await self.table_exists(conn):
+        if await self.table_exists(db):
             return
-        await conn.execute(self.create_table_sql())
-        log_d(here, "Table created:", self.table_name)
+        await db.execute(self.create_table_sql())
 
-    async def count_rows(self, conn: PoolConnectionProxy) -> int:
+    async def count_rows(self, db: PoolConnectionProxy) -> int:
         """
         Return the total number of rows in the channel's timeseries table.
         """
-        if not await self.table_exists(conn):
+        if not await self.table_exists(db):
             return 0
-        query = f'SELECT COUNT(*) FROM "{self.table_name}"'
-        result = await conn.fetchval(query)
+        query = f"SELECT COUNT(*) FROM {self.table}"
+        result = await db.fetchval(query)
         return result or 0
 
-    async def fetch(self, conn: PoolConnectionProxy, *, filter: RequestFilter | None = None) -> ChannelTimeseries:
+    async def fetch(self, db: PoolConnectionProxy, *, filter: RequestFilter | None = None) -> ChannelTimeseries:
         """
         Fetch rows from the timeseries table for this channel.
 
         Parameters
         ----------
-        conn : asyncpg.Connection
+        db : asyncpg.Connection
             Connection to the database
         filter : RequestFilter | None
             Optional filter with from_date, to_date, limit, offset, skip_received
@@ -299,44 +307,40 @@ class ChannelTimeseries:
         """
         here = "fetch_rows"
 
-        if not await self.table_exists(conn):
-            log_w(here, f"Table '{self.table_name}' not found, returning empty list")
+        if not await self.table_exists(db):
+            log_w(here, f"Table '{self.table}' not found, returning empty list")
             self.clear_rows()
             return self
 
         filter = filter or RequestFilter()
-        sql_fragment, params = filter.to_sql_clauses(start_idx=1)
+        sql_fragment, params = filter.to_sql_clauses(start_idx=1, order_by="time", desc=False)
 
-        sql_req = f'SELECT * FROM "{self.table_name}" {sql_fragment} ORDER BY time ASC'
-        rows = await conn.fetch(sql_req, *params)
+        sql_req = f"SELECT * FROM {self.table} {sql_fragment}"
+        rows = await db.fetch(sql_req, *params)
         self.set_rows([dict(r) for r in rows])
         return self
 
-    async def insert(
-        self, conn: PoolConnectionProxy, *, strict: bool = False, warnings: dict[str, str] | None = None
-    ) -> ChannelTimeseries:
+    async def insert(self, db: PoolConnectionProxy, *, strict: bool = False) -> ChannelTimeseries:
         """
-        Insert all rows currently held in the ChannelTimeseries into the DB.
+        Append all rows currently held in the ChannelTimeseries into the DB.
+        Doesn't update existing rows.
 
         Parameters
         ----------
-        conn : asyncpg.Connection
+        db : asyncpg.Connection
         strict : bool
             If True, aborts insertion if any row fails validation
-        warnings : dict | None
-            Optional dictionary to collect per-row validation warnings
 
         Returns
         -------
         self : ChannelTimeseries
-            Instance with successfully inserted rows
+            Instance with successfully inserted rows and updated op_feedback field with potential warnings
         """
         here = "insert"
 
         if not self._rows:
             return self
 
-        warnings = warnings or {}
         pad_width = len(str(len(self.rows)))
 
         tuples = self.get_db_tuples()
@@ -344,32 +348,35 @@ class ChannelTimeseries:
         placeholders = [f"${i + 1}" for i in range(len(cols))]
 
         sql = f"""
-        INSERT INTO {self.table_name} ({", ".join(cols)})
+        INSERT INTO {self.table} ({", ".join(cols)})
         VALUES ({", ".join(placeholders)});
         """
 
-        await self.ensure_table(conn)
+        await self.ensure_table(db)
 
         for idx, row_tuple in enumerate(tuples):
             try:
-                await conn.execute(sql, *row_tuple)
+                await db.execute(sql, *row_tuple)
             except Exception as e:
-                warnings[f"row_{str(idx).zfill(pad_width)}"] = str(e)
+                row_label = f"row_{str(idx).zfill(pad_width)}"
+                self.op_feedback.add_detail(message=str(e), field="rows", subfield=row_label)
 
-        if strict and warnings:
-            log_w(here, "Failed to insert some rows", {"channel_id": str(self.channel_id), **warnings})
+        if strict and self.op_feedback.has_details:
+            log_w(here, "Failed to insert some rows", self.op_feedback.json())
             raise BadRequestError(
-                "Failed to insert some rows", details={"channel_id": str(self.channel_id), **warnings}
+                "Failed to insert some rows",
+                details=self.op_feedback.json(),
             )
+
         return self
 
-    async def delete(self, conn: PoolConnectionProxy, *, filter: RequestFilter | None = None) -> ChannelTimeseries:
+    async def delete(self, db: PoolConnectionProxy, *, filter: RequestFilter | None = None) -> ChannelTimeseries:
         """
         Delete rows in the timeseries table based on filter.
 
         Parameters
         ----------
-        conn : asyncpg.Connection
+        db : asyncpg.Connection
         filter : RequestFilter | None
 
         Returns
@@ -379,19 +386,19 @@ class ChannelTimeseries:
         """
         here = "delete"
 
-        if not await self.table_exists(conn):
-            log_w(here, f"Table '{self.table_name}' not found, cannot delete")
+        if not await self.table_exists(db):
+            log_w(here, f"Table '{self.table}' not found, cannot delete")
             raise NotFoundError(f"No timeseries stored for channel '{self.channel_id}'")
 
         filter = filter or RequestFilter()
         sql_fragment, params = filter.to_sql_clauses(start_idx=1)
 
-        sql_req = f"DELETE FROM {self.table_name} {sql_fragment} RETURNING *"
-        rows = await conn.fetch(sql_req, *params)
+        sql_req = f"DELETE FROM {self.table} {sql_fragment} RETURNING *"
+        rows = await db.fetch(sql_req, *params)
         self.set_rows([dict(r) for r in rows])
         return self
 
-    async def drop(self, conn: PoolConnectionProxy) -> ChannelTimeseries | None:
+    async def drop(self, db: PoolConnectionProxy) -> ChannelTimeseries | None:
         """
         Drop the entire timeseries table for this channel.
 
@@ -399,16 +406,16 @@ class ChannelTimeseries:
             This permanently deletes all rows and the table itself.
         """
         here = "drop"
-        if not await self.table_exists(conn):
-            log_w(here, f"Table '{self.table_name}' not found, nothing to drop")
+        if not await self.table_exists(db):
+            log_w(here, f"Table '{self.table}' not found, nothing to drop")
             return
-        sql_fetch = f"SELECT * FROM {self.table_name}"
-        rows = await conn.fetch(sql_fetch)
+        sql_fetch = f"SELECT * FROM {self.table}"
+        rows = await db.fetch(sql_fetch)
         rows_data = [dict(r) for r in rows]
 
-        sql_drop = f"DROP TABLE {self.table_name}"
-        await conn.execute(sql_drop)
-        log_i(here, f"Table '{self.table_name}' dropped, {len(rows_data)} rows were removed")
+        sql_drop = f"DROP TABLE {self.table}"
+        await db.execute(sql_drop)
+        log_i(here, f"Table '{self.table}' dropped, {len(rows_data)} rows were removed")
         self.clear_rows()
         if rows_data:
             self.add_rows(rows_data)

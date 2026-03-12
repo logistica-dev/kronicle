@@ -53,8 +53,8 @@ async def verify_connection(dsn: str):
         ) from e
 
     try:
-        conn = await connect(dsn)
-        await conn.close()
+        co = await connect(dsn)
+        await co.close()
         log_d(here, f"Verified: app user '{db_usr}' can connect to DB '{db_name}'")
     except Exception as e:
         raise ConnectionError(f"Cannot connect to DB '{db_name}' as user '{db_usr}': {e}") from e
@@ -62,19 +62,20 @@ async def verify_connection(dsn: str):
     return db_usr, host, db_name
 
 
-async def table_exists(conn: Connection | PoolConnectionProxy, namespace: str, table_name: str) -> bool:
+async def table_exists(db: Connection | PoolConnectionProxy, namespace: str, table_name: str) -> bool:
     """Return True if the table exists."""
-    exists = await conn.fetchval(
+    exists = await db.fetchval(
         """
         SELECT EXISTS (
             SELECT 1
             FROM information_schema.tables
             WHERE table_schema = $1 AND table_name = $2
-        )
+        );
         """,
         namespace,
         table_name,
     )
+    # log_d("table_exists", "exists", exists)
     return bool(exists)
 
 
