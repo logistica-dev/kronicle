@@ -2028,27 +2028,104 @@
         ],
         "summary": "List Users",
         "operationId": "list_users_rbac_v1_users_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "email"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional email to filter by",
+              "title": "Email"
+            },
+            "description": "Optional email to filter by"
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional name to filter by",
+              "title": "Name"
+            },
+            "description": "Optional name to filter by"
+          },
+          {
+            "name": "orcid",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional ORCID to filter by",
+              "title": "Orcid"
+            },
+            "description": "Optional ORCID to filter by"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/OutputUser"
-                  },
-                  "type": "array",
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/OutputUser"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/OutputUser"
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
                   "title": "Response List Users Rbac V1 Users Get"
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
           }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
+        }
       },
       "post": {
         "tags": [
@@ -2056,15 +2133,20 @@
         ],
         "summary": "Create User",
         "operationId": "create_user_rbac_v1_users_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/InputUser"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -2087,12 +2169,95 @@
               }
             }
           }
-        },
+        }
+      },
+      "put": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Update User",
+        "operationId": "update_user_rbac_v1_users_put",
         "security": [
           {
             "HTTPBearer": []
           }
-        ]
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InputUser"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutputUser"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Delete User",
+        "operationId": "delete_user_rbac_v1_users_delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InputUser"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutputUser"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     }
   },
@@ -2242,7 +2407,7 @@
         "title": "InputPayload",
         "description": "User-provided payload for a channel.\nThe 'channel_schema' field is a dict of column_name -> type string.",
         "example": {
-          "channel_id": "3b888755-41b4-44be-ac3b-4a520f70b9d3",
+          "channel_id": "b7b707fe-3c72-4d55-8d30-c901c6b196b8",
           "channel_schema": {
             "humidity": "float",
             "temperature": "float",
@@ -2251,7 +2416,7 @@
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-cad13",
+          "name": "thermo-d0bae",
           "rows": [
             {
               "humidity": 55.1,
@@ -2288,8 +2453,26 @@
             "title": "Email"
           },
           "password": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Password"
+          },
+          "orcid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Orcid"
           },
           "name": {
             "anyOf": [
@@ -2316,8 +2499,7 @@
         },
         "type": "object",
         "required": [
-          "email",
-          "password"
+          "email"
         ],
         "title": "InputUser",
         "description": "Represents raw input data for user creation.\nValidates and sanitizes user-provided data before processing.\nMay reject invalid data (e.g., weak passwords, invalid emails)."
@@ -2368,6 +2550,17 @@
               }
             ],
             "title": "Name"
+          },
+          "orcid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Orcid"
           },
           "full_name": {
             "anyOf": [

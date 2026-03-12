@@ -20,15 +20,19 @@ class RbacEngine:
     # ----------------------------------------------------------------------------------------------
     @staticmethod
     def fetch_user_by_email(db: Session, email: EmailStr) -> RbacUser | None:
-        return RbacUser.fetch_by_email(db, email)
+        return RbacUser.fetch(db, email=email)
 
     @staticmethod
     def fetch_user_by_name(db: Session, name: str) -> RbacUser | None:
-        return RbacUser.fetch_by_name(db, name)
+        return RbacUser.fetch(db, name=name)
+
+    @staticmethod
+    def fetch_user_by_external_id(db: Session, external_id: str) -> RbacUser | None:
+        return RbacUser.fetch(db, external_id=external_id)
 
     @staticmethod
     def list_users(db: Session) -> list[RbacUser]:
-        return RbacUser.fetch_all(db)
+        return RbacUser.fetch(db)
 
     @staticmethod
     def get_effective_role(db: Session, user_id: UUID, zone: Zone) -> RbacRole | None:
@@ -64,6 +68,12 @@ class RbacEngine:
     # ----------------------------------------------------------------------------------------------
     @staticmethod
     def create_user(db: Session, user: RbacUser) -> RbacUser:
+        db.add(user)
+        db.flush()  # ensures id is populated
+        return user
+
+    @staticmethod
+    def update_user(db: Session, user: RbacUser) -> RbacUser:
         db.add(user)
         db.flush()  # ensures id is populated
         return user

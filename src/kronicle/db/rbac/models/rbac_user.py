@@ -46,19 +46,29 @@ class RbacUser(RbacEntity):
     # Read table
     # ----------------------------------------------------------------------------------------------
     @classmethod
-    def fetch_by_email(cls, db: Session, email: EmailStr) -> RbacUser | None:
-        return db.query(cls).filter(cls.email == email).first()
-
-    @classmethod
-    def fetch_by_name(cls, db: Session, name: str) -> RbacUser | None:
-        return db.query(cls).filter(cls.name == name).first()
+    def fetch(
+        cls,
+        db: Session,
+        email: EmailStr | None = None,
+        name: str | None = None,
+        external_id: str | None = None,
+    ) -> RbacUser | list[RbacUser]:
+        q = db.query(RbacUser).filter(RbacUser.is_superuser.is_(False))
+        if email:
+            return q.filter(cls.email == email).first()
+        if name:
+            return q.filter(cls.name == name).first()
+        if external_id:
+            return q.filter(cls.external_id == external_id).first()
+        else:
+            return q.all()
 
     @classmethod
     def fetch_all(cls, db: Session) -> list[RbacUser]:
         return db.query(RbacUser).filter(RbacUser.is_superuser.is_(False)).all()
 
     @classmethod
-    def get_by_login(cls, db: Session, login: str, by_email: bool = True) -> "RbacUser | None":
+    def get_by_login(cls, db: Session, login: str, by_email: bool = True) -> RbacUser | None:
         """
         Fetch a user by email or username.
 

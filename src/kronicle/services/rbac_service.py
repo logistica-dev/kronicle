@@ -5,7 +5,7 @@ from kronicle.db.rbac.associations.user_groups import RbacUserGroups
 from kronicle.db.rbac.models.rbac_user import RbacUser
 from kronicle.db.rbac.rbac_db_session import RbacDbSession
 from kronicle.db.rbac.rbac_engine import RbacEngine
-from kronicle.errors.error_types import NotFoundError, UnauthorizedError
+from kronicle.errors.error_types import BadRequestError, NotFoundError, UnauthorizedError
 from kronicle.schemas.rbac.user_schemas import InputUserLogin, OutputUser, ProcessedUser
 from kronicle.utils.dev_logs import log_d
 
@@ -55,20 +55,35 @@ class RbacService:
         db_user = self._fetch_user_by_login(login_input)
         return OutputUser.from_db_user(db_user)
 
+    def fetch_user_by_email(self, email: str) -> OutputUser | None:
+        with self._db.get_db() as db:  # read-only
+            db_user = self._engine.fetch_user_by_email(db, email=email)
+        return OutputUser.from_db_user(db_user) if db_user else None
+
+    def fetch_user_by_name(self, name: str) -> OutputUser | None:
+        with self._db.get_db() as db:  # read-only
+            db_user = self._engine.fetch_user_by_name(db, name=name)
+        return OutputUser.from_db_user(db_user) if db_user else None
+
+    def fetch_user_by_external_id(self, orcid: str) -> OutputUser | None:
+        with self._db.get_db() as db:  # read-only
+            db_user = self._engine.fetch_user_by_external_id(db, external_id=orcid)
+        return OutputUser.from_db_user(db_user) if db_user else None
+
     def list_users(self) -> list[OutputUser]:
         with self._db.get_db() as db:  # read-only
-            with self._db.get_db() as db:
-                users = self._engine.list_users(db)
-            return [OutputUser.from_db_user(u) for u in users]
+            users = self._engine.list_users(db)
+        return [OutputUser.from_db_user(u) for u in users]
 
     # ----------------------------------------------------------------------------------------------
     # Write: create user
     # ----------------------------------------------------------------------------------------------
     def create_user(self, user: ProcessedUser) -> OutputUser:
         here = "create_usr"
-        log_d(here, "user", user.name)
+        log_d(here, user.email)
+        if not user.password_hash:
+            raise BadRequestError("Input user password should be provided")
         rbac_user = user.to_db_user()
-        log_d(here, "rbac_user", rbac_user.name)
 
         with self._db.transaction() as db:
             existing = self._engine.fetch_user_by_email(db=db, email=rbac_user.email)
@@ -79,6 +94,40 @@ class RbacService:
         out_user = OutputUser.from_db_user(db_user)
         return out_user
 
+    def update_user(self, user: ProcessedUser) -> OutputUser:
+        here = "update_user"
+        log_d(here, user.email)
+        with self._db.transaction() as db:
+            db_user: RbacUser = self._engine.fetch_user_by_email(db=db, email=user.email)
+            if not db_user:
+                raise UnauthorizedError("User doesn't exists")
+            updated = False
+            if user.name is not None:
+                db_user.name = user.name
+                updated = True
+            if user.full_name is not None:
+                db_user.full_name = user.full_name
+                updated = True
+            if user.orcid is not None:
+                db_user.external_id = user.orcid
+                updated = True
+            if updated:
+                db.commit()
+            db.refresh(db_user)
+        return OutputUser.from_db_user(db_user)
+
+    def delete_user(self, user: ProcessedUser) -> OutputUser:
+        here = "delete_user"
+        log_d(here, user.email)
+        with self._db.transaction() as db:
+            db_user: RbacUser = self._engine.fetch_user_by_email(db=db, email=user.email)
+            if not db_user:
+                raise UnauthorizedError("User doesn't exists")
+            db_user.is_active = False
+            db.commit()
+            db.refresh(db_user)
+        return OutputUser.from_db_user(db_user)
+
     def update_password_hash(self, user_id: UUID, new_hash: str) -> None:
         with self._db.transaction() as db:
             user = db.query(RbacUser).filter(RbacUser.id == user_id).first()
@@ -87,7 +136,7 @@ class RbacService:
 
     # ----------------------------------------------------------------------------------------------
     # Subjects / Groups
-    # ------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------
     def get_user_groups(self, user_id: UUID) -> list[UUID]:
         """
         Returns a list of group IDs the user belongs to.

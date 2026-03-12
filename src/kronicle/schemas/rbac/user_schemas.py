@@ -1,4 +1,6 @@
 # kronicle/schemas/rbac/user_schemas.py
+from __future__ import annotations
+
 from re import fullmatch
 from typing import Annotated, Any
 from uuid import UUID
@@ -9,7 +11,6 @@ from pydantic import BaseModel, EmailStr, Field, PrivateAttr, field_validator
 from kronicle.auth.pwd.pwd_manager import PasswordManager
 from kronicle.db.rbac.models.rbac_user import RbacUser
 from kronicle.errors.error_types import BadRequestError
-from kronicle.utils.dev_logs import log_d
 
 pwd_manager = PasswordManager()
 
@@ -73,7 +74,8 @@ class InputUser(BaseModel):
     """
 
     email: EmailStr  # Validates email format
-    password: str  # Raw password (will be hashed later)
+    password: str | None = None  # Raw password (will be hashed later)
+    orcid: str | None = None
     name: str | None = None  # optional for now
     full_name: str | None = None
 
@@ -86,7 +88,7 @@ class InputUser(BaseModel):
             raise BadRequestError(f"Invalid password: {e}") from e
         return v
 
-    @field_validator("name")
+    @field_validator("name", "full_name")
     def validate_username_syntax(cls, v: str | None) -> str | None:
         if v is None:
             return v
@@ -105,8 +107,9 @@ class ProcessedUser(BaseModel):
     """
 
     email: EmailStr
-    password_hash: str  # Hashed password (never store raw passwords!)
+    password_hash: str | None = None  # Hashed password (never store raw passwords!)
     name: str | None = None
+    orcid: str | None = None
     full_name: str | None = None
     details: dict[str, Any] = {"auth_method": "local"}  # Default metadata
     group_name: str | None = None
@@ -125,13 +128,13 @@ class ProcessedUser(BaseModel):
 
     @classmethod
     def from_input(cls, data: InputUser):
-        here = "proc.from_input"
-        log_d(here)
-        hashed = pwd_manager.hash_password(data.password)  # password validation takes place there.
+        hashed = pwd_manager.hash_password(data.password) if data.password else None
         return ProcessedUser(
             email=data.email,
             password_hash=hashed,
             name=data.name,
+            full_name=data.full_name,
+            orcid=data.orcid,
             details={"auth_method": "local"},  # explicitly derived
         )
 
@@ -141,6 +144,8 @@ class ProcessedUser(BaseModel):
             email=self.email,
             name=self.name,
             password_hash=self.password_hash,
+            external_id=self.orcid,
+            full_name=self.full_name,
             is_active=True,
             is_superuser=False,
             details=self.details,
@@ -156,6 +161,7 @@ class OutputUser(BaseModel):
     id: UUID
     email: EmailStr
     name: str | None = None
+    orcid: str | None = None
     full_name: str | None = None
     details: dict[str, Any] = {"auth_method": "local"}  # Default metadata
 
@@ -170,7 +176,7 @@ class OutputUser(BaseModel):
         self._is_su = True
 
     @classmethod
-    def from_db_user(cls, db_user: RbacUser) -> "OutputUser":
+    def from_db_user(cls, db_user: RbacUser) -> OutputUser:
         """Convert this processed user data into a RbacUser for persistence."""
         # here = "from_db_user"
         # log_d(here, "db_user", db_user)
@@ -179,6 +185,8 @@ class OutputUser(BaseModel):
             id=db_user.id,
             email=db_user.email,
             name=db_user.name,
+            orcid=db_user.external_id,
+            full_name=db_user.full_name,
             details=db_user.details,
         )
         if db_user.is_superuser:
