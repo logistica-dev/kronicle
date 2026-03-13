@@ -351,7 +351,7 @@ class ChannelMetadata(BaseModel):
         columns = list(self.table_schema().keys())
         placeholders = [f"${i + 1}" for i in range(len(columns))]
         sql = f"""
-        INSERT INTO {self.namespace()}.{self.tablename()} ({", ".join(columns)})
+        INSERT INTO {self.table()} ({", ".join(columns)})
         VALUES ({", ".join(placeholders)})
         RETURNING *;
         """
@@ -400,7 +400,7 @@ class ChannelMetadata(BaseModel):
         placeholders = [f"${i + 1}" for i in range(len(columns) + 1)]  # +1 for WHERE
 
         sql = f"""
-            UPDATE {self.namespace()}.{self.tablename()}
+            UPDATE {self.table()}
             SET {", ".join(f"{col} = {placeholders[idx]}" for idx, col in enumerate(columns))}
             WHERE channel_id = {placeholders[-1]}
             RETURNING *;

@@ -38,6 +38,10 @@ class KronicleBase(Base):
             return cls.__tablename__
         raise NotImplementedError("This is most likely a abstract class and doesn't map to a table")
 
+    @classmethod
+    def table(cls):
+        return f"{cls.namespace()}.{cls.tablename()}"
+
     # Primary key UUID
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
 
@@ -78,7 +82,7 @@ class KronicleBase(Base):
         tablename = cls.tablename()
         table_columns = cls.__table__.columns
 
-        with log_block(here, f"Table '{namespace}.{tablename}' validation"):
+        with log_block(here, f"Table '{cls.table()}' validation"):
             inspector = inspect(conn)
 
             # Check if the table exists
@@ -112,9 +116,6 @@ class KronicleBase(Base):
                 errors.append(f"Extra column '{col_name}' exists in DB but not in model")
 
             if errors:
-                err_msg = (
-                    f"Table '{tablename}' in schema '{namespace}' does not match model declaration:\n"
-                    + "\n".join(errors)
-                )
+                err_msg = f"Table '{cls.table()}' does not match model declaration:\n" + "\n".join(errors)
                 log_e(mod, err_msg)
                 raise RuntimeError(err_msg)

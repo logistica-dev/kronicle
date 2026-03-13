@@ -6,7 +6,6 @@ from kronicle.db.base.kronicle_view import KronicleView
 from kronicle.db.core.models.channel import Channel
 from kronicle.db.core.models.core_entity import CoreEntity
 from kronicle.db.core.models.zone import Zone
-from kronicle.utils.str_utils import normalize_pg_identifier
 
 
 class CoreResource(KronicleView):
@@ -21,10 +20,9 @@ class CoreResource(KronicleView):
 
     @classmethod
     def create_view_sql(cls) -> str:
-        ns = normalize_pg_identifier(cls.namespace())
         return f"""
-        CREATE OR REPLACE VIEW {ns}.{cls.tablename()} AS
-        SELECT id, 'zone' AS type FROM {ns}.{Zone.tablename()}
+        CREATE OR REPLACE VIEW {cls.table()} AS
+        SELECT id, 'zone' AS type FROM {Zone.table()}
         UNION ALL
-        SELECT id, 'channel' AS type FROM {ns}.{Channel.tablename()}
+        SELECT id, 'channel' AS type FROM {Channel.table()}
         """

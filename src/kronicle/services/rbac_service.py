@@ -36,10 +36,10 @@ class RbacService:
         with self._db.get_db() as db:  # read-only
             if login_input.is_email:
                 email = f"{login_input.login}".lower()
-                db_user = self._engine.fetch_user_by_email(db, email)
+                db_user = self._engine.fetch_user_by_email(db, email, including_su=True)
             else:
                 name = login_input.login
-                db_user = self._engine.fetch_user_by_name(db, name)
+                db_user = self._engine.fetch_user_by_name(db, name, including_su=True)
         if not db_user:
             raise NotFoundError("User not found")
         return db_user

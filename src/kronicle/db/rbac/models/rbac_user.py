@@ -9,6 +9,8 @@ from sqlalchemy import Boolean, Index, String, text
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from kronicle.db.rbac.models.rbac_entity import RbacEntity
+from kronicle.errors.error_types import BadRequestError
+from kronicle.utils.dev_logs import log_d
 
 
 class RbacUser(RbacEntity):
@@ -50,22 +52,38 @@ class RbacUser(RbacEntity):
     def fetch(
         cls,
         db: Session,
+        *,
         id: UUID | None = None,
         email: EmailStr | None = None,
         name: str | None = None,
         external_id: str | None = None,
+        including_su=True,
     ) -> RbacUser | list[RbacUser]:
-        q = db.query(RbacUser).filter(RbacUser.is_superuser.is_(False))
+        q = db.query(RbacUser)
+        q_filtered = None
+        if not including_su:
+            q = q.filter(cls.is_superuser.is_(False))
         if id:
-            return q.filter(cls.id == id).first()
+            q_filtered = q.filter(cls.id == id)
         if email:
-            return q.filter(cls.email == email).first()
+            q_filtered = q.filter(cls.email == email)
         if name:
-            return q.filter(cls.name == name).first()
+            q_filtered = q.filter(cls.name == name)
         if external_id:
-            return q.filter(cls.external_id == external_id).first()
-        else:
-            return q.all()
+            q_filtered = q.filter(cls.external_id == external_id)
+        if q_filtered is None:
+            raise BadRequestError("No filter provided")
+        # Log the SQL with literal values for debugging
+        # try:
+        #     sql_str = str(q_filtered.statement.compile(compile_kwargs={"literal_binds": True}))
+        #     log_d("fetch", "sql_query", sql_str)
+        # except Exception as e:
+        #     log_d("fetch", "sql_compile_error", str(e))
+
+        result = q_filtered.first()
+        if not result:
+            log_d("fetch", "warning", "No user found for provided criteria")
+        return result
 
     @classmethod
     def fetch_all(cls, db: Session) -> list[RbacUser]:

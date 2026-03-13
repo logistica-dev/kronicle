@@ -34,3 +34,4 @@ if __name__ == "__main__":  # pragma: no cover
         print("Caught AttributeError: OK")
     print(CoreEntity.namespace())  # prints core => OK
     print(CoreEntity.table_args())  # prints {'schema': 'core'} => OK
+    print(CoreEntity.table())  # prints {'schema': 'core'} => OK

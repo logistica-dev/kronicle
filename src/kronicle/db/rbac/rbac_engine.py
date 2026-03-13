@@ -22,12 +22,12 @@ class RbacEngine:
     # Read-only: fetch user info
     # ----------------------------------------------------------------------------------------------
     @staticmethod
-    def fetch_user_by_email(db: Session, email: EmailStr) -> RbacUser | None:
-        return RbacUser.fetch(db, email=email)
+    def fetch_user_by_email(db: Session, email: EmailStr, *, including_su=True) -> RbacUser | None:
+        return RbacUser.fetch(db, email=email, including_su=including_su)
 
     @staticmethod
-    def fetch_user_by_name(db: Session, name: str) -> RbacUser | None:
-        return RbacUser.fetch(db, name=name)
+    def fetch_user_by_name(db: Session, name: str, *, including_su=True) -> RbacUser | None:
+        return RbacUser.fetch(db, name=name, including_su=including_su)
 
     @staticmethod
     def fetch_user_by_external_id(db: Session, external_id: str) -> RbacUser | None:
@@ -35,7 +35,7 @@ class RbacEngine:
 
     @staticmethod
     def list_users(db: Session) -> list[RbacUser]:
-        return RbacUser.fetch(db)
+        return RbacUser.fetch_all(db)
 
     @staticmethod
     def get_effective_role(db: Session, user_id: UUID, zone: Zone) -> RbacRole | None:
@@ -71,7 +71,7 @@ class RbacEngine:
     # ----------------------------------------------------------------------------------------------
     @staticmethod
     def list_groups(db: Session) -> list[RbacUser]:
-        return RbacGroup.fetch(db)
+        return RbacGroup.fetch_all(db)
 
     # ----------------------------------------------------------------------------------------------
     # Read-only: fetch user-groups info

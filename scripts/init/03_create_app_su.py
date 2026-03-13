@@ -21,7 +21,9 @@ def main():
     su_email = conf.app_su.email
     rbac_db_url = conf.db.dsn(creds=conf.rbac_creds)
 
-    table_name = f"{RbacUser.namespace()}.{RbacUser.tablename()}"
+    table_name = RbacUser.table()
+
+    log_d(here, su_name, su_pwd, su_email, table_name, rbac_db_url)
 
     engine = create_engine(rbac_db_url, future=True)
     log_d(here, "Connected to Kronicle DB")
@@ -29,7 +31,7 @@ def main():
     # Use a session for ORM inserts
     with Session(engine) as session:
         # Check if admin user already exists
-        existing_user = session.query(RbacUser).filter_by(name=su_name).first()
+        existing_user = RbacUser.get_by_login(session, su_name, by_email=False)
         if existing_user:
             log_d(here, f"Admin user '{su_name}' already exists")
             if not existing_user.is_superuser:
@@ -40,6 +42,7 @@ def main():
                 log_d(here, f"Admin user '{su_name}' is already a superuser")
 
         else:
+            log_d(here, f"Creating Admin user '{su_name}'")
             admin_user = RbacUser(
                 name=su_name,
                 password_hash=su_pwd,
