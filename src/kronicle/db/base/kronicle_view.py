@@ -23,6 +23,10 @@ class KronicleView(Base):
         raise NotImplementedError("This is most likely a abstract class and doesn't map to a table")
 
     @classmethod
+    def table(cls):
+        return f"{cls.namespace()}.{cls.tablename()}"
+
+    @classmethod
     def create_view_sql(cls) -> str:
         """Return the SQL to create the view. Must be overridden."""
         raise NotImplementedError
