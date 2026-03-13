@@ -28,7 +28,7 @@ def mock_metadata():
     m.channel_schema = MagicMock()
     m.table_exists = AsyncMock(return_value=True)
     m.create = AsyncMock()
-    m.exists = False
+    m.exists = AsyncMock(return_value=False)
     return m
 
 
@@ -213,7 +213,7 @@ async def test_fetch_rows(mock_metadata, mock_timeseries, mock_conn):
 
 @pytest.mark.asyncio
 async def test_create_conflict_metadata_exists(mock_metadata, mock_timeseries, mock_conn):
-    mock_metadata.exists = True
+    mock_metadata.exists = AsyncMock(return_value=True)
     resource = ChannelResource(mock_metadata, mock_timeseries)
 
     with raises(ConflictError):
@@ -222,8 +222,8 @@ async def test_create_conflict_metadata_exists(mock_metadata, mock_timeseries, m
 
 @pytest.mark.asyncio
 async def test_create_success(mock_metadata, mock_timeseries, mock_conn):
-    mock_metadata.exists = False
-    mock_timeseries.table_exists = False
+    mock_metadata.exists = AsyncMock(return_value=False)
+    mock_timeseries.table_exists = AsyncMock(return_value=False)
 
     resource = ChannelResource(mock_metadata, mock_timeseries)
 

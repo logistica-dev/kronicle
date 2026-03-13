@@ -228,7 +228,10 @@ def q_ident(name: str) -> str:
 
 def normalize_pg_identifier(name: str) -> str:
     if not fullmatch(r"[a-zA-Z_]\w+", name):
-        raise ValueError(f"Invalid Postgres identifier '{name}': only alphanumerics and underscores allowed")
+        raise ValueError(
+            f"Invalid Postgres identifier '{name}': only alphanumerics and underscores allowed"
+            " (start with letter or underscore, two characters minimum)"
+        )
     return name.lower()
 
 

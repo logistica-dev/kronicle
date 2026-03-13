@@ -50,6 +50,9 @@ version_files = ["pyproject.toml:project.version"]
 
 # ----- Tool: pytest
 [tool.pytest.ini_options]
+markers = [
+    "integration: marks tests as integration tests that require a running server",
+]
 pythonpath = ["src"]
 norecursedirs = ["*.egg", ".eggs", "dist", "build", "wip"]
 filterwarnings = ["ignore:.*pkg_resources.*:DeprecationWarning"]
@@ -59,7 +62,6 @@ addopts = [
     "--cov-report=html:reports/html_dir",
     "--cov-report=xml:reports/coverage.xml",
 ]
-
 # ----- Tool: setuptools
 [tool.setuptools]
 package-dir = { "" = "src" }

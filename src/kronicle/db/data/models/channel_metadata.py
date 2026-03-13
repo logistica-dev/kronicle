@@ -241,7 +241,7 @@ class ChannelMetadata(BaseModel):
     # ----------------------------------------------------------------------------------------------
     # DB operations: read/fetch
     # ----------------------------------------------------------------------------------------------
-    async def exists(self, db: PoolConnectionProxy):
+    async def exists(self, db: PoolConnectionProxy) -> bool:
         res = await self.fetch_by_id(db, self.channel_id)
         return res is not None
 

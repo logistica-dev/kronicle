@@ -69,7 +69,7 @@ async def db_exists() -> bool:
 # --------------------------------------------------------------------------------------------------
 # Check if required tables exist
 # --------------------------------------------------------------------------------------------------
-async def tables_exist():
+async def tables_exists():
     """Return True if the DB is already initialized (example: channel metadata table exists)."""
     try:
         async with conf.db.session() as conn:
@@ -100,7 +100,7 @@ async def wait_and_init():
     if not await db_exists():
         print("[entry] DB does not exist.")
         init_needed = True
-    elif not await tables_exist():
+    elif not await tables_exists():
         print("[entry] DB not initialized.")
         init_needed = True
     if init_needed:

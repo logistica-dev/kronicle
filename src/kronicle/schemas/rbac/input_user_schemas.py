@@ -61,7 +61,7 @@ class InputUserLogin(BaseModel):
 
 class InputUserChangePwd(InputUserLogin):
     new_password: Annotated[str, Field(description="New password")]
-    confirm_new_password: Annotated[str, Field(description="Confirm new password")]
+    confirm_password: Annotated[str, Field(description="Confirm new password")]
 
     @field_validator("new_password")
     def validate_new_password(cls, v: str) -> str:
@@ -73,7 +73,7 @@ class InputUserChangePwd(InputUserLogin):
 
     @model_validator(mode="after")
     def check_password_match(self):
-        if self.new_password != self.confirm_new_password:
+        if self.new_password != self.confirm_password:
             raise BadRequestError("New passwords do not match")
         return self
 

@@ -155,7 +155,7 @@ class ChannelRepository:
         # log_d(here, "Payload has rows")
         channel = ChannelResource.from_processed(processed)
         async with self._db.transaction() as db:
-            existing = await channel.metadata.exists(db=db)
+            existing = await channel.metadata.exists(db)
             try:
                 if existing:
                     await channel.metadata.update(db)

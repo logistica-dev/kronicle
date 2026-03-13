@@ -223,9 +223,11 @@ class ChannelResource:
         strict: bool = False,
     ) -> ChannelResource:
         here = "create"
-        if await self.metadata.exists(db):
+        meta_exists = await self.metadata.exists(db)
+        if meta_exists:
             raise ConflictError("A resource already exists", details={"channel_id": str(self.channel_id)})
-        if await self.timeseries.table_exists(db):  ### Should never happen
+        ts_exists = await self.timeseries.table_exists(db)
+        if ts_exists:  ### Should never happen
             raise ConflictError("Data already exists", details={"channel_id": str(self.channel_id)})
         try:
             await self.metadata.create(db)

@@ -83,6 +83,45 @@
         }
       }
     },
+    "/auth/v1/change_password": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Update Password",
+        "operationId": "update_password_auth_v1_change_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InputUserChangePwd"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/channels": {
       "get": {
         "tags": [
@@ -2171,12 +2210,12 @@
           }
         }
       },
-      "put": {
+      "patch": {
         "tags": [
           "RBAC"
         ],
-        "summary": "Update User",
-        "operationId": "update_user_rbac_v1_users_put",
+        "summary": "Patch User",
+        "operationId": "patch_user_rbac_v1_users_patch",
         "security": [
           {
             "HTTPBearer": []
@@ -2407,7 +2446,7 @@
         "title": "InputPayload",
         "description": "User-provided payload for a channel.\nThe 'channel_schema' field is a dict of column_name -> type string.",
         "example": {
-          "channel_id": "b7b707fe-3c72-4d55-8d30-c901c6b196b8",
+          "channel_id": "f0a118b5-d60d-447b-ad3e-28437aa1607c",
           "channel_schema": {
             "humidity": "float",
             "temperature": "float",
@@ -2416,7 +2455,7 @@
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-d0bae",
+          "name": "thermo-74ade",
           "rows": [
             {
               "humidity": 55.1,
@@ -2504,6 +2543,40 @@
         "title": "InputUser",
         "description": "Represents raw input data for user creation.\nValidates and sanitizes user-provided data before processing.\nMay reject invalid data (e.g., weak passwords, invalid emails)."
       },
+      "InputUserChangePwd": {
+        "properties": {
+          "login": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 4,
+            "title": "Login",
+            "description": "Username or email used to login"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password",
+            "description": "User password (validated against server password policy)"
+          },
+          "new_password": {
+            "type": "string",
+            "title": "New Password",
+            "description": "New password"
+          },
+          "confirm_password": {
+            "type": "string",
+            "title": "Confirm Password",
+            "description": "Confirm new password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "login",
+          "password",
+          "new_password",
+          "confirm_password"
+        ],
+        "title": "InputUserChangePwd"
+      },
       "InputUserLogin": {
         "properties": {
           "login": {
@@ -2515,10 +2588,8 @@
           },
           "password": {
             "type": "string",
-            "maxLength": 128,
-            "minLength": 8,
             "title": "Password",
-            "description": "User password"
+            "description": "User password (validated against server password policy)"
           }
         },
         "type": "object",

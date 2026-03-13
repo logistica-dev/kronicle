@@ -114,13 +114,13 @@ def test_equivalent_to_false_if_type_changes():
 
 
 def test_diff_added_removed_changed():
-    s1 = ChannelSchema.sanitize_user_schema({"a": "int", "b": "float"})
-    s2 = ChannelSchema.sanitize_user_schema({"b": "float", "c": "int"})
+    s1 = ChannelSchema.sanitize_user_schema({"aa": "int", "bb": "float"})
+    s2 = ChannelSchema.sanitize_user_schema({"bb": "float", "cc": "int"})
 
     diff = s1.diff(s2)
 
-    assert "c" in diff["added"]
-    assert "a" in diff["removed"]
+    assert "cc" in diff["added"]
+    assert "aa" in diff["removed"]
     assert diff["changed"] == {}
 
 

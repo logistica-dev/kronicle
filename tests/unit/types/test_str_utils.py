@@ -189,7 +189,7 @@ def test_q_ident_escapes_quotes():
 )
 def test_normalize_pg_identifier(inp, valid):
     if valid:
-        assert normalize_pg_identifier(inp) == inp
+        assert normalize_pg_identifier(inp) == inp.lower()
     else:
         with raises(ValueError):
             normalize_pg_identifier(inp)
