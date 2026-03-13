@@ -5,7 +5,8 @@ from pydantic import EmailStr
 from kronicle.auth.auth_middleware import require_auth
 from kronicle.deps.rbac_deps import rbac_service
 from kronicle.errors.error_types import BadRequestError
-from kronicle.schemas.rbac.user_schemas import InputUser, OutputUser, ProcessedUser
+from kronicle.schemas.rbac.input_user_schemas import InputUser
+from kronicle.schemas.rbac.safe_user_schemas import OutputUser, ProcessedUser
 from kronicle.services.rbac_service import RbacService
 
 rbac_router = APIRouter(tags=["RBAC"], dependencies=[Depends(require_auth)])
@@ -45,16 +46,16 @@ def create_user(
     return rbac.create_user(user=user_processed)
 
 
-@rbac_router.put(
+@rbac_router.patch(
     "/users",
     response_model=OutputUser,
 )
-def update_user(
+def patch_user(
     user_in: InputUser,
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
 ):
     user_processed = ProcessedUser.from_input(user_in)
-    return rbac.update_user(user=user_processed)
+    return rbac.patch_user(user=user_processed)
 
 
 @rbac_router.delete(

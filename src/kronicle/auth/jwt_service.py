@@ -5,7 +5,7 @@ from jose import jwt
 
 from kronicle.deps.settings import JWTSettings
 from kronicle.errors.error_types import UnauthorizedError
-from kronicle.schemas.rbac.user_schemas import OutputUser
+from kronicle.schemas.rbac.safe_user_schemas import OutputUser
 
 mod = "jwt"
 

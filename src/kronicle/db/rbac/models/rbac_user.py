@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from typing import Any
+from uuid import UUID
 
 from pydantic import EmailStr
 from sqlalchemy import Boolean, Index, String, text
@@ -49,11 +50,14 @@ class RbacUser(RbacEntity):
     def fetch(
         cls,
         db: Session,
+        id: UUID | None = None,
         email: EmailStr | None = None,
         name: str | None = None,
         external_id: str | None = None,
     ) -> RbacUser | list[RbacUser]:
         q = db.query(RbacUser).filter(RbacUser.is_superuser.is_(False))
+        if id:
+            return q.filter(cls.id == id).first()
         if email:
             return q.filter(cls.email == email).first()
         if name:

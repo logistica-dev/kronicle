@@ -1,12 +1,12 @@
 # kronicle/services/rbac_service.py
 from uuid import UUID
 
-from kronicle.db.rbac.associations.user_groups import RbacUserGroups
 from kronicle.db.rbac.models.rbac_user import RbacUser
 from kronicle.db.rbac.rbac_db_session import RbacDbSession
 from kronicle.db.rbac.rbac_engine import RbacEngine
 from kronicle.errors.error_types import BadRequestError, NotFoundError, UnauthorizedError
-from kronicle.schemas.rbac.user_schemas import InputUserLogin, OutputUser, ProcessedUser
+from kronicle.schemas.rbac.input_user_schemas import InputUserLogin
+from kronicle.schemas.rbac.safe_user_schemas import OutputUser, ProcessedUser
 from kronicle.utils.dev_logs import log_d
 
 """
@@ -94,8 +94,8 @@ class RbacService:
         out_user = OutputUser.from_db_user(db_user)
         return out_user
 
-    def update_user(self, user: ProcessedUser) -> OutputUser:
-        here = "update_user"
+    def patch_user(self, user: ProcessedUser) -> OutputUser:
+        here = "patch_user"
         log_d(here, user.email)
         with self._db.transaction() as db:
             db_user: RbacUser = self._engine.fetch_user_by_email(db=db, email=user.email)
@@ -130,9 +130,7 @@ class RbacService:
 
     def update_password_hash(self, user_id: UUID, new_hash: str) -> None:
         with self._db.transaction() as db:
-            user = db.query(RbacUser).filter(RbacUser.id == user_id).first()
-            if user:
-                user.password_hash = new_hash
+            self._engine.update_password_hash(db, user_id, new_hash)
 
     # ----------------------------------------------------------------------------------------------
     # Subjects / Groups
@@ -141,6 +139,5 @@ class RbacService:
         """
         Returns a list of group IDs the user belongs to.
         """
-        with self._db.get_db() as session:
-            rows = session.query(RbacUserGroups.group_id).filter(RbacUserGroups.user_id == user_id).all()
-            return [r.group_id for r in rows]
+        with self._db.get_db() as db:
+            return self._engine.get_user_groups(db, user_id=user_id)

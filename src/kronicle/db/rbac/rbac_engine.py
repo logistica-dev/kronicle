@@ -7,9 +7,12 @@ from pydantic import EmailStr
 from sqlalchemy.orm import Session
 
 from kronicle.db.core.models.zone import Zone
+from kronicle.db.rbac.associations.user_groups import RbacUserGroups
+from kronicle.db.rbac.models.rbac_group import RbacGroup
 from kronicle.db.rbac.models.rbac_policy import ZonePolicy
 from kronicle.db.rbac.models.rbac_role import RbacRole
 from kronicle.db.rbac.models.rbac_user import RbacUser
+from kronicle.errors.error_types import NotFoundError
 
 
 class RbacEngine:
@@ -64,6 +67,24 @@ class RbacEngine:
         return max(candidate_roles, key=lambda r: getattr(r, "level", 0))
 
     # ----------------------------------------------------------------------------------------------
+    # Read-only: fetch group info
+    # ----------------------------------------------------------------------------------------------
+    @staticmethod
+    def list_groups(db: Session) -> list[RbacUser]:
+        return RbacGroup.fetch(db)
+
+    # ----------------------------------------------------------------------------------------------
+    # Read-only: fetch user-groups info
+    # ----------------------------------------------------------------------------------------------
+    @staticmethod
+    def get_user_groups(db: Session, user_id: UUID) -> list[UUID]:
+        """
+        Returns a list of group IDs the user belongs to.
+        """
+        rows = db.query(RbacUserGroups.group_id).filter(RbacUserGroups.user_id == user_id).all()
+        return [r.group_id for r in rows]
+
+    # ----------------------------------------------------------------------------------------------
     # Write
     # ----------------------------------------------------------------------------------------------
     @staticmethod
@@ -77,3 +98,10 @@ class RbacEngine:
         db.add(user)
         db.flush()  # ensures id is populated
         return user
+
+    @staticmethod
+    def update_password_hash(db: Session, user_id: UUID, new_hash: str) -> None:
+        user = db.query(RbacUser).filter(RbacUser.id == user_id).first()
+        if not user:
+            raise NotFoundError("User not found")
+        user.password_hash = new_hash
