@@ -50,9 +50,14 @@ ARG APP_VERSION=unknown
 ARG GIT_COMMIT=unknown
 ARG BUILD_DATE=unknown
 
-RUN printf "__version__='%s'\n__commit__='%s'\n__build_date__='%s'\n" \
-    "$APP_VERSION" "$GIT_COMMIT" "$BUILD_DATE" \
-    > /opt/kronicle/src/kronicle/_build.py
+RUN if [[ "$APP_VERSION" == refs/tags/* ]]; then \
+      VERSION="${APP_VERSION#refs/tags/}"; \
+    else \
+      VERSION="$APP_VERSION"; \
+    fi && \
+    printf "__version__='%s'\n__commit__='%s'\n__build_date__='%s'\n" \
+      "$VERSION" "${GIT_COMMIT:0:7}" "$BUILD_DATE" \
+      > /opt/kronicle/src/kronicle/_build.py
 
 # Temporary debug
 # ------------------------------------------------------------------------------

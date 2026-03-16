@@ -118,9 +118,9 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           build-args: |
-            APP_VERSION=${{ github.ref_name }}
+            APP_VERSION=${{ github.ref }}
             GIT_COMMIT=${{ github.sha }}
-            BUILD_DATE=${{ github.run_id }}
+            BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           tags: |
             ghcr.io/${{ github.repository_owner }}/kronicle:latest
             ghcr.io/${{ github.repository_owner }}/kronicle:${{ github.sha }}
