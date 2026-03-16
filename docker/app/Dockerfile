@@ -46,6 +46,14 @@ COPY . .
 # Make scripts executable (if you want to run shell wrappers too)
 RUN chmod -R +x scripts/init
 
+ARG APP_VERSION=unknown
+ARG GIT_COMMIT=unknown
+ARG BUILD_DATE=unknown
+
+RUN printf "__version__='%s'\n__commit__='%s'\n__build_date__='%s'\n" \
+    "$APP_VERSION" "$GIT_COMMIT" "$BUILD_DATE" \
+    > /opt/kronicle/src/kronicle/_build.py
+
 # Temporary debug
 # ------------------------------------------------------------------------------
 # Entrypoint
