@@ -253,7 +253,7 @@ class ChannelResource:
 
     @classmethod
     async def fetch_all(cls, db: PoolConnectionProxy, *, filter: RequestFilter | None = None) -> list[ChannelResource]:
-        metadata_list = await ChannelMetadata.fetch_all(db)
+        metadata_list = await ChannelMetadata.fetch_all(db, filter=filter)
         channel_list = []
         for metadata in metadata_list:
             channel = ChannelResource(metadata)
