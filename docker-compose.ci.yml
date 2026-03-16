@@ -8,8 +8,6 @@ services:
   db:
     image: timescale/timescaledb:latest-pg15
     container_name: kronicle-ci-db
-    ports:
-      - "5433:5432" # optional, local access
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
