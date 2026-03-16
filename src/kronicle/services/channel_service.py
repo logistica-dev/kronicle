@@ -5,9 +5,9 @@ from uuid import UUID, uuid4
 from kronicle.db.data.channel_repository import ChannelRepository
 from kronicle.db.data.models.channel_schema import ChannelSchema
 from kronicle.errors.error_types import BadRequestError, NotFoundError
+from kronicle.schemas.filters.request_filter import RequestFilter
 from kronicle.schemas.payload.input_payload import InputPayload
 from kronicle.schemas.payload.processed_payload import ProcessedPayload
-from kronicle.schemas.payload.request_filter import RequestFilter
 from kronicle.schemas.payload.response_payload import ResponsePayload
 from kronicle.utils.dev_logs import log_d
 from kronicle.utils.str_utils import ensure_uuid4, extract_tags
@@ -71,8 +71,9 @@ class ChannelService:
         - If channel does not exist -> require schema (create new).
         - If channel exists -> schema must either be absent or identical to stored one.
         """
+        channel_id = ensure_uuid4(payload.channel_id)
         try:
-            channel = await self._repo.fetch_metadata(ensure_uuid4(payload.channel_id))
+            channel = await self._repo.fetch_metadata(channel_id)
         except Exception:
             log_d("upsert_metadata", "Channel does not exist, creating")
             return await self.create_channel(payload)
@@ -155,6 +156,8 @@ class ChannelService:
         The metadata is not updated.
         """
         processed = await self._process_payload_for_insertion(payload, strict=strict)
+        await self._repo.fetch_channel(ensure_uuid4(processed.channel_id))
+
         updated_resource = await self._repo.insert_rows(
             processed=processed,
             strict=strict,
@@ -170,7 +173,7 @@ class ChannelService:
         here = "up_meta_add_rows"
         # log_d(here)
         processed = await self._process_payload_for_insertion(payload, strict=strict)
-        updated_resource = await self._repo.insert_rows(
+        updated_resource = await self._repo.upsert_metadata_and_insert_rows(
             processed=processed,
             strict=strict,
         )

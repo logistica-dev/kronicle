@@ -84,26 +84,28 @@ jobs:
           done
 
       # Step 8: Run Kronicle DB initialization inside the image
-      - name: Prepare env file
-        run: |
-          cat <<EOF > kronicle.env
-          KRONICLE_DB_HOST=${{ secrets.KRONICLE_DB_HOST }}
-          KRONICLE_DB_PORT=${{ secrets.KRONICLE_DB_PORT }}
-          KRONICLE_DB_NAME=${{ secrets.KRONICLE_DB_NAME }}
-
-          KRONICLE_DB_SU_CREDS=${{ secrets.KRONICLE_DB_SU_CREDS }}
-          KRONICLE_CHAN_CREDS=${{ secrets.KRONICLE_CHAN_CREDS }}
-          KRONICLE_RBAC_CREDS=${{ secrets.KRONICLE_RBAC_CREDS }}
-
-          KRONICLE_SU_INFO=${{ secrets.KRONICLE_SU_INFO }}
-
-          POSTGRES_DB=${{ secrets.POSTGRES_DB }}
-          POSTGRES_USER=${{ secrets.POSTGRES_USER }}
-          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
-          EOF
       - name: Run Kronicle DB init
+        env:
+          KRONICLE_DB_HOST: ${{ secrets.KRONICLE_DB_HOST }}
+          KRONICLE_DB_PORT: ${{ secrets.KRONICLE_DB_PORT }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          KRONICLE_CHAN_CREDS: ${{ secrets.KRONICLE_CHAN_CREDS }}
+          KRONICLE_RBAC_CREDS: ${{ secrets.KRONICLE_RBAC_CREDS }}
+          KRONICLE_SU_INFO: ${{ secrets.KRONICLE_SU_INFO }}
         run: |
-          docker run --rm --network kronicle-net --env-file kronicle.env kronicle-init:latest
+          docker run --rm \
+            --network kronicle-net \
+            -e KRONICLE_DB_HOST \
+            -e KRONICLE_DB_PORT \
+            -e POSTGRES_DB \
+            -e POSTGRES_USER \
+            -e POSTGRES_PASSWORD \
+            -e KRONICLE_CHAN_CREDS \
+            -e KRONICLE_RBAC_CREDS \
+            -e KRONICLE_SU_INFO \
+            kronicle-init:latest
 
       # Step 9: Tear down the temporary DB
       - name: Stop temporary DB

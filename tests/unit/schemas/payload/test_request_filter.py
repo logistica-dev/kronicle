@@ -1,7 +1,7 @@
 from pydantic import ValidationError
 from pytest import raises
 
-from kronicle.schemas.payload.request_filter import DEFAULT_LIMIT, MAX_LIMIT, MAX_OFFSET, RequestFilter
+from kronicle.schemas.filters.request_filter import DEFAULT_LIMIT, MAX_LIMIT, MAX_OFFSET, RequestFilter
 from kronicle.types.iso_datetime import IsoDateTime
 
 

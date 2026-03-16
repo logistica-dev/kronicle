@@ -8,10 +8,10 @@ from asyncpg.pool import PoolConnectionProxy
 from kronicle.db.data.models.channel_metadata import ChannelMetadata
 from kronicle.db.data.models.channel_schema import ChannelSchema
 from kronicle.db.data.models.channel_timeseries import ChannelTimeseries
-from kronicle.errors.error_types import BadRequestError, ConflictError, NotFoundError
+from kronicle.errors.error_types import BadRequestError, NotFoundError
+from kronicle.schemas.filters.request_filter import RequestFilter
 from kronicle.schemas.payload.op_feedback import OpFeedback
 from kronicle.schemas.payload.processed_payload import ProcessedPayload
-from kronicle.schemas.payload.request_filter import RequestFilter
 from kronicle.utils.dev_logs import log_e
 
 mod = "chan_rsrc"
@@ -216,32 +216,6 @@ class ChannelResource:
     # ----------------------------------------------------------------------------------------------
     # DB table access: metadata ant timeseries at the same time
     # ----------------------------------------------------------------------------------------------
-    async def create(
-        self,
-        db: PoolConnectionProxy,
-        *,
-        strict: bool = False,
-    ) -> ChannelResource:
-        here = "create"
-        meta_exists = await self.metadata.exists(db)
-        if meta_exists:
-            raise ConflictError("A resource already exists", details={"channel_id": str(self.channel_id)})
-        ts_exists = await self.timeseries.table_exists(db)
-        if ts_exists:  ### Should never happen
-            raise ConflictError("Data already exists", details={"channel_id": str(self.channel_id)})
-        try:
-            await self.metadata.create(db)
-        except Exception as e:
-            log_e(here, "Metadata creation failed", e)
-            raise
-        if self.timeseries.rows:
-            try:
-                await self.insert_rows(db, strict=strict)
-            except Exception as e:
-                log_e(here, "Row insertion failed", e)
-                raise
-        return self
-
     @classmethod
     async def fetch(
         cls, db: PoolConnectionProxy, channel_id: UUID, *, filter: RequestFilter | None = None
@@ -251,6 +225,14 @@ class ChannelResource:
             await resource.fetch_rows(db, filter=filter)
         return resource
 
+    async def _list_metadata_to_channels(self, db, metadata_list: list[ChannelMetadata]) -> list[ChannelResource]:
+        channel_list = []
+        for meta in metadata_list:
+            channel_resource = ChannelResource(meta)
+            await channel_resource.count_rows(db)
+            channel_list.append(channel_resource)
+        return channel_list
+
     @classmethod
     async def fetch_all(cls, db: PoolConnectionProxy, *, filter: RequestFilter | None = None) -> list[ChannelResource]:
         metadata_list = await ChannelMetadata.fetch_all(db, filter=filter)
@@ -258,6 +240,7 @@ class ChannelResource:
         for metadata in metadata_list:
             channel = ChannelResource(metadata)
             await channel.fetch_rows(db, filter=filter)
+            await channel.count_rows(db)
             channel_list.append(channel)
         return channel_list
 

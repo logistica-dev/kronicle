@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Query
 
 from kronicle.auth.auth_middleware import require_auth
 from kronicle.deps.channel_deps import channel_service
-from kronicle.schemas.payload.request_filter import RequestFilter
+from kronicle.schemas.filters.request_filter import RequestFilter
 from kronicle.schemas.payload.response_payload import ResponsePayload
 from kronicle.services.channel_service import ChannelService
 

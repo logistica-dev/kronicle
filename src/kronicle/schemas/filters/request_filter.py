@@ -1,4 +1,4 @@
-# kronicle/schemas/payload/request_filter.py
+# kronicle/schemas/filters/request_filter.py
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator

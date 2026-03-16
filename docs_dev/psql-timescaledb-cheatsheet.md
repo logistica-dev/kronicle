@@ -29,6 +29,7 @@ psql -U postgres -d dts_db
 - `\l` — list all databases
 - `\c mydb` — connect to database `mydb`
 - `\dn` — list schemas
+- `\dt data.*`
 
 ---
 
