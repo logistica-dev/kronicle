@@ -11,8 +11,8 @@ from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
 from kronicle.db.data.models.channel_schema import ChannelSchema
 from kronicle.errors.error_types import BadRequestError, ConflictError, DatabaseInstructionError, NotFoundError
+from kronicle.schemas.filters.request_filter import RequestFilter
 from kronicle.schemas.payload.processed_payload import ProcessedPayload
-from kronicle.schemas.payload.request_filter import RequestFilter
 from kronicle.types.iso_datetime import IsoDateTime
 from kronicle.types.tag_type import TagType
 from kronicle.utils.asyncpg_utils import table_exists
@@ -257,11 +257,8 @@ class ChannelMetadata(BaseModel):
         Returns:
             ChannelMetadata instance or None if not found
         """
-        ensure_uuid4(channel_id)
-        sql = f"""
-        SELECT * FROM {cls.table()} WHERE channel_id = $1
-        """
-        row = await db.fetchrow(sql, channel_id)
+        sql = f"SELECT * FROM {cls.table()} WHERE channel_id = $1"
+        row = await db.fetchrow(sql, ensure_uuid4(channel_id))
         if not row:
             return None
         return cls.from_db(dict(row))
@@ -278,12 +275,8 @@ class ChannelMetadata(BaseModel):
         Returns:
             ChannelMetadata instance or None if not found
         """
-        normalized_name = normalize_to_snake_case(name)
-        sql = f"""
-        SELECT * FROM {cls.table()}
-        WHERE name = $1
-        """
-        row = await db.fetchrow(sql, normalized_name)
+        sql = f"SELECT * FROM {cls.table()} WHERE name = $1"
+        row = await db.fetchrow(sql, normalize_to_snake_case(name))
         if not row:
             return None
         return cls.from_db(dict(row))
@@ -331,7 +324,6 @@ class ChannelMetadata(BaseModel):
         """
         filter = filter or RequestFilter()
         sql_fragment, params = filter.to_sql_clauses(start_idx=1, order_by="received_at", desc=True)
-
         sql = f"SELECT * FROM {cls.table()} {sql_fragment}"
         rows = await db.fetch(sql, *params)  # TODO: check params / filter out columns
         return [cls.from_db(dict(r)) for r in rows]

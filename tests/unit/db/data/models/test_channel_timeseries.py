@@ -7,7 +7,7 @@ from pytest import raises
 
 from kronicle.db.data.models.channel_timeseries import ChannelTimeseries
 from kronicle.errors.error_types import BadRequestError, NotFoundError
-from kronicle.schemas.payload.request_filter import RequestFilter
+from kronicle.schemas.filters.request_filter import RequestFilter
 
 # --------------------------------------------------------------------------------------
 # Fixtures

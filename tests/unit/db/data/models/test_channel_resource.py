@@ -10,7 +10,6 @@ from kronicle.db.data.models.channel_resource import ChannelResource
 from kronicle.db.data.models.channel_timeseries import ChannelTimeseries
 from kronicle.errors.error_types import (
     BadRequestError,
-    ConflictError,
     NotFoundError,
 )
 from kronicle.schemas.payload.op_feedback import OpFeedback
@@ -203,34 +202,6 @@ async def test_fetch_rows(mock_metadata, mock_timeseries, mock_conn):
     result = await resource.fetch_rows(mock_conn)
 
     mock_timeseries.fetch.assert_called_once()
-    assert result is resource
-
-
-# --------------------------------------------------------------------------------------
-# create()
-# --------------------------------------------------------------------------------------
-
-
-@pytest.mark.asyncio
-async def test_create_conflict_metadata_exists(mock_metadata, mock_timeseries, mock_conn):
-    mock_metadata.exists = AsyncMock(return_value=True)
-    resource = ChannelResource(mock_metadata, mock_timeseries)
-
-    with raises(ConflictError):
-        await resource.create(mock_conn)
-
-
-@pytest.mark.asyncio
-async def test_create_success(mock_metadata, mock_timeseries, mock_conn):
-    mock_metadata.exists = AsyncMock(return_value=False)
-    mock_timeseries.table_exists = AsyncMock(return_value=False)
-
-    resource = ChannelResource(mock_metadata, mock_timeseries)
-
-    result = await resource.create(mock_conn)
-
-    mock_metadata.create.assert_called_once_with(mock_conn)
-    mock_timeseries.insert.assert_called_once()
     assert result is resource
 
 

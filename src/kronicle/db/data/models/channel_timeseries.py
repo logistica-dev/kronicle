@@ -10,8 +10,8 @@ from asyncpg.pool import PoolConnectionProxy
 from kronicle.db.data.models.channel_metadata import ChannelMetadata
 from kronicle.db.data.models.channel_schema import ChannelSchema
 from kronicle.errors.error_types import BadRequestError, NotFoundError
+from kronicle.schemas.filters.request_filter import RequestFilter
 from kronicle.schemas.payload.op_feedback import OpFeedback
-from kronicle.schemas.payload.request_filter import RequestFilter
 from kronicle.utils.asyncpg_utils import table_exists
 from kronicle.utils.dev_logs import log_i, log_w
 from kronicle.utils.str_utils import ensure_uuid4
