@@ -46,19 +46,13 @@ COPY . .
 # Make scripts executable (if you want to run shell wrappers too)
 RUN chmod -R +x scripts/init
 
-ARG APP_VERSION=unknown
-ARG GIT_COMMIT=unknown
-ARG BUILD_DATE=unknown
+# ------------------------------------------------------------------------------
+# Generate build info
+# ------------------------------------------------------------------------------
+ARG APP_VERSION
+ARG GIT_COMMIT
+RUN /opt/kronicle/docker/app/generate_build_info.sh
 
-RUN if echo "$APP_VERSION" | grep -q '^refs/tags/'; then \
-      VERSION=$(echo "$APP_VERSION" | sed 's|refs/tags/||'); \
-    else \
-      VERSION="$APP_VERSION"; \
-    fi && \
-    printf "__version__='%s'\n__commit__='%s'\n__build_date__='%s'\n" \
-      "$(echo $VERSION)" "$(echo $GIT_COMMIT | cut -c1-7)" "$BUILD_DATE" \
-      > /opt/kronicle/src/kronicle/_build.py
-# Temporary debug
 # ------------------------------------------------------------------------------
 # Entrypoint
 # ------------------------------------------------------------------------------

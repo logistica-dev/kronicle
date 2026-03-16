@@ -1,3 +1,3 @@
-__version__ = "0.0.0"
-__commit__ = "7777777"
-__build_date__ = 1773672550
+__version__ = "unknown"
+__commit__ = "0000000"
+__build_date__ = "2026-03-16T15:49:46Z"
