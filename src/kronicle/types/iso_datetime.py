@@ -119,6 +119,8 @@ class IsoDateTime(datetime):
         if isinstance(value, datetime):
             dt = cls.to_iso_datetime(value)
             return dt.astimezone() if to_local_tz else dt
+        if isinstance(value, int):
+            return IsoDateTime.fromtimestamp(value)
 
         if isinstance(value, str):
             try:

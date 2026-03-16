@@ -44,6 +44,25 @@
         }
       }
     },
+    "/health/version": {
+      "get": {
+        "tags": [
+          "Check health"
+        ],
+        "summary": "Version",
+        "operationId": "version_health_version_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/auth/v1/login": {
       "post": {
         "tags": [
@@ -2446,7 +2465,7 @@
         "title": "InputPayload",
         "description": "User-provided payload for a channel.\nThe 'channel_schema' field is a dict of column_name -> type string.",
         "example": {
-          "channel_id": "304783a0-776c-41b6-8550-5e79ccadbe14",
+          "channel_id": "075a232b-18ac-4b77-9598-abbad55aa480",
           "channel_schema": {
             "humidity": "float",
             "temperature": "float",
@@ -2455,7 +2474,7 @@
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-9cd2c",
+          "name": "thermo-61e5e",
           "rows": [
             {
               "humidity": 55.1,
