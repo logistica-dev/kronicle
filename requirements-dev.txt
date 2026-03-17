@@ -7,6 +7,7 @@ pytest-cov>=7.0.0
 pytest-asyncio>=1.3.0
 ruff>=0.14.1
 kronicle-sdk>=0.2.3
+flake8>=7.3.0
 # aiohttp; extra == "d" # Installed as dependency for black
 # click # Installed as dependency for black
 # colorama; extra == "colorama" # Installed as dependency for black

@@ -30,10 +30,11 @@ class ChannelMetadata(BaseModel):
     Part of the payload that describes the data.
     One metadata row identifies one peculiar channel stream.
     `channel_id` identifies uniquely the channel stream from which we collect data.
-    `received_at` is an auto-generated datetime tag that stores the date the user requested the metadata to be
-        created.
+    `received_at` is an auto-generated datetime tag
+        that stores the date the user requested the metadata to be created.
     `channel_schema` describes the columns schema, i.e. the types of the columns of data in
-        Python-like normalized application types (aka SchemaType). It is immutable (once created, it will not be updated)
+        Python-like normalized application types (aka SchemaType).
+        It is immutable (once created, it will not be updated)
     Optional `metadata` and `tag` are user-defined fields that can be used to add further
         information on the data.
 

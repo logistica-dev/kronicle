@@ -92,8 +92,14 @@ class ObservationPayload(KronicableSample):
     # Coordinates & Motion
     ra_deg: float = Field(..., ge=0.0, lt=360.0, description="Right ascension in degrees [0, 360)")
     dec_deg: float = Field(..., ge=-90.0, le=90.0, description="Declination in degrees [-90, 90]")
-    pmra: Optional[float] = Field(None, description="Proper motion in RA (mas/yr). Can be positive or negative.")
-    pmdec: Optional[float] = Field(None, description="Proper motion in Dec (mas/yr). Can be positive or negative.")
+    pmra: Optional[float] = Field(
+        None,
+        description="Proper motion in RA (mas/yr). Can be positive or negative.",
+    )
+    pmdec: Optional[float] = Field(
+        None,
+        description="Proper motion in Dec (mas/yr). Can be positive or negative.",
+    )
 
     # Data Provenance
     added_by: RimsUser = Field(
@@ -101,31 +107,36 @@ class ObservationPayload(KronicableSample):
         description="Identifier/email/name of the person or system adding the data to Kronicle",
     )  # required
     dataset_id: str = Field(
-        ..., description="Unique identifier for the dataset - may just be the measurement set name if unknown"
+        ..., description="Unique identifier for the dataset. May just be the measurement set name if unknown"
     )  # required
     instrument_name: str = Field(
         ..., description="Name of the instrument used for the observation i.e. MeerKAT, LOFAR, etc."
     )  # required
     computing_infrastructure: Optional[str] = Field(
         None,
-        description="Name of the computing infrastructure used for data processing, e.g., 'SURF', 'AWS', 'Google Cloud', etc.",
+        description="Name of the computing infrastructure used for data processing, "
+        "e.g., 'SURF', 'AWS', 'Google Cloud', etc.",
     )
 
     # Publication and Versioning
     publication_details: Optional[str] = Field(
         None,
         alias="publication details",
-        description="Free-form string for BibTeX entry or ORCID ID. Recommended if data result is used in a publication",
+        description="Free-form string for BibTeX entry or ORCID ID."
+        " Recommended if data result is used in a publication",
     )
     rims_client_version: str = Field(
         ...,
         alias="RIMS client version",
-        description="Version of the RIMS client used to generate this payload, ideally a commit hash for reproducibility",
+        description="Version of the RIMS client used to generate this payload."
+        " Ideally a commit hash for reproducibility",
     )
 
     # Data Characteristics
     data_dimensions: DataDimensions = Field(
-        ..., alias="data dimensions", description="This will be the time, frequency and polarization coverage"
+        ...,
+        alias="data dimensions",
+        description="This will be the time, frequency and polarization coverage",
     )  # and antenna/baseline?
     data_format: str = Field(default="FITS")
 

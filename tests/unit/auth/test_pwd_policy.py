@@ -1,4 +1,6 @@
 # tests/test_password_policy.py
+from __future__ import annotations
+
 import unittest
 
 from kronicle.auth.pwd.pwd_policy import (
@@ -119,7 +121,8 @@ class TestPasswordPolicy(unittest.TestCase):
             require_uppercase=False, require_lowercase=False, require_digits=False, require_special=False
         )
         checks = policy.checks
-        # Should include only LengthCheck, ForbiddenCharactersCheck, CommonPasswordCheck, SequentialCheck, KeyboardPatternCheck
+        # Should include only LengthCheck, ForbiddenCharactersCheck, CommonPasswordCheck,
+        #   SequentialCheck, KeyboardPatternCheck
         names = [c.name for c in checks if c is not None]
         assert "uppercase" not in names
         assert "lowercase" not in names

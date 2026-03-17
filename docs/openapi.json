@@ -222,7 +222,7 @@
           "Read data"
         ],
         "summary": "Fetch metadata for a specific channel",
-        "description": "Retrieves metadata for the specified `channel_id`, including schema, tags, and metadata.\nThe response also includes the number of rows stored for that channel but does not include the row data itself.",
+        "description": "Retrieves metadata for the specified `channel_id`, including schema, tags, and metadata.\nThe response also includes the number of rows stored for that channel\nbut does not include the row data itself.",
         "operationId": "fetch_channel_api_v1_channels__channel_id__get",
         "security": [
           {
@@ -739,7 +739,7 @@
           "Input data"
         ],
         "summary": "Fetch metadata for a specific channel",
-        "description": "Retrieves metadata for the specified `channel_id`, including schema, tags, and metadata.\nThe response also includes the number of rows stored for that channel but does not include the row data itself.",
+        "description": "Retrieves metadata for the specified `channel_id`, including schema, tags, and metadata.\nThe response also includes the number of rows stored for that channel\nbut does not include the row data itself.",
         "operationId": "fetch_channel_data_v1_channels__channel_id__get",
         "security": [
           {
@@ -1356,7 +1356,7 @@
           "Setup data channels"
         ],
         "summary": "Fetch metadata for a specific channel",
-        "description": "Retrieves metadata for the specified `channel_id`, including schema, tags, and metadata.\nThe response also includes the number of rows stored for that channel but does not include the row data itself.",
+        "description": "Retrieves metadata for the specified `channel_id`, including schema, tags, and metadata.\nThe response also includes the number of rows stored for that channel\nbut does not include the row data itself.",
         "operationId": "fetch_channel_setup_v1_channels__channel_id__get",
         "security": [
           {
@@ -2465,7 +2465,7 @@
         "title": "InputPayload",
         "description": "User-provided payload for a channel.\nThe 'channel_schema' field is a dict of column_name -> type string.",
         "example": {
-          "channel_id": "04a74d1a-8596-420b-92d4-2eb3176b225a",
+          "channel_id": "0bfb3573-a672-448e-adc1-209942592fae",
           "channel_schema": {
             "humidity": "float",
             "temperature": "float",
@@ -2474,7 +2474,7 @@
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-a267d",
+          "name": "thermo-9c36b",
           "rows": [
             {
               "humidity": 55.1,

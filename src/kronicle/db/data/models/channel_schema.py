@@ -1,5 +1,4 @@
 # kronicle/db/data/models/channel_schema.py
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -18,11 +17,14 @@ mod = "chan_schm"
 # fmt: off
 RESERVED_SQL_KEYWORDS = {
     # PostgreSQL standard keywords
-    "user", "select", "insert", "update", "delete", "join", "group", "order", "limit", "values", "table", "index",
+    "user", "select", "insert", "update", "delete", "join",
+    "group", "order", "limit", "values", "table", "index",
     # TimescaleDB-specific / hypertable keywords
     "chunk", "compress", "policy", "partition",
     }
 # fmt: on
+
+
 class ChannelSchema(BaseModel):
     """
     ChannelSchema is a pure structural definition of a channel's timeseries layout.
