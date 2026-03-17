@@ -147,7 +147,7 @@ class ChannelMetadata(BaseModel):
         """
         return [
             self.channel_id,
-            self.channel_schema.to_db_json(),  # asyncpg will handle dict -> JSONB
+            self.channel_schema.to_user_json(),  # asyncpg will handle dict -> JSONB
             self.name or None,
             self.user_metadata or {},  # dict for JSONB
             self.tags or {},  # dict for JSONB
@@ -163,7 +163,7 @@ class ChannelMetadata(BaseModel):
         tags = row.get("tags") or {}
         received = row.get("received_at")
         received_iso = IsoDateTime.to_iso_datetime(received) if received is not None else IsoDateTime.now_local()
-        channel_schema = ChannelSchema.from_db_json(
+        channel_schema = ChannelSchema.from_user_json(
             loads(row["channel_schema"]) if isinstance(row["channel_schema"], str) else row["channel_schema"]
         )
         return cls(
