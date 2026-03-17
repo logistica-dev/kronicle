@@ -247,5 +247,6 @@ class ChannelSchema(BaseModel):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    chan_schema = ChannelSchema.from_user_json({"temp": "float", "room_id": "str"})
+    chan_schema = ChannelSchema.from_user_json({"temp": "optional[float]", "room_id": "str"})
     print(chan_schema.to_db_json())
+    print(chan_schema.to_user_json())
