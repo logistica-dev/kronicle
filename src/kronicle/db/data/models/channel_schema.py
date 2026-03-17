@@ -10,7 +10,6 @@ from pydantic import BaseModel, Field
 
 from kronicle.db.data.models.schema_types import SchemaType
 from kronicle.types.iso_datetime import IsoDateTime
-from kronicle.utils.dev_logs import log_d
 from kronicle.utils.str_utils import normalize_name, normalize_pg_identifier
 
 mod = "chan_schm"
@@ -209,7 +208,6 @@ class ChannelSchema(BaseModel):
     # ---------------------------------------------------------------------
 
     def validate_row(self, row: dict, now: datetime | None = None, from_user: bool = True) -> dict:
-        here = "validate_row"
         now = now or IsoDateTime.now_local()
 
         # Handle `time` column
@@ -225,8 +223,6 @@ class ChannelSchema(BaseModel):
             elif user_col and user_col in row:
                 key_in_row = user_col
             else:
-                log_d(here, "Missing column", db_col)
-                log_d(here, "Row content", row)
                 if col_type.optional:
                     # Auto-fill missing optional column with None
                     validated[db_col] = col_type.validate(None)
