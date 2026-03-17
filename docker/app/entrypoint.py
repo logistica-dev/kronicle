@@ -114,7 +114,7 @@ async def wait_and_init():
         print(f"[entry] Database '{DB_NAME}' already exists. Skipping init.")
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no-cover
     run(wait_and_init())
 
     print("[entry] Launching Uvicorn/FastAPI server...")
