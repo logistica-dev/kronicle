@@ -32,7 +32,8 @@ class SchemaType:
         n = str(self.name).strip().lower()
         opt = self.optional
         if n.startswith("optional[") and n.endswith("]"):
-            n = n[len("optional[") : -1].strip()
+            len_opt = len("optional[")
+            n = n[len_opt:-1].strip()
             opt = True
 
         # Validate canonical type via registry

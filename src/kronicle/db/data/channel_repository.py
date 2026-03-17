@@ -197,7 +197,7 @@ class ChannelRepository:
                 raise ConflictError("A resource already exists", details={"channel_id": str(channel.channel_id)})
 
             ts_exists = await channel.timeseries.table_exists(db)
-            if ts_exists:  ### Should never happen
+            if ts_exists:  # Should never happen
                 raise ConflictError("Data already exists", details={"channel_id": str(channel.channel_id)})
 
             await channel.timeseries.ensure_table(db)

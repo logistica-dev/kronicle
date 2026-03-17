@@ -1,4 +1,5 @@
 # kronicle/api/shared_read_routes.py
+from __future__ import annotations
 
 from typing import Annotated
 from uuid import UUID
@@ -66,7 +67,8 @@ async def fetch_all_channels_metadata(
     summary="Fetch metadata for a specific channel",
     description=(
         "Retrieves metadata for the specified `channel_id`, including schema, tags, and metadata.\n"
-        "The response also includes the number of rows stored for that channel but does not include the row data itself."
+        "The response also includes the number of rows stored for that channel\n"
+        "but does not include the row data itself."
     ),
     response_model=ResponsePayload,
 )

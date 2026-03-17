@@ -1,4 +1,6 @@
 # kronicle/db/base/kronicle_base.py
+from __future__ import annotations
+
 from datetime import datetime
 from typing import Any
 from uuid import UUID, uuid4
@@ -101,11 +103,14 @@ class KronicleBase(Base):
                 expected_type: str = col_obj.type.compile(dialect=conn.dialect)
 
                 if actual_db_type != expected_type:
-                    errors.append(f"Column '{col_name}' type mismatch: expected {expected_type}, got {actual_db_type}")
+                    errors.append(
+                        f"Column '{col_name}' type mismatch: expected {expected_type}, got {{actual_db_type}}"
+                    )
 
                 if actual_columns_info[col_name]["nullable"] != col_obj.nullable:
                     errors.append(
-                        f"Column '{col_name}' nullability mismatch: expected {col_obj.nullable}, got {actual_columns_info[col_name]['nullable']}"
+                        f"Column '{col_name}' nullability mismatch: expected {col_obj.nullable},"
+                        f" got {actual_columns_info[col_name]['nullable']}"
                     )
 
             actual_columns = set(actual_columns_info.keys())
