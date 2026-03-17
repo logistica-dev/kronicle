@@ -1947,7 +1947,7 @@
           "Setup data channels"
         ],
         "summary": "Clone a channel",
-        "description": "Creates a new channel by cloning an existing channel's schema and optionally metadata. Does not copy data rows.",
+        "description": "Creates a new channel by cloning an existing channel's schema and optionally metadata. Does not copy data rows nor name.",
         "operationId": "clone_channel_setup_v1_channels__channel_id__clone_post",
         "requestBody": {
           "content": {
@@ -2465,7 +2465,7 @@
         "title": "InputPayload",
         "description": "User-provided payload for a channel.\nThe 'channel_schema' field is a dict of column_name -> type string.",
         "example": {
-          "channel_id": "b16390d6-1fb9-442e-85d8-45817587d21b",
+          "channel_id": "04a74d1a-8596-420b-92d4-2eb3176b225a",
           "channel_schema": {
             "humidity": "float",
             "temperature": "float",
@@ -2474,7 +2474,7 @@
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-ff102",
+          "name": "thermo-a267d",
           "rows": [
             {
               "humidity": 55.1,

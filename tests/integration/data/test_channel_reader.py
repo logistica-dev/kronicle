@@ -1,24 +1,43 @@
-# tests/integration/data/channel_reader.py
+# tests/integration/data/test_channel_reader.py
 
+import pytest
 from kronicle_sdk.conf.read_conf import Settings
 from kronicle_sdk.connectors.channel.channel_reader import KronicleReader
-from kronicle_sdk.utils.log import log_d
 
-if __name__ == "__main__":
 
-    here = "read Kronicle"
-    log_d(here)
+@pytest.fixture(scope="session")
+def kronicle_reader():
+    """Return a connected KronicleReader."""
     co = Settings().connection
-    kronicle_reader = KronicleReader(co.url, co.usr, co.pwd)
-    log_d(here, "is_alive", kronicle_reader.is_alive())
-    log_d(here, "is_ready", kronicle_reader.is_ready())
-    log_d(here, "nb channels", len(kronicle_reader.all_channels))
+    reader = KronicleReader(co.url, co.usr, co.pwd)
+    return reader
+
+
+@pytest.mark.integration
+def test_reader_alive_and_ready(kronicle_reader):
+    """Check that the reader reports alive and ready."""
+    assert kronicle_reader.is_alive() is True
+    assert kronicle_reader.is_ready() is True
+
+
+@pytest.mark.integration
+def test_reader_channels(kronicle_reader):
+    """Check that the reader returns channels and max-row channel."""
+    all_channels = kronicle_reader.all_channels
+
+    assert isinstance(all_channels, list)
+    assert len(all_channels) > 0, "Expected at least one channel"
+
     chan_id, _ = kronicle_reader.get_channel_with_max_rows()
     if chan_id:
-        log_d(here, "channel with max rows", kronicle_reader.get_channel(chan_id))
-
-    # try:
-    #     id = uuid4()
-    #     log_d(here, "random channel", kronicle_reader.get_channel(id))
-    # except KronicleHTTPError as e:
-    #     log_w(here, f"Channel {id}", e)
+        channel = kronicle_reader.get_channel(chan_id)
+        assert channel is not None
+        rows = kronicle_reader.get_rows_for_channel(chan_id)
+        assert isinstance(rows, list)
+        for row in rows:
+            assert isinstance(row, dict)
+        cols = kronicle_reader.get_cols_for_channel(chan_id)
+        assert isinstance(cols, dict)
+        for col, vals in cols.items():
+            assert isinstance(col, str)
+            assert isinstance(vals, list)

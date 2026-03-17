@@ -83,7 +83,7 @@ async def patch_channel(
     "/channels/{channel_id}/clone",
     summary="Clone a channel",
     description="Creates a new channel by cloning an existing channel's schema and optionally metadata. "
-    "Does not copy data rows.",
+    "Does not copy data rows nor name.",
     response_model=ResponsePayload,
 )
 async def clone_channel(
