@@ -3,6 +3,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from json import dump
 from pathlib import Path
+from traceback import extract_tb
 
 from fastapi import FastAPI, Request
 from fastapi import HTTPException as FastApiHttpException
@@ -26,7 +27,7 @@ from kronicle.db.data.channel_db_session import ChannelDbSession
 from kronicle.db.data.channel_repository import ChannelRepository
 from kronicle.db.rbac.rbac_db_session import RbacDbSession
 from kronicle.deps.settings import Settings
-from kronicle.errors.error_types import KronicleAppError
+from kronicle.errors.error_types import KronicleAppError, KronicleHTTPErrorPayload
 from kronicle.errors.exception_handlers import (
     app_error_adapter,
     fastapi_exception_adapter,
@@ -35,7 +36,7 @@ from kronicle.errors.exception_handlers import (
 from kronicle.logging.log_bus.mid_sanitize import RequestSanitizerMiddleware
 from kronicle.services.channel_service import ChannelService
 from kronicle.services.rbac_service import RbacService
-from kronicle.utils.dev_logs import log_block, log_d, request_logger, setup_logging
+from kronicle.utils.dev_logs import log_block, log_d, log_e, request_logger, setup_logging
 
 mod = "main"
 
@@ -225,6 +226,31 @@ class KronicleApp:
             if request.url.path != "/" and request.url.path.endswith("/"):
                 request.scope["path"] = request.url.path.rstrip("/")
             return await call_next(request)
+
+        @self.app.middleware("http")
+        async def catch_all_exceptions(request: Request, call_next):
+            try:
+                return await call_next(request)
+            except Exception as exc:
+                # Filter out .venv lines
+
+                tb = extract_tb(exc.__traceback__)
+                filtered = [f for f in tb if "src/kronicle" in f.filename]
+
+                # Make filenames relative for shorter output
+                rel_root = Path(__file__).resolve().parents[2]  # adjust to project root
+                for f in filtered:
+                    rel_file = Path(f.filename).relative_to(rel_root)
+                    log_e("catch all", f"{rel_file}:{f.lineno} ->", f.name)
+
+                # Return standard JSON error
+                return KronicleHTTPErrorPayload.from_exception(
+                    request=request,
+                    exc=exc,
+                    status=500,
+                    error="InternalServerError",
+                    message="An unexpected error occurred.",
+                ).to_error_json()
 
     def init_exception_handlers(self):
         """Initialize exception handlers."""
