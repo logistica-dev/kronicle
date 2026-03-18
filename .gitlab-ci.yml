@@ -48,7 +48,7 @@ test_db_init:
         -e POSTGRES_USER=$POSTGRES_USER \
         -e POSTGRES_PASSWORD=$POSTGRES_PASSWORD \
         -e POSTGRES_DB=$POSTGRES_DB \
-        -p 5433:5432 \
+        -p 5432:5432 \
         --health-cmd="pg_isready -U $POSTGRES_USER" \
         --health-interval=2s \
         --health-timeout=2s \
@@ -82,21 +82,19 @@ test_db_init:
         fi
       done
 
-    # Prepare env file TODO: NO!!!
-    - |
-      cat <<EOF > kronicle.env
-      KRONICLE_DB_HOST=$KRONICLE_DB_HOST
-      KRONICLE_DB_PORT=$KRONICLE_DB_PORT
-      KRONICLE_CHAN_CREDS=$KRONICLE_CHAN_CREDS
-      KRONICLE_RBAC_CREDS=$KRONICLE_RBAC_CREDS
-      KRONICLE_SU_INFO=$KRONICLE_SU_INFO
-      POSTGRES_DB=$POSTGRES_DB
-      POSTGRES_USER=$POSTGRES_USER
-      POSTGRES_PASSWORD=$POSTGRES_PASSWORD
-      EOF
-
     # Run DB initialization
-    - docker run --rm --network kronicle-net --env-file kronicle.env kronicle-init:latest
+    - |
+      docker run --rm \
+        --network kronicle-net \
+        -e KRONICLE_DB_HOST=kronicle-test-db \
+        -e KRONICLE_DB_PORT=5432 \
+        -e POSTGRES_DB=$POSTGRES_DB \
+        -e POSTGRES_USER=$POSTGRES_USER \
+        -e POSTGRES_PASSWORD=$POSTGRES_PASSWORD \
+        -e KRONICLE_CHAN_CREDS=$KRONICLE_CHAN_CREDS \
+        -e KRONICLE_RBAC_CREDS=$KRONICLE_RBAC_CREDS \
+        -e KRONICLE_SU_INFO=$KRONICLE_SU_INFO \
+        kronicle-init:latest
 
     # Stop DB
     - docker stop kronicle-test-db
@@ -129,9 +127,14 @@ publish_image:
         -t $IMAGE_NAME:latest \
         -t $IMAGE_NAME:$CI_COMMIT_SHA \
         -t $IMAGE_NAME:$CI_COMMIT_REF_NAME \
+        --build-arg APP_VERSION=$CI_COMMIT_REF_NAME \
+        --build-arg GIT_COMMIT=$CI_COMMIT_SHA \
+        --build-arg BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
         --push \
         .
 
   rules:
+    # main branch
     - if: $CI_COMMIT_BRANCH == "main"
+    # tags starting with 0.
     - if: $CI_COMMIT_TAG =~ /^0\..*/
