@@ -8,6 +8,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from kronicle.db.data.models.schema_types import SchemaType
+from kronicle.schemas.payload.op_feedback import OpFeedback
 from kronicle.types.iso_datetime import IsoDateTime
 from kronicle.utils.str_utils import normalize_name, normalize_pg_identifier
 
@@ -215,7 +216,7 @@ class ChannelSchema(BaseModel):
         # Handle `time` column
         time_val = IsoDateTime.normalize_value(t) if (t := row.get("time")) else now
         validated = {"time": time_val}
-
+        feedback = OpFeedback()
         for db_col, col_type in self.user_columns.items():
             user_col = self.get_usr_col_name(db_col)
 
@@ -229,19 +230,44 @@ class ChannelSchema(BaseModel):
                     # Auto-fill missing optional column with None
                     validated[db_col] = col_type.validate(None)
                     continue
-                raise ValueError(f"Missing column '{user_col or db_col}' in row")
-
+                feedback.add_detail(message="Missing column", field=user_col)
+                continue
             val = row[key_in_row]
 
             # Validate JSON types (dict/list) or other types
-            validated[db_col] = col_type.validate(val)
-
+            try:
+                validated[db_col] = col_type.validate(val)
+            except Exception as e:
+                feedback.add_detail(message=str(e), field=user_col, subfield=val)
+        if feedback.has_details:
+            raise ValueError(feedback)
         if not from_user and (timestamp := row.get("received_at")):
             validated["received_at"] = timestamp
         else:
             validated["received_at"] = now
 
         return validated
+
+    def validate_column_filter(self, filter: RowRequestFilter, strict: bool = False) -> None:
+        """
+        Validate `column_filters` against a ChannelSchema:
+        - Keep only columns present in schema
+        - Coerce values to the column's SchemaType
+        - Optionally raise if any invalid filter is found
+        """
+        validated_filters: dict = {}
+        feedback = OpFeedback()
+        for col, val in filter.column_filters.items():
+            if col not in self.column_types:
+                feedback.add_detail(message="Unknown column filter", field=col)
+            col_type: SchemaType = self.column_types[col]
+            try:
+                validated_filters[col] = col_type.validate(val)
+            except Exception:
+                feedback.add_detail(message="Invalid value for column filter", field=col, subfield="val")
+
+                # else skip invalid values
+        filter.column_filters = validated_filters
 
 
 if __name__ == "__main__":  # pragma: no cover

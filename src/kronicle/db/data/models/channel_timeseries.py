@@ -10,7 +10,7 @@ from asyncpg.pool import PoolConnectionProxy
 from kronicle.db.data.models.channel_metadata import ChannelMetadata
 from kronicle.db.data.models.channel_schema import ChannelSchema
 from kronicle.errors.error_types import BadRequestError, NotFoundError
-from kronicle.schemas.filters.request_filter import RequestFilter
+from kronicle.schemas.filters.row_request_filter import RowRequestFilter
 from kronicle.schemas.payload.op_feedback import OpFeedback
 from kronicle.utils.asyncpg_utils import table_exists
 from kronicle.utils.dev_logs import log_i, log_w
@@ -289,7 +289,7 @@ class ChannelTimeseries:
         result = await db.fetchval(query)
         return result or 0
 
-    async def fetch(self, db: PoolConnectionProxy, *, filter: RequestFilter | None = None) -> ChannelTimeseries:
+    async def fetch(self, db: PoolConnectionProxy, *, filter: RowRequestFilter | None = None) -> ChannelTimeseries:
         """
         Fetch rows from the timeseries table for this channel.
 
@@ -312,7 +312,7 @@ class ChannelTimeseries:
             self.clear_rows()
             return self
 
-        filter = filter or RequestFilter()
+        filter = filter or RowRequestFilter()
         sql_fragment, params = filter.to_sql_clauses(start_idx=1, order_by="time", desc=False)
 
         sql_req = f"SELECT * FROM {self.table} {sql_fragment}"
@@ -370,7 +370,7 @@ class ChannelTimeseries:
 
         return self
 
-    async def delete(self, db: PoolConnectionProxy, *, filter: RequestFilter | None = None) -> ChannelTimeseries:
+    async def delete(self, db: PoolConnectionProxy, *, filter: RowRequestFilter | None = None) -> ChannelTimeseries:
         """
         Delete rows in the timeseries table based on filter.
 
@@ -390,7 +390,7 @@ class ChannelTimeseries:
             log_w(here, f"Table '{self.table}' not found, cannot delete")
             raise NotFoundError(f"No timeseries stored for channel '{self.channel_id}'")
 
-        filter = filter or RequestFilter()
+        filter = filter or RowRequestFilter()
         sql_fragment, params = filter.to_sql_clauses(start_idx=1)
 
         sql_req = f"DELETE FROM {self.table} {sql_fragment} RETURNING *"

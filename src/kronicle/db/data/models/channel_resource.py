@@ -9,7 +9,7 @@ from kronicle.db.data.models.channel_metadata import ChannelMetadata
 from kronicle.db.data.models.channel_schema import ChannelSchema
 from kronicle.db.data.models.channel_timeseries import ChannelTimeseries
 from kronicle.errors.error_types import BadRequestError, NotFoundError
-from kronicle.schemas.filters.request_filter import RequestFilter
+from kronicle.schemas.filters.timeseries_request_filter import TimeseriesRequestFilter
 from kronicle.schemas.payload.op_feedback import OpFeedback
 from kronicle.schemas.payload.processed_payload import ProcessedPayload
 from kronicle.utils.dev_logs import log_e
@@ -155,7 +155,7 @@ class ChannelResource:
     async def _fetch_metadata(cls, db: PoolConnectionProxy, channel_id: UUID) -> ChannelResource:
         metadata = await ChannelMetadata.fetch_by_id(db, channel_id)
         if not metadata:
-            raise NotFoundError(f"No metadata found for UUID {channel_id}")
+            raise NotFoundError("No metadata found", details={"channel_id": channel_id})
         resource = ChannelResource(metadata)
         await resource.count_rows(db)
         return resource
@@ -178,9 +178,13 @@ class ChannelResource:
         self.row_nb = await self.timeseries.count_rows(db)
         return self.row_nb
 
-    async def fetch_rows(self, db: PoolConnectionProxy, *, filter: RequestFilter | None = None) -> ChannelResource:
+    async def fetch_rows(
+        self, db: PoolConnectionProxy, *, filter: TimeseriesRequestFilter | None = None
+    ) -> ChannelResource:
         await self.count_rows(db)
         if self.row_nb:
+            if filter:
+                valid_filter = filter.model_copy()
             await self.timeseries.fetch(db, filter=filter)
         return self
 
@@ -208,7 +212,7 @@ class ChannelResource:
             raise
         return self
 
-    async def delete_rows(self, db: PoolConnectionProxy, *, filter: RequestFilter | None = None):
+    async def delete_rows(self, db: PoolConnectionProxy, *, filter: TimeseriesRequestFilter | None = None):
         await self.timeseries.delete(db, filter=filter)
         await self.count_rows(db)
         return self
@@ -218,9 +222,11 @@ class ChannelResource:
     # ----------------------------------------------------------------------------------------------
     @classmethod
     async def fetch(
-        cls, db: PoolConnectionProxy, channel_id: UUID, *, filter: RequestFilter | None = None
+        cls, db: PoolConnectionProxy, channel_id: UUID, *, filter: TimeseriesRequestFilter | None = None
     ) -> ChannelResource:
         resource = await cls._fetch_metadata(db, channel_id)
+        if filter:
+            resource.channel_schema.validate_column_filter(filter)
         if resource.row_nb:
             await resource.fetch_rows(db, filter=filter)
         return resource
@@ -234,7 +240,9 @@ class ChannelResource:
         return channel_list
 
     @classmethod
-    async def fetch_all(cls, db: PoolConnectionProxy, *, filter: RequestFilter | None = None) -> list[ChannelResource]:
+    async def fetch_all_channel_rows(
+        cls, db: PoolConnectionProxy, *, filter: TimeseriesRequestFilter | None = None
+    ) -> list[ChannelResource]:
         metadata_list = await ChannelMetadata.fetch_all(db, filter=filter)
         channel_list = []
         for metadata in metadata_list:

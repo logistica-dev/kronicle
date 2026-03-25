@@ -13,6 +13,7 @@ REGEX_UUID = compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[
 
 
 def enforce_length(here: str, length=12) -> str:
+    here = str(here)
     return here.ljust(length, " ") if len(here) < length else here[0:length]
 
 
@@ -68,6 +69,10 @@ def strip_quotes(v: Any) -> Any:
     return v[1:-1] if isinstance(v, str) and len(v) >= 2 and v[0] == v[-1] and v[0] in ('"', "'") else v
 
 
+def replace_non_words(s: str) -> str:
+    return sub(r"[^\w]", "_", str(s))
+
+
 def normalize_to_snake_case(s: str) -> str:
     return sub(r"[^\w]", "_", str(s).lower())
 
@@ -98,6 +103,24 @@ def normalize_name(s: str, prefix: str | None = "") -> str:
         return s
     except Exception as e:
         raise ValueError("Name is invalid...") from e
+
+
+def normalize_query_name(s: str) -> str | None:
+    """
+    This is used to normalize the column name in a query filter, that we want to offer to query dict subfields.
+    In such case, only the first part of `column_name.dict_field.subfield` in a query filter needs normalization.
+    """
+    if not s:
+        return None
+    if not isinstance(s, str):
+        raise ValueError("Input should be a string")
+
+    list_s = s.split(".")
+    if len(list_s) == 1:
+        return normalize_name(s)
+    col = normalize_name(list_s[0])
+    segments = [s.strip() for s in list_s[1:] if s != ""]
+    return ".".join([col, *segments])
 
 
 def extract_tags(tags: list[str]):

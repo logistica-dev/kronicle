@@ -5,7 +5,7 @@ from uuid import UUID, uuid4
 from kronicle.db.data.channel_repository import ChannelRepository
 from kronicle.db.data.models.channel_schema import ChannelSchema
 from kronicle.errors.error_types import BadRequestError, NotFoundError
-from kronicle.schemas.filters.request_filter import RequestFilter
+from kronicle.schemas.filters.timeseries_request_filter import TimeseriesRequestFilter
 from kronicle.schemas.payload.input_payload import InputPayload
 from kronicle.schemas.payload.processed_payload import ProcessedPayload
 from kronicle.schemas.payload.response_payload import ResponsePayload
@@ -185,22 +185,23 @@ class ChannelService:
         self,
         channel_id: UUID,
         *,
-        filter: RequestFilter | None = None,
+        filter: TimeseriesRequestFilter | None = None,
     ) -> ResponsePayload:
         """
         Fetch rows for a given channel.
         """
         # here = "fetch_rows"
         channel = await self._repo.fetch_channel(ensure_uuid4(channel_id), filter=filter)
+
         return ResponsePayload.from_channel_resource(channel, skip_received=filter.skip_received if filter else True)
 
-    async def fetch_all_rows(self, *, filter: RequestFilter | None = None) -> list[ResponsePayload]:
+    async def fetch_all_rows(self, *, filter: TimeseriesRequestFilter | None = None) -> list[ResponsePayload]:
         """
         Fetch all rows for all channels.
         Returns a list of ResponsePayload objects.
         Each payload includes channel_id, metadata, tags, rows, and issued_at.
         """
-        channel_list = await self._repo.fetch_all_channels(filter=filter)
+        channel_list = await self._repo.fetch_all_channel_rows(filter=filter)
         response_list = []
         skip_received = filter.skip_received if filter else True
         for channel in channel_list:
@@ -211,7 +212,7 @@ class ChannelService:
         self,
         channel_id: UUID,
         *,
-        filter: RequestFilter | None = None,
+        filter: TimeseriesRequestFilter | None = None,
     ) -> ResponsePayload:
         """
         Remove all data rows for a channel, keep its metadata, and return the metadata
@@ -224,7 +225,9 @@ class ChannelService:
         channel = await self._repo.delete_rows(channel, filter=filter)
         return ResponsePayload.from_channel_resource(channel)
 
-    async def fetch_columns(self, channel_id: UUID, *, filter: RequestFilter | None = None) -> ResponsePayload:
+    async def fetch_columns(
+        self, channel_id: UUID, *, filter: TimeseriesRequestFilter | None = None
+    ) -> ResponsePayload:
         """
         Fetch rows for a given channel.
         """

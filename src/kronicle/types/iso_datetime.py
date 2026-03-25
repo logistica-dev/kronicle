@@ -9,6 +9,9 @@ from typing import Any, Literal
 # --------------------------------------------------------------------------------------------------
 TimeSpec = Literal["seconds", "milliseconds", "microseconds"]
 
+TIMESTAMP_MIN = 1000000000
+TIMESTAMP_MAX = 2524604400
+
 
 # --------------------------------------------------------------------------------------------------
 # IsoDateTime class
@@ -119,7 +122,12 @@ class IsoDateTime(datetime):
         if isinstance(value, datetime):
             dt = cls.to_iso_datetime(value)
             return dt.astimezone() if to_local_tz else dt
+
         if isinstance(value, int):
+            if value < TIMESTAMP_MIN:
+                raise ValueError(f"Datetime value {value} is before allowed minimum {TIMESTAMP_MIN}")
+            if value > TIMESTAMP_MAX:
+                raise ValueError(f"Datetime value {value} is after allowed maximum {TIMESTAMP_MAX}")
             return IsoDateTime.fromtimestamp(value)
 
         if isinstance(value, str):
