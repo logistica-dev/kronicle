@@ -7,11 +7,12 @@ from uuid import UUID, uuid4
 
 from asyncpg import Record, UniqueViolationError
 from asyncpg.pool import PoolConnectionProxy
-from pydantic import BaseModel, Field, ValidationInfo, field_validator
+from pydantic import BaseModel, Field, PrivateAttr, ValidationInfo, field_validator
 
 from kronicle.db.data.models.channel_schema import ChannelSchema
 from kronicle.errors.error_types import BadRequestError, ConflictError, DatabaseInstructionError, NotFoundError
-from kronicle.schemas.filters.request_filter import RequestFilter
+from kronicle.schemas.filters.row_request_filter import RowRequestFilter
+from kronicle.schemas.payload.op_feedback import OpFeedback
 from kronicle.schemas.payload.processed_payload import ProcessedPayload
 from kronicle.types.iso_datetime import IsoDateTime
 from kronicle.types.tag_type import TagType
@@ -57,6 +58,12 @@ class ChannelMetadata(BaseModel):
         "tags": "JSONB",
         "received_at": "TIMESTAMPTZ NOT NULL DEFAULT now()",
     }  # column names should always be in [a-z_]+ !!!
+
+    _feedback: OpFeedback = PrivateAttr(default_factory=OpFeedback)
+
+    @property
+    def feedback(self) -> OpFeedback:
+        return self._feedback
 
     # ----------------------------------------------------------------------------------------------
     # Field validators
@@ -141,7 +148,7 @@ class ChannelMetadata(BaseModel):
     # ----------------------------------------------------------------------------------------------
     # DB row helpers
     # ----------------------------------------------------------------------------------------------
-    def db_ready_values(self) -> list:
+    def db_ready_values(self) -> list[Any]:
         """
         Return the values in a format ready to be inserted into PostgreSQL.
         JSONB fields are passed as dicts, not strings.
@@ -312,7 +319,9 @@ class ChannelMetadata(BaseModel):
         return [cls.from_db(dict(r)) for r in rows]
 
     @classmethod
-    async def fetch_all(cls, db: PoolConnectionProxy, *, filter: RequestFilter | None = None) -> list[ChannelMetadata]:
+    async def fetch_all(
+        cls, db: PoolConnectionProxy, *, filter: RowRequestFilter | None = None
+    ) -> list[ChannelMetadata]:
         """
         Fetch all metadata rows, ordered by received_at descending.
 
@@ -323,8 +332,8 @@ class ChannelMetadata(BaseModel):
         Returns:
             List of ChannelMetadata objects
         """
-        filter = filter or RequestFilter()
-        sql_fragment, params = filter.to_sql_clauses(start_idx=1, order_by="received_at", desc=True)
+        valid_filter = cls.validate_column_filter(filter) if filter else RowValidFilter()
+        sql_fragment, params = valid_filter.to_sql_clauses(start_idx=1, order_by="received_at", desc=True)
         sql = f"SELECT * FROM {cls.table()} {sql_fragment}"
         rows = await db.fetch(sql, *params)  # TODO: check params / filter out columns
         return [cls.from_db(dict(r)) for r in rows]
@@ -450,6 +459,7 @@ class ChannelMetadata(BaseModel):
 # --------------------------------------------------------------------------------------------------
 if __name__ == "__main__":  # pragma: no cover
     here = "channel_schema tests"
+    log_d(here, "ChannelMetadata.namespace", ChannelMetadata.namespace())  # prints data => OK
 
     user_schema = {
         "time": "time",
@@ -485,6 +495,3 @@ if __name__ == "__main__":  # pragma: no cover
 
     for col, col_type in ChannelMetadata.get_schema_columns():
         log_d(here, f"type of schema column `{col}`", col_type)
-
-if __name__ == "__main__":  # pragma: no cover
-    print(ChannelMetadata.namespace())  # prints data => OK

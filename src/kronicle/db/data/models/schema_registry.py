@@ -4,6 +4,7 @@ from typing import Any, Type
 from uuid import UUID
 
 from kronicle.types.iso_datetime import IsoDateTime
+from kronicle.utils.num_utils import normalize_float, normalize_int
 
 
 class SchemaTypeInfo:
@@ -25,6 +26,17 @@ class SchemaTypeInfo:
             raise TypeError(f"Expected {self.canonical}, got {type(value).__name__}")
         return value
 
+    @staticmethod
+    def _normalize_float(value):
+        if isinstance(value, (int, float)):
+            return value
+        if isinstance(value, str):
+            try:
+                return float(value)
+            except ValueError as e:
+                raise ValueError(f"Cannot normalize type '{value}' to float") from e
+        raise ValueError(f"Cannot normalize type '{type(value).__name__}' to float")
+
     def normalize_value(self, value: Any) -> Any:
         """
         Normalize a value to the canonical Python type for this schema type.
@@ -33,10 +45,16 @@ class SchemaTypeInfo:
         if self.canonical == "datetime":
             return IsoDateTime.normalize_value(value)
 
-        elif self.canonical in {"dict", "list"}:
+        if self.canonical in {"dict", "list"}:
             if isinstance(value, (dict, list)):
                 return value
             raise ValueError(f"Cannot normalize type '{type(value).__name__}' to {self.canonical}")
+
+        if self.canonical == "float":
+            return normalize_float(value)
+
+        if self.canonical == "int":
+            return normalize_int(value)
 
         expected = self.py_type
         if isinstance(value, expected):

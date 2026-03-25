@@ -80,6 +80,16 @@ Here is the full updated [API (as an OpenAPI JSON)](docs/openapi.json)
 
 If the server is launched, you can get an interactive Swagger at http://localhost:8000/docs
 
+### Query filters
+
+| Query | Description                                                                | Allowed Column Types                                                                | SQL Operator        | DB value is cast            |
+| ----- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | ------------------- | --------------------------- |
+| `col` | Exact match. For dict subkeys, value is treated as text.                   | Any scalar type (`int`, `float`, `str`, `datetime`, etc.), dict subkeys (text only) | `=`                 | No                          |
+| `min` | Minimum value comparison. **Not allowed on dict subkeys or lists**.        | Numeric (`int`, `float`) or datetime (`datetime`, `timestamptz`, `timetz`)          | `>=`                | `::numeric`/`::timestamptz` |
+| `max` | Maximum value comparison. **Not allowed on dict subkeys or lists**.        | Numeric (`int`, `float`) or datetime (`datetime`, `timestamptz`, `timetz`)          | `<=`                | `::numeric`/`::timestamptz` |
+| `any` | Checks if value is in a list of values. For dict subkeys, treated as text. | Any scalar type, dict subkeys (text only)                                           | `IN`                | No                          |
+| `has` | Checks if the list column contains the specified value(s).                 | List columns only                                                                   | `@>` / `= ANY(...)` | No                          |
+
 ---
 
 ### Setup / Admin Routes (`/setup/{api_version}`)

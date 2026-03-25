@@ -6,6 +6,7 @@ from typing import Any, Type
 
 from kronicle.db.data.models.schema_registry import SchemaRegistry
 from kronicle.utils.dev_logs import log_i
+from kronicle.utils.str_utils import normalize_name
 
 mod = "sch_typ"
 
@@ -81,6 +82,18 @@ class SchemaType:
             valid = SchemaRegistry().validate_value(value, self.name)
         except (ValueError, TypeError) as e:
             raise ValueError(str(e)) from e
+
+        # 🔥 NEW: normalize JSON structures
+        if self.name == "dict":
+            if not isinstance(valid, dict):
+                raise ValueError("Expected dict")
+            valid = self._normalize_dict_keys(valid)
+
+        elif self.name == "list":
+            # optional: enforce list constraints later if needed
+            if not isinstance(valid, list):
+                raise ValueError("Expected list")
+
         return valid
 
     # ----------------------------------------------------------------------------------------------
@@ -99,6 +112,25 @@ class SchemaType:
             raise ValueError(f"Cannot normalize None for type '{self.name}'")
         return SchemaRegistry().normalize_value(value, self.name)
 
+    def _normalize_dict_keys(self, d: dict, *, depth: int = 1, max_depth: int = 2) -> dict:
+        """
+        Normalize dict keys so that they can be queried later.
+        Cap the depth of the dict keys.
+        """
+        if depth > max_depth:
+            raise ValueError("Max dict nesting depth exceeded")
+
+        out = {}
+        for k, v in d.items():
+            if not isinstance(k, str):
+                raise ValueError("Dict keys must be strings")
+            norm_k = normalize_name(k)
+            if isinstance(v, dict):
+                out[norm_k] = self._normalize_dict_keys(v, depth=depth + 1, max_depth=max_depth)
+            else:
+                out[norm_k] = v
+        return out
+
     # ----------------------------------------------------------------------------------------------
     # Utility
     # ----------------------------------------------------------------------------------------------
@@ -110,7 +142,6 @@ class SchemaType:
     # Representation & comparison
     # ----------------------------------------------------------------------------------------------
     def __repr__(self):
-        print(f"SchemaType({self.name!r}, optional={self.optional})")
         return f"SchemaType({self.name!r}, optional={self.optional})"
 
     def __str__(self):
