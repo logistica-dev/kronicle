@@ -4,12 +4,13 @@ from base64 import urlsafe_b64decode, urlsafe_b64encode
 from random import choices
 from re import compile, fullmatch, sub
 from string import ascii_lowercase, digits
-from typing import Any
+from typing import Any, Callable
 from uuid import UUID, uuid4
 
 from kronicle.types.tag_type import TagType
 
 REGEX_UUID = compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
+SQL_COL_MAX_LEN = 32
 
 
 def enforce_length(here: str, length=12) -> str:
@@ -73,18 +74,39 @@ def replace_non_words(s: str) -> str:
     return sub(r"[^\w]", "_", str(s))
 
 
-def normalize_to_snake_case(s: str) -> str:
-    return sub(r"[^\w]", "_", str(s).lower())
+def normalize_to_snake_case(s: str, *, keep_dots=False) -> str:
+    if not keep_dots:
+        return sub(r"[^\w]", "_", str(s).lower())
+    else:
+        return sub(r"[^\w.]", "_", str(s).lower())
 
 
-def normalize_name(s: str, prefix: str | None = "") -> str:
+def normalize_sort_name(s: str, *, prefix: str | None = "") -> str:
+    s = s.strip()
+    if not s:
+        return ""
+    if s[0] == "-":
+        return f"-{normed}" if (normed := normalize_name(s[1:])) else ""
+    else:
+        return normalize_name(s)
+
+
+def normalize_name_keep_dots(s: str, *, prefix: str | None = "") -> str:
+    return normalize_name(s, keep_dots=True)
+
+
+def normalize_name(s: str, *, keep_dots=False, prefix: str | None = "") -> str:
     if not isinstance(s, str):
         raise TypeError("Name should be a string")
     if s is None or len(s) < 1:
         raise ValueError("Name cannot be empty")
     try:
         # Basic normalization
-        s = normalize_to_snake_case(s)
+        if keep_dots:
+            parts = split_strip(s, ".", normalize_name)
+            s = ".".join(p for p in parts if p)
+        else:
+            s = normalize_to_snake_case(s, keep_dots=keep_dots)
         # Optionally: collapse multiple underscores
         s = sub(r"_+", "_", s)
         # Strip leading/trailing underscores
@@ -100,12 +122,12 @@ def normalize_name(s: str, prefix: str | None = "") -> str:
                 raise ValueError("Name is invalid..")
             # Generate 8-character random name
             s = prefix + "".join(choices(ascii_lowercase + digits, k=8))
-        return s
+        return s[:SQL_COL_MAX_LEN]
     except Exception as e:
         raise ValueError("Name is invalid...") from e
 
 
-def normalize_query_name(s: str) -> str | None:
+def normalize_name_accept_subs(s: str) -> str | None:
     """
     This is used to normalize the column name in a query filter, that we want to offer to query dict subfields.
     In such case, only the first part of `column_name.dict_field.subfield` in a query filter needs normalization.
@@ -114,13 +136,7 @@ def normalize_query_name(s: str) -> str | None:
         return None
     if not isinstance(s, str):
         raise ValueError("Input should be a string")
-
-    list_s = s.split(".")
-    if len(list_s) == 1:
-        return normalize_name(s)
-    col = normalize_name(list_s[0])
-    segments = [s.strip() for s in list_s[1:] if s != ""]
-    return ".".join([col, *segments])
+    return ".".join(split_strip_norm_one(s, ".", normalize_name))
 
 
 def extract_tags(tags: list[str]):
@@ -255,7 +271,31 @@ def normalize_pg_identifier(name: str) -> str:
             f"Invalid Postgres identifier '{name}': only alphanumerics and underscores allowed"
             " (start with letter or underscore, two characters minimum)"
         )
-    return name.lower()
+    return name.lower()[:SQL_COL_MAX_LEN]
+
+
+def strip(s: str, chars: str | None = None):
+    return s.strip(chars)
+
+
+def split_strip_norm_one(s: str, sep: str = ",", norm: Callable | None = None) -> list[str]:
+    if not norm:
+        norm = strip
+    split_str = split_strip(s, sep)
+    if not split_str:
+        return []
+    col_name = norm(split_str[0])
+    segments = [stripped for s in split_str[1:] if (stripped := s.strip())]
+    return [col_name, *segments]
+
+
+def split_strip(s: str, sep: str = ",", norm: Callable | None = None) -> list[str]:
+    if not s:
+        return []
+    if not norm:
+        norm = strip
+    parts = s.split(sep)
+    return [normed for part in parts if (normed := norm(part))]
 
 
 if __name__ == "__main__":  # pragma: no cover
@@ -278,6 +318,9 @@ if __name__ == "__main__":  # pragma: no cover
     except TypeError:
         print("OK: TypeError caught")
     try:
-        print(normalize_name("6", ""))
+        print(normalize_name("6", prefix=""))
     except ValueError:
         print("OK: ValueError caught")
+
+    print(normalize_name('; DROP TABLE; aregluhgar brf zgr  é"& caught; SELECT * DROP()'))
+    print(normalize_name_keep_dots('aregluhgar. brf.__zgr  é"& caught; SELECT * DROP()'))

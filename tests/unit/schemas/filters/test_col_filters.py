@@ -143,7 +143,7 @@ def test_any_filter_scalars(col_int, input_val, expected):
 
 
 def test_any_filter_dict_subkeys(col_dict_sub):
-    f = AnyFilter(col_dict_sub, "a,b,c")
+    f = AnyFilter(col_dict_sub, ["a", "b", "c"])
     sql, params = f.to_sql(1)
     assert params == ["a", "b", "c"]
 
@@ -151,10 +151,10 @@ def test_any_filter_dict_subkeys(col_dict_sub):
 def test_any_filter_invalid(col_list, col_int):
     # Not allowed on list
     with pytest.raises(ValueError):
-        AnyFilter(col_list, [1, 2])
+        AnyFilter(col_list, ["1", "2"])
     # Invalid type
     with pytest.raises(ValueError):
-        AnyFilter(col_int, 123.5)  # numeric input is valid only if wrapped in list
+        AnyFilter(col_int, "123.5")  # type: ignore # numeric input is valid only if wrapped in list
 
 
 # ----------------------------------------------------------------------------------------------
@@ -163,8 +163,8 @@ def test_any_filter_invalid(col_list, col_int):
 def test_has_filter_valid(col_list):
     f = HasFilter(col_list, ["admin", "editor"])
     sql, params = f.to_sql(1)
-    assert params == ["admin", "editor"]
-    assert "@>" in sql
+    assert params == ['["admin", "editor"]']
+    assert sql == f"{col_list.col_name}::jsonb {HasFilter.op} $1::jsonb"
 
 
 def test_has_filter_invalid(col_int):
@@ -175,13 +175,22 @@ def test_has_filter_invalid(col_int):
 def test_has_filter_string_input(col_list):
     f = HasFilter(col_list, "admin,editor")
     sql, params = f.to_sql(1)
-    assert params == ["admin", "editor"]
+    assert params == ['["admin", "editor"]']
+    assert sql == f"{col_list.col_name}::jsonb {HasFilter.op} $1::jsonb"
 
 
 def test_has_filter_single_value(col_list):
     f = HasFilter(col_list, "admin")
     sql, params = f.to_sql(1)
-    assert params == ["admin"]
+    assert params == ['["admin"]']
+    assert sql == f"{col_list.col_name}::jsonb {HasFilter.op} $1::jsonb"
+
+
+def test_has_filter_one_element_list(col_list):
+    f = HasFilter(col_list, ["admin"])
+    sql, params = f.to_sql(1)
+    assert params == ['["admin"]']
+    assert sql == f"{col_list.col_name}::jsonb {HasFilter.op} $1::jsonb"
 
 
 # ----------------------------------------------------------------------------------------------

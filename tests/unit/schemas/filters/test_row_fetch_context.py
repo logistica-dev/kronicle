@@ -1,13 +1,7 @@
 # test_filters.py
 
 from kronicle.db.data.models.schema_types import SchemaType
-from kronicle.schemas.filters.row_fetch_context import (
-    AnyFilter,
-    ExactFilter,
-    MaxFilter,
-    MinFilter,
-    ResolvedColumn,
-)
+from kronicle.schemas.filters.col_filters import AnyFilter, ExactFilter, MaxFilter, MinFilter, ResolvedColumn
 
 
 # -------------------------------
@@ -75,7 +69,7 @@ def test_json_column_range_filter():
 # -------------------------------
 def test_any_filter_list_input():
     col = make_col()
-    filt = AnyFilter(col, [1, 2, 3])
+    filt = AnyFilter(col, ["1", "2", "3"])
     sql, params = filt.to_sql(idx=1)
     assert sql == "temperature IN ($1,$2,$3)"
     assert params == [1, 2, 3]
@@ -83,7 +77,7 @@ def test_any_filter_list_input():
 
 def test_any_filter_csv_string_input():
     col = make_col()
-    filt = AnyFilter(col, "a,b, c")
+    filt = AnyFilter(col, ["a", "b", "c"])
     sql, params = filt.to_sql(idx=1)
     assert sql == "temperature IN ($1,$2,$3)"
     assert params == ["a", "b", "c"]
@@ -91,7 +85,7 @@ def test_any_filter_csv_string_input():
 
 def test_any_filter_json_column():
     col = make_col(name="sensor", col_type="float", subkeys=["temp"])
-    filt = AnyFilter(col, [10, 20])
+    filt = AnyFilter(col, ["10", "20"])
     sql, params = filt.to_sql(idx=1)
     assert sql == "(sensor->>'temp') IN ($1,$2)"
     assert params == [10, 20]
