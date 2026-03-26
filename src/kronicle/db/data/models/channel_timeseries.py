@@ -313,7 +313,7 @@ class ChannelTimeseries:
             return self
 
         filter = filter or RowRequestFilter()
-        sql_fragment, params = filter.to_sql_clauses(start_idx=1, order_by="time", desc=False)
+        sql_fragment, params = filter.to_sql(start_idx=1, order_by="time", desc=False)
 
         sql_req = f"SELECT * FROM {self.table} {sql_fragment}"
         rows = await db.fetch(sql_req, *params)
@@ -391,7 +391,7 @@ class ChannelTimeseries:
             raise NotFoundError(f"No timeseries stored for channel '{self.channel_id}'")
 
         filter = filter or RowRequestFilter()
-        sql_fragment, params = filter.to_sql_clauses(start_idx=1)
+        sql_fragment, params = filter.to_sql(start_idx=1)
 
         sql_req = f"DELETE FROM {self.table} {sql_fragment} RETURNING *"
         rows = await db.fetch(sql_req, *params)

@@ -1,8 +1,6 @@
 # kronicle/schemas/filters/row_request_filter.py
 from __future__ import annotations
 
-from typing import Literal
-
 from pydantic import BaseModel, Field, PrivateAttr
 
 from kronicle.schemas.filters.row_query_filter import DEFAULT_LIMIT, DEFAULT_STRICT_MODE, RowQueryFilter
@@ -17,17 +15,18 @@ class RowRequestFilter(BaseModel):
     # Row-level pagination/sorting
     limit: int | None = Field(default=DEFAULT_LIMIT, description="Max number of rows to return")
     offset: int | None = Field(default=None, description="Number of rows to skip (pagination)")
-    order: Literal["asc", "desc"] | None = Field(default="asc", description="Sort order: asc or desc")
+    sort: list[str] | None = Field(default=None, description="Sort columns, prefix with '-' for descending order")
 
     # Column selection
     columns: list[str] | None = Field(default=None, description="Comma-separated list of columns to return")
     skip_received: bool = Field(default=True, description="False to display data reception date")
 
     # Row filters
-    col: dict[str, str] = Field(default_factory=dict, description="Exact match filters: ?col[name]=Tintin")
+    col: dict[str, str] = Field(default_factory=dict, description="Exact match filters: ?col[author.name]=Herbert")
     min: dict[str, str] = Field(default_factory=dict, description="Minimum value filters: ?min[time]=2026-03-20")
     max: dict[str, str] = Field(default_factory=dict, description="Maximum value filters: ?max[time]=2026-03-21")
-    any: dict[str, str] = Field(default_factory=dict, description="Multi-value filters: ?any[tags]=room1,room2")
+    any: dict[str, list[str]] = Field(default_factory=dict, description="Multi-value filters: ?any[tags]=room1,room2")
+    has: dict[str, list[str]] = Field(default_factory=dict, description="Multi-value filters: ?any[tags]=room1,room2")
 
     # Strict mode and feedback
     strict: bool = Field(default=DEFAULT_STRICT_MODE, description="Raise errors if true, otherwise accumulate warnings")

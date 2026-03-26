@@ -83,7 +83,7 @@ class SchemaType:
         except (ValueError, TypeError) as e:
             raise ValueError(str(e)) from e
 
-        # 🔥 NEW: normalize JSON structures
+        # NEW: normalize JSON structures
         if self.name == "dict":
             if not isinstance(valid, dict):
                 raise ValueError("Expected dict")

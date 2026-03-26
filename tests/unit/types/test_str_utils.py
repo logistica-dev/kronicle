@@ -122,7 +122,7 @@ def test_strip_quotes(inp, expected):
     ],
 )
 def test_normalize_name(inp, expected):
-    result = normalize_name(inp, "col_")
+    result = normalize_name(inp, prefix="col_")
     if isinstance(expected, str):
         assert result == expected
     else:
