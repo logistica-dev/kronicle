@@ -1,4 +1,4 @@
-# kronicle/schemas/filters/col_filters.py
+# kronicle/db/data/query/col_filters.py
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -250,7 +250,7 @@ if __name__ == "__main__":  # pragma: no cover
     setup_logging()
 
     col_int = ResolvedColumn(col_type=SchemaType("int"), col_name="count")
-    f = AnyFilter(col_int, "4,5,6")
+    f = AnyFilter(col_int, ["4", "5", "6"])
     log_d(here, f.__class__.__name__)
     sql, params = f.to_sql(1)
     log_d(here, sql, params)

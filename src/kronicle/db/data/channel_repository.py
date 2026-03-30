@@ -8,8 +8,9 @@ from asyncpg.pool import PoolConnectionProxy
 from kronicle.db.data.channel_db_session import ChannelDbSession
 from kronicle.db.data.models.channel_metadata import ChannelMetadata
 from kronicle.db.data.models.channel_resource import ChannelResource
+from kronicle.db.data.query.row_fetch_context import RowFetchContext
 from kronicle.errors.error_types import BadRequestError, ConflictError, NotFoundError
-from kronicle.schemas.filters.timeseries_request_filter import TimeseriesRequestFilter
+from kronicle.schemas.filters.row_request_filter import RowRequestFilter
 from kronicle.schemas.payload.processed_payload import ProcessedPayload
 from kronicle.types.tag_type import TagType
 from kronicle.utils.dev_logs import log_d, log_e
@@ -53,12 +54,16 @@ class ChannelRepository:
             channel_list.append(channel_resource)
         return channel_list
 
+    async def _fetch_metadata(self, db: PoolConnectionProxy, channel_id: UUID):
+        return await ChannelResource.fetch(db, channel_id=channel_id)
+
     # ----------------------------------------------------------------------------------------------
     # Pure ChannelMetadata operations
     # ----------------------------------------------------------------------------------------------
+
     async def fetch_metadata(self, channel_id: UUID) -> ChannelResource:
         async with self._db.transaction() as db:
-            return await ChannelResource.fetch(db, channel_id=channel_id)
+            return await self._fetch_metadata(db, channel_id)
 
     async def fetch_all_metadata(self) -> list[ChannelResource]:
         async with self._db.transaction() as db:
@@ -92,7 +97,7 @@ class ChannelRepository:
 
     async def patch_metadata(self, processed: ProcessedPayload) -> ChannelResource:
         async with self._db.transaction() as db:
-            channel = await self.fetch_metadata(processed.channel_id)
+            channel = await self._fetch_metadata(db, processed.channel_id)
 
             # Update metadata fields if provided
             if processed.metadata:
@@ -118,6 +123,7 @@ class ChannelRepository:
     # ----------------------------------------------------------------------------------------------
     # ChannelResource operations (timeseries + metadata)
     # ----------------------------------------------------------------------------------------------
+
     async def insert_rows(self, processed: ProcessedPayload, *, strict: bool = False) -> ChannelResource:
         """
         Append rows to an existing channel
@@ -169,19 +175,29 @@ class ChannelRepository:
                 channel.op_feedback.add_detail("No rows to insert", "rows")
         return channel
 
-    async def delete_rows(self, channel: ChannelResource, *, filter: TimeseriesRequestFilter | None = None):
+    async def fetch_rows(self, channel_id: UUID, *, filter: RowRequestFilter | None = None):
         async with self._db.transaction() as db:
-            return await channel.delete_rows(db, filter=filter)
+            channel = await self._fetch_metadata(db, channel_id)
+            if not channel.row_nb:
+                raise NotFoundError("No rows found for channel", details={"channel_id": channel_id})
+            row_filter = RowFetchContext(column_types=channel.column_types, req_filters=filter or RowRequestFilter())
+            return await channel.fetch_rows(db, context=row_filter)
+
+    async def delete_rows(self, channel_id: UUID, *, filter: RowRequestFilter | None = None):
+        async with self._db.transaction() as db:
+            channel = await self._fetch_metadata(db, channel_id)
+            if not channel.row_nb:
+                raise NotFoundError("No rows found for channel", details={"channel_id": channel_id})
+            row_filter = RowFetchContext(column_types=channel.column_types, req_filters=filter or RowRequestFilter())
+            return await channel.delete_rows(db, context=row_filter)
 
     # ----------------------------------------------------------------------------------------------
     # Channel operations (timeseries + metadata)
     # ----------------------------------------------------------------------------------------------
 
-    async def fetch_channel(
-        self, channel_id: UUID, *, filter: TimeseriesRequestFilter | None = None
-    ) -> ChannelResource:
+    async def fetch_channel(self, channel_id: UUID, *, filter: RowRequestFilter | None = None) -> ChannelResource:
         async with self._db.transaction() as db:
-            channel: ChannelResource = await ChannelResource.fetch(db, channel_id, filter=filter)
+            channel: ChannelResource = await ChannelResource.fetch(db, channel_id)
         return channel
 
     async def create_channel(self, processed: ProcessedPayload) -> ChannelResource:
@@ -217,6 +233,6 @@ class ChannelRepository:
         async with self._db.transaction() as db:
             return await ChannelResource.delete_channel_with_id(db, channel_id)
 
-    async def fetch_all_channel_rows(self, *, filter: TimeseriesRequestFilter | None = None) -> list[ChannelResource]:
-        async with self._db.transaction() as db:
-            return await ChannelResource.fetch_all_channel_rows(db, filter=filter)
+    # async def fetch_all_channel_rows(self, *, filter: RowRequestFilter | None = None) -> list[ChannelResource]:
+    #     async with self._db.transaction() as db:
+    #         return await ChannelResource.fetch_all_channel_rows(db, filter=filter)

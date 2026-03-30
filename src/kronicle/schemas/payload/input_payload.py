@@ -81,7 +81,7 @@ class InputPayload(BaseModel):
     def normalize_and_check_length(cls, v):
         if not v:
             return ""
-        name = normalize_name(v, "channel_")
+        name = normalize_name(v, prefix="channel_")
         if len(name) > 64:
             raise BadRequestError(f"Channel name too long ({len(name)} > 64 characters)")
         return name

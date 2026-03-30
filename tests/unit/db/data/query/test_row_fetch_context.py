@@ -1,14 +1,20 @@
 # test_filters.py
 
 from kronicle.db.data.models.schema_types import SchemaType
-from kronicle.schemas.filters.col_filters import AnyFilter, ExactFilter, MaxFilter, MinFilter, ResolvedColumn
+from kronicle.db.data.query.col_filters import (
+    AnyFilter,
+    ExactFilter,
+    MaxFilter,
+    MinFilter,
+    ResolvedColumn,
+)
 
 
 # -------------------------------
 # Helper function to create ResolvedColumn
 # -------------------------------
 def make_col(name="temperature", col_type="float", subkeys=None):
-    return ResolvedColumn(col_name=name, col_type=SchemaType(col_type), subkeys=subkeys or [])
+    return ResolvedColumn(col_name=name, col_type=SchemaType(col_type), subkeys=subkeys)
 
 
 # -------------------------------
@@ -29,7 +35,7 @@ def test_min_filter_sql():
     col = make_col()
     filt = MinFilter(col, 10)
     sql, params = filt.to_sql(idx=1)
-    assert sql == "temperature >= $1::numeric"
+    assert sql == "temperature::numeric >= $1"
     assert params == [10]
 
 
@@ -40,7 +46,7 @@ def test_max_filter_sql():
     col = make_col()
     filt = MaxFilter(col, 100)
     sql, params = filt.to_sql(idx=1)
-    assert sql == "temperature <= $1::numeric"
+    assert sql == "temperature::numeric <= $1"
     assert params == [100]
 
 
@@ -48,7 +54,7 @@ def test_max_filter_sql():
 # JSON/dict column tests
 # -------------------------------
 def test_json_column_exact_filter():
-    col = make_col(name="sensor", col_type="float", subkeys=["temp"])
+    col = make_col(name="sensor", col_type="dict", subkeys=["temp"])
     filt = ExactFilter(col, 5.5)
     sql, params = filt.to_sql(idx=1)
     # LHS is casted for numeric, value kept as-is
@@ -57,10 +63,10 @@ def test_json_column_exact_filter():
 
 
 def test_json_column_range_filter():
-    col = make_col(name="sensor", col_type="float", subkeys=["temp"])
+    col = make_col(name="sensor", col_type="dict", subkeys=["temp"])
     filt = MinFilter(col, 10)
     sql, params = filt.to_sql(idx=1)
-    assert sql == "(sensor->>'temp')::numeric >= $1"
+    assert sql == "(sensor->>'temp') >= $1"
     assert params == [10]
 
 
