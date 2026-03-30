@@ -4,7 +4,7 @@ from datetime import datetime
 import pytest
 
 from kronicle.db.data.models.schema_types import SchemaType
-from kronicle.schemas.filters.col_filters import (
+from kronicle.db.data.query.col_filters import (
     AnyFilter,
     ExactFilter,
     HasFilter,

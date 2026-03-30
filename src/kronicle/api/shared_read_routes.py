@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, Query
 from kronicle.auth.auth_middleware import require_auth
 from kronicle.deps.channel_deps import channel_service
 from kronicle.schemas.filters.row_query_filter import RowQueryFilter
+from kronicle.schemas.filters.row_request_filter import RowRequestFilter
 from kronicle.schemas.payload.response_payload import ResponsePayload
 from kronicle.services.channel_service import ChannelService
 
@@ -74,9 +75,11 @@ async def fetch_all_channels_metadata(
 )
 async def fetch_channel(
     channel_id: UUID,
+    filter: Annotated[RowQueryFilter, Depends()],
     controller: ChannelService = Depends(channel_service),  # noqa: B008
 ) -> ResponsePayload:
-    return await controller.fetch_metadata(channel_id)
+    req_filter = RowRequestFilter.from_query(filter)
+    return await controller.fetch_metadata(channel_id, filter=req_filter)
 
 
 @shared_read_router.get(
@@ -94,7 +97,7 @@ async def fetch_channel_rows(
     filter: Annotated[RowQueryFilter, Depends()],
     controller: ChannelService = Depends(channel_service),  # noqa: B008
 ) -> ResponsePayload:
-    request_filter = filter.to_domain()
+    request_filter = RowRequestFilter.from_query(filter)
     return await controller.fetch_rows(channel_id, filter=request_filter)
 
 
@@ -112,5 +115,5 @@ async def fetch_channel_columns(
     filter: Annotated[RowQueryFilter, Depends()],
     controller: ChannelService = Depends(channel_service),  # noqa: B008
 ) -> ResponsePayload:
-    request_filter = filter.to_domain()
+    request_filter = RowRequestFilter.from_query(filter)
     return await controller.fetch_columns(channel_id, filter=request_filter)

@@ -73,7 +73,7 @@ class ProcessedPayload(BaseModel):
 
     @classmethod
     def normalize_name(cls, name: str) -> str:
-        return normalize_name(name, "channel_")
+        return normalize_name(name, prefix="channel_")
 
     @classmethod
     def sanitize_metadata(cls, d) -> dict[str, Any]:
@@ -122,7 +122,7 @@ class ProcessedPayload(BaseModel):
         processed = cls(
             channel_id=ensure_uuid4(payload.channel_id),
             channel_schema=channel_schema if channel_schema else payload.ensure_channel_schema(),
-            name=normalize_name(payload.name, "channel_") if payload.name else None,
+            name=normalize_name(payload.name, prefix="channel_") if payload.name else None,
             metadata=cls.sanitize_metadata(payload.metadata),
             tags=cls.sanitize_tags(payload.tags),
             rows=payload.rows or [],

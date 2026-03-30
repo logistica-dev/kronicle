@@ -109,7 +109,7 @@ class ChannelSchema(BaseModel):
             raise ValueError("Column names cannot be empty")
 
         # Normalization
-        db_col = normalize_name(name, "col_")
+        db_col = normalize_name(name, prefix="col_")
         if not db_col:
             raise ValueError("Incorrect column name")
 
@@ -247,27 +247,6 @@ class ChannelSchema(BaseModel):
             validated["received_at"] = now
 
         return validated
-
-    def validate_column_filter(self, filter: RowRequestFilter, strict: bool = False) -> None:
-        """
-        Validate `column_filters` against a ChannelSchema:
-        - Keep only columns present in schema
-        - Coerce values to the column's SchemaType
-        - Optionally raise if any invalid filter is found
-        """
-        validated_filters: dict = {}
-        feedback = OpFeedback()
-        for col, val in filter.column_filters.items():
-            if col not in self.column_types:
-                feedback.add_detail(message="Unknown column filter", field=col)
-            col_type: SchemaType = self.column_types[col]
-            try:
-                validated_filters[col] = col_type.validate(val)
-            except Exception:
-                feedback.add_detail(message="Invalid value for column filter", field=col, subfield="val")
-
-                # else skip invalid values
-        filter.column_filters = validated_filters
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -1,14 +1,12 @@
-# kronicle/schemas/filters/row_fetch_context.py
+# kronicle/db/data/query/row_query_builder.py
 from __future__ import annotations
 
 from typing import Any
 
-from fastapi._compat.v2 import normalize_name
-from pydantic import BaseModel, PrivateAttr
+from pydantic import BaseModel, Field, PrivateAttr
 
 from kronicle.db.data.models.schema_types import SchemaType
-from kronicle.errors.error_types import BadRequestError
-from kronicle.schemas.filters.col_filters import (
+from kronicle.db.data.query.col_filters import (
     AnyFilter,
     ColumnFilter,
     ExactFilter,
@@ -17,10 +15,11 @@ from kronicle.schemas.filters.col_filters import (
     MinFilter,
     OrderBy,
 )
+from kronicle.errors.error_types import BadRequestError
 from kronicle.schemas.filters.row_request_filter import RowRequestFilter
 from kronicle.schemas.payload.op_feedback import OpFeedback
 from kronicle.utils.dev_logs import log_block, log_d, log_w, setup_logging
-from kronicle.utils.str_utils import split_strip
+from kronicle.utils.str_utils import normalize_name, split_strip
 
 
 # -------------------------------------------------------------------------------------------------
@@ -41,7 +40,7 @@ class RowFetchContext(BaseModel):
     """
 
     column_types: dict[str, SchemaType]
-    req_filters: RowRequestFilter
+    req_filters: RowRequestFilter = Field(default_factory=RowRequestFilter)
 
     _filter_map: dict[str, type[ColumnFilter]] = {
         "col": ExactFilter,
@@ -101,6 +100,14 @@ class RowFetchContext(BaseModel):
         here = "_resolve_sort"
         sort_cols = self.req_filters.sort
         if not sort_cols or not isinstance(sort_cols, list):
+            # Default sort: -received_at
+            self._sort.append(
+                OrderBy.factory(
+                    col_type=self.column_types["received_at"],
+                    col_name="received_at",
+                    desc=True,
+                )
+            )
             return
 
         for col in sort_cols:
@@ -120,7 +127,7 @@ class RowFetchContext(BaseModel):
                 log_w(here, e)
                 self._feedback.add_detail(str(e), "request.sort", col)
 
-    def to_sql(self, order_by: str | None = None, desc: bool = True) -> tuple[str, list]:
+    def to_sql(self) -> tuple[str, list]:
         """
         Generate full SQL fragment with WHERE, ORDER BY, LIMIT, OFFSET.
 

@@ -11,7 +11,6 @@ from pydantic import BaseModel, Field, PrivateAttr, ValidationInfo, field_valida
 
 from kronicle.db.data.models.channel_schema import ChannelSchema
 from kronicle.errors.error_types import BadRequestError, ConflictError, DatabaseInstructionError, NotFoundError
-from kronicle.schemas.filters.row_request_filter import RowRequestFilter
 from kronicle.schemas.payload.op_feedback import OpFeedback
 from kronicle.schemas.payload.processed_payload import ProcessedPayload
 from kronicle.types.iso_datetime import IsoDateTime
@@ -29,7 +28,7 @@ mod = "chan_meta"
 class ChannelMetadata(BaseModel):
     """
     Part of the payload that describes the data.
-    One metadata row identifies one peculiar channel stream.
+    One channel metadata identifies one peculiar channel stream.
     `channel_id` identifies uniquely the channel stream from which we collect data.
     `received_at` is an auto-generated datetime tag
         that stores the date the user requested the metadata to be created.
@@ -163,16 +162,16 @@ class ChannelMetadata(BaseModel):
         ]
 
     @classmethod
-    def from_db(cls, row: dict) -> ChannelMetadata:
+    def from_db(cls, record: dict) -> ChannelMetadata:
         """Create ChannelMetadata from a DB row dict."""
-        channel_id = row["channel_id"]
-        name = row.get("name") or ""
-        metadata = row.get("user_metadata") or {}
-        tags = row.get("tags") or {}
-        received = row.get("received_at")
+        channel_id = record["channel_id"]
+        name = record.get("name") or ""
+        metadata = record.get("user_metadata") or {}
+        tags = record.get("tags") or {}
+        received = record.get("received_at")
         received_iso = IsoDateTime.to_iso_datetime(received) if received is not None else IsoDateTime.now_local()
         channel_schema = ChannelSchema.from_user_json(
-            loads(row["channel_schema"]) if isinstance(row["channel_schema"], str) else row["channel_schema"]
+            loads(record["channel_schema"]) if isinstance(record["channel_schema"], str) else record["channel_schema"]
         )
         return cls(
             channel_id=channel_id,
@@ -210,7 +209,7 @@ class ChannelMetadata(BaseModel):
             channel_schema = channel_truth
         else:
             channel_schema = processed.channel_schema
-        name = normalize_name(processed.name, "channel_") if processed.name else ""
+        name = normalize_name(processed.name, prefix="channel_") if processed.name else ""
 
         return cls(
             channel_id=channel_id,
@@ -220,8 +219,8 @@ class ChannelMetadata(BaseModel):
             tags=processed.tags or {},
         )
 
-    def update_with_db(self, row: Record):
-        db_obj = type(self).from_db(dict(row))
+    def update_with_db(self, record: Record):
+        db_obj = type(self).from_db(dict(record))
         for field in type(self).model_fields:  # <-- class-level access!
             setattr(self, field, getattr(db_obj, field))
         log_d(mod, f"ChannelMetadata updated in place: {self.channel_id}")
@@ -266,15 +265,15 @@ class ChannelMetadata(BaseModel):
             ChannelMetadata instance or None if not found
         """
         sql = f"SELECT * FROM {cls.table()} WHERE channel_id = $1"
-        row = await db.fetchrow(sql, ensure_uuid4(channel_id))
-        if not row:
+        record = await db.fetchrow(sql, ensure_uuid4(channel_id))
+        if not record:
             return None
-        return cls.from_db(dict(row))
+        return cls.from_db(dict(record))
 
     @classmethod
     async def fetch_by_name(cls, db: PoolConnectionProxy, name: str) -> ChannelMetadata | None:
         """
-        Fetch a metadata row by name.
+        Fetch a metadata by name.
 
         Args:
             db: asyncpg.Connection object
@@ -284,15 +283,15 @@ class ChannelMetadata(BaseModel):
             ChannelMetadata instance or None if not found
         """
         sql = f"SELECT * FROM {cls.table()} WHERE name = $1"
-        row = await db.fetchrow(sql, normalize_to_snake_case(name))
-        if not row:
+        record = await db.fetchrow(sql, normalize_to_snake_case(name))
+        if not record:
             return None
-        return cls.from_db(dict(row))
+        return cls.from_db(dict(record))
 
     @classmethod
     async def fetch_by_tags(cls, db: PoolConnectionProxy, tags: dict[str, TagType]) -> list[ChannelMetadata]:
         """
-        Fetch metadata rows that match all specified tags.
+        Fetch every metadata that match all specified tags.
 
         Args:
             db: asyncpg.Connection object
@@ -303,47 +302,38 @@ class ChannelMetadata(BaseModel):
         """
         if not tags:
             return []
-
         # Normalize all keys
-        normalized_tags = {
-            normalize_to_snake_case(k): normalize_to_snake_case(v) if isinstance(v, str) else v for k, v in tags.items()
-        }
-        tag_filter = dumps(normalized_tags)
+        tags_str = dumps(tags)
 
         sql = f"""
         SELECT * FROM {cls.table()}
         WHERE tags @> $1
         ORDER BY received_at DESC
         """
-        rows = await db.fetch(sql, tag_filter)
-        return [cls.from_db(dict(r)) for r in rows]
+        record_list = await db.fetch(sql, tags_str)
+        return [cls.from_db(dict(r)) for r in record_list]
 
     @classmethod
-    async def fetch_all(
-        cls, db: PoolConnectionProxy, *, filter: RowRequestFilter | None = None
-    ) -> list[ChannelMetadata]:
+    async def fetch_all(cls, db: PoolConnectionProxy) -> list[ChannelMetadata]:
         """
-        Fetch all metadata rows, ordered by received_at descending.
+        Fetch every metadata, ordered by received_at descending.
 
         Args:
             db: asyncpg.Connection object
-            filter: optional RequestFilter to limit rows or paginate results
 
         Returns:
             List of ChannelMetadata objects
         """
-        valid_filter = cls.validate_column_filter(filter) if filter else RowValidFilter()
-        sql_fragment, params = valid_filter.to_sql_clauses(start_idx=1, order_by="received_at", desc=True)
-        sql = f"SELECT * FROM {cls.table()} {sql_fragment}"
-        rows = await db.fetch(sql, *params)  # TODO: check params / filter out columns
-        return [cls.from_db(dict(r)) for r in rows]
+        sql = f"SELECT * FROM {cls.table()} ORDER BY received_at DESC"
+        record_list = await db.fetch(sql)
+        return [cls.from_db(dict(r)) for r in record_list]
 
     # ----------------------------------------------------------------------------------------------
     # DB operations: create
     # ----------------------------------------------------------------------------------------------
     async def create(self, db: PoolConnectionProxy) -> ChannelMetadata:
         """
-        Insert a new ChannelMetadata row.
+        Insert a new ChannelMetadata.
         Raises an error if the channel_id already exists.
         """
         # ChannelMetadata table is supposed to exist (checked at bootstrap)
@@ -362,12 +352,14 @@ class ChannelMetadata(BaseModel):
         # log_d(here, "sql", sql)
         # log_d(here, "db_ready_values", self.db_ready_values())
         try:
-            row = await db.fetchrow(sql, *self.db_ready_values())
-            if row is None:
-                log_e(here, f"INSERT did not return a row - channel_id={self.channel_id}")
-                raise DatabaseInstructionError("INSERT did not return a row", details={"channel_id": self.channel_id})
+            record = await db.fetchrow(sql, *self.db_ready_values())
+            if record is None:
+                log_e(here, f"INSERT did not return a record - channel_id={self.channel_id}")
+                raise DatabaseInstructionError(
+                    "INSERT did not return a record", details={"channel_id": self.channel_id}
+                )
             log_d(mod, f"ChannelMetadata created: {self.channel_id}")
-            return self.update_with_db(row)
+            return self.update_with_db(record)
         except UniqueViolationError as e:
             # Determine which field caused the violation
             constraint = getattr(e, "constraint_name", "")  # asyncpg sets this if the DB reports the constraint name
@@ -400,25 +392,25 @@ class ChannelMetadata(BaseModel):
         if not existing:
             raise ValueError(f"No ChannelMetadata found for id {self.channel_id}")
 
-        columns = ["name", "user_metadata", "tags"]
-        placeholders = [f"${i + 1}" for i in range(len(columns) + 1)]  # +1 for WHERE
+        updatable_columns = ["name", "user_metadata", "tags"]
+        placeholders = [f"${i + 1}" for i in range(len(updatable_columns) + 1)]  # +1 for WHERE
 
         sql = f"""
             UPDATE {self.table()}
-            SET {", ".join(f"{col} = {placeholders[idx]}" for idx, col in enumerate(columns))}
+            SET {", ".join(f"{col} = {placeholders[idx]}" for idx, col in enumerate(updatable_columns))}
             WHERE channel_id = {placeholders[-1]}
             RETURNING *;
             """
-        values = [getattr(self, col) if col == "name" else getattr(self, col) or {} for col in columns]
+        values = [getattr(self, col) if col == "name" else getattr(self, col) or {} for col in updatable_columns]
         values.append(self.channel_id)
 
         try:
-            row = await db.fetchrow(sql, *values)
-            if row is None:
+            record = await db.fetchrow(sql, *values)
+            if record is None:
                 raise NotFoundError("No ChannelMetadata found", details={"channel_id": self.channel_id})
             log_d(mod, f"ChannelMetadata updated: {self.channel_id}")
-            # Return a new instance built from the updated row
-            return self.update_with_db(row)
+            # Return a new instance built from the updated metadata
+            return self.update_with_db(record)
         except UniqueViolationError as e:
             constraint = getattr(e, "constraint_name", "")
             if constraint == f"{self.tablename()}_name_key":
@@ -448,10 +440,10 @@ class ChannelMetadata(BaseModel):
         WHERE channel_id = $1
         RETURNING *;
         """
-        row = await db.fetchrow(sql, self.channel_id)
-        if not row:
+        record = await db.fetchrow(sql, self.channel_id)
+        if not record:
             return None  # row didn't exist
-        return self.update_with_db(row)
+        return self.update_with_db(record)
 
 
 # --------------------------------------------------------------------------------------------------
@@ -485,7 +477,7 @@ if __name__ == "__main__":  # pragma: no cover
     log_d(here, "metadata", metadata)
     log_d(here, "DB ready values", metadata.db_ready_values())
 
-    sample_row = {
+    sample_meta = {
         "time": IsoDateTime.now_local(),
         "temperature": 25.5,
         "humidity": 50.2,
