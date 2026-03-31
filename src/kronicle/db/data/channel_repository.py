@@ -77,11 +77,20 @@ class ChannelRepository:
                 raise NotFoundError("No channel was found", details={"name": name})
             return await self._metadata_to_channel(db, metadata)
 
-    async def fetch_metadata_by_tags(self, tags: dict[str, TagType]) -> list[ChannelResource]:
+    async def fetch_metadata_by_tags(self, tags: dict[str, str]) -> list[ChannelResource]:
         if not tags:
             return []
         async with self._db.transaction() as db:
             metadata_list = await ChannelMetadata.fetch_by_tags(db, tags)
+            if not metadata_list:
+                return []
+            return await self._list_metadata_to_channels(db, metadata_list)
+
+    async def fetch_metadata_by_user_meta(self, user_meta: dict[str, str]) -> list[ChannelResource]:
+        if not user_meta:
+            return []
+        async with self._db.transaction() as db:
+            metadata_list = await ChannelMetadata.fetch_by_user_meta(db, user_meta)
             if not metadata_list:
                 return []
             return await self._list_metadata_to_channels(db, metadata_list)
@@ -195,7 +204,7 @@ class ChannelRepository:
     # Channel operations (timeseries + metadata)
     # ----------------------------------------------------------------------------------------------
 
-    async def fetch_channel(self, channel_id: UUID, *, filter: RowRequestFilter | None = None) -> ChannelResource:
+    async def fetch_channel(self, channel_id: UUID) -> ChannelResource:
         async with self._db.transaction() as db:
             channel: ChannelResource = await ChannelResource.fetch(db, channel_id)
         return channel

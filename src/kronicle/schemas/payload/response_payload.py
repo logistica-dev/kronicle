@@ -76,12 +76,12 @@ class ResponsePayload(BaseModel):
         ResponsePayload
             Fully populated payload ready for response to user.
         """
+        # here = "from_chan_resource"
         channel_metadata = channel.metadata
         channel_timeseries = channel.timeseries
 
         rows = channel_timeseries.to_user_rows(skip_received=skip_received)
         provided_rows = len(rows)
-
         payload = cls(
             channel_id=channel_metadata.channel_id,
             channel_schema=channel_metadata.channel_schema,
@@ -99,7 +99,6 @@ class ResponsePayload(BaseModel):
         # Optional: convert rows to columns and remove rows if strict
         if strict:
             payload.rows_to_columns(strict=True)
-
         return payload
 
     def with_op_status(self, status: str = "success", details: dict | None = None) -> ResponsePayload:

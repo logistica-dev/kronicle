@@ -12,6 +12,7 @@ from kronicle.schemas.filters.row_query_filter import RowQueryFilter
 from kronicle.schemas.filters.row_request_filter import RowRequestFilter
 from kronicle.schemas.payload.response_payload import ResponsePayload
 from kronicle.services.channel_service import ChannelService
+from kronicle.utils.dev_logs import log_d
 
 """
 Routes available to users with read-only permissions.
@@ -47,11 +48,18 @@ shared_read_router = APIRouter(dependencies=[Depends(require_auth)])
         "No data rows are returned in this endpoint.\n"
         "Optionally, filter by a name or tag_key/tag_value pair."
     ),
-    response_model=list[ResponsePayload],
+    response_model=list[ResponsePayload] | ResponsePayload,
 )
 async def fetch_all_channels_metadata(
     name: str | None = Query(None, description="Optional name to filter by"),
-    tags: list[str] = Query(None, description="Optional tags as key:value pairs, e.g., color:red"),  # noqa: B008
+    tags: list[str] = Query(  # noqa: B008
+        None,
+        description="Optional tags as comma-separated key:value pairs, e.g., color:red",
+    ),
+    metadata: list[str] = Query(  # noqa: B008
+        None,
+        description="Optional tags as comma-separated key:value pairs, e.g., color:red",
+    ),
     controller: ChannelService = Depends(channel_service),  # noqa: B008
 ) -> list[ResponsePayload] | ResponsePayload:
     # Name filter takes priority
@@ -59,7 +67,11 @@ async def fetch_all_channels_metadata(
         return await controller.fetch_metadata_by_name(name=name)
     # Tags filter
     if tags:
+        log_d("fetch_all_channels_metadata", "tags:", tags)
         return await controller.fetch_metadata_by_tags(tags=tags)
+    if metadata:
+        log_d("fetch_all_channels_metadata", "metadata:", metadata)
+        return await controller.fetch_metadata_by_user_meta(user_meta=metadata)
     return await controller.fetch_all_metadata()
 
 
@@ -75,11 +87,9 @@ async def fetch_all_channels_metadata(
 )
 async def fetch_channel(
     channel_id: UUID,
-    filter: Annotated[RowQueryFilter, Depends()],
     controller: ChannelService = Depends(channel_service),  # noqa: B008
 ) -> ResponsePayload:
-    req_filter = RowRequestFilter.from_query(filter)
-    return await controller.fetch_metadata(channel_id, filter=req_filter)
+    return await controller.fetch_metadata(channel_id)
 
 
 @shared_read_router.get(

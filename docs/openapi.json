@@ -182,10 +182,24 @@
               "items": {
                 "type": "string"
               },
-              "description": "Optional tags as key:value pairs, e.g., color:red",
+              "description": "Optional tags as comma-separated key:value pairs, e.g., color:red",
               "title": "Tags"
             },
-            "description": "Optional tags as key:value pairs, e.g., color:red"
+            "description": "Optional tags as comma-separated key:value pairs, e.g., color:red"
+          },
+          {
+            "name": "metadata",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Optional tags as comma-separated key:value pairs, e.g., color:red",
+              "title": "Metadata"
+            },
+            "description": "Optional tags as comma-separated key:value pairs, e.g., color:red"
           }
         ],
         "responses": {
@@ -194,10 +208,17 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ResponsePayload"
-                  },
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ResponsePayload"
+                      }
+                    },
+                    {
+                      "$ref": "#/components/schemas/ResponsePayload"
+                    }
+                  ],
                   "title": "Response Fetch All Channels Metadata Api V1 Channels Get"
                 }
               }
@@ -290,38 +311,6 @@
             }
           },
           {
-            "name": "from_date",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "From Date"
-            }
-          },
-          {
-            "name": "to_date",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "To Date"
-            }
-          },
-          {
             "name": "limit",
             "in": "query",
             "required": false,
@@ -356,20 +345,6 @@
                 }
               ],
               "title": "Offset"
-            }
-          },
-          {
-            "name": "order",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "enum": [
-                "asc",
-                "desc"
-              ],
-              "type": "string",
-              "default": "asc",
-              "title": "Order"
             }
           },
           {
@@ -451,38 +426,6 @@
             }
           },
           {
-            "name": "from_date",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "From Date"
-            }
-          },
-          {
-            "name": "to_date",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "To Date"
-            }
-          },
-          {
             "name": "limit",
             "in": "query",
             "required": false,
@@ -517,20 +460,6 @@
                 }
               ],
               "title": "Offset"
-            }
-          },
-          {
-            "name": "order",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "enum": [
-                "asc",
-                "desc"
-              ],
-              "type": "string",
-              "default": "asc",
-              "title": "Order"
             }
           },
           {
@@ -628,10 +557,24 @@
               "items": {
                 "type": "string"
               },
-              "description": "Optional tags as key:value pairs, e.g., color:red",
+              "description": "Optional tags as comma-separated key:value pairs, e.g., color:red",
               "title": "Tags"
             },
-            "description": "Optional tags as key:value pairs, e.g., color:red"
+            "description": "Optional tags as comma-separated key:value pairs, e.g., color:red"
+          },
+          {
+            "name": "metadata",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Optional tags as comma-separated key:value pairs, e.g., color:red",
+              "title": "Metadata"
+            },
+            "description": "Optional tags as comma-separated key:value pairs, e.g., color:red"
           }
         ],
         "responses": {
@@ -640,10 +583,17 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ResponsePayload"
-                  },
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ResponsePayload"
+                      }
+                    },
+                    {
+                      "$ref": "#/components/schemas/ResponsePayload"
+                    }
+                  ],
                   "title": "Response Fetch All Channels Metadata Data V1 Channels Get"
                 }
               }
@@ -795,38 +745,6 @@
             }
           },
           {
-            "name": "from_date",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "From Date"
-            }
-          },
-          {
-            "name": "to_date",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "To Date"
-            }
-          },
-          {
             "name": "limit",
             "in": "query",
             "required": false,
@@ -861,20 +779,6 @@
                 }
               ],
               "title": "Offset"
-            }
-          },
-          {
-            "name": "order",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "enum": [
-                "asc",
-                "desc"
-              ],
-              "type": "string",
-              "default": "asc",
-              "title": "Order"
             }
           },
           {
@@ -1025,38 +929,6 @@
             }
           },
           {
-            "name": "from_date",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "From Date"
-            }
-          },
-          {
-            "name": "to_date",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "To Date"
-            }
-          },
-          {
             "name": "limit",
             "in": "query",
             "required": false,
@@ -1091,20 +963,6 @@
                 }
               ],
               "title": "Offset"
-            }
-          },
-          {
-            "name": "order",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "enum": [
-                "asc",
-                "desc"
-              ],
-              "type": "string",
-              "default": "asc",
-              "title": "Order"
             }
           },
           {
@@ -1202,10 +1060,24 @@
               "items": {
                 "type": "string"
               },
-              "description": "Optional tags as key:value pairs, e.g., color:red",
+              "description": "Optional tags as comma-separated key:value pairs, e.g., color:red",
               "title": "Tags"
             },
-            "description": "Optional tags as key:value pairs, e.g., color:red"
+            "description": "Optional tags as comma-separated key:value pairs, e.g., color:red"
+          },
+          {
+            "name": "metadata",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Optional tags as comma-separated key:value pairs, e.g., color:red",
+              "title": "Metadata"
+            },
+            "description": "Optional tags as comma-separated key:value pairs, e.g., color:red"
           }
         ],
         "responses": {
@@ -1214,10 +1086,17 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ResponsePayload"
-                  },
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ResponsePayload"
+                      }
+                    },
+                    {
+                      "$ref": "#/components/schemas/ResponsePayload"
+                    }
+                  ],
                   "title": "Response Fetch All Channels Metadata Setup V1 Channels Get"
                 }
               }
@@ -1492,38 +1371,6 @@
             }
           },
           {
-            "name": "from_date",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "From Date"
-            }
-          },
-          {
-            "name": "to_date",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "To Date"
-            }
-          },
-          {
             "name": "limit",
             "in": "query",
             "required": false,
@@ -1558,20 +1405,6 @@
                 }
               ],
               "title": "Offset"
-            }
-          },
-          {
-            "name": "order",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "enum": [
-                "asc",
-                "desc"
-              ],
-              "type": "string",
-              "default": "asc",
-              "title": "Order"
             }
           },
           {
@@ -1718,8 +1551,74 @@
               "format": "uuid",
               "title": "Channel Id"
             }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 500,
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 10000,
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "skip_received",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Skip Received"
+            }
+          },
+          {
+            "name": "strict",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Strict"
+            }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_delete_channel_rows_setup_v1_channels__channel_id__rows_delete"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -1769,38 +1668,6 @@
             }
           },
           {
-            "name": "from_date",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "From Date"
-            }
-          },
-          {
-            "name": "to_date",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "To Date"
-            }
-          },
-          {
             "name": "limit",
             "in": "query",
             "required": false,
@@ -1835,20 +1702,6 @@
                 }
               ],
               "title": "Offset"
-            }
-          },
-          {
-            "name": "order",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "enum": [
-                "asc",
-                "desc"
-              ],
-              "type": "string",
-              "default": "asc",
-              "title": "Order"
             }
           },
           {
@@ -2285,8 +2138,25 @@
   },
   "components": {
     "schemas": {
-      "Body_fetch_channel_columns_api_v1_channels__channel_id__columns_get": {
+      "Body_delete_channel_rows_setup_v1_channels__channel_id__rows_delete": {
         "properties": {
+          "sort": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort"
+          },
           "columns": {
             "anyOf": [
               {
@@ -2307,6 +2177,118 @@
             },
             "type": "object",
             "title": "Col"
+          },
+          "min": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Min"
+          },
+          "max": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Max"
+          },
+          "any": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Any"
+          },
+          "has": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Has"
+          }
+        },
+        "type": "object",
+        "title": "Body_delete_channel_rows_setup_v1_channels__channel_id__rows_delete"
+      },
+      "Body_fetch_channel_columns_api_v1_channels__channel_id__columns_get": {
+        "properties": {
+          "sort": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort"
+          },
+          "columns": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Columns"
+          },
+          "col": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Col"
+          },
+          "min": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Min"
+          },
+          "max": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Max"
+          },
+          "any": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Any"
+          },
+          "has": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Has"
           }
         },
         "type": "object",
@@ -2314,6 +2296,23 @@
       },
       "Body_fetch_channel_columns_data_v1_channels__channel_id__columns_get": {
         "properties": {
+          "sort": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort"
+          },
           "columns": {
             "anyOf": [
               {
@@ -2334,6 +2333,40 @@
             },
             "type": "object",
             "title": "Col"
+          },
+          "min": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Min"
+          },
+          "max": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Max"
+          },
+          "any": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Any"
+          },
+          "has": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Has"
           }
         },
         "type": "object",
@@ -2341,6 +2374,23 @@
       },
       "Body_fetch_channel_columns_setup_v1_channels__channel_id__columns_get": {
         "properties": {
+          "sort": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort"
+          },
           "columns": {
             "anyOf": [
               {
@@ -2361,6 +2411,40 @@
             },
             "type": "object",
             "title": "Col"
+          },
+          "min": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Min"
+          },
+          "max": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Max"
+          },
+          "any": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Any"
+          },
+          "has": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Has"
           }
         },
         "type": "object",
@@ -2368,6 +2452,23 @@
       },
       "Body_fetch_channel_rows_api_v1_channels__channel_id__rows_get": {
         "properties": {
+          "sort": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort"
+          },
           "columns": {
             "anyOf": [
               {
@@ -2388,6 +2489,40 @@
             },
             "type": "object",
             "title": "Col"
+          },
+          "min": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Min"
+          },
+          "max": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Max"
+          },
+          "any": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Any"
+          },
+          "has": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Has"
           }
         },
         "type": "object",
@@ -2395,6 +2530,23 @@
       },
       "Body_fetch_channel_rows_data_v1_channels__channel_id__rows_get": {
         "properties": {
+          "sort": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort"
+          },
           "columns": {
             "anyOf": [
               {
@@ -2415,6 +2567,40 @@
             },
             "type": "object",
             "title": "Col"
+          },
+          "min": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Min"
+          },
+          "max": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Max"
+          },
+          "any": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Any"
+          },
+          "has": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Has"
           }
         },
         "type": "object",
@@ -2422,6 +2608,23 @@
       },
       "Body_fetch_channel_rows_setup_v1_channels__channel_id__rows_get": {
         "properties": {
+          "sort": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort"
+          },
           "columns": {
             "anyOf": [
               {
@@ -2442,6 +2645,40 @@
             },
             "type": "object",
             "title": "Col"
+          },
+          "min": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Min"
+          },
+          "max": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Max"
+          },
+          "any": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Any"
+          },
+          "has": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Has"
           }
         },
         "type": "object",
@@ -2591,7 +2828,7 @@
         "title": "InputPayload",
         "description": "User-provided payload for a channel.\nThe 'channel_schema' field is a dict of column_name -> type string.",
         "example": {
-          "channel_id": "f6eef8c1-5f93-4e83-bb8f-1eef2ffed672",
+          "channel_id": "1ffdaf3f-d8b9-45be-b145-f23bbc59c8be",
           "channel_schema": {
             "humidity": "float",
             "temperature": "float",
@@ -2600,7 +2837,7 @@
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-0e69e",
+          "name": "thermo-e5b10",
           "rows": [
             {
               "humidity": 55.1,

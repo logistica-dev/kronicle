@@ -210,6 +210,11 @@ def log_d(here, *args, stacklevel=2, **kwargs):
         basic_logger.debug(format_input(here, *args, **kwargs), stacklevel=stacklevel)
 
 
+def log_t(here, *args, stacklevel=2, **kwargs):
+    if LOG_LEVEL > 3:
+        basic_logger.debug(format_input(here, *args, **kwargs), stacklevel=stacklevel)
+
+
 def log_d_if(here, should_print: bool = False, *args, **kwargs):
     if LOG_LEVEL > 2 and should_print:
         basic_logger.debug(format_input(here, *args, **kwargs), stacklevel=2)

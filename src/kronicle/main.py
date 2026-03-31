@@ -229,19 +229,21 @@ class KronicleApp:
 
         @self.app.middleware("http")
         async def catch_all_exceptions(request: Request, call_next):
+            here = "catch_all_exc"
             try:
                 return await call_next(request)
             except Exception as exc:
                 # Filter out .venv lines
 
                 tb = extract_tb(exc.__traceback__)
+                # log_w(here, "trace:", tb)
                 filtered = [f for f in tb if "src/kronicle" in f.filename]
 
                 # Make filenames relative for shorter output
                 rel_root = Path(__file__).resolve().parents[2]  # adjust to project root
                 for f in filtered:
                     rel_file = Path(f.filename).relative_to(rel_root)
-                    log_e("catch all", f"{rel_file}:{f.lineno} ->", f.name)
+                    log_e(here, f"{rel_file}:{f.lineno} ->", f.name)
 
                 # Return standard JSON error
                 return KronicleHTTPErrorPayload.from_exception(

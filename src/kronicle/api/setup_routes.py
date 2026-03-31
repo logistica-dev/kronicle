@@ -1,5 +1,6 @@
 # kronicle/api/setup_routes.py
 
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends
@@ -9,6 +10,8 @@ from kronicle.api.shared_write_routes import shared_writer_router
 from kronicle.auth.auth_middleware import require_auth
 from kronicle.db.data.models.schema_registry import SchemaRegistry
 from kronicle.deps.channel_deps import channel_service
+from kronicle.schemas.filters.row_query_filter import RowQueryFilter
+from kronicle.schemas.filters.row_request_filter import RowRequestFilter
 from kronicle.schemas.payload.input_payload import InputPayload
 from kronicle.schemas.payload.response_payload import ResponsePayload
 from kronicle.services.channel_service import ChannelService
@@ -121,9 +124,11 @@ async def delete_channel(
 )
 async def delete_channel_rows(
     channel_id: UUID,
+    filter: Annotated[RowQueryFilter, Depends()],
     controller: ChannelService = Depends(channel_service),  # noqa: B008
 ):
-    return await controller.delete_rows_for_channel(channel_id)
+    request_filter = RowRequestFilter.from_query(filter)
+    return await controller.delete_rows_for_channel(channel_id, filter=request_filter)
 
 
 @setup_router.post(
