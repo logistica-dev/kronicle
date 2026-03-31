@@ -1,7 +1,7 @@
 # kronicle/db/data/models/channel_metadata.py
 from __future__ import annotations
 
-from json import dumps, loads
+from json import loads
 from typing import Any, ClassVar
 from uuid import UUID, uuid4
 
@@ -289,28 +289,53 @@ class ChannelMetadata(BaseModel):
         return cls.from_db(dict(record))
 
     @classmethod
-    async def fetch_by_tags(cls, db: PoolConnectionProxy, tags: dict[str, TagType]) -> list[ChannelMetadata]:
+    async def fetch_by_tags(cls, db: PoolConnectionProxy, tags: dict[str, str]) -> list[ChannelMetadata]:
         """
         Fetch every metadata that match all specified tags.
 
         Args:
             db: asyncpg.Connection object
-            tags: dict of tag_key -> tag_value to match (all must match)
+            tags: dict (all key:value pairs of which must match)
 
         Returns:
             List of ChannelMetadata instances matching all tags
         """
         if not tags:
             return []
-        # Normalize all keys
-        tags_str = dumps(tags)
 
         sql = f"""
         SELECT * FROM {cls.table()}
         WHERE tags @> $1
         ORDER BY received_at DESC
         """
-        record_list = await db.fetch(sql, tags_str)
+        record_list = await db.fetch(sql, tags)
+        return [cls.from_db(dict(r)) for r in record_list]
+
+    @classmethod
+    async def fetch_by_user_meta(cls, db: PoolConnectionProxy, user_meta: dict[str, str]) -> list[ChannelMetadata]:
+        """
+        Fetch every metadata that match all specified tags.
+
+        Args:
+            db: asyncpg.Connection object
+            user_meta: dict (all key:value pairs of which must match)
+
+        Returns:
+            List of ChannelMetadata instances matching all input metadata
+        """
+        here = "get_by_user_meta"
+        if not user_meta:
+            return []
+
+        sql = f"""
+        SELECT * FROM {cls.table()}
+        WHERE user_metadata @> $1
+        ORDER BY received_at DESC
+        """
+        log_d(here, "user_meta:", user_meta)
+        record_list = await db.fetch(sql, user_meta)
+        log_d(here, "record_list:", record_list)
+
         return [cls.from_db(dict(r)) for r in record_list]
 
     @classmethod

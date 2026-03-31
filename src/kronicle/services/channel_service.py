@@ -2,6 +2,8 @@
 
 from uuid import UUID, uuid4
 
+from fastapi._compat.v2 import normalize_name
+
 from kronicle.db.data.channel_repository import ChannelRepository
 from kronicle.db.data.models.channel_schema import ChannelSchema
 from kronicle.errors.error_types import BadRequestError
@@ -10,7 +12,7 @@ from kronicle.schemas.payload.input_payload import InputPayload
 from kronicle.schemas.payload.processed_payload import ProcessedPayload
 from kronicle.schemas.payload.response_payload import ResponsePayload
 from kronicle.utils.dev_logs import log_d
-from kronicle.utils.str_utils import ensure_uuid4, extract_tags, normalize_to_snake_case
+from kronicle.utils.str_utils import ensure_uuid4, extract_tags
 
 mod = "chan_srvc"
 
@@ -82,11 +84,11 @@ class ChannelService:
         channel = await self._repo.update_metadata(processed_payload)
         return ResponsePayload.from_channel_resource(channel)
 
-    async def fetch_metadata(self, channel_id: UUID, filter: RowRequestFilter) -> ResponsePayload:
+    async def fetch_metadata(self, channel_id: UUID) -> ResponsePayload:
         """
         Fetch metadata for a given channel_id.
         """
-        channel = await self._repo.fetch_channel(ensure_uuid4(channel_id), filter=filter)
+        channel = await self._repo.fetch_channel(ensure_uuid4(channel_id))
         return ResponsePayload.from_channel_resource(channel)
 
     async def fetch_all_metadata(self) -> list[ResponsePayload]:
@@ -100,17 +102,24 @@ class ChannelService:
         """
         Fetch all metadata entries and row counts.
         """
-        channel = await self._repo.fetch_metadata_by_name(name=name)
+        norm_name = normalize_name(name)
+        channel = await self._repo.fetch_metadata_by_name(name=norm_name)
         return ResponsePayload.from_channel_resource(channel)
 
     async def fetch_metadata_by_tags(self, tags: list[str]) -> list[ResponsePayload]:
         """
         Fetch all metadata entries and row counts.
         """
-        tag_dict = extract_tags(tags)
-        normalized_tags = {normalize_to_snake_case(k): v for k, v in tag_dict.items()}
-
+        normalized_tags = extract_tags(tags)
         channels = await self._repo.fetch_metadata_by_tags(normalized_tags)
+        return [ResponsePayload.from_channel_resource(channel) for channel in channels]
+
+    async def fetch_metadata_by_user_meta(self, user_meta: list[str]) -> list[ResponsePayload]:
+        """
+        Fetch all metadata entries and row counts.
+        """
+        normalized_meta = extract_tags(user_meta)
+        channels = await self._repo.fetch_metadata_by_user_meta(normalized_meta)
         return [ResponsePayload.from_channel_resource(channel) for channel in channels]
 
     async def delete_channel(self, channel_id: UUID) -> ResponsePayload | None:
@@ -193,8 +202,7 @@ class ChannelService:
         Fetch rows for a given channel.
         """
         # here = "fetch_rows"
-        channel = await self._repo.fetch_channel(ensure_uuid4(channel_id), filter=filter)
-
+        channel = await self._repo.fetch_channel(ensure_uuid4(channel_id))
         return ResponsePayload.from_channel_resource(channel, skip_received=filter.skip_received if filter else True)
 
     # async def fetch_all_rows(self, *, filter: RowRequestFilter | None = None) -> list[ResponsePayload]:

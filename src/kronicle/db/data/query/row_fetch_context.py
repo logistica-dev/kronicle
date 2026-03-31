@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, Field, PrivateAttr
+from pydantic import BaseModel, PrivateAttr
 
 from kronicle.db.data.models.schema_types import SchemaType
 from kronicle.db.data.query.col_filters import (
@@ -40,7 +40,7 @@ class RowFetchContext(BaseModel):
     """
 
     column_types: dict[str, SchemaType]
-    req_filters: RowRequestFilter = Field(default_factory=RowRequestFilter)
+    req_filters: RowRequestFilter | None = None
 
     _filter_map: dict[str, type[ColumnFilter]] = {
         "col": ExactFilter,
@@ -62,16 +62,22 @@ class RowFetchContext(BaseModel):
         with log_block(here, "resolving sort"):
             self._resolve_sort()
 
-        if self._feedback.has_details and self.req_filters.strict:
+        if self._feedback.has_details and self.filters.strict:
             raise BadRequestError("Incorrect query parameters", details=self._feedback.json())
 
     @property
+    def filters(self) -> RowRequestFilter:
+        if self.req_filters is None:
+            self.req_filters = RowRequestFilter()
+        return self.req_filters
+
+    @property
     def limit(self) -> int | None:
-        return self.req_filters.limit
+        return self.filters.limit
 
     @property
     def offset(self) -> int | None:
-        return self.req_filters.offset
+        return self.filters.offset
 
     @property
     def feedback(self) -> OpFeedback:
@@ -98,7 +104,7 @@ class RowFetchContext(BaseModel):
 
     def _resolve_sort(self):
         here = "_resolve_sort"
-        sort_cols = self.req_filters.sort
+        sort_cols = self.filters.sort
         if not sort_cols or not isinstance(sort_cols, list):
             # Default sort: -received_at
             self._sort.append(

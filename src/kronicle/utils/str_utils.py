@@ -139,7 +139,7 @@ def normalize_name_accept_subs(s: str) -> str | None:
     return ".".join(split_strip_norm_one(s, ".", normalize_name))
 
 
-def extract_tags(tags: list[str]):
+def extract_tags(tags: list[str]) -> dict[str, str]:
     """
     Input: list of "key:value" strings
     Simple "key" will be parsed as "key":True
@@ -149,23 +149,23 @@ def extract_tags(tags: list[str]):
         if ":" not in t:
             tag_dict[t] = True
             continue
-
         key, value = t.split(":", 1)
-        try:
-            key = normalize_name(key)
-        except (ValueError, TypeError):
-            continue
-        # Optional: cast value to int/float/bool if possible
-        if (val_i := value.lower()) in {"true", "false"}:
-            cast_value: TagType = val_i == "true"
-        elif value.isdigit():
-            cast_value: TagType = int(value)
-        else:
-            try:
-                cast_value = float(value)
-            except ValueError:
-                cast_value = value
-        tag_dict[key] = cast_value
+        tag_dict[normalize_name(key)] = value
+        # try:
+        #     key = normalize_name(key)
+        # except (ValueError, TypeError):
+        #     continue
+        # # Optional: cast value to int/float/bool if possible
+        # if (val_i := value.lower()) in {"true", "false"}:
+        #     cast_value: TagType = val_i == "true"
+        # elif value.isdigit():
+        #     cast_value: TagType = int(value)
+        # else:
+        #     try:
+        #         cast_value = float(value)
+        #     except ValueError:
+        #         cast_value = value
+        # tag_dict[key] = cast_value
     return tag_dict
 
 

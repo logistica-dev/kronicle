@@ -32,6 +32,7 @@ class RequestSanitizerMiddleware(BaseHTTPMiddleware):
         return self._safe_paths.is_excluded_path(path)
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        # here = "dispatch"
         # Check if path can be excluded
         if self._is_excluded_path(request.url.path):
             return await call_next(request)
