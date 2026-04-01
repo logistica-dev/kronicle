@@ -201,9 +201,9 @@ class ChannelService:
         """
         Fetch rows for a given channel.
         """
-        # here = "fetch_rows"
-        channel = await self._repo.fetch_channel(ensure_uuid4(channel_id))
-        return ResponsePayload.from_channel_resource(channel, skip_received=filter.skip_received if filter else True)
+        channel = await self._repo.fetch_channel_rows(ensure_uuid4(channel_id), filter=filter)
+        skip = filter.skip_received if filter and filter.skip_received is not None else True
+        return ResponsePayload.from_channel_resource(channel, skip_received=skip)
 
     # async def fetch_all_rows(self, *, filter: RowRequestFilter | None = None) -> list[ResponsePayload]:
     #     """

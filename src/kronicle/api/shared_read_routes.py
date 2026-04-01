@@ -62,15 +62,16 @@ async def fetch_all_channels_metadata(
     ),
     controller: ChannelService = Depends(channel_service),  # noqa: B008
 ) -> list[ResponsePayload] | ResponsePayload:
+    here = "fetch_all_channels_metadata"
     # Name filter takes priority
     if name:
         return await controller.fetch_metadata_by_name(name=name)
     # Tags filter
     if tags:
-        log_d("fetch_all_channels_metadata", "tags:", tags)
+        log_d(here, "tags:", tags)
         return await controller.fetch_metadata_by_tags(tags=tags)
     if metadata:
-        log_d("fetch_all_channels_metadata", "metadata:", metadata)
+        log_d(here, "metadata:", metadata)
         return await controller.fetch_metadata_by_user_meta(user_meta=metadata)
     return await controller.fetch_all_metadata()
 
@@ -104,7 +105,7 @@ async def fetch_channel(
 )
 async def fetch_channel_rows(
     channel_id: UUID,
-    filter: Annotated[RowQueryFilter, Depends()],
+    filter: Annotated[RowQueryFilter, Depends(RowQueryFilter.from_query_params)],
     controller: ChannelService = Depends(channel_service),  # noqa: B008
 ) -> ResponsePayload:
     request_filter = RowRequestFilter.from_query(filter)
@@ -122,7 +123,7 @@ async def fetch_channel_rows(
 )
 async def fetch_channel_columns(
     channel_id: UUID,
-    filter: Annotated[RowQueryFilter, Depends()],
+    filter: Annotated[RowQueryFilter, Depends(RowQueryFilter.from_query_params)],
     controller: ChannelService = Depends(channel_service),  # noqa: B008
 ) -> ResponsePayload:
     request_filter = RowRequestFilter.from_query(filter)

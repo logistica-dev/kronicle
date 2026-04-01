@@ -28,8 +28,8 @@ def test_list_channels(kronicle_setup):
         assert isinstance(channel, KroniclePayload)
     log_d(here, "Channel list ^^^")
 
-    max_chan_id, _ = kronicle_setup.get_channel_with_max_rows()
-    if max_chan_id:
+    max_chan = kronicle_setup.get_channel_with_max_rows()
+    if max_chan and (max_chan_id := max_chan.channel_id):
         channel = kronicle_setup.get_channel(max_chan_id)
         assert channel is not None
         rows = kronicle_setup.get_rows_for_channel(max_chan_id)

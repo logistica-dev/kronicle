@@ -309,74 +309,8 @@
               "format": "uuid",
               "title": "Channel Id"
             }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "integer",
-                  "maximum": 500,
-                  "minimum": 1
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "default": 100,
-              "title": "Limit"
-            }
-          },
-          {
-            "name": "offset",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "integer",
-                  "maximum": 10000,
-                  "minimum": 0
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Offset"
-            }
-          },
-          {
-            "name": "skip_received",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": true,
-              "title": "Skip Received"
-            }
-          },
-          {
-            "name": "strict",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": false,
-              "title": "Strict"
-            }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Body_fetch_channel_rows_api_v1_channels__channel_id__rows_get"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -424,74 +358,8 @@
               "format": "uuid",
               "title": "Channel Id"
             }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "integer",
-                  "maximum": 500,
-                  "minimum": 1
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "default": 100,
-              "title": "Limit"
-            }
-          },
-          {
-            "name": "offset",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "integer",
-                  "maximum": 10000,
-                  "minimum": 0
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Offset"
-            }
-          },
-          {
-            "name": "skip_received",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": true,
-              "title": "Skip Received"
-            }
-          },
-          {
-            "name": "strict",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": false,
-              "title": "Strict"
-            }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Body_fetch_channel_columns_api_v1_channels__channel_id__columns_get"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -743,74 +611,8 @@
               "format": "uuid",
               "title": "Channel Id"
             }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "integer",
-                  "maximum": 500,
-                  "minimum": 1
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "default": 100,
-              "title": "Limit"
-            }
-          },
-          {
-            "name": "offset",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "integer",
-                  "maximum": 10000,
-                  "minimum": 0
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Offset"
-            }
-          },
-          {
-            "name": "skip_received",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": true,
-              "title": "Skip Received"
-            }
-          },
-          {
-            "name": "strict",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": false,
-              "title": "Strict"
-            }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Body_fetch_channel_rows_data_v1_channels__channel_id__rows_get"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -927,74 +729,8 @@
               "format": "uuid",
               "title": "Channel Id"
             }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "integer",
-                  "maximum": 500,
-                  "minimum": 1
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "default": 100,
-              "title": "Limit"
-            }
-          },
-          {
-            "name": "offset",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "integer",
-                  "maximum": 10000,
-                  "minimum": 0
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Offset"
-            }
-          },
-          {
-            "name": "skip_received",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": true,
-              "title": "Skip Received"
-            }
-          },
-          {
-            "name": "strict",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": false,
-              "title": "Strict"
-            }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Body_fetch_channel_columns_data_v1_channels__channel_id__columns_get"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -1369,74 +1105,8 @@
               "format": "uuid",
               "title": "Channel Id"
             }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "integer",
-                  "maximum": 500,
-                  "minimum": 1
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "default": 100,
-              "title": "Limit"
-            }
-          },
-          {
-            "name": "offset",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "integer",
-                  "maximum": 10000,
-                  "minimum": 0
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Offset"
-            }
-          },
-          {
-            "name": "skip_received",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": true,
-              "title": "Skip Received"
-            }
-          },
-          {
-            "name": "strict",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": false,
-              "title": "Strict"
-            }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Body_fetch_channel_rows_setup_v1_channels__channel_id__rows_get"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -1594,7 +1264,14 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "boolean",
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
               "default": true,
               "title": "Skip Received"
             }
@@ -1604,7 +1281,14 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "boolean",
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
               "default": false,
               "title": "Strict"
             }
@@ -1666,74 +1350,8 @@
               "format": "uuid",
               "title": "Channel Id"
             }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "integer",
-                  "maximum": 500,
-                  "minimum": 1
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "default": 100,
-              "title": "Limit"
-            }
-          },
-          {
-            "name": "offset",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "integer",
-                  "maximum": 10000,
-                  "minimum": 0
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Offset"
-            }
-          },
-          {
-            "name": "skip_received",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": true,
-              "title": "Skip Received"
-            }
-          },
-          {
-            "name": "strict",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": false,
-              "title": "Strict"
-            }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Body_fetch_channel_columns_setup_v1_channels__channel_id__columns_get"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -2172,517 +1790,119 @@
             "title": "Columns"
           },
           "col": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Col"
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Col",
+            "default": {}
           },
           "min": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Min"
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min",
+            "default": {}
           },
           "max": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Max"
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max",
+            "default": {}
           },
           "any": {
-            "additionalProperties": {
-              "items": {
-                "type": "string"
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "type": "object"
               },
-              "type": "array"
-            },
-            "type": "object",
-            "title": "Any"
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Any",
+            "default": {}
           },
           "has": {
-            "additionalProperties": {
-              "items": {
-                "type": "string"
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "type": "object"
               },
-              "type": "array"
-            },
-            "type": "object",
-            "title": "Has"
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Has",
+            "default": {}
           }
         },
         "type": "object",
         "title": "Body_delete_channel_rows_setup_v1_channels__channel_id__rows_delete"
-      },
-      "Body_fetch_channel_columns_api_v1_channels__channel_id__columns_get": {
-        "properties": {
-          "sort": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sort"
-          },
-          "columns": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Columns"
-          },
-          "col": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Col"
-          },
-          "min": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Min"
-          },
-          "max": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Max"
-          },
-          "any": {
-            "additionalProperties": {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            "type": "object",
-            "title": "Any"
-          },
-          "has": {
-            "additionalProperties": {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            "type": "object",
-            "title": "Has"
-          }
-        },
-        "type": "object",
-        "title": "Body_fetch_channel_columns_api_v1_channels__channel_id__columns_get"
-      },
-      "Body_fetch_channel_columns_data_v1_channels__channel_id__columns_get": {
-        "properties": {
-          "sort": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sort"
-          },
-          "columns": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Columns"
-          },
-          "col": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Col"
-          },
-          "min": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Min"
-          },
-          "max": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Max"
-          },
-          "any": {
-            "additionalProperties": {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            "type": "object",
-            "title": "Any"
-          },
-          "has": {
-            "additionalProperties": {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            "type": "object",
-            "title": "Has"
-          }
-        },
-        "type": "object",
-        "title": "Body_fetch_channel_columns_data_v1_channels__channel_id__columns_get"
-      },
-      "Body_fetch_channel_columns_setup_v1_channels__channel_id__columns_get": {
-        "properties": {
-          "sort": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sort"
-          },
-          "columns": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Columns"
-          },
-          "col": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Col"
-          },
-          "min": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Min"
-          },
-          "max": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Max"
-          },
-          "any": {
-            "additionalProperties": {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            "type": "object",
-            "title": "Any"
-          },
-          "has": {
-            "additionalProperties": {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            "type": "object",
-            "title": "Has"
-          }
-        },
-        "type": "object",
-        "title": "Body_fetch_channel_columns_setup_v1_channels__channel_id__columns_get"
-      },
-      "Body_fetch_channel_rows_api_v1_channels__channel_id__rows_get": {
-        "properties": {
-          "sort": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sort"
-          },
-          "columns": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Columns"
-          },
-          "col": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Col"
-          },
-          "min": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Min"
-          },
-          "max": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Max"
-          },
-          "any": {
-            "additionalProperties": {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            "type": "object",
-            "title": "Any"
-          },
-          "has": {
-            "additionalProperties": {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            "type": "object",
-            "title": "Has"
-          }
-        },
-        "type": "object",
-        "title": "Body_fetch_channel_rows_api_v1_channels__channel_id__rows_get"
-      },
-      "Body_fetch_channel_rows_data_v1_channels__channel_id__rows_get": {
-        "properties": {
-          "sort": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sort"
-          },
-          "columns": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Columns"
-          },
-          "col": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Col"
-          },
-          "min": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Min"
-          },
-          "max": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Max"
-          },
-          "any": {
-            "additionalProperties": {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            "type": "object",
-            "title": "Any"
-          },
-          "has": {
-            "additionalProperties": {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            "type": "object",
-            "title": "Has"
-          }
-        },
-        "type": "object",
-        "title": "Body_fetch_channel_rows_data_v1_channels__channel_id__rows_get"
-      },
-      "Body_fetch_channel_rows_setup_v1_channels__channel_id__rows_get": {
-        "properties": {
-          "sort": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sort"
-          },
-          "columns": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Columns"
-          },
-          "col": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Col"
-          },
-          "min": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Min"
-          },
-          "max": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Max"
-          },
-          "any": {
-            "additionalProperties": {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            "type": "object",
-            "title": "Any"
-          },
-          "has": {
-            "additionalProperties": {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            "type": "object",
-            "title": "Has"
-          }
-        },
-        "type": "object",
-        "title": "Body_fetch_channel_rows_setup_v1_channels__channel_id__rows_get"
       },
       "ChannelSchema": {
         "properties": {
@@ -2828,7 +2048,7 @@
         "title": "InputPayload",
         "description": "User-provided payload for a channel.\nThe 'channel_schema' field is a dict of column_name -> type string.",
         "example": {
-          "channel_id": "1ffdaf3f-d8b9-45be-b145-f23bbc59c8be",
+          "channel_id": "7e7e5272-2042-4b6c-8586-7204b143552b",
           "channel_schema": {
             "humidity": "float",
             "temperature": "float",
@@ -2837,7 +2057,7 @@
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-e5b10",
+          "name": "thermo-1fc91",
           "rows": [
             {
               "humidity": 55.1,

@@ -6,6 +6,7 @@ import pytest
 from pytest import raises
 
 from kronicle.db.data.models.channel_timeseries import ChannelTimeseries
+from kronicle.db.data.query.row_fetch_context import RowFetchContext
 from kronicle.errors.error_types import BadRequestError, NotFoundError
 
 # --------------------------------------------------------------------------------------
@@ -256,7 +257,7 @@ async def test_fetch_success(ts, mock_conn):
 
     with patch.object(ts, "table_exists", new=AsyncMock(return_value=True)):
         mock_conn.fetch.return_value = [fake_row]
-        result = await ts.fetch(mock_conn, filter=RequestFilter())
+        result = await ts.fetch(mock_conn, context=RowFetchContext())
 
         assert result is ts
         assert len(ts.rows) == 1
