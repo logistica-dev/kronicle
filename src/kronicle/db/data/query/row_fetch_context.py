@@ -40,7 +40,7 @@ class RowFetchContext(BaseModel):
     """
 
     column_types: dict[str, SchemaType]
-    req_filters: RowRequestFilter | None = None
+    in_filters: RowRequestFilter | None = None
 
     _filter_map: dict[str, type[ColumnFilter]] = {
         "col": ExactFilter,
@@ -55,6 +55,8 @@ class RowFetchContext(BaseModel):
     _filters: list[ColumnFilter] = PrivateAttr(default_factory=list)
     _sort: list[OrderBy] = PrivateAttr(default_factory=list)
 
+    _default_sort = OrderBy.factory(col_type=SchemaType("datetime"), col_name="received_at", desc=True)
+
     def model_post_init(self, __context: Any) -> None:
         here = "model_post_init"
         with log_block(here, "resolving filters"):
@@ -67,9 +69,9 @@ class RowFetchContext(BaseModel):
 
     @property
     def filters(self) -> RowRequestFilter:
-        if self.req_filters is None:
-            self.req_filters = RowRequestFilter()
-        return self.req_filters
+        if self.in_filters is None:
+            self.in_filters = RowRequestFilter()
+        return self.in_filters
 
     @property
     def limit(self) -> int | None:
@@ -85,8 +87,9 @@ class RowFetchContext(BaseModel):
         return self._feedback
 
     def _resolve_filters(self):
+        here = "resolve_filter"
         for attr, ColFilter in self._filter_map.items():
-            values = getattr(self.req_filters, attr)
+            values = getattr(self.in_filters, attr)
             for col, val in values.items():
                 try:
                     col_name, *subkeys = split_strip(col, ".", normalize_name)
@@ -101,19 +104,14 @@ class RowFetchContext(BaseModel):
                     self._filters.append(col_filter)
                 except ValueError as e:
                     self._feedback.add_detail("Incorrect filter", f"request.{attr}", f"{col}={val}", extra=str(e))
+        log_d(here, "_filters", self._filters)
 
     def _resolve_sort(self):
         here = "_resolve_sort"
         sort_cols = self.filters.sort
         if not sort_cols or not isinstance(sort_cols, list):
             # Default sort: -received_at
-            self._sort.append(
-                OrderBy.factory(
-                    col_type=self.column_types["received_at"],
-                    col_name="received_at",
-                    desc=True,
-                )
-            )
+            self._sort.append(self._default_sort)
             return
 
         for col in sort_cols:
@@ -191,6 +189,6 @@ if __name__ == "__main__":  # pragma: no cover
         "author": SchemaType("dict"),
         "time": SchemaType("datetime"),
     }
-    ctx = RowFetchContext(req_filters=f, column_types=column_types)
+    ctx = RowFetchContext(in_filters=f, column_types=column_types)
     sql, params = ctx.to_sql()
     log_d(here, sql, params)

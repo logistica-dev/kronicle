@@ -5,10 +5,12 @@ from json import dump
 from pathlib import Path
 from traceback import extract_tb
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi import HTTPException as FastApiHttpException
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from pydantic import ValidationError
 from sqlalchemy.orm import configure_mappers
 from starlette.exceptions import HTTPException as StarletteHttpException
 
@@ -32,11 +34,12 @@ from kronicle.errors.exception_handlers import (
     app_error_adapter,
     fastapi_exception_adapter,
     generic_exception_handler,
+    pydantic_exception_adapter,
 )
 from kronicle.logging.log_bus.mid_sanitize import RequestSanitizerMiddleware
 from kronicle.services.channel_service import ChannelService
 from kronicle.services.rbac_service import RbacService
-from kronicle.utils.dev_logs import log_block, log_d, log_e, request_logger, setup_logging
+from kronicle.utils.dev_logs import log_block, log_d, log_e, log_w, request_logger, setup_logging
 
 mod = "main"
 
@@ -232,7 +235,11 @@ class KronicleApp:
             here = "catch_all_exc"
             try:
                 return await call_next(request)
+            except (HTTPException, KronicleAppError, ValidationError) as exc:
+                log_w(here, exc)
+                raise exc
             except Exception as exc:
+                log_e(here, type(exc).__name__)
                 # Filter out .venv lines
 
                 tb = extract_tb(exc.__traceback__)
@@ -259,6 +266,8 @@ class KronicleApp:
         self.app.add_exception_handler(KronicleAppError, app_error_adapter)
         self.app.add_exception_handler(StarletteHttpException, fastapi_exception_adapter)
         self.app.add_exception_handler(FastApiHttpException, fastapi_exception_adapter)
+        self.app.add_exception_handler(RequestValidationError, pydantic_exception_adapter)
+        self.app.add_exception_handler(ValidationError, pydantic_exception_adapter)
         self.app.add_exception_handler(Exception, generic_exception_handler)
 
     def generate_doc(self):

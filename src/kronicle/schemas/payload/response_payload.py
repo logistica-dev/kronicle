@@ -1,4 +1,4 @@
-# kronicle/schemas/payload/output_payload.py
+# kronicle/schemas/payload/response_payload.py
 from __future__ import annotations
 
 from typing import Any

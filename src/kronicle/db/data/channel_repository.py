@@ -12,7 +12,6 @@ from kronicle.db.data.query.row_fetch_context import RowFetchContext
 from kronicle.errors.error_types import BadRequestError, ConflictError, NotFoundError
 from kronicle.schemas.filters.row_request_filter import RowRequestFilter
 from kronicle.schemas.payload.processed_payload import ProcessedPayload
-from kronicle.types.tag_type import TagType
 from kronicle.utils.dev_logs import log_d, log_e
 
 
@@ -137,8 +136,6 @@ class ChannelRepository:
         """
         Append rows to an existing channel
         """
-        here = "insert_rows"
-        log_d(here)
         if not processed.rows:
             raise BadRequestError("The payload contains no row to insert")
         channel = ChannelResource.from_processed(processed)
@@ -189,7 +186,7 @@ class ChannelRepository:
             channel = await self._fetch_metadata(db, channel_id)
             if not channel.row_nb:
                 raise NotFoundError("No rows found for channel", details={"channel_id": channel_id})
-            row_filter = RowFetchContext(column_types=channel.column_types, req_filters=filter or RowRequestFilter())
+            row_filter = RowFetchContext(column_types=channel.column_types, in_filters=filter or RowRequestFilter())
             return await channel.fetch_rows(db, context=row_filter)
 
     async def delete_rows(self, channel_id: UUID, *, filter: RowRequestFilter | None = None):
@@ -197,7 +194,7 @@ class ChannelRepository:
             channel = await self._fetch_metadata(db, channel_id)
             if not channel.row_nb:
                 raise NotFoundError("No rows found for channel", details={"channel_id": channel_id})
-            row_filter = RowFetchContext(column_types=channel.column_types, req_filters=filter or RowRequestFilter())
+            row_filter = RowFetchContext(column_types=channel.column_types, in_filters=filter or RowRequestFilter())
             return await channel.delete_rows(db, context=row_filter)
 
     # ----------------------------------------------------------------------------------------------
@@ -208,6 +205,12 @@ class ChannelRepository:
         async with self._db.transaction() as db:
             channel: ChannelResource = await ChannelResource.fetch(db, channel_id)
         return channel
+
+    async def fetch_channel_rows(self, channel_id: UUID, *, filter: RowRequestFilter | None = None) -> ChannelResource:
+        async with self._db.transaction() as db:
+            channel: ChannelResource = await ChannelResource.fetch(db, channel_id)
+            row_filter = RowFetchContext(column_types=channel.column_types, in_filters=filter or RowRequestFilter())
+            return await channel.fetch_rows(db, context=row_filter)
 
     async def create_channel(self, processed: ProcessedPayload) -> ChannelResource:
         """

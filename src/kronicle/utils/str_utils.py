@@ -144,10 +144,10 @@ def extract_tags(tags: list[str]) -> dict[str, str]:
     Input: list of "key:value" strings
     Simple "key" will be parsed as "key":True
     """
-    tag_dict: dict[str, TagType] = {}
+    tag_dict: dict[str, str] = {}
     for t in tags:
         if ":" not in t:
-            tag_dict[t] = True
+            tag_dict[t] = "True"
             continue
         key, value = t.split(":", 1)
         tag_dict[normalize_name(key)] = value

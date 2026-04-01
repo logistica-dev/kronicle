@@ -32,12 +32,13 @@ def test_writer_channels(kronicle_writer):
     for channel in all_channels:
         assert isinstance(channel, KroniclePayload)
 
-    max_chan_id, max_available_rows = kronicle_writer.get_channel_with_max_rows()
-    log_d(here, "max chan id", max_chan_id, "->", max_available_rows, "rows")
-    if max_available_rows:
+    max_chan = kronicle_writer.get_channel_with_max_rows()
+    if max_chan and (max_chan_id := max_chan.channel_id):
+        max_available_rows = max_chan.available_rows
+        log_d(here, "max chan id", max_chan_id, "->", max_available_rows, "rows")
         channel = kronicle_writer.get_channel(max_chan_id)
         log_d(here, "channel with max rows", channel)
-        rows: list = kronicle_writer.get_rows_for_channel(max_chan_id, "list")
+        rows = kronicle_writer.get_rows_for_channel(max_chan_id, "list")
         assert isinstance(rows, list)
         for row in rows:
             assert isinstance(row, dict)

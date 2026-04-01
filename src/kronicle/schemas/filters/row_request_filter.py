@@ -19,17 +19,25 @@ class RowRequestFilter(BaseModel):
 
     # Column selection
     columns: list[str] | None = Field(default=None, description="Comma-separated list of columns to return")
-    skip_received: bool = Field(default=True, description="False to display data reception date")
+    skip_received: bool | None = Field(default=True, description="False to display data reception date")
 
     # Row filters
-    col: dict[str, str] = Field(default_factory=dict, description="Exact match filters: ?col[author.name]=Herbert")
-    min: dict[str, str] = Field(default_factory=dict, description="Minimum value filters: ?min[time]=2026-03-20")
-    max: dict[str, str] = Field(default_factory=dict, description="Maximum value filters: ?max[time]=2026-03-21")
-    any: dict[str, list[str]] = Field(default_factory=dict, description="Multi-value filters: ?any[tags]=room1,room2")
-    has: dict[str, list[str]] = Field(default_factory=dict, description="Multi-value filters: ?any[tags]=room1,room2")
+    col: dict[str, str] | None = Field(
+        default_factory=dict, description="Exact match filters: ?col[author.name]=Herbert"
+    )
+    min: dict[str, str] | None = Field(default_factory=dict, description="Minimum value filters: ?min[time]=2026-03-20")
+    max: dict[str, str] | None = Field(default_factory=dict, description="Maximum value filters: ?max[time]=2026-03-21")
+    any: dict[str, list[str]] | None = Field(
+        default_factory=dict, description="Multi-value filters: ?any[tags]=room1,room2"
+    )
+    has: dict[str, list[str]] | None = Field(
+        default_factory=dict, description="Multi-value filters: ?any[tags]=room1,room2"
+    )
 
     # Strict mode and feedback
-    strict: bool = Field(default=DEFAULT_STRICT_MODE, description="Raise errors if true, otherwise accumulate warnings")
+    strict: bool | None = Field(
+        default=DEFAULT_STRICT_MODE, description="Raise errors if true, otherwise accumulate warnings"
+    )
     _feedback: OpFeedback = PrivateAttr(default_factory=OpFeedback)
 
     @property

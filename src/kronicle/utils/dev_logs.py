@@ -174,7 +174,10 @@ def format_input(here: str, *args, **kwargs) -> str:
     """Format log content and escape brackets for Rich."""
     parts = []
     if args:
-        parts.append(" ".join(str(a) for a in args))
+        if len(args) > 1:
+            parts.append(f"{args[0]}: {' '.join(str(a) for a in args[1:])}")
+        else:
+            parts.append(" ".join([str(a) for a in args]))
     if kwargs:
         parts.append(" ".join(f"{k}={v}" for k, v in kwargs.items()))
 

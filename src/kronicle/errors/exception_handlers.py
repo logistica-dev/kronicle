@@ -1,9 +1,10 @@
 # kronicle/errors/exception_handlers.py
-import traceback
 
 from fastapi import HTTPException as FastApiHttpException
 from fastapi import Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from pydantic import ValidationError
 from starlette.exceptions import HTTPException as StarletteHttpException
 
 from kronicle.errors.error_types import KronicleAppError, KronicleHTTPErrorPayload, new_request_id
@@ -49,10 +50,7 @@ def app_error_adapter(request: Request, exc: Exception) -> JSONResponse:
     )
 
 
-def fastapi_exception_handler(
-    request: Request,
-    exc: FastApiHttpException | StarletteHttpException,
-) -> JSONResponse:
+def fastapi_exception_handler(request: Request, exc: FastApiHttpException | StarletteHttpException) -> JSONResponse:
     """
     Handle FastAPI / Starlette HTTPException.
     Logs warnings and returns a standardized JSON payload.
@@ -88,6 +86,39 @@ def fastapi_exception_adapter(request: Request, exc: Exception) -> JSONResponse:
     )
 
 
+def pydantic_exception_handler(request: Request, exc: RequestValidationError | ValidationError) -> JSONResponse:
+    """
+    Handle Pydantic / FastAPI validation errors.
+    Logs details and returns a proper 422 response.
+    """
+    here = "pydantic_exc"
+    log_e(here, f"Validation error at {request.method} {request.url.path}: {exc.errors()}")
+    if isinstance(exc, RequestValidationError):
+        return KronicleHTTPErrorPayload.from_pydantic_validation(request=request, exc=exc).to_error_json()
+    if isinstance(exc, ValidationError):
+        return KronicleHTTPErrorPayload.from_pydantic_core_validation(request=request, exc=exc).to_error_json()
+
+
+def pydantic_exception_adapter(request: Request, exc: Exception) -> JSONResponse:
+    """
+    Adapter to register with FastAPI's add_exception_handler.
+    Routes exceptions to fastapi_exception_handler if they are HTTPExceptions,
+    otherwise falls back to the generic handler.
+
+    Args:
+        request: FastAPI request object
+        exc: Exception instance
+
+    Returns:
+        JSONResponse produced by appropriate handler
+    """
+    return (
+        pydantic_exception_handler(request, exc)
+        if isinstance(exc, (RequestValidationError, ValidationError))
+        else generic_exception_handler(request, exc)
+    )
+
+
 def generic_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """
     Catch-all handler for unexpected exceptions.
@@ -100,9 +131,11 @@ def generic_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     Returns:
         JSONResponse with status=500 and generic InternalServerError info
     """
+    here = "Unhandled exception"
+    log_e(here, type(exc).__name__)
     request_id = getattr(request.state, "request_id", new_request_id())
-    log_e(f"Unhandled exception '{request_id}' at {request.method} {request.url.path}: {exc}")
-    log_e(traceback.format_exc())
+    log_e(here, request_id, f"{request.method} {request.url.path}: {exc}")
+    # log_e(traceback.format_exc())
 
     return KronicleHTTPErrorPayload.from_exception(
         request=request,

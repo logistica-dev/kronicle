@@ -1,10 +1,13 @@
 # kronicle/errors/error_types.py
+from __future__ import annotations
+
 from typing import Any
 
 from fastapi import HTTPException, Request, status
 from fastapi import HTTPException as FastApiHttpException
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 from starlette.exceptions import HTTPException as StarletteHttpException
 
 from kronicle.utils.str_utils import uuid4_str
@@ -39,7 +42,7 @@ class KronicleHTTPErrorPayload(BaseModel):
     request_id: str
 
     @classmethod
-    def from_app_exception(cls, exc: "KronicleAppError", request: Request) -> "KronicleHTTPErrorPayload":
+    def from_app_exception(cls, exc: KronicleAppError, request: Request) -> KronicleHTTPErrorPayload:
         """
         Convert a KronicleAppError into the full HTTP error model including request context.
         """
@@ -59,7 +62,7 @@ class KronicleHTTPErrorPayload(BaseModel):
         cls,
         request: Request,
         exc: FastApiHttpException | StarletteHttpException,
-    ) -> "KronicleHTTPErrorPayload":
+    ) -> KronicleHTTPErrorPayload:
         """
         Build a standardized error payload from a FastAPI or Starlette HTTPException.
 
@@ -81,6 +84,91 @@ class KronicleHTTPErrorPayload(BaseModel):
         )
 
     @classmethod
+    def from_pydantic_core_validation(
+        cls,
+        request: Request,
+        exc: ValidationError,
+        status: int = 422,
+        error: str = "ValidationError",
+        message: str = "Request validation failed",
+    ) -> KronicleHTTPErrorPayload:
+        """
+        Build a KronicleHTTPErrorPayload from a pydantic_core.ValidationError (Pydantic v2).
+
+        Args:
+            request: FastAPI request object
+            exc: pydantic_core.ValidationError instance
+            status: HTTP status code (default 422)
+            error: Short error string (default "ValidationError")
+            message: Human-readable message (default "Request validation failed")
+
+        Returns:
+            KronicleHTTPErrorPayload instance
+        """
+        request_id = getattr(request.state, "request_id", new_request_id())
+
+        # exc.errors() returns a list of dicts with 'type', 'loc', 'msg'
+        details: dict[str, Any] = {}
+        for err in exc.errors():
+            loc = ".".join(str(l) for l in err.get("loc", [])) or "unknown"
+            msg = err.get("msg", "")
+            typ = err.get("type", "")
+            details[loc] = {"message": msg, "type": typ}
+
+        return cls(
+            status=status,
+            error=error,
+            message=message,
+            details=details,
+            path=request.url.path,
+            method=request.method.upper() if isinstance(request.method, str) else request.method,
+            request_id=request_id,
+        )
+
+    @classmethod
+    def from_pydantic_validation(
+        cls,
+        request: Request,
+        exc: RequestValidationError,
+        status: int = 422,
+        error: str = "ValidationError",
+        message: str = "Request validation failed",
+    ) -> KronicleHTTPErrorPayload:
+        """
+        Build a KronicleHTTPErrorPayload from a Pydantic validation error.
+
+        Args:
+            request: FastAPI request object
+            exc: RequestValidationError instance
+            status: HTTP status code (default 422)
+            error: Short error string (default "ValidationError")
+            message: Human-readable message (default "Request validation failed")
+
+        Returns:
+            KronicleHTTPErrorPayload instance
+        """
+        request_id = getattr(request.state, "request_id", new_request_id())
+        details: dict[str, list[dict[str, str]]] = {}
+
+        # Convert exc.errors() list into a dict of field -> error messages
+
+        for err in exc.errors():
+            loc = ".".join(str(l) for l in err.get("loc", [])) or "unknown"
+            msg = err.get("msg", "")
+            typ = err.get("type", "")
+            details.setdefault(loc, []).append({"message": msg, "type": typ})
+
+        return cls(
+            status=status,
+            error=error,
+            message=message,
+            details=details,
+            path=request.url.path,
+            method=request.method.upper() if isinstance(request.method, str) else request.method,
+            request_id=request_id,
+        )
+
+    @classmethod
     def from_exception(
         cls,
         *,
@@ -90,7 +178,7 @@ class KronicleHTTPErrorPayload(BaseModel):
         error: str | None = None,
         message: str | None = None,
         details: dict[str, Any] | None = None,
-    ) -> "KronicleHTTPErrorPayload":
+    ) -> KronicleHTTPErrorPayload:
         """
         Create a KronicleHTTPErrorPayload from an exception and request.
 
