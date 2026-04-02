@@ -28,7 +28,7 @@ from kronicle.auth.pwd.pwd_policy import PasswordPolicy
 from kronicle.db.data.channel_db_session import ChannelDbSession
 from kronicle.db.data.channel_repository import ChannelRepository
 from kronicle.db.rbac.rbac_db_session import RbacDbSession
-from kronicle.deps.settings import Settings
+from kronicle.deps.settings import KronicleSettings
 from kronicle.errors.error_types import KronicleAppError, KronicleHTTPErrorPayload
 from kronicle.errors.exception_handlers import (
     app_error_adapter,
@@ -45,7 +45,7 @@ mod = "main"
 
 
 class KronicleApp:
-    def __init__(self):
+    def __init__(self, conf: KronicleSettings):
         print("-------------------------------------------------------------------------------------------------------")
         here = "init"
         # Setup logging
@@ -53,7 +53,7 @@ class KronicleApp:
 
         # Retrieving the configuration settings
         with log_block(here, "Configuration"):
-            self.conf = Settings()
+            self.conf = conf
         app_conf = self.conf.app
         auth_conf = self.conf.auth
         is_dev = not self.conf.is_prod_env
@@ -131,26 +131,26 @@ class KronicleApp:
         with log_block(here, "Channel DB"):
             channel_db = ChannelDbSession(db_url=db_conf.channel_connection_url)
             await channel_db.init_async()
-            self.channel_db = channel_db
+            self.app.state.channel_db = channel_db
         with log_block(here, "Channel deps"):
             channel_repository = ChannelRepository(channel_db)
-            app.state.channel_service = ChannelService(channel_repository)
+            self.app.state.channel_service = ChannelService(channel_repository)
 
         # --- RBAC DB ---
         with log_block(here, "RBAC session manager"):
-            self.rbac_db = RbacDbSession(db_url=db_conf.rbac_connection_url, echo=False)
+            self.app.state.rbac_db = RbacDbSession(db_url=db_conf.rbac_connection_url, echo=False)
         with log_block(here, "RBAC mappers"):
             configure_mappers()
         with log_block(here, "RBAC tables validation"):
-            self.rbac_db.validate_tables()  # Add all RBAC models here
+            self.app.state.rbac_db.validate_tables()  # Add all RBAC models here
 
         with log_block(here, "RBAC service"):
-            rbac_service = RbacService(self.rbac_db)
-            app.state.rbac_service = rbac_service
+            rbac_service = RbacService(self.app.state.rbac_db)
+            self.app.state.rbac_service = rbac_service
 
         # --- Auth service ---
         with log_block(here, "AuthService"):
-            app.state.auth_service = AuthService(self.jwt_service, rbac_service)
+            self.app.state.auth_service = AuthService(self.jwt_service, rbac_service)
 
         # ----- Start background consumer tasks
         # setup_task = asyncio.create_task(consume_setup_logs())
@@ -167,9 +167,9 @@ class KronicleApp:
 
         # ----- Cleanup on shutdown
         with log_block(here, "Channel DB shutdown"):
-            await self.channel_db.close()
+            await self.app.state.channel_db.close()
         with log_block(here, "RBAC DB shutdown"):
-            self.rbac_db.close()
+            self.app.state.rbac_db.close()
 
         # Cancel background tasks if they were started
         # for task in [setup_task, data_task, api_task]:
@@ -300,4 +300,6 @@ class KronicleApp:
 
 
 # Create the application and expose an app to uvicorn
-app = KronicleApp().app
+def create_app() -> FastAPI:
+    conf = KronicleSettings()
+    return KronicleApp(conf).app
