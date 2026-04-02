@@ -6,6 +6,7 @@ from os import getenv
 from pathlib import Path
 from sys import base_prefix, prefix
 from time import time
+from unittest.mock import MagicMock
 
 from rich.console import Console
 from rich.logging import RichHandler
@@ -35,6 +36,8 @@ LEVEL_SHORT = {
 
 HERE_LEN = 15
 LOG_LINE_LEN = 140
+
+_logging_initialized = False
 
 
 class OneLetterRichHandler(RichHandler):
@@ -113,6 +116,11 @@ request_logger = getLogger("kronicle_request_logger")
 
 def setup_logging():
     """Initialize application logging with RichHandler."""
+    global _logging_initialized
+
+    if _logging_initialized:
+        return
+
     # Clear root handlers
     root_logger = getLogger()
     root_logger.handlers.clear()
@@ -166,6 +174,13 @@ def setup_logging():
     syslog.addHandler(syslog_handler)
     syslog.setLevel(DEBUG)
 
+    _logging_initialized = True
+
+
+def _ensure_logging():
+    if not _logging_initialized:
+        setup_logging()
+
 
 # ------------------------------------------------------
 # Utility functions
@@ -189,6 +204,7 @@ def format_input(here: str, *args, **kwargs) -> str:
 
 def _log(level_func, color: str, here: str, *args, stacklevel=2, **kwargs):
     """Internal helper to log colored messages according to LOG_LEVEL."""
+    _ensure_logging()
     msg = format_input(here, *args, **kwargs)
     level_func(f"[{color}]{msg}[/{color}]", stacklevel=stacklevel)
 
@@ -261,10 +277,20 @@ def log_block(here, message):
 # Example usage
 # ------------------------------------------------------
 if __name__ == "__main__":  # pragma: no cover
-    setup_logging()
+    here = "Log"
     log_d("Test log")
     log_d("Log", "Test")
     log_d("Log", "Main", "test")
     log_i("Log", "Main", "info")
     log_w("Log", "Main", "warn")
     log_e("Log", "Main", "error")
+    formatter = SingleLetterFormatter("%(levelname)s")
+
+    record = MagicMock()
+    record.levelno = 20  # INFO
+    record.levelname = "INFO"
+
+    output = formatter.format(record)
+    log_d(here, "output", output)
+
+    assert "I" in output  # INFO -> I

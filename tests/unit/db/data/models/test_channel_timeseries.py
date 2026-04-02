@@ -1,4 +1,4 @@
-# tests/db/data/models/test_channel_timeseries.py
+# tests/unit/db/data/models/test_channel_timeseries.py
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -49,6 +49,13 @@ def mock_conn():
     conn.fetch = AsyncMock()
     conn.execute = AsyncMock()
     return conn
+
+
+@pytest.fixture
+def mock_context():
+    ctx = MagicMock(spec=RowFetchContext)
+    ctx.to_sql.return_value = ("", [])
+    return ctx
 
 
 # --------------------------------------------------------------------------------------
@@ -239,15 +246,15 @@ async def test_ensure_table_skips_when_exists(ts, mock_conn):
 
 
 @pytest.mark.asyncio
-async def test_fetch_table_missing_returns_empty(ts, mock_conn):
+async def test_fetch_table_missing_returns_empty(ts, mock_conn, mock_context):
     with patch.object(ts, "table_exists", new=AsyncMock(return_value=False)):
-        result = await ts.fetch(mock_conn)
+        result = await ts.fetch(mock_conn, context=mock_context)
         assert result is ts
         assert len(ts.rows) == 0
 
 
 @pytest.mark.asyncio
-async def test_fetch_success(ts, mock_conn):
+async def test_fetch_success(ts, mock_conn, mock_context):
     fake_row = {
         "time": "t1",
         "temperature": 10,
@@ -257,7 +264,7 @@ async def test_fetch_success(ts, mock_conn):
 
     with patch.object(ts, "table_exists", new=AsyncMock(return_value=True)):
         mock_conn.fetch.return_value = [fake_row]
-        result = await ts.fetch(mock_conn, context=RowFetchContext())
+        result = await ts.fetch(mock_conn, context=mock_context)
 
         assert result is ts
         assert len(ts.rows) == 1
@@ -316,14 +323,14 @@ async def test_insert_strict_failure(ts, mock_conn):
 
 
 @pytest.mark.asyncio
-async def test_delete_table_missing_raises(ts, mock_conn):
+async def test_delete_table_missing_raises(ts, mock_conn, mock_context):
     with patch.object(ts, "table_exists", new=AsyncMock(return_value=False)):
         with raises(NotFoundError):
-            await ts.delete(mock_conn)
+            await ts.delete(mock_conn, context=mock_context)
 
 
 @pytest.mark.asyncio
-async def test_delete_success(ts, mock_conn):
+async def test_delete_success(ts, mock_conn, mock_context):
     fake_row = {
         "time": "t1",
         "temperature": 10,
@@ -333,7 +340,7 @@ async def test_delete_success(ts, mock_conn):
 
     with patch.object(ts, "table_exists", new=AsyncMock(return_value=True)):
         mock_conn.fetch.return_value = [fake_row]
-        result = await ts.delete(mock_conn)
+        result = await ts.delete(mock_conn, context=mock_context)
 
         assert result is ts
         assert len(ts.rows) == 1

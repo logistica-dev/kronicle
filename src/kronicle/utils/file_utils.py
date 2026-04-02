@@ -1,3 +1,4 @@
+# kronicle/utils/file_utils.py
 from configparser import ConfigParser, ExtendedInterpolation
 from hashlib import md5, sha256, sha512
 from json import dump, load

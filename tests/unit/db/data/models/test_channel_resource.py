@@ -1,4 +1,4 @@
-# tests/db/data/models/test_channel_resource.py
+# tests/unit/db/data/models/test_channel_resource.py
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -8,6 +8,7 @@ from pytest import raises
 from kronicle.db.data.models.channel_metadata import ChannelMetadata
 from kronicle.db.data.models.channel_resource import ChannelResource
 from kronicle.db.data.models.channel_timeseries import ChannelTimeseries
+from kronicle.db.data.query.row_fetch_context import RowFetchContext
 from kronicle.errors.error_types import (
     BadRequestError,
     NotFoundError,
@@ -26,8 +27,7 @@ def mock_metadata():
     m.channel_id = uuid4()
     m.channel_schema = MagicMock()
     m.table_exists = AsyncMock(return_value=True)
-    m.create = AsyncMock()
-    m.exists = AsyncMock(return_value=False)
+    m.delete = AsyncMock(return_value=True)
     return m
 
 
@@ -43,6 +43,9 @@ def mock_timeseries(mock_metadata):
     ts.ensure_table = AsyncMock()
     ts.fetch = AsyncMock()
     ts.insert = AsyncMock()
+    ts.count_rows = AsyncMock(return_value=1)
+    ts.delete = AsyncMock()
+    ts.drop = AsyncMock()
     ts.op_feedback = OpFeedback()
     return ts
 
@@ -50,19 +53,19 @@ def mock_timeseries(mock_metadata):
 @pytest.fixture
 def mock_payload():
     p = MagicMock(spec=ProcessedPayload)
-    p.channel_id = str(uuid4())
-    p.channel_schema = MagicMock()
-    p.name = "My Channel"
-    p.metadata = {"a": 1}
-    p.tags = {"b": 2}
     p.rows = [{"time": "2024-01-01T00:00:00Z", "value": 1}]
-    p.op_feedback = OpFeedback()  # ← ADD THIS
+    p.op_feedback = OpFeedback()
     return p
 
 
 @pytest.fixture
 def mock_conn():
     return AsyncMock()
+
+
+@pytest.fixture
+def mock_context():
+    return MagicMock(spec=RowFetchContext)
 
 
 # --------------------------------------------------------------------------------------
@@ -124,10 +127,7 @@ def test_from_processed_strict_propagation(mock_payload):
             ts_instance = MagicMock()
             ts_cls.return_value = ts_instance
 
-            ChannelResource.from_processed(
-                mock_payload,
-                strict=True,
-            )
+            ChannelResource.from_processed(mock_payload, strict=True)
 
             ts_instance.add_rows.assert_called_once_with(
                 mock_payload.rows,
@@ -180,6 +180,19 @@ async def test_fetch_metadata_not_found(mock_conn):
             await ChannelResource._fetch_metadata(mock_conn, uuid4())
 
 
+@pytest.mark.asyncio
+async def test_fetch_metadata_success(mock_conn):
+    fake_meta = MagicMock(spec=ChannelMetadata)
+    fake_meta.channel_id = uuid4()
+    fake_meta.channel_schema = MagicMock()
+
+    with patch.object(ChannelMetadata, "fetch_by_id", new=AsyncMock(return_value=fake_meta)):
+        with patch.object(ChannelResource, "count_rows", new=AsyncMock()):
+            resource = await ChannelResource._fetch_metadata(mock_conn, fake_meta.channel_id)
+
+            assert isinstance(resource, ChannelResource)
+
+
 # --------------------------------------------------------------------------------------
 # Timeseries DB access
 # --------------------------------------------------------------------------------------
@@ -193,44 +206,80 @@ async def test_insert_rows(mock_metadata, mock_timeseries, mock_conn):
 
     mock_timeseries.ensure_table.assert_called_once()
     mock_timeseries.insert.assert_called_once()
+    mock_timeseries.count_rows.assert_called_once()
 
 
 @pytest.mark.asyncio
-async def test_fetch_rows(mock_metadata, mock_timeseries, mock_conn):
+async def test_fetch_rows(mock_metadata, mock_timeseries, mock_conn, mock_context):
     resource = ChannelResource(mock_metadata, mock_timeseries)
 
-    result = await resource.fetch_rows(mock_conn)
+    result = await resource.fetch_rows(mock_conn, context=mock_context)
 
-    mock_timeseries.fetch.assert_called_once()
+    mock_timeseries.count_rows.assert_called_once()
+    mock_timeseries.fetch.assert_called_once_with(mock_conn, context=mock_context)
     assert result is resource
+
+
+@pytest.mark.asyncio
+async def test_delete_rows(mock_metadata, mock_timeseries, mock_conn, mock_context):
+    resource = ChannelResource(mock_metadata, mock_timeseries)
+
+    await resource.delete_rows(mock_conn, context=mock_context)
+
+    mock_timeseries.delete.assert_called_once()
+    mock_timeseries.count_rows.assert_called_once()
 
 
 # --------------------------------------------------------------------------------------
 # fetch()
 # --------------------------------------------------------------------------------------
+
+
 @pytest.mark.asyncio
-async def test_fetch_success(mock_conn):
-    fake_meta = MagicMock(spec=ChannelMetadata)
-    fake_meta.channel_id = uuid4()
-    fake_meta.channel_schema = MagicMock()
+async def test_fetch_calls_fetch_metadata(mock_conn):
+    fake_resource = MagicMock(spec=ChannelResource)
 
-    resource = ChannelResource(fake_meta)
-    resource.row_nb = 1  # <-- must be truthy so fetch_rows is called
+    with patch.object(ChannelResource, "_fetch_metadata", new=AsyncMock(return_value=fake_resource)) as mock_fetch:
+        result = await ChannelResource.fetch(mock_conn, uuid4())
 
-    # create a mock for _fetch_metadata that returns your resource
-    resource.fetch_rows = AsyncMock(return_value=resource)
-    mock_fetch_meta = AsyncMock(return_value=resource)
+        mock_fetch.assert_awaited_once()
+        assert result is fake_resource
 
-    # patch _fetch_metadata
-    with patch.object(ChannelResource, "_fetch_metadata", mock_fetch_meta):
-        # patch fetch_rows on the resource returned by _fetch_metadata
-        result = await ChannelResource.fetch(mock_conn, fake_meta.channel_id)
 
-        # assert _fetch_metadata was awaited
-        mock_fetch_meta.assert_awaited_once_with(mock_conn, fake_meta.channel_id)
+# --------------------------------------------------------------------------------------
+# delete()
+# --------------------------------------------------------------------------------------
 
-        # assert fetch_rows was awaited
-        resource.fetch_rows.assert_awaited_once_with(mock_conn, filter=None)
 
-        # result is the resource instance
-        assert result is resource
+@pytest.mark.asyncio
+async def test_delete_success(mock_metadata, mock_timeseries, mock_conn):
+    resource = ChannelResource(mock_metadata, mock_timeseries)
+
+    result = await resource.delete(mock_conn)
+
+    mock_metadata.delete.assert_called_once()
+    mock_timeseries.drop.assert_called_once()
+    assert result
+    assert result.row_nb == 0
+
+
+@pytest.mark.asyncio
+async def test_delete_not_found(mock_metadata, mock_timeseries, mock_conn):
+    mock_metadata.delete.return_value = False
+    resource = ChannelResource(mock_metadata, mock_timeseries)
+
+    result = await resource.delete(mock_conn)
+
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_delete_channel_with_id(mock_conn):
+    fake_resource = MagicMock(spec=ChannelResource)
+    fake_resource.delete = AsyncMock(return_value="deleted")
+
+    with patch.object(ChannelResource, "_fetch_metadata", new=AsyncMock(return_value=fake_resource)):
+        result = await ChannelResource.delete_channel_with_id(mock_conn, uuid4())
+
+        fake_resource.delete.assert_awaited_once()
+        assert result == "deleted"

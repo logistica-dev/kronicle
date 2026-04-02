@@ -18,7 +18,7 @@ from kronicle.db.data.query.col_filters import (
 from kronicle.errors.error_types import BadRequestError
 from kronicle.schemas.filters.row_request_filter import RowRequestFilter
 from kronicle.schemas.payload.op_feedback import OpFeedback
-from kronicle.utils.dev_logs import log_block, log_d, log_w, setup_logging
+from kronicle.utils.dev_logs import log_block, log_d, log_w
 from kronicle.utils.str_utils import normalize_name, split_strip
 
 
@@ -170,7 +170,6 @@ class RowFetchContext(BaseModel):
 
 if __name__ == "__main__":  # pragma: no cover
     here = "row_fetch_context.tests"
-    setup_logging()
 
     f = RowRequestFilter(
         col={"status": "ok", "author.name": "Alice"},

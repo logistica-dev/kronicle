@@ -1778,6 +1778,9 @@
           "columns": {
             "anyOf": [
               {
+                "type": "string"
+              },
+              {
                 "items": {
                   "type": "string"
                 },
@@ -2048,7 +2051,7 @@
         "title": "InputPayload",
         "description": "User-provided payload for a channel.\nThe 'channel_schema' field is a dict of column_name -> type string.",
         "example": {
-          "channel_id": "7e7e5272-2042-4b6c-8586-7204b143552b",
+          "channel_id": "3527861f-5577-4801-909a-7fbc473e7c12",
           "channel_schema": {
             "humidity": "float",
             "temperature": "float",
@@ -2057,7 +2060,7 @@
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-1fc91",
+          "name": "thermo-b8f1d",
           "rows": [
             {
               "humidity": 55.1,

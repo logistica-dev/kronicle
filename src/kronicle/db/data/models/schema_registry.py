@@ -23,7 +23,7 @@ class SchemaTypeInfo:
         if self.canonical == "float" and isinstance(value, (int, float)):
             return float(value)
         if not isinstance(value, self.py_type):
-            raise TypeError(f"Expected {self.canonical}, got {Type(value).__name__}")
+            raise TypeError(f"Expected {self.canonical}, got {type(value).__name__}")
         return value
 
     @staticmethod
@@ -35,7 +35,7 @@ class SchemaTypeInfo:
                 return float(value)
             except ValueError as e:
                 raise ValueError(f"Cannot normalize type '{value}' to float") from e
-        raise ValueError(f"Cannot normalize type '{Type(value).__name__}' to float")
+        raise ValueError(f"Cannot normalize type '{type(value).__name__}' to float")
 
     def normalize_value(self, value: Any) -> Any:
         """
@@ -48,7 +48,7 @@ class SchemaTypeInfo:
         if self.canonical in {"dict", "list"}:
             if isinstance(value, (dict, list)):
                 return value
-            raise ValueError(f"Cannot normalize type '{Type(value).__name__}' to {self.canonical}")
+            raise ValueError(f"Cannot normalize type '{type(value).__name__}' to {self.canonical}")
 
         if self.canonical == "float":
             return normalize_float(value)
@@ -59,7 +59,7 @@ class SchemaTypeInfo:
         expected = self.py_type
         if isinstance(value, expected):
             return value
-        raise ValueError(f"Expected type {self.canonical}, got {Type(value).__name__}")
+        raise ValueError(f"Expected type {self.canonical}, got {type(value).__name__}")
 
     def __str__(self) -> str:
         return (
