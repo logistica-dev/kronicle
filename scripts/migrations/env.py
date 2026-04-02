@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from kronicle.db.rbac.models.rbac_entity import RbacEntity  # your declarative base
 
 # Import your app config
-from kronicle.deps.settings import Settings
+from kronicle.deps.settings import KronicleSettings
 
 # This is the Alembic Config object, which provides access to .ini values
 config = context.config
@@ -19,7 +19,7 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Read RBAC DB URL from your conf
-conf = Settings()
+conf = KronicleSettings()
 db_url = conf.rbac.connection_url
 
 # Set the SQLAlchemy URL dynamically

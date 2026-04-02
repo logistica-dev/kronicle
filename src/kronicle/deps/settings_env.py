@@ -1,13 +1,14 @@
-# kronicle/deps/env_var.py
-
+# src/kronicle/deps/settings_env.py
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from json import dumps
 from os import getenv
 from typing import Any
 
 from asyncpg import connect
+from pydantic import SecretStr
 
 from kronicle.utils.dev_logs import log_e, log_w
 from kronicle.utils.str_utils import decode_b64url, normalize_pg_identifier
@@ -103,8 +104,8 @@ class EnvUserCreds(UserCreds):
 
     @classmethod
     def from_env(cls, *args, **kwargs):
-        decoded = cls.get_env()
         try:
+            decoded = cls.get_env()
             usr, pwd = decoded.split(":", 1)
         except ValueError as e:
             raise RuntimeError(f"{cls._env} {cls._how}") from e
@@ -143,12 +144,17 @@ class DbAccess(ConnectionSettings):
     def from_env(cls, default_creds: UserCreds) -> DbAccess:
         host = ensure_env_var(DB_HOST)
         port = int(ensure_env_var(DB_PORT))
-        name = getenv(DB_NAME_ALT) or get_env_var(DB_NAME, "kronicle")
+        try:
+            name = getenv(DB_NAME_ALT) or get_env_var(DB_NAME, "kronicle")
+            name = normalize_pg_identifier(name)
+            usr = normalize_pg_identifier(default_creds.username)
+        except ValueError as e:
+            raise RuntimeError(e) from e
         return cls(
             host=host,
             port=port,
-            name=normalize_pg_identifier(name),
-            usr=normalize_pg_identifier(default_creds.username),
+            name=name,
+            usr=usr,
             pwd=default_creds.password,
         )
 
@@ -241,3 +247,69 @@ class KronicleEnvConf:
             env=app_env,
             conf_file=conf_file,
         )
+
+
+class DBSettings:
+    """
+    Channel/metadata database settings.
+    These are extracted from environment variables.
+    """
+
+    def __init__(self, conf: KronicleEnvConf) -> None:
+        self.env = conf
+
+        self._host: str = conf.db.host
+        self._port: int = conf.db.port
+        self._name: str = conf.db.name  # already gone through normalize_pg_identifier
+
+        self._chan_usr: str = conf.chan_creds.username  # already gone through normalize_pg_identifier
+        self._chan_pwd: SecretStr = SecretStr(conf.chan_creds.password)
+
+        self._rbac_usr: str = conf.rbac_creds.username  # already gone through normalize_pg_identifier
+        self._rbac_pwd: SecretStr = SecretStr(conf.rbac_creds.password)
+
+    def get_connection_url(self, usr: str, pwd: str) -> str:
+        return f"postgresql://{usr}:{pwd}@{self._host}:{self._port}/{self._name}"
+
+    @property
+    def channel_connection_url(self) -> str:
+        return self.get_connection_url(usr=self._chan_usr, pwd=self._chan_pwd.get_secret_value())
+
+    @property
+    def rbac_connection_url(self) -> str:
+        return self.get_connection_url(usr=self._rbac_usr, pwd=self._rbac_pwd.get_secret_value())
+
+    @property
+    def masked_connection_url(self) -> str | None:
+        """Return URL safe for logging (password hidden)"""
+        url = self.channel_connection_url
+        if "@" in url and ":" in url.split("//")[1]:
+            scheme, rest = url.split("://", 1)
+            user_pass, host = rest.split("@", 1)
+            if ":" in user_pass:
+                user, _ = user_pass.split(":", 1)
+                user_pass = f"{user}:******"
+            return f"{scheme}://{user_pass}@{host}"
+        return url
+
+    def model_dump(self, **kwargs) -> dict[str, str | None]:
+        return {"connection_url": self.masked_connection_url}
+
+    def model_dump_json(self, **kwargs) -> str:
+        return dumps(self.model_dump(), indent=2)
+
+    def __str__(self) -> str:
+        return f"DBSettings({self.masked_connection_url})"
+
+    # @classmethod
+    # def _is_valid_pg_url(cls, url):
+    #     # Ensure url is a SecretStr
+    #     if not isinstance(url, SecretStr):
+    #         url = SecretStr(url)
+    #     # Validate format as PostgresDsn
+    #     # simple validation using PostgresDsn
+    #     try:
+    #         PostgresDsn(url.get_secret_value())
+    #     except Exception as e:
+    #         raise ValueError(f"Invalid Postgres URL: {url}") from e
+    #     return url
