@@ -54,9 +54,12 @@ class KronicleApp:
         # Retrieving the configuration settings
         with log_block(here, "Configuration"):
             self.conf = Settings()
+        app_conf = self.conf.app
+        auth_conf = self.conf.auth
+        is_dev = not self.conf.is_prod_env
 
         # Initialize application logging
-        log_d(here, self.conf.app.name, f"v{self.conf.app.version}", self.conf.app.description)
+        log_d(here, app_conf.name, f"v{app_conf.version}", app_conf.description)
         log_d(here, f"Launching on {self.conf.server.host}:{self.conf.server.port}")
 
         # Lifespan takes care of the RBAC DB service right bellow
@@ -65,14 +68,19 @@ class KronicleApp:
         # Initialize authentication
         with log_block(here, "PasswordManager"):
             self.policy = PasswordPolicy(
-                min_length=self.conf.auth.pwd_min_length,
-                require_uppercase=self.conf.auth.pwd_require_uppercase,
-                require_lowercase=self.conf.auth.pwd_require_lowercase,
-                require_digits=self.conf.auth.pwd_require_digits,
-                require_special=self.conf.auth.pwd_require_special,
-                special_chars=self.conf.auth.pwd_special_chars,
+                min_length=auth_conf.pwd_min_length,
+                require_uppercase=auth_conf.pwd_require_uppercase,
+                require_lowercase=auth_conf.pwd_require_lowercase,
+                require_digits=auth_conf.pwd_require_digits,
+                require_special=auth_conf.pwd_require_special,
+                special_chars=auth_conf.pwd_special_chars,
             )
-            PasswordManager.initialize(policy=self.policy, time_cost=3, memory_cost=65536, parallelism=4)
+            PasswordManager.initialize(
+                policy=self.policy,
+                time_cost=3,
+                memory_cost=65536,
+                parallelism=4,
+            )
 
         with log_block(here, "JWTService"):
             jwt_service = JWTService(self.conf.jwt)
@@ -82,13 +90,13 @@ class KronicleApp:
         with log_block(here, "FastAPI and lifespan"):
             self.app: FastAPI = FastAPI(
                 lifespan=self.lifespan,
-                title=self.conf.app.name,
+                title=app_conf.name,
                 debug=False,
-                version=self.conf.app.version,
-                summary=self.conf.app.description,
-                openapi_url=self.conf.app.openapi_url if not self.conf.is_prod_env else None,
-                docs_url="/docs" if not self.conf.is_prod_env else None,
-                redoc_url="/redoc" if not self.conf.is_prod_env else None,
+                version=app_conf.version,
+                summary=app_conf.description,
+                openapi_url=app_conf.openapi_url if is_dev else None,
+                docs_url="/docs" if is_dev else None,
+                redoc_url="/redoc" if is_dev else None,
                 redirect_slashes=False,
             )
 
@@ -109,22 +117,28 @@ class KronicleApp:
             with log_block(here, "Doc generation"):
                 self.generate_doc()
 
+    # ----------------------------------------------------------------------------------------------
+    # Lifespan: setup DBs and services
+    # ----------------------------------------------------------------------------------------------
     @asynccontextmanager
     async def lifespan(self, app: FastAPI) -> AsyncIterator[None]:
         """Application lifecycle management."""
         here = "app.launch"
-        # log_d(here, "Channel DB:", f"{self.conf.db._host}:{self.conf.db._port}/{self.conf.db._name}")
-        log_d(here, "Connection url:", self.conf.db.masked_connection_url)
+        db_conf = self.conf.db
+        log_d(here, "Connection url:", db_conf.masked_connection_url)
+
+        # --- Channel DB ---
         with log_block(here, "Channel DB"):
-            channel_db = ChannelDbSession(db_url=self.conf.db.channel_connection_url)
+            channel_db = ChannelDbSession(db_url=db_conf.channel_connection_url)
             await channel_db.init_async()
             self.channel_db = channel_db
         with log_block(here, "Channel deps"):
             channel_repository = ChannelRepository(channel_db)
             app.state.channel_service = ChannelService(channel_repository)
 
+        # --- RBAC DB ---
         with log_block(here, "RBAC session manager"):
-            self.rbac_db = RbacDbSession(db_url=self.conf.db.rbac_connection_url, echo=False)
+            self.rbac_db = RbacDbSession(db_url=db_conf.rbac_connection_url, echo=False)
         with log_block(here, "RBAC mappers"):
             configure_mappers()
         with log_block(here, "RBAC tables validation"):
@@ -134,6 +148,7 @@ class KronicleApp:
             rbac_service = RbacService(self.rbac_db)
             app.state.rbac_service = rbac_service
 
+        # --- Auth service ---
         with log_block(here, "AuthService"):
             app.state.auth_service = AuthService(self.jwt_service, rbac_service)
 
@@ -143,6 +158,7 @@ class KronicleApp:
         # api_task = asyncio.create_task(consume_api_logs())
         # log_d("Log consumers started")
 
+        # --- Ready ---
         log_d(here, f"Swagger docs available at: http://{self.conf.server.host}:{self.conf.server.port}/docs")
         log_d(here, "Kronicle server ready")
         print("------------------------------------------------------------------------------------------[ Init OK ]--")
@@ -163,6 +179,9 @@ class KronicleApp:
         #     except asyncio.CancelledError:
         #         print(f"Task {task.get_name()} cancelled.")
 
+    # ----------------------------------------------------------------------------------------------
+    # Route
+    # ----------------------------------------------------------------------------------------------
     def init_routes(self):
         """Initialize all API routes."""
         api_version = self.conf.api_version
@@ -188,6 +207,9 @@ class KronicleApp:
             favicon_path = Path(__file__).resolve().parents[2] / "static" / "favicon.ico"
             return FileResponse(favicon_path)
 
+    # ----------------------------------------------------------------------------------------------
+    # Middleware
+    # ----------------------------------------------------------------------------------------------
     def init_middleware(self):
         """Initialize application middleware."""
 

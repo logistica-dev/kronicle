@@ -12,8 +12,6 @@ from kronicle.db.rbac.models.rbac_user import RbacUser
 from kronicle.errors.error_types import BadRequestError
 from kronicle.schemas.rbac.input_user_schemas import InputUser
 
-pwd_manager = PasswordManager()
-
 # Allowed characters after the first letter
 _ALLOWED_CHARS = "A-Za-z0-9_ .@-"
 _USERNAME_MIN_LENGTH = 4
@@ -52,7 +50,7 @@ class ProcessedUser(BaseModel):
 
     @classmethod
     def from_input(cls, data: InputUser):
-        hashed = pwd_manager.hash_password(data.password) if data.password else None
+        hashed = PasswordManager().hash_password(data.password) if data.password else None
         return ProcessedUser(
             email=data.email,
             password_hash=hashed,

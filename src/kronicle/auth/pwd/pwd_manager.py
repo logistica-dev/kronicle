@@ -6,6 +6,7 @@ from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHash, VerificationError, VerifyMismatchError
 
 from kronicle.auth.pwd.pwd_policy import PasswordPolicy, ValidationResult
+from kronicle.errors.error_types import BadRequestError
 
 # Default Argon2id parameters (adjust based on your security requirements)
 _DEFAULT_PARAMS = {
@@ -62,7 +63,7 @@ class PasswordManager:
         """Check if password meets minimum requirements."""
         result: ValidationResult = self.policy.check(password)
         if not result["valid"] and result["errors"]:
-            raise ValueError("; ".join(result["errors"]))
+            raise BadRequestError("; ".join(result["errors"]))
         return result["valid"]
 
     def get_password_validation(self, password: str) -> ValidationResult:
@@ -80,7 +81,7 @@ class PasswordManager:
             Hashed password string
 
         Raises:
-            ValueError: If password doesn't meet requirements
+            RuntimeError: If password doesn't meet requirements
         """
         self.validate_password(password)
 
@@ -102,7 +103,7 @@ class PasswordManager:
             True if password matches, False otherwise
 
         Raises:
-            ValueError: If hash is invalid
+            BadRequestError: If hash is invalid
         """
         try:
             return self.pwd_hasher.verify(hashed_password, input_password)
@@ -111,7 +112,7 @@ class PasswordManager:
             return False
         except (VerificationError, InvalidHash) as e:
             self.logger.error(f"Password verification error: {e}")
-            raise ValueError("Invalid password hash") from e
+            raise BadRequestError("Invalid password") from e
 
     def needs_rehash(self, hashed_password: str) -> bool:
         """

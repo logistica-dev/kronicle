@@ -219,24 +219,27 @@ def log_w(here, *args, stacklevel=3, **kwargs):
         _log(basic_logger.warning, "yellow", here, *args, stacklevel=stacklevel, **kwargs)
 
 
-def log_i(here, *args, stacklevel=2, **kwargs):
+def log_i(here, *args, stacklevel=3, **kwargs):
     if LOG_LEVEL > 1:
         _log(basic_logger.info, "blue", here, *args, stacklevel=stacklevel, **kwargs)
 
 
-def log_d(here, *args, stacklevel=2, **kwargs):
+def log_d(here, *args, stacklevel=3, **kwargs):
     if LOG_LEVEL > 2:
-        basic_logger.debug(format_input(here, *args, **kwargs), stacklevel=stacklevel)
+        _log(basic_logger.debug, "white", here, *args, stacklevel=stacklevel, **kwargs)
+        # basic_logger.debug(format_input(here, *args, **kwargs), stacklevel=stacklevel)
 
 
-def log_t(here, *args, stacklevel=2, **kwargs):
+def log_t(here, *args, stacklevel=3, **kwargs):
     if LOG_LEVEL > 3:
-        basic_logger.debug(format_input(here, *args, **kwargs), stacklevel=stacklevel)
+        _log(basic_logger.debug, "white", here, *args, stacklevel=stacklevel, **kwargs)
+        # basic_logger.debug(format_input(here, *args, **kwargs), stacklevel=stacklevel)
 
 
-def log_d_if(here, should_print: bool = False, *args, **kwargs):
+def log_d_if(here, should_print: bool = False, *args, stacklevel=3, **kwargs):
     if LOG_LEVEL > 2 and should_print:
-        basic_logger.debug(format_input(here, *args, **kwargs), stacklevel=2)
+        _log(basic_logger.debug, "white", here, *args, stacklevel=stacklevel, **kwargs)
+        # basic_logger.debug(format_input(here, *args, **kwargs), stacklevel=2)
 
 
 def decorator_timer(func):
@@ -264,13 +267,14 @@ def log_assert(cond: bool, ok_tag: str = "OK", ko_tag: str = "!! KO !!") -> str:
 # ------------------------------------------------------
 @contextmanager
 def log_block(here, message):
-    log_d(here, f"Starting {message}...", stacklevel=4)
+    stacklevel = 5
+    log_d(here, f"Starting {message}...", stacklevel=stacklevel)
     start_time = time()
     try:
         yield
     finally:
         elapsed = time() - start_time
-        log_d(here, f"  >{message}: done in {elapsed:.3f}s", stacklevel=4)
+        log_d(here, f"  >{message}: done in {elapsed:.3f}s", stacklevel=stacklevel)
 
 
 # ------------------------------------------------------

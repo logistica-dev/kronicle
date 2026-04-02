@@ -12,7 +12,7 @@ from kronicle.db.data.query.row_fetch_context import RowFetchContext
 from kronicle.errors.error_types import BadRequestError, ConflictError, NotFoundError
 from kronicle.schemas.filters.row_request_filter import RowRequestFilter
 from kronicle.schemas.payload.processed_payload import ProcessedPayload
-from kronicle.utils.dev_logs import log_d, log_e
+from kronicle.utils.dev_logs import log_e
 
 
 class ChannelRepository:
