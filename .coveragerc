@@ -1,0 +1,4 @@
+[run]
+omit =
+    src/kronicle/_build.py
+    */__init__.py

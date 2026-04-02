@@ -6,7 +6,7 @@ from json import dumps
 from typing import Any
 
 from kronicle.db.data.models.schema_types import SchemaType
-from kronicle.utils.dev_logs import log_d, log_e, setup_logging
+from kronicle.utils.dev_logs import log_d, log_e
 from kronicle.utils.str_utils import normalize_name, normalize_pg_identifier, split_strip
 
 
@@ -247,7 +247,6 @@ class OrderBy:
 
 if __name__ == "__main__":  # pragma: no cover
     here = "row_fetch_context.tests"
-    setup_logging()
 
     col_int = ResolvedColumn(col_type=SchemaType("int"), col_name="count")
     f = AnyFilter(col_int, ["4", "5", "6"])

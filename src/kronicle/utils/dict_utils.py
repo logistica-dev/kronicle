@@ -1,3 +1,4 @@
+# kronicle/utils/dict_utils.py
 from collections import defaultdict
 from typing import Any
 
@@ -8,12 +9,12 @@ def ensure_dict_or_none(d, field_name: str | None = None):
         return {}
     if not isinstance(d, dict):
         if field_name:
-            raise TypeError(f"{field_name} must be a dict or None")
+            raise TypeError(f"'{field_name}' must be a dict or None")
         raise TypeError("Must be a dict or None")
     for key in d.keys():
         if not key.strip():
             if field_name:
-                raise ValueError(f"Key cannot be empty for {field_name}")
+                raise ValueError(f"Key cannot be empty for '{field_name}'")
             raise ValueError("Key cannot be empty")
     return d
 

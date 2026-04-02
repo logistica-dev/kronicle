@@ -375,7 +375,7 @@ class ChannelTimeseries:
         Parameters
         ----------
         db : asyncpg.Connection
-        filter : RequestFilter | None
+        context : RowFetchContext
 
         Returns
         -------

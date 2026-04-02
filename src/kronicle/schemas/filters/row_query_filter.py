@@ -38,7 +38,7 @@ class RowQueryFilter(BaseModel):
     )
 
     # Column selection
-    columns: list[str] | None = Query(None, description="Columns to include in the result")
+    columns: str | list[str] | None = Query(None, description="Columns to include in the result")
     skip_received: bool | None = Query(True, description="False to include reception timestamp")
 
     # Row filters
@@ -75,6 +75,10 @@ class RowQueryFilter(BaseModel):
     def cap_offset(cls, v):
         if v is None:
             return None
+        try:
+            v = int(v)
+        except TypeError:
+            return None
         if v < 1:
             v = DEFAULT_OFFSET
         return min(v, MAX_OFFSET)
@@ -108,6 +112,8 @@ class RowQueryFilter(BaseModel):
                 norm_k = norm(key)
                 if norm_k:
                     result[norm_k] = val
+                else:
+                    raise ValueError("Empty column name")
             except ValueError:
                 self._feedback.add_detail(
                     message="Invalid column name",
@@ -135,6 +141,8 @@ class RowQueryFilter(BaseModel):
                 norm_k = norm(key)
                 if norm_k:
                     result[norm_k] = vals
+                else:
+                    raise ValueError("Empty column name")
             except ValueError:
                 self._feedback.add_detail(
                     message="Invalid column name",
@@ -251,10 +259,14 @@ class RowQueryFilter(BaseModel):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    from kronicle.utils.dev_logs import log_block, log_d, setup_logging
+    from kronicle.utils.dev_logs import log_block, log_d
 
     here = "RowQueryFilter"
 
-    setup_logging()
     adv = RowQueryFilter.parse_bracketed_filters([("min[time]", "2026-03-31T12:04:14.476554Z")])
     log_d(here, "adv", adv)
+
+    f = RowQueryFilter()
+    input_dict = {"": ["Alice"]}
+    result = f.normalize_single_value(input_dict, str.lower, "col")
+    log_d(here, "feedback.details", f.feedback.details)

@@ -39,7 +39,7 @@ from kronicle.errors.exception_handlers import (
 from kronicle.logging.log_bus.mid_sanitize import RequestSanitizerMiddleware
 from kronicle.services.channel_service import ChannelService
 from kronicle.services.rbac_service import RbacService
-from kronicle.utils.dev_logs import log_block, log_d, log_e, log_w, request_logger, setup_logging
+from kronicle.utils.dev_logs import log_block, log_d, log_e, log_w, request_logger
 
 mod = "main"
 
@@ -49,7 +49,6 @@ class KronicleApp:
         print("-------------------------------------------------------------------------------------------------------")
         here = "init"
         # Setup logging
-        setup_logging()
         log_d(here, "Logger ready")
 
         # Retrieving the configuration settings

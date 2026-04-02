@@ -59,7 +59,10 @@ class InputPayload(BaseModel):
     @field_validator("channel_schema", "metadata", "tags", mode="before")
     @classmethod
     def ensure_dict_or_none(cls, d, info: ValidationInfo) -> dict:
-        return ensure_dict_or_none(d, info.field_name)
+        try:
+            return ensure_dict_or_none(d, info.field_name)
+        except TypeError as e:
+            raise BadRequestError(f"Incorrect value: {e}", details={f"{info.field_name}": d}) from e
 
     # --------------------------------------------------------------------------
     # Populate name from name (safe)
@@ -81,10 +84,7 @@ class InputPayload(BaseModel):
     def normalize_and_check_length(cls, v):
         if not v:
             return ""
-        name = normalize_name(v, prefix="channel_")
-        if len(name) > 64:
-            raise BadRequestError(f"Channel name too long ({len(name)} > 64 characters)")
-        return name
+        return normalize_name(v, prefix="channel_")
 
     # --------------------------------------------------------------------------
     # Runtime validation helpers
@@ -172,7 +172,7 @@ if __name__ == "__main__":  # pragma: no cover
     # --- test validator: tags must be dict ---
     try:
         InputPayload(channel_id=uuid4(), tags=["not", "a", "dict"])  # type: ignore
-    except (ValidationError, TypeError) as e:
+    except (ValidationError, BadRequestError) as e:
         log_d(here, "Caught expected validation error :")
         log_d(here, e)
 
@@ -185,3 +185,15 @@ if __name__ == "__main__":  # pragma: no cover
     # --- test validator: no uuid ---
     empty_payload = InputPayload()  # type: ignore
     log_d(here, "No ID InputPayload (metadata/tags default to dict) :", empty_payload.model_dump())
+
+    values = {"name": "Original"}
+    payload = InputPayload._populate_name(values)  # type: ignore
+    log_d(here, payload["name"] == "Original")
+
+    payload = InputPayload(name="MyChannel")
+    log_d(here, "payload.name", payload.name)
+
+    payload = InputPayload()
+    log_d(here, "payload.name", payload.name)
+
+    log_d(here, "example_payload", example_payload())
