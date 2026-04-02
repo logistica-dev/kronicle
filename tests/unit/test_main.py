@@ -50,7 +50,7 @@ def reset_password_manager():
 # ------------------------------
 def test_factory_initialization_calls_services_and_configs(mock_settings):
     """Ensure that settings, password manager, and JWT are initialized on factory creation."""
-    with patch("kronicle.main.PasswordManager.initialize") as MockPwdInit, patch("kronicle.main.JWTService") as MockJWT:
+    with patch("kronicle.main.PasswordManager.initialize") as MockPwdInit:
 
         factory = KronicleApp(mock_settings)
 
@@ -73,21 +73,21 @@ def test_app_has_lifespan_method(mock_settings):
 def test_routes_initialization_called(mock_settings):
     """Ensure init_routes is called during factory creation."""
     with patch.object(KronicleApp, "init_routes") as mock_routes:
-        factory = KronicleApp(mock_settings)
+        KronicleApp(mock_settings)
         mock_routes.assert_called_once()
 
 
 def test_middleware_initialization_called(mock_settings):
     """Ensure init_middleware is called during factory creation."""
     with patch.object(KronicleApp, "init_middleware") as mock_middleware:
-        factory = KronicleApp(mock_settings)
+        KronicleApp(mock_settings)
         mock_middleware.assert_called_once()
 
 
 def test_exception_handlers_initialization_called(mock_settings):
     """Ensure init_exception_handlers is called during factory creation."""
     with patch.object(KronicleApp, "init_exception_handlers") as mock_handlers:
-        factory = KronicleApp(mock_settings)
+        KronicleApp(mock_settings)
         mock_handlers.assert_called_once()
 
 
