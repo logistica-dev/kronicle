@@ -3,6 +3,7 @@ from pytest import fixture, raises
 
 from kronicle.auth.pwd.pwd_manager import PasswordManager
 from kronicle.auth.pwd.pwd_policy import PasswordPolicy
+from kronicle.errors.error_types import BadRequestError
 
 
 @fixture
@@ -25,7 +26,7 @@ def test_validate_password_success(manager):
 
 def test_validate_password_failure(manager):
     # Too short, fails policy
-    with raises(ValueError) as exc_info:
+    with raises(BadRequestError) as exc_info:
         manager.validate_password("short")
     assert "at least" in str(exc_info.value)
 
@@ -49,9 +50,9 @@ def test_hash_and_verify(manager):
 
 def test_verify_invalid_hash(manager):
     # Random string is not a valid hash
-    with raises(ValueError) as exc_info:
+    with raises(BadRequestError) as exc_info:
         manager.verify_password("notahash", "Secure123!")
-    assert "Invalid password hash" in str(exc_info.value)
+    assert "Invalid password" in str(exc_info.value)
 
 
 def test_needs_rehash(manager):
@@ -89,5 +90,5 @@ def test_get_default_params():
 
 def test_hash_password_invalid_policy(manager):
     # Provide a password that violates policy
-    with raises(ValueError):
+    with raises(BadRequestError):
         manager.hash_password("short")

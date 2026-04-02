@@ -8,8 +8,7 @@ from uuid import UUID, uuid4
 from sqlalchemy import DateTime, func, inspect, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, declarative_base, mapped_column
 
 from kronicle.utils.dev_logs import log_block, log_e
 

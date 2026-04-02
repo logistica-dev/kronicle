@@ -101,16 +101,16 @@ class ResponsePayload(BaseModel):
             payload.rows_to_columns(strict=True)
         return payload
 
-    def with_op_status(self, status: str = "success", details: dict | None = None) -> ResponsePayload:
-        """
-        Set operation metadata (status and additional details).
-        Automatically sets issued_at if not already set.
-        """
-        if status and status.lower() != "success":
-            self.op_status = status
-        if details:
-            self.op_details.update(details)
-        return self
+    # def with_op_status(self, status: str = "success", details: dict | None = None) -> ResponsePayload:
+    #     """
+    #     Set operation metadata (status and additional details).
+    #     Automatically sets issued_at if not already set.
+    #     """
+    #     if status and status.lower() != "success":
+    #         self.op_status = status
+    #     if details:
+    #         self.op_details.update(details)
+    #     return self
 
     @field_serializer("channel_schema")
     def flatten_schema(self, channel_schema, _info):
