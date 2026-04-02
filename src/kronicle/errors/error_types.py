@@ -110,7 +110,7 @@ class KronicleHTTPErrorPayload(BaseModel):
         # exc.errors() returns a list of dicts with 'type', 'loc', 'msg'
         details: dict[str, Any] = {}
         for err in exc.errors():
-            loc = ".".join(str(l) for l in err.get("loc", [])) or "unknown"
+            loc = ".".join(str(place) for place in err.get("loc", [])) or "unknown"
             msg = err.get("msg", "")
             typ = err.get("type", "")
             details[loc] = {"message": msg, "type": typ}
@@ -153,7 +153,7 @@ class KronicleHTTPErrorPayload(BaseModel):
         # Convert exc.errors() list into a dict of field -> error messages
 
         for err in exc.errors():
-            loc = ".".join(str(l) for l in err.get("loc", [])) or "unknown"
+            loc = ".".join(str(place) for place in err.get("loc", [])) or "unknown"
             msg = err.get("msg", "")
             typ = err.get("type", "")
             details.setdefault(loc, []).append({"message": msg, "type": typ})

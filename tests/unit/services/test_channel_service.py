@@ -150,7 +150,7 @@ async def test_fetch_metadata(service, mock_repo):
 
 @pytest.mark.asyncio
 async def test_insert_channel_rows(service, mock_repo, input_payload):
-    fake_processed = AsyncMock(spec=ProcessedPayload)
+    # fake_processed = AsyncMock(spec=ProcessedPayload)
     fake_channel = AsyncMock()
     fake_response = AsyncMock()
 
