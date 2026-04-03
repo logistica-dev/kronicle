@@ -20,7 +20,7 @@ class KronicleEntity(KronicleBase):
     __abstract__ = True  # Do not create a table for this class itself
 
     # Optional name
-    name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(100), unique=True, nullable=True)
 
     @property
     def row_snapshot(self) -> dict[str, Any]:
@@ -30,7 +30,7 @@ class KronicleEntity(KronicleBase):
         """
         return {
             "id": str(self.id),
-            "name": self.name,
+            "name": self.name if self.name else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "details": self.details,

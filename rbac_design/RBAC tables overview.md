@@ -7,11 +7,12 @@
 
 ## Core Tables
 
-| Class            | Description                                                                           |
-| ---------------- | ------------------------------------------------------------------------------------- |
-| **Channel**      | Represents a data channel within a Zone. Core resource.                               |
-| **Zone**         | Represents a project or workspace. Can contain multiple Channels. Core resource.      |
-| **CoreResource** | View combining all core resources (`Zone` + `Channel`) for easier access and queries. |
+| Class            | Description                                                                                                              |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| **Channel**      | Represents a data channel within a Zone. Core resource.                                                                  |
+| **Zone**         | Represents a project or workspace. Can contain multiple Channels. Core resource.                                         |
+| **Row**          | Represents a single row in a Channel. Tracks `channel_id`, unique `row_id`, and optional public/private access metadata. |
+| **CoreResource** | View combining all core resources (`Zone` + `Channel`) for easier access and queries.                                    |
 
 ## RBAC Tables
 
@@ -26,4 +27,5 @@
 | **RbacSubject**    | View unifying all subjects (`RbacUser` + `RbacGroup`) to simplify policy assignment and lookups.                                                  |
 | **AccessProfile**  | Represents a pre-defined set of permissions on a resource (like ZoneReader, ZoneWriter, ZoneAdmin). Can be assigned to subjects via policies.     |
 | **RbacPolicy**     | Associates a subject (`RbacUser` or `RbacGroup`) with an `AccessProfile` for a specific resource. Determines effective permissions.               |
+| **RowPolicy**      | Associates a subject with row-level access on a specific row. Can include read/write permissions and enforce the public/private flag.             |
 | **RbacEvent**      | (Optional, created last) Stores historical RBAC events or audits for tracking changes to users, groups, roles, policies, etc.                     |

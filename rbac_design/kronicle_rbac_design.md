@@ -4,21 +4,24 @@ _This document defines the architecture, policy logic, and implementation guidel
 
 ## Definitions
 
-| Term             | Definition                                                                                                                                                             | Kronicle Examples                                                                                                                      |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| **User**         | An individual identified entity (human or bot) identity.                                                                                                               | `alice@kronicle`, `bob@kronicle`                                                                                                       |
-| **Group**        | A collection of **Users**.                                                                                                                                             | `data-science-team`, `admin-team`                                                                                                      |
-| **Resource**     | An individual data object or entity.<br>Usually a Kronicle **Channel**, but granularity goes to **Channel Metadata**, or the set of **Channel Rows**.                  | Channel: `channel:climate-data`<br>Metadata: `channel:climate-data/metadata/owner`<br>Row: `channel:climate-data/rows/2024-01-01`      |
-| **Zone**         | A set of **Resources** (e.g., all channels in a project).<br>It can also be seen as a logical boundary where permissions are defined preemtively for future resources. | `project:climate-analysis`, `team:data-science`                                                                                        |
-| **Action**       | The type of operation being attempted.                                                                                                                                 | `read`, `create`, `update`, `delete`, `manage`                                                                                         |
-| **Target**       | An entity that actions are performed on.<br>Can be a **Resource** or **Zone**.                                                                                         | Channel: `channel:climate-data`<br>Channel Metadata: `channel:climate-data/metadata/owner`<br>Channel Row: `channel:climate-data/rows` |
-| **Subject**      | An entity that can perform actions. <br>Can be a **User** or a **Group**.                                                                                              | User: `alice@kronicle`<br>Group: `data-science-team`<br>Bot: `monitoring-bot`                                                          |
-| **Permission**   | Allow a specific action to be performed on a **Target**.<br>They are inherited from **UserGroups**, but **Users** can have extra **Permissions**.                      | `{ action:'read', target: 'channel:climate-data',  }`<br>`write:metadata`, `manage:bot`, `view:logs`                                   |
-| **Restriction**  | Deny a specific action to be performed on a **Target**.<br>They are inherited from **UserGroups**, and **Group** restrictions override **User** **Permissions**.       | `read:channel`, `write:metadata`, `delete:row`, `manage:bot`, `view:logs`                                                              |
-| **Role**         | A set of **Permissions** and **Restrictions**.                                                                                                                         | `reader`, `writer`, `admin`, `metadata-editor`, `row-deleter`                                                                          |
-| **TargetedRole** | A **Role** for a specific type of **Target**.                                                                                                                          | `reader`, `writer`, `admin`, `metadata-editor`, `row-deleter`                                                                          |
-| **Policy**       | A rule that grants a **Subject** a **Role** for a **Target**.                                                                                                          | "The `monitoring-bot` has the `writer` role for `channel:climate-data`."                                                               |
-| **Delegation**   | A temporary **Policy**, i.e. a **TargetedRole** assignment from one **User to** another, with optional time boundaries.                                                | "Alice delegates temporary-writer role to service-account-1 for channel:climate-data."                                                 |
+| Term                  | Definition                                                                                                                                                               | Kronicle Examples                                                                                                                      |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| **User**              | An individual identified entity (human or bot) identity.                                                                                                                 | `alice@kronicle`, `bob@kronicle`                                                                                                       |
+| **Group**             | A collection of **Users**.                                                                                                                                               | `data-science-team`, `admin-team`                                                                                                      |
+| **Resource**          | An individual data object or entity.<br>Usually a Kronicle **Channel**, but granularity goes to **Channel Metadata**, or the set of **Channel Rows**.                    | Channel: `channel:climate-data`<br>Metadata: `channel:climate-data/metadata/owner`<br>Row: `channel:climate-data/rows/2024-01-01`      |
+| **Zone**              | A set of **Resources** (e.g., all channels in a project).<br>It can also be seen as a logical boundary where permissions are defined preemtively for future resources.   | `project:climate-analysis`, `team:data-science`                                                                                        |
+| **Action**            | The type of operation being attempted.                                                                                                                                   | `read`, `create`, `update`, `delete`, `manage`                                                                                         |
+| **Target**            | An entity that actions are performed on.<br>Can be a **Resource** or **Zone**.                                                                                           | Channel: `channel:climate-data`<br>Channel Metadata: `channel:climate-data/metadata/owner`<br>Channel Row: `channel:climate-data/rows` |
+| **Subject**           | An entity that can perform actions. <br>Can be a **User** or a **Group**.                                                                                                | User: `alice@kronicle`<br>Group: `data-science-team`<br>Bot: `monitoring-bot`                                                          |
+| **Permission**        | Allow a specific action to be performed on a **Target**.<br>They are inherited from **UserGroups**, but **Users** can have extra **Permissions**.                        | `{ action:'read', target: 'channel:climate-data',  }`<br>`write:metadata`, `manage:bot`, `view:logs`                                   |
+| **Restriction**       | Deny a specific action to be performed on a **Target**.<br>They are inherited from **UserGroups**, and **Group** restrictions override **User** **Permissions**.         | `read:channel`, `write:metadata`, `delete:row`, `manage:bot`, `view:logs`                                                              |
+| **Role**              | A set of **Permissions** and **Restrictions**.                                                                                                                           | `reader`, `writer`, `admin`, `metadata-editor`, `row-deleter`                                                                          |
+| **TargetedRole**      | A **Role** for a specific type of **Target**.                                                                                                                            | `reader`, `writer`, `admin`, `metadata-editor`, `row-deleter`                                                                          |
+| **Policy**            | A rule that grants a **Subject** a **Role** for a **Target**.                                                                                                            | "The `monitoring-bot` has the `writer` role for `channel:climate-data`."                                                               |
+| **Row Access Policy** | Optional per-row rules specifying read access for individual users or public/private flags. If private, a `release_at` timestamp can define when the row becomes public. | Row: `channel:climate-data/rows/2024-01-01` → allowed users: `[alice@kronicle]`, is_public: `False`, release_at: `2027-06-01`          |
+| **Delegation**        | A temporary **Policy**, i.e. a **TargetedRole** assignment from one **User to** another, with optional time boundaries.                                                  | "Alice delegates temporary-writer role to service-account-1 for channel:climate-data."                                                 |
+
+---
 
 ## Core Principles
 
@@ -27,6 +30,9 @@ _This document defines the architecture, policy logic, and implementation guidel
 - **Separated Management:** Resource administration (`/setup`) is decoupled from identity management (`/rbac`).
 - **Data Sovereignty:** Zones enforce hard boundaries for multi-tenant or multi-project isolation.
 - **Auditability:** Every RBAC change, delegation, and default role application is logged.
+- **Row-Level Enforcement:** If zone/channel policies are neutral, access is evaluated per row using row-level policies and public/private flags.
+
+---
 
 ## Route-Level “Security Lanes”
 
@@ -39,6 +45,36 @@ To support network-level firewall policies and infrastructure isolation, Kronicl
 | `/data/v1`   | **Ingestion Lane**   | `create`           | Restricted to IoT/Sensor IP ranges.                           |
 | `/setup/v1`  | **Resource Admin**   | `update`, `delete` | Restricted to Admin VPN/Subnet.                               |
 | `/rbac/v1`   | **Identity Admin**   | `manage`           | Highly restricted to Security Ops.                            |
+
+---
+
+## Key Row-Level RBAC Workflow
+
+1. **User requests access** to rows of a channel.
+2. **Zone-level check**
+   - If policy denies → no access.
+   - If policy allows full read → skip row-level check.
+3. **Channel-level check**
+   - If policy denies → no access.
+   - If policy allows full read → skip row-level check.
+4. **Row-level check** (if zone/channel are neutral)
+   - Fetch `RowPolicy` for the channel.
+   - Compute for each row:
+     - Explicitly allowed users.
+     - `ìs_public` flag / `release_at` timestamp.
+   - Generate a SQL filter (`RowRbacContext`) restricting the query to accessible `row_id`s.
+5. **Query Execution**
+   - Apply `RowRbacContext` filter along with any column filters.
+   - Execute asynchronously via `asyncpg`.
+
+---
+
+## Notes on Row-Level Policies
+
+- **Short-Circuiting:** Zone and Channel policies can skip row checks if they grant/deny full access.
+- **Performance:** Millions of rows expected → always compute SQL filter in DB, not in Python.
+- **Public Flag:** Rows can be marked as public; if private, access is restricted until `release_at` timestamp.
+- **Integration:** `RowFetchContext` can incorporate row-level RBAC filter directly when building queries.
 
 ---
 
@@ -163,13 +199,16 @@ All authorization decisions are logged with the following context:
 
 ### Data-Level Actions
 
-| Resource / Action        | Allowed Roles     | Route Prefix | Notes                                                                    |
-| ------------------------ | ----------------- | ------------ | ------------------------------------------------------------------------ |
-| Delegate Role/Permission | Writer, DataAdmin | `/rbac/v1`   | Can only delegate permissions they themselves hold.                      |
-| Create Channel in Zone   | Writer, DataAdmin | `/data/v1`   | User automatically gets the default role for the Zone unless overridden. |
-| Update Channel Metadata  | Writer, DataAdmin | `/setup/v1`  | Metadata changes are considered a resource admin action.                 |
-| Delete Channel / Rows    | DataAdmin         | `/setup/v1`  | Full control over resources; restricted to highest privilege.            |
-| Read Channel / Metadata  | Reader, Writer    | `/api/v1`    | Consumption lane; read-only access.                                      |
+| Resource / Action        | Allowed Roles     | Route Prefix | Notes                                                                                       |
+| ------------------------ | ----------------- | ------------ | ------------------------------------------------------------------------------------------- |
+| Delegate Role/Permission | Writer, DataAdmin | `/rbac/v1`   | Can only delegate permissions they themselves hold.                                         |
+| Create Channel in Zone   | Writer, DataAdmin | `/data/v1`   | User automatically gets the default role for the Zone unless overridden.                    |
+| Update Channel Metadata  | Writer, DataAdmin | `/setup/v1`  | Metadata changes are considered a resource admin action.                                    |
+| Delete Channel / Rows    | DataAdmin         | `/setup/v1`  | Full control over resources; restricted to highest privilege.                               |
+| Read Channel / Metadata  | Reader, Writer    | `/api/v1`    | Consumption lane; read-only access.                                                         |
+| Read Rows (Row-Level)    | Reader, Writer    | `/api/v1`    | Rows are accessible if `is_public == true` or `row_id` is in user's RBAC-computed row list. |
+
+Note: Daily job updates `is_public` based on `released_at`.
 
 ---
 
@@ -209,6 +248,40 @@ All authorization decisions are logged with the following context:
 | 3    | User revokes delegated Role / Permission | `enforcer.remove_policy("g", "service-account-1", "temporary-writer:alice@kronicle:channel:climate-data")`                                     |
 
 ---
+
+### 4. Row-Level Access with Public Flag
+
+1. Each **Row** has:
+   - `row_id` (BIGSERIAL)
+   - `channel_id`
+   - `is_public` boolean
+   - Optional `release_at` timestamp
+
+2. At **runtime**, access checks are simplified:
+   - Query rows with `WHERE is_public = true OR row_id IN <user_row_access_list>`.
+   - No per-row timestamp comparison needed for reads.
+
+3. **Daily job** updates the public status:
+
+   ```python
+   UPDATE row
+   SET is_public = TRUE
+   WHERE release_at <= now() AND is_public = FALSE;
+   ```
+
+   - Makes rows public automatically once their release date is reached.
+   - Keeps runtime queries fast and simple, even for millions of rows.
+
+4. **RBAC enforcement order for reads:**
+   - Check Zone and Channel policies first (full allow / full deny shortcut).
+   - If nothing applies, fallback to row-level access (row_id list + is_public).
+   - Restriction rules always override Permission.
+
+5. **Auditability:**
+   - Row access decisions can be logged for sensitive datasets.
+   - Daily release job can also log which rows became public and when.
+
+- ***
 
 ## Notes on Default Roles
 

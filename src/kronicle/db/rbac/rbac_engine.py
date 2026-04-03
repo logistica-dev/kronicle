@@ -6,7 +6,7 @@ from uuid import UUID
 from pydantic import EmailStr
 from sqlalchemy.orm import Session
 
-from kronicle.db.core.models.zone import Zone
+from kronicle.db.core.models.core_zone import Zone
 from kronicle.db.rbac.associations.user_groups import RbacUserGroups
 from kronicle.db.rbac.models.rbac_group import RbacGroup
 from kronicle.db.rbac.models.rbac_policy import ZonePolicy
