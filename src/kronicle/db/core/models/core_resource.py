@@ -3,9 +3,9 @@ from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from kronicle.db.base.kronicle_view import KronicleView
-from kronicle.db.core.models.channel import Channel
+from kronicle.db.core.models.core_channel import Channel
 from kronicle.db.core.models.core_entity import CoreEntity
-from kronicle.db.core.models.zone import Zone
+from kronicle.db.core.models.core_zone import Zone
 
 
 class CoreResource(KronicleView):

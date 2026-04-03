@@ -5,8 +5,8 @@ from sqlalchemy import ForeignKey, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, declared_attr, mapped_column, relationship
 
-from kronicle.db.core.models.channel import Channel
-from kronicle.db.core.models.zone import Zone
+from kronicle.db.core.models.core_channel import Channel
+from kronicle.db.core.models.core_zone import Zone
 from kronicle.db.rbac.models.rbac_entity import RbacEntity
 from kronicle.db.rbac.models.rbac_role import RbacRole
 

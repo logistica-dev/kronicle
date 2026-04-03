@@ -1,8 +1,8 @@
 # Centralized list of all RBAC tables
-from kronicle.db.core.models.channel import Channel
+from kronicle.db.core.models.core_channel import Channel
 from kronicle.db.core.models.core_entity import CoreEntity
 from kronicle.db.core.models.core_resource import CoreResource
-from kronicle.db.core.models.zone import Zone
+from kronicle.db.core.models.core_zone import Zone
 
 CORE_NAMESPACE = CoreEntity.namespace()
 

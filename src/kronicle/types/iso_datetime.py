@@ -106,6 +106,19 @@ class IsoDateTime(datetime):
         return IsoDateTime(year, month, day, tzinfo=cls.local_tz())
 
     @classmethod
+    def _normalize_str(cls, value: str, to_local_tz: bool = False) -> IsoDateTime:
+        try:
+            dt = cls.fromisoformat(value.replace("Z", "+00:00"))
+            if dt.tzinfo is None:
+                dt = cls.to_iso_datetime(dt)  # apply local tz
+            return dt.astimezone() if to_local_tz else dt
+        except ValueError:
+            try:
+                return cls._parse_partial_iso(value)
+            except ValueError as e:
+                raise ValueError(f"Cannot parse datetime from '{value}'") from e
+
+    @classmethod
     def normalize_value(cls, value: Any, to_local_tz: bool = False) -> IsoDateTime:
         """
         Normalize a value to IsoDateTime:
@@ -131,16 +144,7 @@ class IsoDateTime(datetime):
             return IsoDateTime.fromtimestamp(value)
 
         if isinstance(value, str):
-            try:
-                dt = cls.fromisoformat(value.replace("Z", "+00:00"))
-                if dt.tzinfo is None:
-                    dt = cls.to_iso_datetime(dt)  # apply local tz
-                return dt.astimezone() if to_local_tz else dt
-            except ValueError:
-                try:
-                    return cls._parse_partial_iso(value)
-                except ValueError as e:
-                    raise ValueError(f"Cannot parse datetime from '{value}'") from e
+            return cls._normalize_str(value, to_local_tz)
         raise ValueError(f"Cannot normalize type '{type(value).__name__}' to datetime")
 
     # ------------------------------------------------------------------
