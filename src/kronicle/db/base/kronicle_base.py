@@ -102,9 +102,7 @@ class KronicleBase(Base):
                 expected_type: str = col_obj.type.compile(dialect=conn.dialect)
 
                 if actual_db_type != expected_type:
-                    errors.append(
-                        f"Column '{col_name}' type mismatch: expected {expected_type}, got {{actual_db_type}}"
-                    )
+                    errors.append(f"Column '{col_name}' type mismatch: expected {expected_type}, got {actual_db_type}")
 
                 if actual_columns_info[col_name]["nullable"] != col_obj.nullable:
                     errors.append(

@@ -6,9 +6,9 @@ from sys import exit, stderr
 import uvicorn
 from asyncpg import CannotConnectNowError, ConnectionDoesNotExistError, InvalidCatalogNameError, PostgresError
 
-from kronicle.db.core.models.channel import Channel
+from kronicle.db.core.models.core_channel import Channel
 from kronicle.db.core.models.core_entity import CoreEntity
-from kronicle.db.core.models.zone import Zone
+from kronicle.db.core.models.core_zone import Zone
 from kronicle.db.data.channel_repository import ChannelMetadata
 from kronicle.db.rbac.models.rbac_entity import RbacEntity
 from kronicle.db.rbac.models.rbac_user import RbacUser
@@ -118,10 +118,11 @@ if __name__ == "__main__":  # pragma: no-cover
     run(wait_and_init())
 
     print("[entry] Launching Uvicorn/FastAPI server...")
-    from kronicle.main import app  # your FastAPI instance
+    from kronicle.main import create_app  # your FastAPI instance
 
     uvicorn.run(
-        app,
+        create_app,
+        factory=True,
         host="0.0.0.0",
         port=int(os.environ.get("KRONICLE_PORT", 8000)),
         log_level="error",

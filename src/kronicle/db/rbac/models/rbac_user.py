@@ -23,8 +23,8 @@ class RbacUser(RbacEntity):
     external_id: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
 
     # default -> Python-side default | server_default -> PostgreSQL DB-side default
-    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("true"))
-    is_superuser: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"), nullable=False)
+    is_superuser: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
 
     __table_args__ = (
         Index("ix_users_email", "email"),

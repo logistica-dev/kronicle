@@ -20,8 +20,8 @@ class RbacGroupRoles(RbacAssociation):
     role_id: Mapped[UUID] = mapped_column(ForeignKey(RbacRole.id), primary_key=True)
 
     # Optional ORM helpers
-    group: Mapped[RbacGroup] = relationship(RbacGroup, backref=__tablename__)
-    role: Mapped[RbacRole] = relationship(RbacRole, backref=__tablename__)
+    group: Mapped[RbacGroup] = relationship("RbacGroup", backref=__tablename__)
+    role: Mapped[RbacRole] = relationship("RbacRole", backref=__tablename__)
 
     @classmethod
     def groups_for_role(cls, session, role_id: UUID) -> list[RbacGroup]:

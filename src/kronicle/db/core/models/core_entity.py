@@ -1,4 +1,4 @@
-# kronicle/db/core/models/core_base.py
+# kronicle/db/core/models/core_entity.py
 
 from kronicle.db.base.kronicle_entity import KronicleEntity
 

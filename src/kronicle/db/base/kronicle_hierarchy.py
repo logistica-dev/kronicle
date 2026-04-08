@@ -89,6 +89,17 @@ class KronicleHierarchyMixin(KronicleBase):
             stack.extend(node.children)
         return False
 
+    def _walk_ancestors(self, visitor: Callable[[T], None]) -> None:
+        visited: set[UUID] = set()
+        stack: list[T] = getattr(self, "parent_groups", [])
+        while stack:
+            node = stack.pop()
+            if node.id in visited:
+                continue
+            visited.add(node.id)
+            visitor(node)
+            stack.extend(getattr(node, "parent_groups", []))
+
     @property
     def children(self: T) -> list[T]:
         """Typed access to children, backed by dynamic SQLAlchemy relationship."""

@@ -22,8 +22,8 @@ class RbacRole(RbacEntity):
     __tablename__ = "roles"
 
     description: Mapped[str] = mapped_column(nullable=True)
-    permissions: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
-    restrictions: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    permissions: Mapped[list[str]] = mapped_column(JSONB, default=list, nullable=False)
+    restrictions: Mapped[list[str]] = mapped_column(JSONB, default=list, nullable=False)
 
     @property
     def snapshot(self) -> dict[str, Any]:

@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy.orm import Mapped, Session, mapped_column
+from sqlalchemy.orm import Session
 
 from kronicle.db.base.kronicle_hierarchy import KronicleHierarchyMixin
 from kronicle.db.rbac.models.rbac_entity import RbacEntity
@@ -12,8 +12,6 @@ from kronicle.db.rbac.models.rbac_entity import RbacEntity
 
 class RbacGroup(RbacEntity, KronicleHierarchyMixin):
     __tablename__ = "groups"
-
-    name: Mapped[str] = mapped_column(nullable=False, unique=True)
 
     @property
     def snapshot(self) -> dict[str, Any]:

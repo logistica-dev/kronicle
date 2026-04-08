@@ -43,8 +43,8 @@ class RbacEvent(RbacEntity):
     # Actor
     # ----------------------------
     actor_id: Mapped[UUID] = mapped_column(ForeignKey("rbac.users.id"), nullable=False)
-    actor: Mapped[RbacUser] = relationship(RbacUser, backref=backref("performed_events", lazy="select"))
-    actor_snapshot: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    actor: Mapped[RbacUser] = relationship("RbacUser", backref=backref("performed_events", lazy="select"))
+    actor_snapshot: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
 
     # ----------------------------
     # Subject
@@ -52,27 +52,29 @@ class RbacEvent(RbacEntity):
     subject_type: Mapped[str] = mapped_column(String(16), nullable=False)  # "user" or "group"
     subject_id: Mapped[UUID] = mapped_column(nullable=False)
     subject_user: Mapped[RbacUser | None] = relationship(
-        RbacUser,
+        "RbacUser",
         primaryjoin="RbacUser.id==RbacEvent.subject_id",
         viewonly=True,
     )
     subject_group: Mapped[RbacGroup | None] = relationship(
-        RbacGroup,
+        "RbacGroup",
         primaryjoin="RbacGroup.id==RbacEvent.subject_id",
         viewonly=True,
     )
-    subject_snapshot: Mapped[dict] = mapped_column(JSONB, nullable=True, default=dict)
+    subject_snapshot: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=True)
 
     # ----------------------------
     # Target (Zone or Resource)
     # ----------------------------
     target_type: Mapped[str] = mapped_column(String(16), nullable=False)
     target_id: Mapped[UUID] = mapped_column(nullable=False)
-    target_snapshot: Mapped[dict] = mapped_column(JSONB, nullable=True, default=dict)
-    zone: Mapped[Zone | None] = relationship(Zone, primaryjoin="Zone.id==RbacEvent.target_id", viewonly=True)
+    target_snapshot: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=True)
+    zone: Mapped[Zone | None] = relationship("Zone", primaryjoin="Zone.id==RbacEvent.target_id", viewonly=True)
 
     # ----------------------------
     # Role involved
     # ----------------------------
     role_id: Mapped[UUID | None] = mapped_column(ForeignKey("rbac.roles.id"), nullable=True)
-    role: Mapped[RbacRole | None] = relationship(RbacRole, primaryjoin="RbacRole.id==RbacEvent.role_id", viewonly=True)
+    role: Mapped[RbacRole | None] = relationship(
+        "RbacRole", primaryjoin="RbacRole.id==RbacEvent.role_id", viewonly=True
+    )

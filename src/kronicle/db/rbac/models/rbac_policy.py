@@ -7,7 +7,12 @@ from uuid import UUID
 from sqlalchemy import Boolean, DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, declared_attr, mapped_column, relationship
 
-from kronicle.db.rbac.models.rbac_access_profile import ChannelAccessProfile, ResourceAccessProfile, ZoneAccessProfile
+from kronicle.db.rbac.models.rbac_access_profile import (
+    ChannelAccessProfile,
+    ResourceAccessProfile,
+    RowAccessProfile,
+    ZoneAccessProfile,
+)
 from kronicle.db.rbac.models.rbac_entity import RbacEntity
 from kronicle.db.rbac.models.rbac_subject import RbacSubject
 
@@ -46,12 +51,12 @@ class RbacPolicy(RbacEntity):
     @declared_attr
     def subject(cls) -> Mapped[RbacSubject]:
         """Subject can be either a User or a Group. View-only relationship."""
-        return relationship(RbacSubject, viewonly=True)
+        return relationship("RbacSubject", viewonly=True)
 
     @declared_attr
     def is_delegation(cls) -> Mapped[bool]:
         """Indicates if this policy is a temporary delegated assignment."""
-        return mapped_column(Boolean, nullable=False, default=False, server_default="false")
+        return mapped_column(Boolean, default=False, server_default="false", nullable=False)
 
     @declared_attr
     def delegation_start(cls) -> Mapped[datetime | None]:
@@ -62,6 +67,23 @@ class RbacPolicy(RbacEntity):
     def delegation_end(cls) -> Mapped[datetime | None]:
         """Optional end datetime for delegated policy."""
         return mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ZonePolicy(RbacPolicy):
+    """
+    Policy for a Zone instance. Links a ZoneAccessProfile to a Subject.
+    """
+
+    __tablename__ = "zone_policies"
+    __table_args__ = {"schema": RbacEntity.namespace(), "extend_existing": True}
+
+    @declared_attr
+    def access_profile_id(cls) -> Mapped[UUID]:
+        return mapped_column(ForeignKey(ZoneAccessProfile.id), nullable=False)
+
+    @declared_attr
+    def access_profile(cls) -> Mapped[ZoneAccessProfile]:  # type: ignore[reportIncompatibleVariableOverride]
+        return relationship(ZoneAccessProfile)
 
 
 class ChannelPolicy(RbacPolicy):
@@ -81,18 +103,18 @@ class ChannelPolicy(RbacPolicy):
         return relationship(ChannelAccessProfile)
 
 
-class ZonePolicy(RbacPolicy):
+class RowPolicy(RbacPolicy):
     """
-    Policy for a Zone instance. Links a ZoneAccessProfile to a Subject.
+    Policy for a single Channel's timeseries row. Links a RowAccessProfile to a Subject.
     """
 
-    __tablename__ = "zone_policies"
+    __tablename__ = "row_policies"
     __table_args__ = {"schema": RbacEntity.namespace(), "extend_existing": True}
 
     @declared_attr
     def access_profile_id(cls) -> Mapped[UUID]:
-        return mapped_column(ForeignKey(ZoneAccessProfile.id), nullable=False)
+        return mapped_column(ForeignKey(RowAccessProfile.id), nullable=False)
 
     @declared_attr
-    def access_profile(cls) -> Mapped[ZoneAccessProfile]:  # type: ignore[reportIncompatibleVariableOverride]
-        return relationship(ZoneAccessProfile)
+    def access_profile(cls) -> Mapped[RowAccessProfile]:  # type: ignore[reportIncompatibleVariableOverride]
+        return relationship(RowAccessProfile)

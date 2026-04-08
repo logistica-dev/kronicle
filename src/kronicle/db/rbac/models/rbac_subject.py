@@ -32,5 +32,5 @@ class RbacSubject(RbacEntity):
     # Type of subject: 'users' or 'groups'
     type: Mapped[SubjectType] = mapped_column(String(16), nullable=False)
 
-    user = relationship(RbacUser, primaryjoin=lambda: foreign(RbacSubject.id) == RbacUser.id, viewonly=True)
-    group = relationship(RbacGroup, primaryjoin=lambda: foreign(RbacSubject.id) == RbacGroup.id, viewonly=True)
+    user = relationship("RbacUser", primaryjoin=lambda: foreign(RbacSubject.id) == RbacUser.id, viewonly=True)
+    group = relationship("RbacGroup", primaryjoin=lambda: foreign(RbacSubject.id) == RbacGroup.id, viewonly=True)

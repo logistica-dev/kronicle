@@ -6,6 +6,7 @@ from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, declared_attr, mapped_column, relationship
 
 from kronicle.db.core.models.core_channel import Channel
+from kronicle.db.core.models.core_row import Row
 from kronicle.db.core.models.core_zone import Zone
 from kronicle.db.rbac.models.rbac_entity import RbacEntity
 from kronicle.db.rbac.models.rbac_role import RbacRole
@@ -33,17 +34,6 @@ class ResourceAccessProfile(RbacEntity):
         return mapped_column(String(255), nullable=True)
 
 
-class ChannelAccessProfile(ResourceAccessProfile):
-    __tablename__ = "channel_access_profiles"
-    __table_args__ = (
-        UniqueConstraint("role_id", "channel_id", name="uq_channel_access_profile"),  # Tuple of constraints first
-        {"schema": RbacEntity.namespace(), "extend_existing": True},  # Options dictionary last
-    )
-
-    channel_id: Mapped[str] = mapped_column(ForeignKey(Channel.id), nullable=False)
-    channel: Mapped[Channel] = relationship(Channel)
-
-
 class ZoneAccessProfile(ResourceAccessProfile):
     """
     Scoped Role for a Zone instance.
@@ -55,5 +45,27 @@ class ZoneAccessProfile(ResourceAccessProfile):
         {"schema": RbacEntity.namespace(), "extend_existing": True},
     )
 
-    zone_id: Mapped[str] = mapped_column(ForeignKey(Zone.id), nullable=False)
-    zone: Mapped[Zone] = relationship(Zone)
+    zone_id: Mapped[UUID] = mapped_column(ForeignKey(Zone.id), nullable=False)
+    zone: Mapped[Zone] = relationship("Zone", backref="access_profiles")
+
+
+class ChannelAccessProfile(ResourceAccessProfile):
+    __tablename__ = "channel_access_profiles"
+    __table_args__ = (
+        UniqueConstraint("role_id", "channel_id", name="uq_channel_access_profile"),  # Tuple of constraints first
+        {"schema": RbacEntity.namespace(), "extend_existing": True},  # Options dictionary last
+    )
+
+    channel_id: Mapped[UUID] = mapped_column(ForeignKey(Channel.id), nullable=False)
+    channel: Mapped[Channel] = relationship("Channel", backref="access_profiles")
+
+
+class RowAccessProfile(ResourceAccessProfile):
+    __tablename__ = "row_access_profiles"
+    __table_args__ = (
+        UniqueConstraint("role_id", "row_id", name="uq_row_access_profile"),  # Tuple of constraints first
+        {"schema": RbacEntity.namespace(), "extend_existing": True},  # Options dictionary last
+    )
+
+    row_id: Mapped[UUID] = mapped_column(ForeignKey(Row.id), nullable=False)
+    row: Mapped[Row] = relationship("Row", backref="access_profiles")
