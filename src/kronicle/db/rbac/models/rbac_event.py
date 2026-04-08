@@ -34,47 +34,47 @@ class RbacEvent(RbacEntity):
 
     __tablename__ = "rbac_events"
 
-    # ----------------------------
+    # ----------------------------------------------------------------------------------------------
     # Core action
-    # ----------------------------
+    # ----------------------------------------------------------------------------------------------
     verb: Mapped[str] = mapped_column(String(16), nullable=False)  # ASSIGN, REVOKE, DELEGATE
 
-    # ----------------------------
+    # ----------------------------------------------------------------------------------------------
     # Actor
-    # ----------------------------
-    actor_id: Mapped[UUID] = mapped_column(ForeignKey("rbac.users.id"), nullable=False)
-    actor: Mapped[RbacUser] = relationship("RbacUser", backref=backref("performed_events", lazy="select"))
+    # ----------------------------------------------------------------------------------------------
+    actor_id: Mapped[UUID] = mapped_column(ForeignKey(RbacUser.id), nullable=False)
+    actor: Mapped[RbacUser] = relationship(RbacUser, backref=backref("performed_events", lazy="select"))
     actor_snapshot: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
 
-    # ----------------------------
+    # ----------------------------------------------------------------------------------------------
     # Subject
-    # ----------------------------
+    # ----------------------------------------------------------------------------------------------
     subject_type: Mapped[str] = mapped_column(String(16), nullable=False)  # "user" or "group"
     subject_id: Mapped[UUID] = mapped_column(nullable=False)
     subject_user: Mapped[RbacUser | None] = relationship(
-        "RbacUser",
-        primaryjoin="RbacUser.id==RbacEvent.subject_id",
+        RbacUser,
+        primaryjoin=lambda: RbacUser.id == RbacEvent.subject_id,
         viewonly=True,
     )
     subject_group: Mapped[RbacGroup | None] = relationship(
-        "RbacGroup",
-        primaryjoin="RbacGroup.id==RbacEvent.subject_id",
+        RbacGroup,
+        primaryjoin=lambda: RbacGroup.id == RbacEvent.subject_id,
         viewonly=True,
     )
     subject_snapshot: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=True)
 
-    # ----------------------------
+    # ----------------------------------------------------------------------------------------------
     # Target (Zone or Resource)
-    # ----------------------------
+    # ----------------------------------------------------------------------------------------------
     target_type: Mapped[str] = mapped_column(String(16), nullable=False)
     target_id: Mapped[UUID] = mapped_column(nullable=False)
     target_snapshot: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=True)
-    zone: Mapped[Zone | None] = relationship("Zone", primaryjoin="Zone.id==RbacEvent.target_id", viewonly=True)
+    zone: Mapped[Zone | None] = relationship(Zone, primaryjoin=lambda: Zone.id == RbacEvent.target_id, viewonly=True)
 
-    # ----------------------------
+    # ----------------------------------------------------------------------------------------------
     # Role involved
-    # ----------------------------
-    role_id: Mapped[UUID | None] = mapped_column(ForeignKey("rbac.roles.id"), nullable=True)
+    # ----------------------------------------------------------------------------------------------
+    role_id: Mapped[UUID | None] = mapped_column(ForeignKey(RbacRole.id), nullable=True)
     role: Mapped[RbacRole | None] = relationship(
-        "RbacRole", primaryjoin="RbacRole.id==RbacEvent.role_id", viewonly=True
+        RbacRole, primaryjoin=lambda: RbacRole.id == RbacEvent.role_id, viewonly=True
     )

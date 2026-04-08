@@ -9,8 +9,8 @@ from kronicle.db.core.models.core_zone import Zone
 
 
 class Channel(CoreEntity):
-    __tablename__ = "channel"
-    zone_id: Mapped[UUID] = mapped_column(ForeignKey("zones.id"), nullable=False)
+    __tablename__ = "channels"
+    zone_id: Mapped[UUID] = mapped_column(ForeignKey(Zone.id), nullable=False)
 
     # ORM convenience only (not ownership)
-    zone: Mapped[Zone] = relationship("Zone", backref="channels")
+    zone: Mapped[Zone] = relationship(Zone, backref=__tablename__)

@@ -51,7 +51,7 @@ class RbacPolicy(RbacEntity):
     @declared_attr
     def subject(cls) -> Mapped[RbacSubject]:
         """Subject can be either a User or a Group. View-only relationship."""
-        return relationship("RbacSubject", viewonly=True)
+        return relationship(RbacSubject, viewonly=True)
 
     @declared_attr
     def is_delegation(cls) -> Mapped[bool]:

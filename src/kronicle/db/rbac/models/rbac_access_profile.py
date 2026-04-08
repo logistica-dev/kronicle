@@ -46,7 +46,7 @@ class ZoneAccessProfile(ResourceAccessProfile):
     )
 
     zone_id: Mapped[UUID] = mapped_column(ForeignKey(Zone.id), nullable=False)
-    zone: Mapped[Zone] = relationship("Zone", backref="access_profiles")
+    zone: Mapped[Zone] = relationship(Zone, backref="access_profiles")
 
 
 class ChannelAccessProfile(ResourceAccessProfile):
@@ -57,7 +57,7 @@ class ChannelAccessProfile(ResourceAccessProfile):
     )
 
     channel_id: Mapped[UUID] = mapped_column(ForeignKey(Channel.id), nullable=False)
-    channel: Mapped[Channel] = relationship("Channel", backref="access_profiles")
+    channel: Mapped[Channel] = relationship(Channel, backref="access_profiles")
 
 
 class RowAccessProfile(ResourceAccessProfile):
@@ -68,4 +68,4 @@ class RowAccessProfile(ResourceAccessProfile):
     )
 
     row_id: Mapped[UUID] = mapped_column(ForeignKey(Row.id), nullable=False)
-    row: Mapped[Row] = relationship("Row", backref="access_profiles")
+    row: Mapped[Row] = relationship(Row, backref="access_profiles")

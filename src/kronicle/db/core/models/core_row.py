@@ -15,7 +15,7 @@ class Row(CoreEntity):
     Note: the core.row.id (inherited from KronicleBase) = data.timeseries.row_id
     """
 
-    __tablename__ = "row"
+    __tablename__ = "rows"
 
     # Index for fast lookup when given channel + timeseries row
     __table_args__ = (
@@ -26,8 +26,8 @@ class Row(CoreEntity):
     # id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
 
     # The channel this row belongs to
-    channel_id: Mapped[UUID] = mapped_column(ForeignKey("channel.id"), nullable=False)
-    channel: Mapped[Channel] = relationship(Channel, backref="rows")
+    channel_id: Mapped[UUID] = mapped_column(ForeignKey(Channel.id), nullable=False)
+    channel: Mapped[Channel] = relationship(Channel, backref=__tablename__)
 
     # Link to Timescale row_id (BIGSERIAL)
     timeseries_row_id: Mapped[int] = mapped_column(nullable=False)

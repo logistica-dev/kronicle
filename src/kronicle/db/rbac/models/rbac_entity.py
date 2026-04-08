@@ -19,7 +19,7 @@ class RbacEntity(KronicleEntity):
     __table_args__ = {"schema": _RBAC_NAMESPACE, "extend_existing": True}
 
     @classmethod
-    def namespace(cls):
+    def namespace(cls) -> str:
         return _RBAC_NAMESPACE
 
     @classmethod

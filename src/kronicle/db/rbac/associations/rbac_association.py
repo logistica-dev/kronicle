@@ -9,5 +9,5 @@ class RbacAssociation(KronicleAssociation):
     __abstract__ = True  # Do not create a table for this class itself
 
     @classmethod
-    def namespace(cls):
+    def namespace(cls) -> str:
         return RbacEntity.namespace()

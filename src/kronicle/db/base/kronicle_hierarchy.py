@@ -27,9 +27,9 @@ class KronicleHierarchyMixin(KronicleBase):
 
     _hierarchy_table: Table  # dynamically created per subclass
 
-    # ----------------------------
+    # ----------------------------------------------------------------------------------------------
     # Setup
-    # ----------------------------
+    # ----------------------------------------------------------------------------------------------
     @classmethod
     def _setup_hierarchy(cls):
         """Create canonical hierarchy table and attach children relationship."""
@@ -62,9 +62,9 @@ class KronicleHierarchyMixin(KronicleBase):
             backref=f"parent_{parent_name}",
         )
 
-    # ----------------------------
+    # ----------------------------------------------------------------------------------------------
     # Traversal
-    # ----------------------------
+    # ----------------------------------------------------------------------------------------------
     def _walk_subtree(self: T, visitor: Callable[[T], None]) -> None:
         visited: set[UUID] = set()
         stack: list[T] = [self]
@@ -114,9 +114,9 @@ class KronicleHierarchyMixin(KronicleBase):
     def _would_create_cycle(self: T, candidate: T) -> bool:
         return candidate._walk_subtree_until(lambda node: node.id == self.id)
 
-    # ----------------------------
+    # ----------------------------------------------------------------------------------------------
     # Automatic mutation
-    # ----------------------------
+    # ----------------------------------------------------------------------------------------------
     def add_child(self: T, child: T):
         """Add a child safely; raises ValueError on cycle."""
         if self._would_create_cycle(child):
