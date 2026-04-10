@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TypeVar
+from typing import Any, TypeVar
 from uuid import UUID
 
 from sqlalchemy import Column, ForeignKey, Table
@@ -31,16 +31,17 @@ class KronicleHierarchyMixin(KronicleBase):
     # Setup
     # ----------------------------------------------------------------------------------------------
     @classmethod
-    def _setup_hierarchy(cls):
+    def setup_hierarchy(cls):
         """Create canonical hierarchy table and attach children relationship."""
         parent_name = cls.tablename()
         namespace = cls.namespace()
         table_name = f"{parent_name}_hierarchy"
 
         here = f"{namespace}.{parent_name}._setup_hierarchy"
-        if hasattr(cls, "_hierarchy_table"):
+        if hasattr(cls, "_hierarchy_table") and cls._hierarchy_table is not None:
             log_d(here, f"Hierarchy already set, {table_name} exists")
             return
+
         parent_table = cls.__table__
         metadata = parent_table.metadata
 
@@ -48,8 +49,12 @@ class KronicleHierarchyMixin(KronicleBase):
         hierarchy_table = Table(
             table_name,
             metadata,
-            Column("parent_id", parent_table.c.id.type, ForeignKey(parent_table.c.id), primary_key=True),
-            Column("child_id", parent_table.c.id.type, ForeignKey(parent_table.c.id), primary_key=True),
+            Column(
+                "parent_id", parent_table.c.id.type, ForeignKey(parent_table.c.id, ondelete="CASCADE"), primary_key=True
+            ),
+            Column(
+                "child_id", parent_table.c.id.type, ForeignKey(parent_table.c.id, ondelete="CASCADE"), primary_key=True
+            ),
             schema=namespace,
         )
         cls._hierarchy_table = hierarchy_table
@@ -59,7 +64,7 @@ class KronicleHierarchyMixin(KronicleBase):
             secondary=hierarchy_table,
             primaryjoin=lambda: cls.id == hierarchy_table.c.parent_id,
             secondaryjoin=lambda: cls.id == hierarchy_table.c.child_id,
-            backref=f"parent_{parent_name}",
+            backref="parents",
         )
 
     # ----------------------------------------------------------------------------------------------
@@ -89,7 +94,7 @@ class KronicleHierarchyMixin(KronicleBase):
             stack.extend(node.children)
         return False
 
-    def _walk_ancestors(self, visitor: Callable[[T], None]) -> None:
+    def _walk_ancestors(self, visitor: Callable[[T], Any]) -> None:
         visited: set[UUID] = set()
         stack: list[T] = getattr(self, "parent_groups", [])
         while stack:

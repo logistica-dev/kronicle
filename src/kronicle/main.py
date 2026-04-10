@@ -25,8 +25,10 @@ from kronicle.auth.auth_service import AuthService
 from kronicle.auth.jwt_service import JWTService
 from kronicle.auth.pwd.pwd_manager import PasswordManager
 from kronicle.auth.pwd.pwd_policy import PasswordPolicy
+from kronicle.db.core.models.core_zone import Zone
 from kronicle.db.data.channel_db_session import ChannelDbSession
 from kronicle.db.data.channel_repository import ChannelRepository
+from kronicle.db.rbac.models.rbac_group import RbacGroup
 from kronicle.db.rbac.rbac_db_session import RbacDbSession
 from kronicle.deps.settings import KronicleSettings
 from kronicle.errors.error_types import KronicleAppError, KronicleHTTPErrorPayload
@@ -100,15 +102,12 @@ class KronicleApp:
                 redirect_slashes=False,
             )
 
-        # Initialize middleware
         with log_block(here, "Middleware"):
             self.init_middleware()
 
-        # Initialize exception handlers
         with log_block(here, "Exception handler"):
             self.init_exception_handlers()
 
-        # Initialize routes
         with log_block(here, "Routes"):
             self.init_routes()
 
@@ -116,6 +115,10 @@ class KronicleApp:
         if self.conf.is_dev_env:
             with log_block(here, "Doc generation"):
                 self.generate_doc()
+
+    def setup_table_hierarchy(self):
+        Zone.setup_hierarchy()
+        RbacGroup.setup_hierarchy()
 
     # ----------------------------------------------------------------------------------------------
     # Lifespan: setup DBs and services
@@ -132,6 +135,7 @@ class KronicleApp:
             channel_db = ChannelDbSession(db_url=db_conf.channel_connection_url)
             await channel_db.init_async()
             self.app.state.channel_db = channel_db
+
         with log_block(here, "Channel deps"):
             channel_repository = ChannelRepository(channel_db)
             self.app.state.channel_service = ChannelService(channel_repository)
@@ -139,8 +143,13 @@ class KronicleApp:
         # --- RBAC DB ---
         with log_block(here, "RBAC session manager"):
             self.app.state.rbac_db = RbacDbSession(db_url=db_conf.rbac_connection_url, echo=False)
+
+        with log_block(here, "RBAC hierarchies setup"):
+            self.setup_table_hierarchy()
+
         with log_block(here, "RBAC mappers"):
             configure_mappers()
+
         with log_block(here, "RBAC tables validation"):
             self.app.state.rbac_db.validate_tables()  # Add all RBAC models here
 

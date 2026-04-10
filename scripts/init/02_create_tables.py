@@ -85,12 +85,12 @@ def table_exists(db, namespace, table_name):
     return db.execute(
         text(
             """
-                SELECT EXISTS (
-                    SELECT 1
-                    FROM information_schema.tables
-                    WHERE table_schema = :schema AND table_name = :table
-                )
-                """
+            SELECT EXISTS (
+                SELECT 1
+                FROM information_schema.tables
+                WHERE table_schema = :schema AND table_name = :table
+            )
+            """
         ),
         {"schema": namespace, "table": table_name},
     ).scalar()
@@ -162,12 +162,12 @@ def create_sqlalchemy_tables(db, tables, namespace):
                     raise e
 
         # --- Setup hierarchy if applicable (KronicleHierarchyMixin) ---
-        if hasattr(table_cls, "_setup_hierarchy") and issubclass(table_cls, KronicleHierarchyMixin):
+        if issubclass(table_cls, KronicleHierarchyMixin):
             log_d(here, f"Setting up the hierarchy for '{namespace}.{table_name}'")
-            table_cls._setup_hierarchy()
+            table_cls.setup_hierarchy()
             log_d(here, "Hierarchy set")
 
-            hierarchy_table = getattr(table_cls, "_hierarchy_table", None)
+            hierarchy_table = table_cls._hierarchy_table
             if hierarchy_table is not None:
                 if table_exists(db, namespace, hierarchy_table.name):
                     log_d(here, f"Hierarchy table '{namespace}.{hierarchy_table.name}' already exists")

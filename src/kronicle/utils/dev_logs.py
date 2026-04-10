@@ -272,7 +272,11 @@ def log_block(here, message):
     start_time = time()
     try:
         yield
-    finally:
+    except Exception as e:
+        elapsed = time() - start_time
+        log_e(here, f"  >{message}: FAILED after {elapsed:.3f}s ({e})", stacklevel=stacklevel)
+        raise
+    else:
         elapsed = time() - start_time
         log_d(here, f"  >{message}: done in {elapsed:.3f}s", stacklevel=stacklevel)
 
