@@ -2,8 +2,8 @@ from typing import Callable, Generic, TypeVar
 
 from sqlalchemy.orm import Session
 
-from kronicle.db.base.hierarchy.hierarchy_engine import HierarchyEngine
 from kronicle.db.base.kronicle_base import KronicleBase
+from kronicle.repo.hierarchy.hierarchy_engine import HierarchyEngine
 
 T = TypeVar("T", bound=KronicleBase)
 
@@ -13,12 +13,6 @@ class HierarchyService(Generic[T]):
     High-level API for hierarchy operations.
 
     This is the only class that application code should use directly.
-
-    It composes:
-      - HierarchyEngine (graph traversal)
-      - HierarchyRepository (data access)
-      - HierarchyValidator (constraints)
-      => Repository writes, Validator decides, Service orchestrates
     """
 
     def __init__(
@@ -63,3 +57,15 @@ class HierarchyService(Generic[T]):
         Return all descendants of a node.
         """
         return list(self.engine.descendants(node))
+
+    def expand_descendants(self, nodes: list[T]) -> set[T]:
+        """
+        Expand multiple roots into full closure set.
+        Used heavily by RBAC resolution.
+        """
+        result = {}
+        for node in nodes:
+            for d in self.engine.descendants(node):
+                result[d.id] = d
+            result[node.id] = node
+        return set(result.values())

@@ -9,7 +9,7 @@ from asyncpg import CannotConnectNowError, ConnectionDoesNotExistError, InvalidC
 from kronicle.db.core.models.core_channel import Channel
 from kronicle.db.core.models.core_entity import CoreEntity
 from kronicle.db.core.models.core_zone import Zone
-from kronicle.db.data.channel_repository import ChannelMetadata
+from kronicle.db.data.models.channel_metadata import ChannelMetadata
 from kronicle.db.rbac.models.rbac_entity import RbacEntity
 from kronicle.db.rbac.models.rbac_user import RbacUser
 from scripts.init.init import main as init_script  # type: ignore

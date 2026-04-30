@@ -1,7 +1,8 @@
 # kronicle/db/rbac/models/__init__.py
-from kronicle.db.rbac.associations.group_roles import RbacGroupRoles
-from kronicle.db.rbac.associations.user_groups import RbacUserGroups
-from kronicle.db.rbac.associations.user_roles import RbacUserRoles
+from kronicle.db.rbac.links.group_hierarchy import RbacGroupHierarchy
+from kronicle.db.rbac.links.group_roles import RbacGroupRoles
+from kronicle.db.rbac.links.user_groups import RbacUserGroups
+from kronicle.db.rbac.links.user_roles import RbacUserRoles
 from kronicle.db.rbac.models.rbac_access_profile import ChannelAccessProfile, ZoneAccessProfile
 from kronicle.db.rbac.models.rbac_entity import RbacEntity
 from kronicle.db.rbac.models.rbac_group import RbacGroup
@@ -21,6 +22,9 @@ ALL_RBAC_TABLES = [
     # User then Group
     RbacGroup,
     RbacRole,
+    # Group hierarchy
+    RbacGroupHierarchy,
+    RbacGroupRoles,
     # These should be created afterwards as they link to previous tables
     RbacUserGroups,
     RbacUserRoles,

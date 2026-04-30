@@ -1,4 +1,4 @@
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Iterator
 from typing import Generic, TypeVar
 
 from kronicle.db.base.kronicle_base import KronicleBase
@@ -30,13 +30,13 @@ class HierarchyEngine(Generic[T]):
     # ----------------------------------------------------------------------------------------------
     # Ancestors
     # ----------------------------------------------------------------------------------------------
-    def ancestors(self, node: T) -> Iterable[T]:
+    def ancestors(self, node: T) -> Iterator[T]:
         """
         Yield all ancestors of a node (DFS).
 
         Cycle-safe (visited set).
         """
-        visited = set()
+        visited = {node.id}
         stack = [node]
 
         while stack:
@@ -53,11 +53,11 @@ class HierarchyEngine(Generic[T]):
     # ----------------------------------------------------------------------------------------------
     # Descendants
     # ----------------------------------------------------------------------------------------------
-    def descendants(self, node: T) -> Iterable[T]:
+    def descendants(self, node: T) -> Iterator[T]:
         """
         Yield all descendants of a node (DFS).
         """
-        visited = set()
+        visited = {node.id}
         stack = [node]
 
         while stack:

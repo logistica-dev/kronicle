@@ -26,7 +26,7 @@ def mock_db_session():
 
 @pytest.fixture
 def rbac_service(mock_db_session, mock_engine):
-    return RbacService(rbac_db_session=mock_db_session, rbac_engine=mock_engine)
+    return RbacService(rbac_db_session=mock_db_session)
 
 
 def test_create_user_success(rbac_service, mock_engine, mock_db_session):

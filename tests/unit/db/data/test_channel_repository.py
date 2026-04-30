@@ -4,11 +4,11 @@ from uuid import uuid4
 
 import pytest
 
-from kronicle.db.data.channel_repository import ChannelRepository
 from kronicle.db.data.models.channel_metadata import ChannelMetadata
 from kronicle.db.data.models.channel_resource import ChannelResource
 from kronicle.db.data.models.channel_schema import ChannelSchema
 from kronicle.errors.error_types import BadRequestError, ConflictError, NotFoundError
+from kronicle.repo.data.channel_repository import ChannelRepository
 from kronicle.schemas.payload.processed_payload import ProcessedPayload
 
 pytestmark = pytest.mark.asyncio

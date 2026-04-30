@@ -27,7 +27,6 @@ from kronicle.auth.pwd.pwd_manager import PasswordManager
 from kronicle.auth.pwd.pwd_policy import PasswordPolicy
 from kronicle.db.core.models.core_zone import Zone
 from kronicle.db.data.channel_db_session import ChannelDbSession
-from kronicle.db.data.channel_repository import ChannelRepository
 from kronicle.db.rbac.models.rbac_group import RbacGroup
 from kronicle.db.rbac.rbac_db_session import RbacDbSession
 from kronicle.deps.settings import KronicleSettings
@@ -39,6 +38,7 @@ from kronicle.errors.exception_handlers import (
     pydantic_exception_adapter,
 )
 from kronicle.logging.log_bus.mid_sanitize import RequestSanitizerMiddleware
+from kronicle.repo.data.channel_repository import ChannelRepository
 from kronicle.services.channel_service import ChannelService
 from kronicle.services.rbac_service import RbacService
 from kronicle.utils.dev_logs import log_block, log_d, log_e, log_w, request_logger

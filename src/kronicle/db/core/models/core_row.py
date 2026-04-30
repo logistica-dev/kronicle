@@ -15,11 +15,13 @@ class Row(CoreEntity):
     Note: the core.row.id (inherited from KronicleBase) = data.timeseries.row_id
     """
 
+    UQ_CONSTRAINT = "uq_channel_row"
+
     __tablename__ = "rows"
 
     # Index for fast lookup when given channel + timeseries row
     __table_args__ = (
-        UniqueConstraint("channel_id", "timeseries_row_id", name="uq_channel_row"),
+        UniqueConstraint("channel_id", "timeseries_row_id", name=UQ_CONSTRAINT),
         {"schema": CoreEntity.namespace(), "extend_existing": True},
     )
     # Reminder: id is inherited from KronicleBase

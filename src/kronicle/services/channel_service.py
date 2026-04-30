@@ -4,9 +4,9 @@ from uuid import UUID, uuid4
 
 from fastapi._compat.v2 import normalize_name
 
-from kronicle.db.data.channel_repository import ChannelRepository
 from kronicle.db.data.models.channel_schema import ChannelSchema
 from kronicle.errors.error_types import BadRequestError
+from kronicle.repo.data.channel_repository import ChannelRepository
 from kronicle.schemas.filters.row_request_filter import RowRequestFilter
 from kronicle.schemas.payload.input_payload import InputPayload
 from kronicle.schemas.payload.processed_payload import ProcessedPayload
