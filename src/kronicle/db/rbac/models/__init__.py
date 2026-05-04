@@ -1,12 +1,12 @@
 # kronicle/db/rbac/models/__init__.py
 from kronicle.db.rbac.links.group_hierarchy import RbacGroupHierarchy
 from kronicle.db.rbac.links.group_roles import RbacGroupRoles
+from kronicle.db.rbac.links.rbac_access_profile import ChannelAccessProfile, RowAccessProfile, ZoneAccessProfile
 from kronicle.db.rbac.links.user_groups import RbacUserGroups
 from kronicle.db.rbac.links.user_roles import RbacUserRoles
-from kronicle.db.rbac.models.rbac_access_profile import ChannelAccessProfile, ZoneAccessProfile
 from kronicle.db.rbac.models.rbac_entity import RbacEntity
 from kronicle.db.rbac.models.rbac_group import RbacGroup
-from kronicle.db.rbac.models.rbac_policy import ChannelPolicy, ZonePolicy
+from kronicle.db.rbac.models.rbac_policy import ChannelPolicy, RowPolicy, ZonePolicy
 from kronicle.db.rbac.models.rbac_role import RbacRole
 from kronicle.db.rbac.models.rbac_subject import RbacSubject
 from kronicle.db.rbac.models.rbac_user import RbacUser
@@ -30,11 +30,14 @@ ALL_RBAC_TABLES = [
     RbacUserRoles,
     RbacGroupRoles,
     RbacSubject,
+    # Access profiles (resource <-> role)
     ChannelAccessProfile,
     ZoneAccessProfile,
-    # Then these should be created afterwards
+    RowAccessProfile,
+    # Policies
     ChannelPolicy,
     ZonePolicy,
+    RowPolicy,
     # This one should be last
     # RbacEvent,
 ]

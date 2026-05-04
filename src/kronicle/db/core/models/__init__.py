@@ -1,6 +1,6 @@
 # kronicle/db/core/models/__init__.py
 
-# Centralized list of all RBAC tables
+from kronicle.db.core.links.zone_hierarchy import ZoneHierarchy
 from kronicle.db.core.models.core_channel import Channel
 from kronicle.db.core.models.core_entity import CoreEntity
 from kronicle.db.core.models.core_resource import CoreResource
@@ -9,7 +9,7 @@ from kronicle.db.core.models.core_zone import Zone
 
 CORE_NAMESPACE = CoreEntity.namespace()
 
-# Centralized list of all RBAC tables
+# Centralized list of all CORE tables
 ALL_CORE_TABLES = [
     Row,
     # Channel must be created after Row
@@ -18,4 +18,5 @@ ALL_CORE_TABLES = [
     Zone,
     # The view for both of these:
     CoreResource,
+    ZoneHierarchy,
 ]

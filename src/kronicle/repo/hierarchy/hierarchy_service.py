@@ -1,3 +1,4 @@
+# kronicle/repo/hierarchy/hierarchy_service.py
 from typing import Callable, Generic, TypeVar
 
 from sqlalchemy.orm import Session
@@ -58,7 +59,7 @@ class HierarchyService(Generic[T]):
         """
         return list(self.engine.descendants(node))
 
-    def expand_descendants(self, nodes: list[T]) -> set[T]:
+    def descendant_closure(self, nodes: list[T]) -> set[T]:
         """
         Expand multiple roots into full closure set.
         Used heavily by RBAC resolution.

@@ -1,3 +1,4 @@
+# kronicle/repo/hierarchy/hierarchy_engine.py
 from collections.abc import Callable, Iterable, Iterator
 from typing import Generic, TypeVar
 

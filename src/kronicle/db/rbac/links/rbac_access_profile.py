@@ -8,11 +8,11 @@ from sqlalchemy.orm import Mapped, declared_attr, mapped_column, relationship
 from kronicle.db.core.models.core_channel import Channel
 from kronicle.db.core.models.core_row import Row
 from kronicle.db.core.models.core_zone import Zone
-from kronicle.db.rbac.models.rbac_entity import RbacEntity
+from kronicle.db.rbac.links.rbac_link import RbacLink
 from kronicle.db.rbac.models.rbac_role import RbacRole
 
 
-class ResourceAccessProfile(RbacEntity):
+class ResourceAccessProfile(RbacLink):
     """
     Abstract base for a Scoped Role, i.e. a Role applied to a specific Resource instance.
     Automatically created when a new Resource is added.
@@ -39,10 +39,12 @@ class ZoneAccessProfile(ResourceAccessProfile):
     Scoped Role for a Zone instance.
     """
 
+    UQ_CONSTRAINT = "uq_zone_access_profile"
+
     __tablename__ = "zone_access_profiles"
     __table_args__ = (
-        UniqueConstraint("role_id", "zone_id", name="uq_zone_access_profile"),
-        {"schema": RbacEntity.namespace(), "extend_existing": True},
+        UniqueConstraint(RbacLink.ROLE_ID, RbacLink.ZONE_ID, name=UQ_CONSTRAINT),
+        {"schema": RbacLink.namespace(), "extend_existing": True},
     )
 
     zone_id: Mapped[UUID] = mapped_column(ForeignKey(Zone.id), nullable=False)
@@ -51,9 +53,11 @@ class ZoneAccessProfile(ResourceAccessProfile):
 
 class ChannelAccessProfile(ResourceAccessProfile):
     __tablename__ = "channel_access_profiles"
+    UQ_CONSTRAINT = "uq_channel_access_profile"
+
     __table_args__ = (
-        UniqueConstraint("role_id", "channel_id", name="uq_channel_access_profile"),  # Tuple of constraints first
-        {"schema": RbacEntity.namespace(), "extend_existing": True},  # Options dictionary last
+        UniqueConstraint(RbacLink.ROLE_ID, RbacLink.CHANNEL_ID, name=UQ_CONSTRAINT),  # Tuple of constraints first
+        {"schema": RbacLink.namespace(), "extend_existing": True},  # Options dictionary last
     )
 
     channel_id: Mapped[UUID] = mapped_column(ForeignKey(Channel.id), nullable=False)
@@ -62,9 +66,11 @@ class ChannelAccessProfile(ResourceAccessProfile):
 
 class RowAccessProfile(ResourceAccessProfile):
     __tablename__ = "row_access_profiles"
+    UQ_CONSTRAINT = "uq_row_access_profile"
+
     __table_args__ = (
-        UniqueConstraint("role_id", "row_id", name="uq_row_access_profile"),  # Tuple of constraints first
-        {"schema": RbacEntity.namespace(), "extend_existing": True},  # Options dictionary last
+        UniqueConstraint(RbacLink.ROLE_ID, RbacLink.ROW_ID, name=UQ_CONSTRAINT),  # Tuple of constraints first
+        {"schema": RbacLink.namespace(), "extend_existing": True},  # Options dictionary last
     )
 
     row_id: Mapped[UUID] = mapped_column(ForeignKey(Row.id), nullable=False)

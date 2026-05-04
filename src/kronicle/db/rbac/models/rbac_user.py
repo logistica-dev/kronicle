@@ -12,6 +12,11 @@ from kronicle.db.rbac.models.rbac_entity import RbacEntity
 class RbacUser(RbacEntity):
     __tablename__ = "users"
 
+    __table_args__ = (
+        Index("ix_users_email", "email"),
+        {"schema": RbacEntity.namespace(), "extend_existing": True},
+    )
+
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)  # Mandatory!
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
@@ -21,11 +26,6 @@ class RbacUser(RbacEntity):
     # default -> Python-side default | server_default -> PostgreSQL DB-side default
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"), nullable=False)
     is_superuser: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
-
-    __table_args__ = (
-        Index("ix_users_email", "email"),
-        {"schema": RbacEntity.namespace(), "extend_existing": True},
-    )
 
     @property
     def snapshot(self) -> dict[str, Any]:

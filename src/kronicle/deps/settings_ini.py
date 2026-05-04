@@ -1,4 +1,4 @@
-# src/kronicle/deps/settings_ini.py
+# kronicle/deps/settings_ini.py
 from __future__ import annotations
 
 from configparser import ConfigParser

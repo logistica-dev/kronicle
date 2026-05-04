@@ -1,4 +1,4 @@
-# src/kronicle/db/rbac/links/group_hierarchy.py
+# kronicle/db/rbac/links/group_hierarchy.py
 from uuid import UUID
 
 from sqlalchemy import ForeignKey, UniqueConstraint
@@ -29,5 +29,4 @@ class RbacGroupHierarchy(RbacLink):
     child_id: Mapped[UUID] = mapped_column(ForeignKey(RbacGroup.id, ondelete="CASCADE"), primary_key=True)
 
     # ORM navigation (important for traversal)
-    parent = relationship(RbacGroup, foreign_keys=[parent_id], backref="child_links")
-    child = relationship(RbacGroup, foreign_keys=[child_id], backref="parent_links")
+    parents = relationship(RbacGroup, foreign_keys=[parent_id], backref="children")

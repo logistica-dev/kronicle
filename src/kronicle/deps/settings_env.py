@@ -1,4 +1,4 @@
-# src/kronicle/deps/settings_env.py
+# kronicle/deps/settings_env.py
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
@@ -256,7 +256,7 @@ class DBSettings:
     """
 
     def __init__(self, conf: KronicleEnvConf) -> None:
-        self.env = conf
+        # self.env_conf: KronicleEnvConf = conf
 
         self._host: str = conf.db.host
         self._port: int = conf.db.port

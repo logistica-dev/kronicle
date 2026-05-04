@@ -41,7 +41,7 @@ class RbacService:
 
         group_engine = HierarchyEngine(
             parents_of=lambda g: g.parent_links,
-            children_of=lambda g: g.child_links,
+            children_of=lambda g: g.children,
         )
 
         self.group_hierarchy_service = HierarchyService(
@@ -52,8 +52,8 @@ class RbacService:
         )
 
         zone_engine = HierarchyEngine(
-            parents_of=lambda g: g.parent_links,
-            children_of=lambda g: g.child_links,
+            parents_of=lambda g: g.parent,
+            children_of=lambda g: g.children,
         )
 
         self.zone_hierarchy_service = HierarchyService(

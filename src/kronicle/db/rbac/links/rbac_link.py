@@ -11,6 +11,11 @@ class RbacLink(KronicleLink):
     USER_ID = "user_id"
     GROUP_ID = "group_id"
     ROLE_ID = "role_id"
+    ACCESS_PROFILE_ID = "access_profile_id"
+
+    ZONE_ID = "zone_id"
+    CHANNEL_ID = "channel_id"
+    ROW_ID = "row_id"
 
     @classmethod
     def namespace(cls) -> str:

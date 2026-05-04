@@ -13,7 +13,28 @@ class KronicleLink(KronicleBase):
     PARENT_ID = "parent_id"
     CHILD_ID = "child_id"
 
+    PARENT_LINKS = "parent_links"
+    children = "children"
+
     UQ_CONSTRAINT: str
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+
+        # Skip abstract classes
+        if getattr(cls, "__abstract__", False):
+            return
+
+        if not getattr(cls, "UQ_CONSTRAINT", None):
+            raise TypeError(f"{cls.__name__} must define UQ_CONSTRAINT")
+
+        table = getattr(cls, "__table__", None)
+        if table is not None:
+            constraint_names = {c.name for c in table.constraints}
+            if cls.UQ_CONSTRAINT not in constraint_names:
+                raise TypeError(
+                    f"{cls.__name__}: UQ_CONSTRAINT '{cls.UQ_CONSTRAINT}' " f"not found in table constraints"
+                )
 
     @classmethod
     def uq_constraint(cls) -> str:

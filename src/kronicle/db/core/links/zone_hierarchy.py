@@ -30,5 +30,4 @@ class ZoneHierarchy(CoreLink):
     parent_id: Mapped[UUID] = mapped_column(ForeignKey(Zone.id, ondelete="CASCADE"), primary_key=True)
     child_id: Mapped[UUID] = mapped_column(ForeignKey(Zone.id, ondelete="CASCADE"), primary_key=True)
 
-    parent = relationship(Zone, foreign_keys=[parent_id], backref="child_links")
-    child = relationship(Zone, foreign_keys=[child_id], backref="parent_links")
+    parent = relationship(Zone, foreign_keys=[parent_id], backref="children")
