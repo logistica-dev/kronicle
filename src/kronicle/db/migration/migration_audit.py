@@ -1,9 +1,7 @@
 from dataclasses import dataclass
 
-from sqlalchemy.orm import DeclarativeMeta
-
 from kronicle.db.base.kronicle_base import Base
-from scripts.migrations.env import KronicleBase
+from kronicle.utils.dev_logs import log_i
 
 
 @dataclass
@@ -19,7 +17,7 @@ def collect_metadata_snapshot() -> MigrationAuditSnapshot:
     Captures the state of SQLAlchemy metadata BEFORE migration runs.
     """
 
-    tables = KronicleBase.metadata.tables.values()
+    tables = Base.metadata.tables.values()
 
     schemas = sorted({t.schema for t in tables if t.schema})
     table_names = sorted(Base.metadata.tables.keys())
@@ -38,8 +36,8 @@ def log_snapshot(snapshot: MigrationAuditSnapshot, logger):
     """
     Emits structured migration diagnostics.
     """
-
-    logger.info("=== Migration Audit Snapshot ===")
-    logger.info(f"Tables: {snapshot.table_count}")
-    logger.info(f"Schemas: {snapshot.schemas}")
-    logger.info(f"Foreign keys: {snapshot.foreign_key_count}")
+    here = "migration_audit"
+    log_i(here, "=== Migration Audit Snapshot ===")
+    log_i(here, f"Tables: {snapshot.table_count}")
+    log_i(here, f"Schemas: {snapshot.schemas}")
+    log_i(here, f"Foreign keys: {snapshot.foreign_key_count}")

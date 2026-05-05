@@ -6,10 +6,13 @@ from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from kronicle.db.base.kronicle_base import KronicleBase
+from kronicle.db.base.kronicle_base import Base
 from kronicle.db.migration.bootstrap_check import run_bootstrap_checks
 from kronicle.db.registry import *  # noqa
+from kronicle.db.registry import get_migration_schemas
 from kronicle.deps.settings import KronicleSettings
+
+MIGRATION_SCHEMAS = get_migration_schemas()
 
 # This is the Alembic Config object, which provides access to .ini values
 config = context.config
@@ -26,7 +29,16 @@ db_url = conf.db.rbac_connection_url
 config.set_main_option("sqlalchemy.url", db_url)
 
 # Metadata to target
-target_metadata = KronicleBase.metadata
+target_metadata = Base.metadata
+
+
+# -------------------------------------------------------
+# Schema-scoped migration
+# -------------------------------------------------------
+def include_object(object, name, type_, reflected, compare_to):
+    if type_ == "table":
+        return object.schema in MIGRATION_SCHEMAS
+    return True
 
 
 # -------------------------------------------------------
