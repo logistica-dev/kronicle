@@ -1,24 +1,69 @@
+# kronicle/db/migration/bootstrap_report.py
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import List
+
+from kronicle.db.migration.operations import DbStructureOperation
+
+
+# =============================================================================
+# Diagnostic model
+# =============================================================================
+@dataclass(frozen=True)
+class BootstrapIssue:
+    level: str  # "error" | "warning" | "info"
+    message: str
+    schema: str | None = None
+    table: str | None = None
+
+
+# =============================================================================
+# Bootstrap report (diagnostics only)
+# =============================================================================
 class BootstrapReport:
+    """
+    Collects:
+    - validation issues (errors / warnings / info)
+    - NO planning logic
+    """
+
     def __init__(self):
-        self.errors: list[str] = []
-        self.warnings: list[str] = []
-        self.infos: list[str] = []
+        self.issues: List[BootstrapIssue] = []
+        self.operations: List[DbStructureOperation] = []
 
-    def add_error(self, msg: str):
-        self.errors.append(msg)
+    # ------------------------------------------------------------------
+    # Issues
+    # ------------------------------------------------------------------
+    def add_error(self, msg: str, *, schema: str | None = None, table: str | None = None):
+        self.issues.append(BootstrapIssue("error", msg, schema, table))
 
-    def add_warning(self, msg: str):
-        self.warnings.append(msg)
+    def add_warning(self, msg: str, *, schema: str | None = None, table: str | None = None):
+        self.issues.append(BootstrapIssue("warning", msg, schema, table))
 
-    def add_info(self, msg: str):
-        self.infos.append(msg)
+    def add_info(self, msg: str, *, schema: str | None = None, table: str | None = None):
+        self.issues.append(BootstrapIssue("info", msg, schema, table))
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+    @property
+    def errors(self) -> list[str]:
+        return [i.message for i in self.issues if i.level == "error"]
+
+    @property
+    def warnings(self) -> list[str]:
+        return [i.message for i in self.issues if i.level == "warning"]
 
     @property
     def is_valid(self) -> bool:
-        return not self.errors
+        return not any(i.level == "error" for i in self.issues)
 
+    # ------------------------------------------------------------------
+    # Execution helpers
+    # ------------------------------------------------------------------
     def raise_if_invalid(self):
-        if self.errors:
+        if not self.is_valid:
             raise RuntimeError(self.format())
 
     def format(self) -> str:

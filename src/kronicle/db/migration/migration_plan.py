@@ -1,114 +1,145 @@
+# kronicle/db/migration/migration_plan.py
 from __future__ import annotations
 
+from collections import defaultdict, deque
 from dataclasses import dataclass, field
-from typing import Dict, List, Set
+from typing import Dict, Iterable, List, Set
 
-from alembic.operations import Operations
+from kronicle.db.migration.operations import DbStructureOperation, SafetyLevel
 
-from kronicle.db.migration.operations import SafetyLevel, SchemaOperation
 
 # =============================================================================
 # MigrationPlan
 # =============================================================================
-
-
 @dataclass
 class MigrationPlan:
     """
-    Represents a fully resolved migration execution plan as a sorted DAG of SchemaOperation
-    - grouped by safety level
-    - validated for dependency correctness
-    - ready to be rendered into Alembic or executed step-by-step
+    Fully resolved, ordered migration execution plan.
 
-    This is NOT execution.
-    This is a deterministic ordering of operations.
+    Responsibilities:
+    - resolve dependency graph
+    - apply deterministic ordering (priority + DAG)
+    - classify safety levels
+    - provide execution interface
     """
 
-    operations: List[SchemaOperation]
+    operations: List[DbStructureOperation]
 
-    # internal graph cache
-    _graph: Dict[str, Set[str]] = field(default_factory=dict, init=False)
-    _index: Dict[str, SchemaOperation] = field(default_factory=dict, init=False)
+    # computed
+    ordered_operations: List[DbStructureOperation] = field(init=False, default_factory=list)
+    by_safety: Dict[str, List[DbStructureOperation]] = field(init=False, default_factory=dict)
 
-    # ------------------------------------------------------------------
-    # Build phase
-    # ------------------------------------------------------------------
-    def __post_init__(self):
-        self._index = {op.op_id: op for op in self.operations}
-        self._graph = self._build_graph()
+    # --------------------------------------------------------------------------
+    # Build entry point
+    # --------------------------------------------------------------------------
+    @classmethod
+    def build(cls, ops: Iterable[DbStructureOperation]) -> "MigrationPlan":
+        plan = cls(list(ops))
+        plan._resolve()
+        plan._classify()
+        return plan
 
-    # ------------------------------------------------------------------
-    # Dependency graph
-    # ------------------------------------------------------------------
-    def _build_graph(self) -> Dict[str, Set[str]]:
-        graph: Dict[str, Set[str]] = {op.op_id: set() for op in self.operations}
+    # --------------------------------------------------------------------------
+    # DAG resolution (priority-aware topological sort)
+    # --------------------------------------------------------------------------
+    def _resolve(self) -> None:
+        ops = self.operations
 
-        for op in self.operations:
+        id_map: Dict[str, DbStructureOperation] = {op.op_id: op for op in ops}
+
+        graph: Dict[str, Set[str]] = defaultdict(set)
+        indegree: Dict[str, int] = defaultdict(int)
+
+        # ------------------------------------------------------------------
+        # Build graph
+        # ------------------------------------------------------------------
+        for op in ops:
             for dep in op.depends_on:
-                if dep in graph:
-                    graph[op.op_id].add(dep)
+                graph[dep].add(op.op_id)
+                indegree[op.op_id] += 1
 
-        return graph
+        # ------------------------------------------------------------------
+        # Priority-aware queue (stable ordering)
+        # ------------------------------------------------------------------
+        def sort_key(op_id: str):
+            op = id_map[op_id]
+            return (op.priority, op.op_id)
 
-    # ------------------------------------------------------------------
-    # Topological sort
-    # ------------------------------------------------------------------
-    def ordered(self) -> List[SchemaOperation]:
-        visited = set()
-        temp = set()
-        result = []
+        queue = deque(
+            sorted(
+                [op_id for op_id in id_map if indegree[op_id] == 0],
+                key=sort_key,
+            )
+        )
 
-        def visit(node: str):
-            if node in temp:
-                raise RuntimeError(f"Circular dependency detected at {node}")
+        ordered: List[DbStructureOperation] = []
 
-            if node in visited:
-                return
+        # ------------------------------------------------------------------
+        # Kahn algorithm (stable)
+        # ------------------------------------------------------------------
+        while queue:
+            current = queue.popleft()
+            ordered.append(id_map[current])
 
-            temp.add(node)
+            for nxt in graph[current]:
+                indegree[nxt] -= 1
 
-            for dep in self._graph.get(node, []):
-                visit(dep)
+                if indegree[nxt] == 0:
+                    queue.append(nxt)
 
-            temp.remove(node)
-            visited.add(node)
-            result.append(self._index[node])
+            # keep queue deterministic after each step
+            queue = deque(sorted(queue, key=sort_key))
 
-        for op in self.operations:
-            visit(op.op_id)
+        # ------------------------------------------------------------------
+        # cycle detection
+        # ------------------------------------------------------------------
+        if len(ordered) != len(ops):
+            missing = set(id_map.keys()) - {o.op_id for o in ordered}
+            raise RuntimeError(f"Cyclic or unresolved dependencies: {missing}")
 
-        # stable ordering by priority within same dependency level
-        result.sort(key=lambda o: o.priority)
+        self.ordered_operations = ordered
 
-        return result
+    # --------------------------------------------------------------------------
+    # Safety classification
+    # --------------------------------------------------------------------------
+    def _classify(self) -> None:
+        grouped: Dict[str, List[DbStructureOperation]] = defaultdict(list)
 
-    # ------------------------------------------------------------------
-    # Safety grouping
-    # ------------------------------------------------------------------
-    def by_safety(self) -> dict[str, List[SchemaOperation]]:
-        groups = {
-            SafetyLevel.SAFE: [],
-            SafetyLevel.WARNING: [],
-            SafetyLevel.DESTRUCTIVE: [],
-        }
+        for op in self.ordered_operations:
+            grouped[op.safety.level].append(op)
 
-        for op in self.ordered():
-            groups[op.safety].append(op)
+        self.by_safety = grouped
 
-        return groups
+    # --------------------------------------------------------------------------
+    # Query helpers
+    # --------------------------------------------------------------------------
+    def safe_ops(self) -> List[DbStructureOperation]:
+        return self.by_safety.get(SafetyLevel.SAFE, [])
 
-    # ------------------------------------------------------------------
+    def warning_ops(self) -> List[DbStructureOperation]:
+        return self.by_safety.get(SafetyLevel.WARNING, [])
+
+    def destructive_ops(self) -> List[DbStructureOperation]:
+        return self.by_safety.get(SafetyLevel.DESTRUCTIVE, [])
+
+    # --------------------------------------------------------------------------
     # Execution
-    # ------------------------------------------------------------------
-    def apply(self, op: Operations) -> None:
+    # --------------------------------------------------------------------------
+    def apply(self, alembic_ops) -> None:
         """
-        Execute full migration plan using Alembic operations context.
+        Execute all operations using Alembic Operations context.
         """
-        for operation in self.ordered():
-            operation.apply(op)
+        for op in self.ordered_operations:
+            op.apply(alembic_ops)
 
-    # ------------------------------------------------------------------
-    # Debug helpers
-    # ------------------------------------------------------------------
-    def describe(self) -> List[str]:
-        return [op.describe() for op in self.ordered()]
+    # --------------------------------------------------------------------------
+    # Debug
+    # --------------------------------------------------------------------------
+    def summary(self) -> dict:
+        return {
+            "total": len(self.operations),
+            "ordered": [op.describe() for op in self.ordered_operations],
+            "safe": len(self.safe_ops()),
+            "warning": len(self.warning_ops()),
+            "destructive": len(self.destructive_ops()),
+        }

@@ -1,32 +1,52 @@
 # kronicle/db/migration/migration_manager.py
+from __future__ import annotations
+
 import subprocess
 from pathlib import Path
 
-from alembic import command
 from alembic.config import Config
+from alembic.migration import MigrationContext
+from alembic.operations import Operations
 
-from kronicle.db.migration.bootstrap_check import run_bootstrap_checks
-from kronicle.db.migration.migration_audit import collect_metadata_snapshot, log_snapshot
+from kronicle.db.migration.migration_plan import MigrationPlan
+from kronicle.db.migration.migration_proposal import MigrationProposal
 from kronicle.db.rbac.rbac_db_session import RbacDbSession
-from kronicle.db.registry import *  # noqa
 from kronicle.db.registry import get_migration_schemas
 from kronicle.deps.settings import KronicleSettings
 from kronicle.types.iso_datetime import IsoDateTime
 from kronicle.utils.dev_logs import log_i
 
+# ======================================================================================
+# MigrationManager
+# ======================================================================================
+
 
 class MigrationManager:
-    def __init__(self, db_url, alembic_cfg_path: str = "alembic.ini"):
+    """
+    Orchestrates the full migration lifecycle:
+
+        1. Backup
+        2. Proposal (diff)
+        3. Plan (ordering + safety)
+        4. Execution (Alembic Ops)
+        5. History recording (future integration)
+    """
+
+    def __init__(self, db_url: str, alembic_cfg_path: str = "alembic.ini", *, auto_approve: bool = False):
         self.cfg = Config(alembic_cfg_path)
         self.db_url = db_url
+
         self.schemas = get_migration_schemas()
         self.db = RbacDbSession(db_url)
+
+        self.auto_approve = auto_approve
 
         log_i("migration", f"Migration scope: {self.schemas}")
 
     # ------------------------------------------------------------------
     # BACKUP
     # ------------------------------------------------------------------
+
     def backup(self) -> Path:
         ts = IsoDateTime.now_utc().strftime("%Y%m%d_%H%M%S")
         backup_file = Path(f"./backups/kronicle_{ts}.dump")
@@ -43,59 +63,122 @@ class MigrationManager:
         return backup_file
 
     # ------------------------------------------------------------------
-    # MIGRATION FLOW
+    # CORE PIPELINE
     # ------------------------------------------------------------------
-    def run(self, auto_generate: bool = False, verbose: bool = True):
+
+    def build_plan(self):
+        """
+        Step 1–3:
+        Proposal → Plan
+        """
+        with self.db._engine.connect() as conn:
+            proposal = MigrationProposal(conn)
+
+            ops = proposal.to_operations()
+            plan = MigrationPlan.build(ops)
+
+        return plan
+
+    # ------------------------------------------------------------------
+    # EXECUTION
+    # ------------------------------------------------------------------
+
+    def apply_plan(self, plan: MigrationPlan) -> None:
+        """
+        Execute migration plan via Alembic Operations context.
+        """
+
+        log_i("migration", f"Executing migration plan: {len(plan.ordered_operations)} ops")
+
+        with self.db._engine.begin() as conn:
+            context = MigrationContext.configure(conn)
+            ops = Operations(context)
+
+            plan.apply(ops)
+
+    # ------------------------------------------------------------------
+    # HISTORY (placeholder hook)
+    # ------------------------------------------------------------------
+
+    def record_migration_state(self, plan: MigrationPlan, success: bool):
+        """
+        Hook for:
+        - schema_migration_state
+        - schema_migration_history
+
+        Keep isolated so RBAC/Core separation remains clean.
+        """
+        log_i("migration", f"Recording migration state (success={success})")
+        # TODO: insert into:
+        # - CoreSchemaMigrationHistory / RbacSchemaMigrationHistory
+        # - CoreSchemaMigrationState / RbacSchemaMigrationState
+
+    # ------------------------------------------------------------------
+    # RUN
+    # ------------------------------------------------------------------
+    def run(self, verbose: bool = True):
         log_i("migration", "Starting migration pipeline")
 
-        # 1. PRE SNAPSHOT
-        pre = collect_metadata_snapshot()
-        if verbose:
-            log_snapshot(pre, log_i)
+        plan = None
+        backup_file = None
 
-        # 2. BOOTSTRAP VALIDATION
-        log_i("migration", "Running bootstrap checks")
-        with self.db._engine.connect() as db:
-            run_bootstrap_checks(db)  # if you extend later, pass connection
-
-        # 3. BACKUP
-        backup_file = self.backup()
-
-        # 4. OPTIONAL: generate migration
-        if auto_generate:
-            log_i("migration", "Generating Alembic revision")
-            command.revision(self.cfg, autogenerate=True, message="auto migration")
-
-        # 5. CONFIRMATION GATE
-        confirm = input("Apply migration? (y/n): ")
-        if confirm.lower() != "y":
-            log_i("migration", "Migration aborted by user")
-            return
-
-        # 6. APPLY MIGRATION
         try:
-            log_i("migration", "Applying Alembic upgrade")
-            command.upgrade(self.cfg, "head")
+            # --------------------------------------------------
+            # 1. PURE: build plan (no side effects)
+            # --------------------------------------------------
+            plan = self.build_plan()
+
+            if not plan.operations:
+                log_i("migration", "No changes detected — nothing to apply")
+                return
+
+            if verbose:
+                log_i("migration", f"Plan summary: {plan.summary()}")
+
+            # --------------------------------------------------
+            # 2. USER GATE (before ANY mutation)
+            # --------------------------------------------------
+            if not self.auto_approve:
+                confirm = input("Review above migration plan.\n" "Proceed with backup + migration? (y/n): ")
+
+                if confirm.lower() != "y":
+                    log_i("migration", "Migration aborted by user")
+                    return
+
+            # --------------------------------------------------
+            # 3. SIDE EFFECTS (only after approval)
+            # --------------------------------------------------
+            backup_file = self.backup()
+
+            self.apply_plan(plan)
+            self.record_migration_state(plan, success=True)
+
         except Exception as e:
             log_i("migration", f"FAILED migration: {e}")
-            log_i("migration", f"Restoring backup: {backup_file}")
 
-            # rollback hook (manual restore step)
-            subprocess.run(["pg_restore", "-d", db_url, str(backup_file)], check=True)
+            if backup_file:
+                log_i("migration", f"Restoring backup: {backup_file}")
+                subprocess.run(
+                    ["pg_restore", "-d", self.db_url, str(backup_file)],
+                    check=True,
+                )
+
+            if plan is not None:
+                self.record_migration_state(plan, success=False)
 
             raise
-
-        # 7. POST SNAPSHOT
-        post = collect_metadata_snapshot()
-        if verbose:
-            log_snapshot(post, log_i)
 
         log_i("migration", "Migration completed successfully")
 
 
-if __name__ == "__main__":  # pragma: no-cover
+# ======================================================================================
+# CLI entrypoint
+# ======================================================================================
 
+
+if __name__ == "__main__":
     settings = KronicleSettings()
     db_url = settings.db.rbac_connection_url
+
     manager = MigrationManager(db_url=db_url)
     manager.run()

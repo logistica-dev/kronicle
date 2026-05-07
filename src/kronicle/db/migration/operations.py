@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field, replace
-from typing import FrozenSet, Tuple
+from typing import ClassVar, FrozenSet, Tuple
 
 from alembic.operations import Operations
 from sqlalchemy import Column
@@ -20,13 +20,36 @@ class SafetyLevel:
     DESTRUCTIVE = "destructive"
 
 
+@dataclass(frozen=True, kw_only=True)
+class SafetyPolicy(ABC):
+    level: ClassVar[str]
+
+    def requires_confirmation(self) -> bool:
+        return self.level == SafetyLevel.DESTRUCTIVE
+
+
+class SafePolicy(SafetyPolicy):
+    level = SafetyLevel.SAFE
+
+
+class WarningPolicy(SafetyPolicy):
+    level = SafetyLevel.WARNING
+
+
+class DestructivePolicy(SafetyPolicy):
+    level = SafetyLevel.DESTRUCTIVE
+
+    def requires_confirmation(self) -> bool:
+        return True
+
+
 # ==================================================================================================
 # Base operation
 # ==================================================================================================
 
 
 @dataclass(frozen=True, kw_only=True)
-class SchemaOperation(ABC):
+class DbStructureOperation(ABC):
     """
     Immutable migration intent.
 
@@ -36,11 +59,10 @@ class SchemaOperation(ABC):
     - directly executable via Alembic
     """
 
-    priority: int = 100
-    safety: str = SafetyLevel.SAFE
-
     # dependency graph (by op_id, not object references)
     depends_on: FrozenSet[str] = field(default_factory=frozenset, repr=False)
+    priority: ClassVar[int]
+    safety: ClassVar[SafetyPolicy]
 
     # ----------------------------------------------------------------------------------------------
     # Identity
@@ -52,7 +74,7 @@ class SchemaOperation(ABC):
     # ----------------------------------------------------------------------------------------------
     # Dependency handling
     # ----------------------------------------------------------------------------------------------
-    def with_dependency(self, other: SchemaOperation) -> SchemaOperation:
+    def with_dependency(self, other: DbStructureOperation) -> DbStructureOperation:
         return replace(
             self,
             depends_on=self.depends_on | {other.op_id},
@@ -94,9 +116,11 @@ def _schema(op_fn):
 
 
 @dataclass(frozen=True)
-class CreateSchemaOp(SchemaOperation):
+class CreateSchemaOp(DbStructureOperation):
     schema: str = ""
-    priority: int = 5
+
+    priority = 5
+    safety = SafePolicy()
 
     def describe(self):
         return f"create_schema:{self.schema}"
@@ -106,11 +130,13 @@ class CreateSchemaOp(SchemaOperation):
 
 
 @dataclass(frozen=True)
-class CreateTableOp(SchemaOperation):
+class CreateTableOp(DbStructureOperation):
     schema: str
     table: str
     columns: Tuple = field(default_factory=tuple)
-    priority: int = 10
+
+    priority = 10
+    safety = SafePolicy()
 
     def describe(self):
         return f"create_table:{self.schema}.{self.table}"
@@ -124,12 +150,14 @@ class CreateTableOp(SchemaOperation):
 
 
 @dataclass(frozen=True)
-class AddColumnOp(SchemaOperation):
+class AddColumnOp(DbStructureOperation):
     schema: str
     table: str
     column_name: str
     column_def: Column  # SQLAlchemy Column
-    priority: int = 20
+
+    priority = 20
+    safety = SafePolicy()
 
     def describe(self):
         return f"add_column:{self.schema}.{self.table}.{self.column_name}"
@@ -143,11 +171,14 @@ class AddColumnOp(SchemaOperation):
 
 
 @dataclass(frozen=True)
-class AddUniqueConstraintOp(SchemaOperation):
+class AddUniqueConstraintOp(DbStructureOperation):
     schema: str
     table: str
     constraint_name: str
     columns: tuple
+
+    priority = 30
+    safety = WarningPolicy()
 
     def describe(self):
         return f"add_unique:{self.schema}.{self.table}.{self.constraint_name}"
@@ -162,11 +193,14 @@ class AddUniqueConstraintOp(SchemaOperation):
 
 
 @dataclass(frozen=True)
-class AddCheckConstraintOp(SchemaOperation):
+class AddCheckConstraintOp(DbStructureOperation):
     schema: str
     table: str
     constraint_name: str
     sqltext: str
+
+    priority = 35
+    safety = WarningPolicy()
 
     def describe(self):
         return f"add_check:{self.schema}.{self.table}.{self.constraint_name}"
@@ -181,11 +215,14 @@ class AddCheckConstraintOp(SchemaOperation):
 
 
 @dataclass(frozen=True)
-class AddExcludeConstraintOp(SchemaOperation):
+class AddExcludeConstraintOp(DbStructureOperation):
     schema: str
     table: str
     constraint_name: str
     elements: tuple
+
+    priority = 36
+    safety = WarningPolicy()
 
     def describe(self):
         return f"add_exclude:{self.schema}.{self.table}.{self.constraint_name}"
@@ -205,11 +242,13 @@ class AddExcludeConstraintOp(SchemaOperation):
 
 
 @dataclass(frozen=True)
-class RenameTableOp(SchemaOperation):
+class RenameTableOp(DbStructureOperation):
     schema: str
     old_name: str
     new_name: str
-    priority: int = 15
+
+    priority = 15
+    safety = WarningPolicy()
 
     def describe(self):
         return f"rename_table:{self.schema}.{self.old_name}->{self.new_name}"
@@ -223,12 +262,14 @@ class RenameTableOp(SchemaOperation):
 
 
 @dataclass(frozen=True)
-class RenameColumnOp(SchemaOperation):
+class RenameColumnOp(DbStructureOperation):
     schema: str
     table: str
     old_name: str
     new_name: str
-    priority: int = 50
+
+    priority = 50
+    safety = WarningPolicy()
 
     def describe(self):
         return f"rename_column:{self.schema}.{self.table}.{self.old_name}->{self.new_name}"
@@ -248,14 +289,15 @@ class RenameColumnOp(SchemaOperation):
 
 
 @dataclass(frozen=True)
-class AlterColumnTypeOp(SchemaOperation):
+class AlterColumnTypeOp(DbStructureOperation):
     schema: str
     table: str
     column: str
     old_type: TypeEngine
     new_type: TypeEngine
-    priority: int = 60
-    safety: str = SafetyLevel.WARNING
+
+    priority = 60
+    safety = WarningPolicy()
 
     def describe(self):
         return f"alter_type:{self.schema}.{self.table}.{self.column}"
@@ -270,13 +312,14 @@ class AlterColumnTypeOp(SchemaOperation):
 
 
 @dataclass(frozen=True)
-class AlterColumnNullabilityOp(SchemaOperation):
+class AlterColumnNullabilityOp(DbStructureOperation):
     schema: str
     table: str
     column: str
     nullable: bool
-    priority: int = 55
-    safety: str = SafetyLevel.WARNING
+
+    priority = 55
+    safety = WarningPolicy()
 
     def describe(self):
         return f"alter_nullable:{self.schema}.{self.table}.{self.column}"
@@ -296,12 +339,13 @@ class AlterColumnNullabilityOp(SchemaOperation):
 
 
 @dataclass(frozen=True)
-class DropConstraintOp(SchemaOperation):
+class DropConstraintOp(DbStructureOperation):
     schema: str
     table: str
     constraint_name: str
-    priority: int = 40
-    safety: str = SafetyLevel.WARNING
+
+    priority = 40
+    safety = WarningPolicy()
 
     def describe(self):
         return f"drop_constraint:{self.schema}.{self.table}.{self.constraint_name}"
@@ -315,12 +359,13 @@ class DropConstraintOp(SchemaOperation):
 
 
 @dataclass(frozen=True)
-class DropColumnOp(SchemaOperation):
+class DropColumnOp(DbStructureOperation):
     schema: str
     table: str
     column_name: str
-    priority: int = 80
-    safety: str = SafetyLevel.DESTRUCTIVE
+
+    priority = 80
+    safety = DestructivePolicy()
 
     def describe(self):
         return f"drop_column:{self.schema}.{self.table}.{self.column_name}"
@@ -334,11 +379,12 @@ class DropColumnOp(SchemaOperation):
 
 
 @dataclass(frozen=True)
-class DropTableOp(SchemaOperation):
+class DropTableOp(DbStructureOperation):
     schema: str
     table: str
-    priority: int = 1000
-    safety: str = SafetyLevel.DESTRUCTIVE
+
+    priority = 1000
+    safety = DestructivePolicy()
 
     def describe(self):
         return f"drop_table:{self.schema}.{self.table}"
@@ -354,7 +400,7 @@ class DropTableOp(SchemaOperation):
 # Registry
 # ==================================================================================================
 
-ALL_OPERATION_TYPES: Tuple[type, ...] = (
+ALL_OPERATION_TYPES: tuple[type, ...] = (
     CreateSchemaOp,
     CreateTableOp,
     AddColumnOp,

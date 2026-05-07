@@ -17,5 +17,4 @@ class Zone(CoreEntity):
         return {
             "id": str(self.id),
             "name": self.name,
-            "channel_ids": [str(chan.id) for chan in getattr(self, "channels", [])],
         }
