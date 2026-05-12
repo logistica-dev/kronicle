@@ -6,17 +6,16 @@ on:
     types: [opened, reopened, synchronize]
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
 
 jobs:
   auto-merge:
     if: github.actor == 'dependabot[bot]'
     runs-on: ubuntu-latest
+
     steps:
-      - name: Auto-merge Dependabot PRs
-        uses: pascalgn/dependabot-auto-merge-action@v2
-        with:
-          github-token: ${{ secrets.DEP_BOT }}
-          merge-method: squash
-          merge-strategy: merge
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr merge --auto --squash "$PR_URL"
