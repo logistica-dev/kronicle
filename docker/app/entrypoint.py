@@ -6,9 +6,9 @@ from sys import exit, stderr
 import uvicorn
 from asyncpg import CannotConnectNowError, ConnectionDoesNotExistError, InvalidCatalogNameError, PostgresError
 
-from kronicle.db.core.models.channel import Channel
+from kronicle.db.core.models.core_channel import Channel
 from kronicle.db.core.models.core_entity import CoreEntity
-from kronicle.db.core.models.zone import Zone
+from kronicle.db.core.models.core_zone import Zone
 from kronicle.db.data.channel_repository import ChannelMetadata
 from kronicle.db.rbac.models.rbac_entity import RbacEntity
 from kronicle.db.rbac.models.rbac_user import RbacUser

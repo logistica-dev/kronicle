@@ -1,4 +1,4 @@
-# kronicle/db/core/models/zone.py
+# kronicle/db/core/models/core_zone.py
 from typing import Any
 from uuid import UUID
 
