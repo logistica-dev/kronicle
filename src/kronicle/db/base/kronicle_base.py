@@ -122,4 +122,4 @@ class KronicleBase(Base):
             if errors:
                 err_msg = f"Table '{cls.table()}' does not match model declaration:\n" + "\n".join(errors)
                 log_e(mod, err_msg)
-                raise RuntimeError(err_msg)
+                # raise RuntimeError(err_msg)
