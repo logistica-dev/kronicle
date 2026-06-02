@@ -102,7 +102,8 @@ class DatabaseCatalogBuilder:
     # SQLAlchemy → catalog
     # ------------------------------------------------------------------
 
-    def from_metadata(self, tables: Dict[str, Table]) -> DatabaseCatalog:
+    @classmethod
+    def from_metadata(cls, tables: Dict[str, Table]) -> DatabaseCatalog:
         grouped: Dict[str, List[TableCatalog]] = {}
 
         for table in tables.values():

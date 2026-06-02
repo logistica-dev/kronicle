@@ -40,12 +40,12 @@ class MigrationExecutor:
         self,
         plan: MigrationPlan,
         *,
-        revision: str,
-        schema: str,
         applied_by: str = "system",
     ) -> MigrationExecutionResult:
+        revision = plan.revision
+        schema_label = ",".join(sorted(plan.schemas))
         started_at = datetime.utcnow()
-        log_i("migration_executor", f"Executing plan {revision} for schema={schema}")
+        log_i("migration_executor", f"Executing plan {revision} for schema(s)={schema_label}")
 
         # Alembic operation context
         context = MigrationContext.configure(self.connection)
@@ -73,7 +73,7 @@ class MigrationExecutor:
 
         return MigrationExecutionResult(
             revision=revision,
-            schema=schema,
+            schema=schema_label,
             started_at=started_at,
             finished_at=finished_at,
             success=success,

@@ -45,6 +45,8 @@ RBAC_CREDS = "KRONICLE_RBAC_CREDS"  # b64(rbac_usr:rbac_pwd)
 KRONICLE_CONF = "KRONICLE_CONF"
 KRONICLE_ENV = "KRONICLE_ENV"
 
+KRONICLE_SQLA_BACKUP = "KRONICLE_SQLA_BACKUP"
+
 
 # --------------------------------------------------------------------------------------------------
 # Helpers

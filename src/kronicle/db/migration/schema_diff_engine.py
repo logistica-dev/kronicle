@@ -18,8 +18,10 @@ from kronicle.db.migration.operations import (
     DbStructureOperation,
     DropColumnOp,
     DropTableOp,
+    RenameColumnOp,
+    RenameTableOp,
 )
-from kronicle.utils.dev_logs import log_d
+from kronicle.utils.dev_logs import log_d, log_w
 
 mod = "schema_diff"
 
@@ -57,7 +59,6 @@ class SchemaDiffEngine:
     Future:
     - indexes
     - constraints
-    - rename detection
     - FK diffs
     """
 
@@ -97,38 +98,41 @@ class SchemaDiffEngine:
 
             db_tables = set(self.inspector.get_table_names(schema=schema))
 
-            # --------------------------------------------------------------
-            # Missing tables
-            # --------------------------------------------------------------
-            for table_name, table in tables.items():
-
-                if table_name not in db_tables:
-                    create_op = self._build_create_table_op(table)
-
-                    result.add(create_op)
-
-                    continue
-
-                # Existing table → compare structure
-                self._diff_existing_table(
-                    result=result,
-                    table=table,
-                )
-
-            # --------------------------------------------------------------
-            # Extra tables
-            # --------------------------------------------------------------
             metadata_names = set(tables.keys())
 
+            # Tables in metadata but missing from DB → create candidates
+            missing_tables = metadata_names - db_tables
+            # Tables in DB but absent from metadata → drop / rename candidates
             extra_tables = db_tables - metadata_names
 
+            # --------------------------------------------------------------
+            # Rename detection (avoid data-lossy drop+create)
+            # --------------------------------------------------------------
+            matched = self._detect_table_renames(schema, missing_tables, extra_tables)
+            for old_name, new_name in matched:
+                log_w(mod, f"Rename detected: {schema}.{old_name} -> {new_name}")
+                result.add(RenameTableOp(schema=schema, old_name=old_name, new_name=new_name))
+                missing_tables.discard(new_name)
+                extra_tables.discard(old_name)
+
+            # --------------------------------------------------------------
+            # Remaining missing tables → create
+            # --------------------------------------------------------------
+            for table_name in sorted(missing_tables):
+                table = tables[table_name]
+                result.add(self._build_create_table_op(table))
+
+            # --------------------------------------------------------------
+            # Existing tables → compare structure
+            # --------------------------------------------------------------
+            for table_name in sorted(metadata_names & db_tables):
+                self._diff_existing_table(result=result, table=tables[table_name])
+
+            # --------------------------------------------------------------
+            # Remaining extra tables → drop
+            # --------------------------------------------------------------
             for table_name in sorted(extra_tables):
-                result.add(
-                    DropTableOp(
-                        schema=schema,
-                        table=table_name,
-                    )
-                )
+                result.add(DropTableOp(schema=schema, table=table_name))
 
         return result
 
@@ -150,6 +154,84 @@ class SchemaDiffEngine:
             grouped[schema][table.name] = table
 
         return grouped
+
+    # ==============================================================================================
+    # Rename detection
+    # ==============================================================================================
+
+    @staticmethod
+    def _detect_table_renames(
+        schema: str,
+        missing_tables: set[str],
+        extra_tables: set[str],
+    ) -> list[tuple[str, str]]:
+        """
+        Detect potential table renames using string similarity
+        (e.g. channel -> channels, zones_hierarchy -> zone_hierarchy).
+
+        Returns list of (old_name, new_name) pairs.
+        """
+        import difflib
+
+        renames: list[tuple[str, str]] = []
+        used_extras: set[str] = set()
+
+        for missing in sorted(missing_tables):
+            best_match: str | None = None
+            best_ratio = 0.0
+
+            for extra in extra_tables:
+                if extra in used_extras:
+                    continue
+                ratio = difflib.SequenceMatcher(None, extra, missing).ratio()
+                if ratio > best_ratio:
+                    best_ratio = ratio
+                    best_match = extra
+
+            if best_match is not None and best_ratio >= 0.5:
+                renames.append((best_match, missing))
+                used_extras.add(best_match)
+
+        return renames
+
+    # ==============================================================================================
+    # Column rename detection
+    # ==============================================================================================
+
+    @staticmethod
+    def _detect_column_renames(
+        table_name: str,
+        missing_columns: set[str],
+        extra_columns: set[str],
+    ) -> list[tuple[str, str]]:
+        """
+        Detect potential column renames via string similarity
+        (e.g. temp -> temperature, decription -> description).
+
+        Returns list of (old_name, new_name) pairs.
+        """
+        import difflib
+
+        renames: list[tuple[str, str]] = []
+        used_extras: set[str] = set()
+
+        for missing in sorted(missing_columns):
+            best_match: str | None = None
+            best_ratio = 0.0
+
+            for extra in extra_columns:
+                if extra in used_extras:
+                    continue
+                ratio = difflib.SequenceMatcher(None, extra, missing).ratio()
+                if ratio > best_ratio:
+                    best_ratio = ratio
+                    best_match = extra
+
+            if best_match is not None and best_ratio >= 0.5:
+                renames.append((best_match, missing))
+                used_extras.add(best_match)
+
+        return renames
 
     # ==============================================================================================
     # Table creation
@@ -194,30 +276,29 @@ class SchemaDiffEngine:
         metadata_column_names = set(metadata_columns.keys())
 
         # ------------------------------------------------------------------------------------------
-        # Missing columns
+        # Column rename detection + add / drop
         # ------------------------------------------------------------------------------------------
         missing_columns = metadata_column_names - db_column_names
+        extra_columns = db_column_names - metadata_column_names
+
+        matched = self._detect_column_renames(table_name, missing_columns, extra_columns)
+        for old_name, new_name in matched:
+            log_w(mod, f"Column rename detected: {schema}.{table_name}.{old_name} -> {new_name}")
+            result.add(RenameColumnOp(schema=schema, table=table_name, old_name=old_name, new_name=new_name))
+            missing_columns.discard(new_name)
+            extra_columns.discard(old_name)
 
         for col_name in sorted(missing_columns):
-
-            column = metadata_columns[col_name]
-
             result.add(
                 AddColumnOp(
                     schema=schema,
                     table=table_name,
                     column_name=col_name,
-                    column_def=column.copy(),
+                    column_def=metadata_columns[col_name].copy(),
                 )
             )
 
-        # ------------------------------------------------------------------------------------------
-        # Extra columns
-        # ------------------------------------------------------------------------------------------
-        extra_columns = db_column_names - metadata_column_names
-
         for col_name in sorted(extra_columns):
-
             result.add(
                 DropColumnOp(
                     schema=schema,
@@ -227,7 +308,7 @@ class SchemaDiffEngine:
             )
 
         # ------------------------------------------------------------------------------------------
-        # Existing columns
+        # Existing columns → diff type / nullability
         # ------------------------------------------------------------------------------------------
         shared_columns = db_column_names & metadata_column_names
 

@@ -24,6 +24,7 @@ class SchemaMigrationHistory(KronicleBase):
     revision: Mapped[str]
     previous_revision: Mapped[str | None]
 
+    operation_index: Mapped[int]
     operation_type: Mapped[str]
     target: Mapped[str]
 

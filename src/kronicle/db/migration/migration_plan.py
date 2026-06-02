@@ -50,17 +50,17 @@ class MigrationPlan:
         graph: Dict[str, Set[str]] = defaultdict(set)
         indegree: Dict[str, int] = defaultdict(int)
 
-        # ------------------------------------------------------------------
+        # ----------------------------------------------------------------------
         # Build graph
-        # ------------------------------------------------------------------
+        # ----------------------------------------------------------------------
         for op in ops:
             for dep in op.depends_on:
                 graph[dep].add(op.op_id)
                 indegree[op.op_id] += 1
 
-        # ------------------------------------------------------------------
+        # ----------------------------------------------------------------------
         # Priority-aware queue (stable ordering)
-        # ------------------------------------------------------------------
+        # ----------------------------------------------------------------------
         def sort_key(op_id: str):
             op = id_map[op_id]
             return (op.priority, op.op_id)
@@ -74,9 +74,9 @@ class MigrationPlan:
 
         ordered: List[DbStructureOperation] = []
 
-        # ------------------------------------------------------------------
+        # ----------------------------------------------------------------------
         # Kahn algorithm (stable)
-        # ------------------------------------------------------------------
+        # ----------------------------------------------------------------------
         while queue:
             current = queue.popleft()
             ordered.append(id_map[current])
@@ -90,9 +90,9 @@ class MigrationPlan:
             # keep queue deterministic after each step
             queue = deque(sorted(queue, key=sort_key))
 
-        # ------------------------------------------------------------------
+        # ----------------------------------------------------------------------
         # cycle detection
-        # ------------------------------------------------------------------
+        # ----------------------------------------------------------------------
         if len(ordered) != len(ops):
             missing = set(id_map.keys()) - {o.op_id for o in ordered}
             raise RuntimeError(f"Cyclic or unresolved dependencies: {missing}")
@@ -109,6 +109,23 @@ class MigrationPlan:
             grouped[op.safety.level].append(op)
 
         self.by_safety = grouped
+
+    # --------------------------------------------------------------------------
+    # Revision (deterministic hash of the ordered operations)
+    # --------------------------------------------------------------------------
+    @property
+    def revision(self) -> str:
+        import hashlib
+
+        combined = "|".join(op.describe() for op in self.ordered_operations)
+        return hashlib.sha256(combined.encode()).hexdigest()[:12]
+
+    # --------------------------------------------------------------------------
+    # Schemas involved in this plan
+    # --------------------------------------------------------------------------
+    @property
+    def schemas(self) -> set[str]:
+        return {getattr(op, "schema", "") for op in self.ordered_operations if getattr(op, "schema", None)}
 
     # --------------------------------------------------------------------------
     # Query helpers
