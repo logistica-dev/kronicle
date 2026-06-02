@@ -5,7 +5,6 @@ import os
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict
 
 from alembic.config import Config
 from alembic.migration import MigrationContext
@@ -36,8 +35,8 @@ mod = "migration"
 # --------------------------------------------------------------------------------------
 # Schema → model mapping
 # --------------------------------------------------------------------------------------
-_SCHEMA_STATE: Dict[str, type] = {}
-_SCHEMA_HISTORY: Dict[str, type] = {}
+_SCHEMA_STATE: dict[str, type] = {}
+_SCHEMA_HISTORY: dict[str, type] = {}
 
 
 def _register_schema_models():
@@ -79,7 +78,7 @@ class MigrationManager:
 
         self.schemas = get_migration_schemas()
         self.db = RbacDbSession(db_url)
-        self._previous_revisions: Dict[str, str | None] = {}
+        self._previous_revisions: dict[str, str | None] = {}
 
         self.auto_approve = auto_approve
 

@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Tuple
 
 from sqlalchemy import inspect
 from sqlalchemy.schema import Table
@@ -20,7 +19,7 @@ class ColumnCatalog:
     default: str | None
     primary_key: bool
 
-    def as_tuple(self) -> Tuple:
+    def as_tuple(self) -> tuple:
         return (self.name, self.type, self.nullable, self.default, self.primary_key)
 
 
@@ -32,9 +31,9 @@ class ColumnCatalog:
 @dataclass(frozen=True)
 class TableCatalog:
     name: str
-    columns: Tuple[ColumnCatalog, ...]
+    columns: tuple[ColumnCatalog, ...]
 
-    def as_tuple(self) -> Tuple:
+    def as_tuple(self) -> tuple:
         return (self.name, tuple(c.as_tuple() for c in self.columns))
 
 
@@ -46,9 +45,9 @@ class TableCatalog:
 @dataclass(frozen=True)
 class DatabaseCatalog:
     namespace: str
-    tables: Tuple[TableCatalog, ...]
+    tables: tuple[TableCatalog, ...]
 
-    def as_tuple(self) -> Tuple:
+    def as_tuple(self) -> tuple:
         return (self.namespace, tuple(t.as_tuple() for t in self.tables))
 
     def compute_hash(self) -> str:
@@ -78,7 +77,7 @@ class DatabaseCatalogBuilder:
     # ------------------------------------------------------------------
 
     def from_database(self, namespace: str) -> DatabaseCatalog:
-        tables: List[TableCatalog] = []
+        tables: list[TableCatalog] = []
 
         for table_name in self.inspector.get_table_names(schema=namespace):
             columns = self.inspector.get_columns(table_name, schema=namespace)
@@ -103,8 +102,8 @@ class DatabaseCatalogBuilder:
     # ------------------------------------------------------------------
 
     @classmethod
-    def from_metadata(cls, tables: Dict[str, Table]) -> DatabaseCatalog:
-        grouped: Dict[str, List[TableCatalog]] = {}
+    def from_metadata(cls, tables: dict[str, Table]) -> DatabaseCatalog:
+        grouped: dict[str, list[TableCatalog]] = {}
 
         for table in tables.values():
             if table.schema is None:

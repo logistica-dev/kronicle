@@ -1,6 +1,7 @@
 # kronicle/auth/pwd/pwd_manager.py
+from __future__ import annotations
+
 import logging
-from typing import Optional
 
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHash, VerificationError, VerifyMismatchError
@@ -25,7 +26,7 @@ class PasswordManager:
     Implements a class instance approach (stateless, configured once).
     """
 
-    _instance: Optional["PasswordManager"] = None
+    _instance: PasswordManager | None = None
 
     def __new__(cls, *args, **kwargs) -> "PasswordManager":
         # If singleton already exists, return it

@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List
 
 from kronicle.db.migration.operations import DbStructureOperation
 
@@ -29,8 +28,8 @@ class BootstrapReport:
     """
 
     def __init__(self):
-        self.issues: List[BootstrapIssue] = []
-        self.operations: List[DbStructureOperation] = []
+        self.issues: list[BootstrapIssue] = []
+        self.operations: list[DbStructureOperation] = []
 
     # ------------------------------------------------------------------
     # Issues

@@ -2,10 +2,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
-from typing import List, Optional
 
 from kronicle.db.migration.operations import DbStructureOperation
+from kronicle.types.iso_datetime import IsoDateTime
 
 
 @dataclass(frozen=True)
@@ -16,8 +15,8 @@ class OperationResult:
 
     operation: DbStructureOperation
     success: bool
-    error: Optional[str] = None
-    executed_at: datetime = field(default_factory=datetime.utcnow)
+    error: str | None = None
+    executed_at: IsoDateTime = field(default_factory=IsoDateTime.now_utc)
     duration_ms: float = 0.0
 
 
@@ -34,17 +33,17 @@ class MigrationExecutionResult:
     revision: str
     schema: str  # "core" or "rbac"
 
-    started_at: datetime
-    finished_at: datetime
+    started_at: IsoDateTime
+    finished_at: IsoDateTime
 
     success: bool
 
-    operations: List[OperationResult] = field(default_factory=list)
+    operations: list[OperationResult] = field(default_factory=list)
 
-    backup_file: Optional[str] = None
+    backup_file: str | None = None
 
     @property
-    def failed_operations(self) -> List[OperationResult]:
+    def failed_operations(self) -> list[OperationResult]:
         return [op for op in self.operations if not op.success]
 
     @property

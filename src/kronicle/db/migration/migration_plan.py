@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Set
+from typing import Iterable
 
 from kronicle.db.migration.operations import DbStructureOperation, SafetyLevel
 
@@ -23,11 +23,11 @@ class MigrationPlan:
     - provide execution interface
     """
 
-    operations: List[DbStructureOperation]
+    operations: list[DbStructureOperation]
 
     # computed
-    ordered_operations: List[DbStructureOperation] = field(init=False, default_factory=list)
-    by_safety: Dict[str, List[DbStructureOperation]] = field(init=False, default_factory=dict)
+    ordered_operations: list[DbStructureOperation] = field(init=False, default_factory=list)
+    by_safety: dict[str, list[DbStructureOperation]] = field(init=False, default_factory=dict)
 
     # --------------------------------------------------------------------------
     # Build entry point
@@ -45,10 +45,10 @@ class MigrationPlan:
     def _resolve(self) -> None:
         ops = self.operations
 
-        id_map: Dict[str, DbStructureOperation] = {op.op_id: op for op in ops}
+        id_map: dict[str, DbStructureOperation] = {op.op_id: op for op in ops}
 
-        graph: Dict[str, Set[str]] = defaultdict(set)
-        indegree: Dict[str, int] = defaultdict(int)
+        graph: dict[str, set[str]] = defaultdict(set)
+        indegree: dict[str, int] = defaultdict(int)
 
         # ----------------------------------------------------------------------
         # Build graph
@@ -72,7 +72,7 @@ class MigrationPlan:
             )
         )
 
-        ordered: List[DbStructureOperation] = []
+        ordered: list[DbStructureOperation] = []
 
         # ----------------------------------------------------------------------
         # Kahn algorithm (stable)
@@ -103,7 +103,7 @@ class MigrationPlan:
     # Safety classification
     # --------------------------------------------------------------------------
     def _classify(self) -> None:
-        grouped: Dict[str, List[DbStructureOperation]] = defaultdict(list)
+        grouped: dict[str, list[DbStructureOperation]] = defaultdict(list)
 
         for op in self.ordered_operations:
             grouped[op.safety.level].append(op)
@@ -130,13 +130,13 @@ class MigrationPlan:
     # --------------------------------------------------------------------------
     # Query helpers
     # --------------------------------------------------------------------------
-    def safe_ops(self) -> List[DbStructureOperation]:
+    def safe_ops(self) -> list[DbStructureOperation]:
         return self.by_safety.get(SafetyLevel.SAFE, [])
 
-    def warning_ops(self) -> List[DbStructureOperation]:
+    def warning_ops(self) -> list[DbStructureOperation]:
         return self.by_safety.get(SafetyLevel.WARNING, [])
 
-    def destructive_ops(self) -> List[DbStructureOperation]:
+    def destructive_ops(self) -> list[DbStructureOperation]:
         return self.by_safety.get(SafetyLevel.DESTRUCTIVE, [])
 
     # --------------------------------------------------------------------------

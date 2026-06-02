@@ -15,6 +15,7 @@ from kronicle.db.migration.execution_result import (
 )
 from kronicle.db.migration.migration_plan import MigrationPlan
 from kronicle.db.migration.operations import DbStructureOperation
+from kronicle.types.iso_datetime import IsoDateTime
 from kronicle.utils.dev_logs import log_e, log_i
 
 
@@ -44,7 +45,7 @@ class MigrationExecutor:
     ) -> MigrationExecutionResult:
         revision = plan.revision
         schema_label = ",".join(sorted(plan.schemas))
-        started_at = datetime.utcnow()
+        started_at = IsoDateTime.now_utc()
         log_i("migration_executor", f"Executing plan {revision} for schema(s)={schema_label}")
 
         # Alembic operation context
@@ -69,7 +70,7 @@ class MigrationExecutor:
                 if self.strict:
                     break
 
-        finished_at = datetime.utcnow()
+        finished_at = IsoDateTime.now_utc()
 
         return MigrationExecutionResult(
             revision=revision,

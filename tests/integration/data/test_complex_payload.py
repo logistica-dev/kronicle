@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime, timezone
-from typing import Literal, Optional
+from typing import Literal
 
 import pytest
 from kronicle_sdk.conf.read_conf import Settings
@@ -50,12 +50,12 @@ class BatchAccessPolicy(BaseModel):
 
 class RimsUser(BaseModel):
     email: EmailStr
-    orcid: Optional[str] = None
-    name: Optional[str] = None
+    orcid: str | None = None
+    name: str | None = None
 
     @field_validator("orcid")
     @classmethod
-    def validate_orcid(cls, v: Optional[str]) -> Optional[str]:
+    def validate_orcid(cls, v: str | None) -> str | None:
         if v is None or v.strip() is None:
             return None
         v = v.strip()
@@ -83,20 +83,20 @@ class ObservationPayload(KronicableSample):
     model_config = ConfigDict(populate_by_name=True, alias_generator=None)
 
     # Target Information and origin
-    catalog_key: Optional[str] = Field(default=None, description="Target catalog ID, if target is from a known catalog")
-    catalog_name: Optional[str] = Field(default=None, description="Catalog Name, if target is from a known catalog")
+    catalog_key: str | None = Field(default=None, description="Target catalog ID, if target is from a known catalog")
+    catalog_name: str | None = Field(default=None, description="Catalog Name, if target is from a known catalog")
     name: str
     tags: list[str] = Field(default_factory=list)
-    source_type: Optional[str] = Field(None, alias="type", description="e.g., star, pulsar, or bright source")
+    source_type: str | None = Field(None, alias="type", description="e.g., star, pulsar, or bright source")
 
     # Coordinates & Motion
     ra_deg: float = Field(..., ge=0.0, lt=360.0, description="Right ascension in degrees [0, 360)")
     dec_deg: float = Field(..., ge=-90.0, le=90.0, description="Declination in degrees [-90, 90]")
-    pmra: Optional[float] = Field(
+    pmra: float | None = Field(
         None,
         description="Proper motion in RA (mas/yr). Can be positive or negative.",
     )
-    pmdec: Optional[float] = Field(
+    pmdec: float | None = Field(
         None,
         description="Proper motion in Dec (mas/yr). Can be positive or negative.",
     )
@@ -112,14 +112,14 @@ class ObservationPayload(KronicableSample):
     instrument_name: str = Field(
         ..., description="Name of the instrument used for the observation i.e. MeerKAT, LOFAR, etc."
     )  # required
-    computing_infrastructure: Optional[str] = Field(
+    computing_infrastructure: str | None = Field(
         None,
         description="Name of the computing infrastructure used for data processing, "
         "e.g., 'SURF', 'AWS', 'Google Cloud', etc.",
     )
 
     # Publication and Versioning
-    publication_details: Optional[str] = Field(
+    publication_details: str | None = Field(
         None,
         alias="publication details",
         description="Free-form string for BibTeX entry or ORCID ID."

@@ -3,10 +3,11 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field, replace
-from typing import ClassVar, FrozenSet, Tuple
+from typing import ClassVar, FrozenSet
 
 from alembic.operations import Operations
 from sqlalchemy import Column
+from sqlalchemy.sql import quoted_name
 from sqlalchemy.types import TypeEngine
 
 # ==================================================================================================
@@ -133,7 +134,7 @@ class CreateSchemaOp(DbStructureOperation):
 class CreateTableOp(DbStructureOperation):
     schema: str
     table: str
-    columns: Tuple = field(default_factory=tuple)
+    columns: tuple = field(default_factory=tuple)
 
     priority = 10
     safety = SafePolicy()
@@ -167,6 +168,30 @@ class AddColumnOp(DbStructureOperation):
             self.table,
             self.column_def,
             schema=self.schema,
+        )
+
+
+@dataclass(frozen=True)
+class CreateIndexOp(DbStructureOperation):
+    schema: str
+    table: str
+    index_name: str
+    column_names: tuple[str, ...]
+    unique: bool = False
+
+    priority = 25
+    safety = SafePolicy()
+
+    def describe(self):
+        return f"create_index:{self.schema}.{self.table}.{self.index_name}"
+
+    def apply(self, op: Operations) -> None:
+        op.create_index(
+            self.index_name,
+            self.table,
+            self.column_names,
+            schema=self.schema,
+            unique=self.unique,
         )
 
 
@@ -283,6 +308,56 @@ class RenameColumnOp(DbStructureOperation):
         )
 
 
+@dataclass(frozen=True)
+class RenameConstraintOp(DbStructureOperation):
+    schema: str
+    table: str
+    old_name: str
+    new_name: str
+
+    priority = 42
+    safety = WarningPolicy()
+
+    def describe(self):
+        return f"rename_constraint:{self.schema}.{self.table}.{self.old_name}->{self.new_name}"
+
+    def apply(self, op: Operations) -> None:
+        op.execute(
+            f"ALTER TABLE {self.schema}.{quoted_name(self.table, None)} "
+            f"RENAME CONSTRAINT {self.old_name} TO {self.new_name}"
+        )
+
+
+@dataclass(frozen=True)
+class AddForeignKeyOp(DbStructureOperation):
+    schema: str
+    table: str
+    constraint_name: str
+    referred_table: str
+    local_columns: tuple[str, ...]
+    referred_columns: tuple[str, ...]
+    ondelete: str | None = None
+    onupdate: str | None = None
+
+    priority = 45
+    safety = WarningPolicy()
+
+    def describe(self):
+        return f"add_foreignkey:{self.schema}.{self.table}.{self.constraint_name}"
+
+    def apply(self, op: Operations) -> None:
+        op.create_foreign_key(
+            self.constraint_name,
+            self.table,
+            self.referred_table,
+            list(self.local_columns),
+            list(self.referred_columns),
+            schema=self.schema,
+            ondelete=self.ondelete,
+            onupdate=self.onupdate,
+        )
+
+
 # ==================================================================================================
 # ALTER
 # ==================================================================================================
@@ -359,6 +434,27 @@ class DropConstraintOp(DbStructureOperation):
 
 
 @dataclass(frozen=True)
+class DropForeignKeyOp(DbStructureOperation):
+    schema: str
+    table: str
+    constraint_name: str
+
+    priority = 47
+    safety = DestructivePolicy()
+
+    def describe(self):
+        return f"drop_foreignkey:{self.schema}.{self.table}.{self.constraint_name}"
+
+    def apply(self, op: Operations) -> None:
+        op.drop_constraint(
+            self.constraint_name,
+            self.table,
+            type_="foreignkey",
+            schema=self.schema,
+        )
+
+
+@dataclass(frozen=True)
 class DropColumnOp(DbStructureOperation):
     schema: str
     table: str
@@ -374,6 +470,26 @@ class DropColumnOp(DbStructureOperation):
         op.drop_column(
             self.table,
             self.column_name,
+            schema=self.schema,
+        )
+
+
+@dataclass(frozen=True)
+class DropIndexOp(DbStructureOperation):
+    schema: str
+    table: str
+    index_name: str
+
+    priority = 85
+    safety = DestructivePolicy()
+
+    def describe(self):
+        return f"drop_index:{self.schema}.{self.table}.{self.index_name}"
+
+    def apply(self, op: Operations) -> None:
+        op.drop_index(
+            self.index_name,
+            table_name=self.table,
             schema=self.schema,
         )
 
@@ -404,14 +520,19 @@ ALL_OPERATION_TYPES: tuple[type, ...] = (
     CreateSchemaOp,
     CreateTableOp,
     AddColumnOp,
+    CreateIndexOp,
     AddUniqueConstraintOp,
     AddCheckConstraintOp,
     AddExcludeConstraintOp,
     RenameTableOp,
     RenameColumnOp,
+    RenameConstraintOp,
+    AddForeignKeyOp,
+    DropConstraintOp,
+    DropForeignKeyOp,
     AlterColumnTypeOp,
     AlterColumnNullabilityOp,
-    DropConstraintOp,
     DropColumnOp,
+    DropIndexOp,
     DropTableOp,
 )
