@@ -339,6 +339,27 @@ class SchemaDiffEngine:
         # ------------------------------------------------------------------------------------------
         self._diff_constraints(result=result, schema=schema, table=table, table_name=table_name)
 
+        # ------------------------------------------------------------------------------------------
+        # Deduplication: DropIndexOps backed by a DropConstraintOp
+        # On PostgreSQL, DROP CONSTRAINT on a unique index drops the backing index automatically.
+        # A subsequent DropIndexOp for the same name would fail — remove it.
+        # ------------------------------------------------------------------------------------------
+        drop_constraint_names = {
+            op.constraint_name
+            for op in result.operations
+            if isinstance(op, DropConstraintOp) and op.table == table_name and op.schema == schema
+        }
+        result.operations = [
+            op
+            for op in result.operations
+            if not (
+                isinstance(op, DropIndexOp)
+                and op.table == table_name
+                and op.schema == schema
+                and op.index_name in drop_constraint_names
+            )
+        ]
+
     # ==============================================================================================
     # Column diff
     # ==============================================================================================
