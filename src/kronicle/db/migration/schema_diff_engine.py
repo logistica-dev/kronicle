@@ -435,7 +435,12 @@ class SchemaDiffEngine:
         db_indexes = {
             idx["name"]: idx
             for idx in self.inspector.get_indexes(table_name, schema=schema)
-            if idx and idx["name"] and not idx["name"].endswith("_pkey")  # skip auto-generated PK indexes
+            if (
+                idx
+                and idx["name"]
+                and not idx["name"].endswith("_pkey")  # skip auto-generated PK indexes
+                and not idx.get("duplicates_constraint")  # managed by _diff_constraints
+            )
         }
         meta_indexes = {str(idx.name): idx for idx in table.indexes if idx.name is not None}
 

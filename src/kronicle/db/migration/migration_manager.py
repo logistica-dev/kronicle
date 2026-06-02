@@ -28,7 +28,7 @@ from kronicle.db.registry import get_migration_schemas
 from kronicle.deps.settings import KronicleSettings
 from kronicle.deps.settings_env import KRONICLE_SQLA_BACKUP
 from kronicle.types.iso_datetime import IsoDateTime
-from kronicle.utils.dev_logs import log_e, log_i, log_w
+from kronicle.utils.dev_logs import log_d, log_e, log_i, log_w
 
 mod = "migration"
 
@@ -89,7 +89,7 @@ class MigrationManager:
     # ------------------------------------------------------------------
 
     def backup(self) -> Path:
-        backup_prefix = os.environ.get(KRONICLE_SQLA_BACKUP, "./backups/kronicle")
+        backup_prefix = os.environ.get(KRONICLE_SQLA_BACKUP, "./backup/kronicle")
         backup_prefix_path = Path(backup_prefix)
 
         ts = IsoDateTime.now_utc().strftime("%Y%m%d_%H%M%S")
@@ -320,7 +320,7 @@ class MigrationManager:
             if backup_file:
                 log_i(mod, f"Restoring backup: {backup_file}")
                 subprocess.run(
-                    ["pg_restore", "-d", self.db_url, str(backup_file)],
+                    ["pg_restore", "--clean", "--if-exists", "--no-owner", "-d", self.db_url, str(backup_file)],
                     check=True,
                 )
 
@@ -338,9 +338,22 @@ class MigrationManager:
 
 
 if __name__ == "__main__":
+    here = "migr_manager"
 
+    # load .conf/.secrets into os.environ
+    secrets_path = Path(__file__).resolve().parent.parent.parent.parent.parent / ".conf" / ".secrets"
+    if secrets_path.exists():
+        import re
+
+        for line in secrets_path.read_text().splitlines():
+            m = re.match(r'^(?:export\s+)?(\w+)\s*=\s*["\']?(.*?)["\']?\s*$', line)
+            if m:
+                os.environ[m.group(1)] = m.group(2)
+
+    log_d(here, "Env var loaded")
     settings = KronicleSettings()
     db_url = settings.db.rbac_connection_url
+    # log_d(here, "db_url", db_url)
 
     manager = MigrationManager(db_url=db_url)
     manager.run()

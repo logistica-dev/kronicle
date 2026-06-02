@@ -118,10 +118,10 @@ if __name__ == "__main__":  # pragma: no-cover
     run(wait_and_init())
 
     print("[entry] Launching Uvicorn/FastAPI server...")
-    from kronicle.main import create_app  # your FastAPI instance
+    from kronicle.main import app  # your FastAPI instance
 
     uvicorn.run(
-        create_app,
+        app,
         factory=True,
         host="0.0.0.0",
         port=int(os.environ.get("KRONICLE_PORT", 8000)),

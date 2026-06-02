@@ -309,6 +309,6 @@ class KronicleApp:
 
 
 # Create the application and expose an app to uvicorn
-def create_app() -> FastAPI:
+def app() -> FastAPI:
     conf = KronicleSettings()
     return KronicleApp(conf).app
