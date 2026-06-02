@@ -12,7 +12,6 @@ import asyncio
 
 from sqlalchemy import create_engine, text
 
-from kronicle.db.base.kronicle_hierarchy import KronicleHierarchyMixin
 from kronicle.db.core.models import ALL_CORE_TABLES, CORE_NAMESPACE
 from kronicle.db.data.models import ALL_DATA_TABLES, DATA_NAMESPACE
 from kronicle.db.rbac.models import ALL_RBAC_TABLES, RBAC_NAMESPACE
@@ -44,6 +43,7 @@ async def create_namespaces_if_missing(
 ):
     """
     Ensure schemas exist in the application database with the correct owner.
+    Idempotent.
 
     Args:
         su_conn: asyncpg superuser connection
@@ -57,7 +57,6 @@ async def create_namespaces_if_missing(
 
         log_d(here, "Check if schema exists...")
         exists = await db.fetchval("SELECT 1 FROM pg_namespace WHERE nspname=$1", namespace)
-
         if not exists:
             # Schema does not exist: create it with the intended owner
             await db.execute(f"CREATE SCHEMA {namespace} AUTHORIZATION {username}")
@@ -73,10 +72,9 @@ async def create_namespaces_if_missing(
                 if fail_on_owner_mismatch:
                     log_w(mod, msg + " (owner left unchanged, failing)")
                     raise RuntimeError(msg)
-                else:
-                    # Optionally, alter the owner instead of failing:
-                    await db.execute(f"ALTER SCHEMA {namespace} OWNER TO {username}")
-                    log_w(mod, msg + " (owner changed)")
+                # Optionally, alter the owner instead of failing:
+                await db.execute(f"ALTER SCHEMA {namespace} OWNER TO {username}")
+                log_w(mod, msg + " (owner changed)")
             else:
                 log_d(mod, f"Schema '{namespace}' already exists with correct owner '{username}'")
 
@@ -161,20 +159,20 @@ def create_sqlalchemy_tables(db, tables, namespace):
                     log_e(here, f"Table creation failed for '{namespace}.{table_name}'")
                     raise e
 
-        # --- Setup hierarchy if applicable (KronicleHierarchyMixin) ---
-        if issubclass(table_cls, KronicleHierarchyMixin):
-            log_d(here, f"Setting up the hierarchy for '{namespace}.{table_name}'")
-            table_cls.setup_hierarchy()
-            log_d(here, "Hierarchy set")
+        # # --- Setup hierarchy if applicable (KronicleHierarchyMixin) ---
+        # if issubclass(table_cls, KronicleHierarchyMixin):
+        #     log_d(here, f"Setting up the hierarchy for '{namespace}.{table_name}'")
+        #     table_cls.setup_hierarchy()
+        #     log_d(here, "Hierarchy set")
 
-            hierarchy_table = table_cls._hierarchy_table
-            if hierarchy_table is not None:
-                if table_exists(db, namespace, hierarchy_table.name):
-                    log_d(here, f"Hierarchy table '{namespace}.{hierarchy_table.name}' already exists")
-                else:
-                    log_d(here, f"Creating hierarchy table '{namespace}.{hierarchy_table.name}'")
-                    hierarchy_table.schema = namespace
-                    create_sqlalchemy_tables(db, [hierarchy_table], namespace)
+        #     hierarchy_table = table_cls._hierarchy_table
+        #     if hierarchy_table is not None:
+        #         if table_exists(db, namespace, hierarchy_table.name):
+        #             log_d(here, f"Hierarchy table '{namespace}.{hierarchy_table.name}' already exists")
+        #         else:
+        #             log_d(here, f"Creating hierarchy table '{namespace}.{hierarchy_table.name}'")
+        #             hierarchy_table.schema = namespace
+        #             create_sqlalchemy_tables(db, [hierarchy_table], namespace)
 
 
 async def main():
@@ -186,7 +184,6 @@ async def main():
     log_d(mod, "Create namespaces if missing...")
     async with conf.db.session() as su_conn:
         await create_namespaces_if_missing(su_conn, namespace_owners, fail_on_owner_mismatch=False)
-    await su_conn.close()
     log_d(mod, "Superuser connection closed after schema verification")
 
     log_d("----- Step 2: create tables using the owning users")

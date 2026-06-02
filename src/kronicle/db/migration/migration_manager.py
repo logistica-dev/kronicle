@@ -11,7 +11,7 @@ from alembic.migration import MigrationContext
 from alembic.operations import Operations
 from sqlalchemy import select
 
-from kronicle.db.base.kronicle_base import Base
+from kronicle.db.base.kronicle_table import Base
 from kronicle.db.migration.db_catalog import DatabaseCatalogBuilder
 from kronicle.db.migration.migration_plan import MigrationPlan
 from kronicle.db.migration.migration_proposal import MigrationProposal
@@ -72,9 +72,17 @@ class MigrationManager:
         7. History + State recording (chained revisions)
     """
 
-    def __init__(self, db_url: str, alembic_cfg_path: str = "alembic.ini", *, auto_approve: bool = False):
+    def __init__(
+        self,
+        db_url: str,
+        alembic_cfg_path: str = "alembic.ini",
+        *,
+        auto_approve: bool = False,
+        backup_url: str | None = None,
+    ):
         self.cfg = Config(alembic_cfg_path)
         self.db_url = db_url
+        self.backup_url = backup_url or db_url
 
         self.schemas = get_migration_schemas()
         self.db = RbacDbSession(db_url)
@@ -96,7 +104,7 @@ class MigrationManager:
         backup_file = backup_prefix_path.parent / f"{backup_prefix_path.name}_{ts}.dump"
         backup_file.parent.mkdir(parents=True, exist_ok=True)
 
-        cmd = ["pg_dump", "-Fc", "-f", str(backup_file), self.db_url]
+        cmd = ["pg_dump", "-Fc", "-f", str(backup_file), self.backup_url]
 
         for schema in self.schemas:
             cmd += ["-n", schema]
@@ -151,6 +159,30 @@ class MigrationManager:
                         f"Schema '{schema}' has drifted from recorded state "
                         f"(stored hash: {row.schema_hash[:12]}… ≠ actual: {actual_hash[:12]}…)",
                     )
+                    metadata_hash = self._compute_metadata_hash(schema)
+                    if metadata_hash == actual_hash:
+                        log_d(mod, "  metadata == actual — diff engine agrees, hash mismatch is false positive")
+                    else:
+                        log_d(mod, f"  metadata ({metadata_hash[:12]}…) ≠ actual — real structural difference")
+                        import json
+
+                        db_cat = DatabaseCatalogBuilder(conn).from_database(schema)
+                        meta_tables = {n: t for n, t in Base.metadata.tables.items() if t.schema == schema}
+                        meta_cat = DatabaseCatalogBuilder.from_metadata(meta_tables)
+                        db_raw = json.dumps(db_cat.as_tuple(), default=str)
+                        meta_raw = json.dumps(meta_cat.as_tuple(), default=str)
+                        log_d(mod, f"  DB catalog len={len(db_raw)}  Meta catalog len={len(meta_raw)}")
+                        log_d(mod, f"  DB catalog:   {db_raw[:2000]}")
+                        log_d(mod, f"  Meta catalog: {meta_raw[:2000]}")
+                        if db_raw == meta_raw:
+                            log_d(mod, "  Catalogs are IDENTICAL — bug in compute_hash")
+                        else:
+                            for i, (a, b) in enumerate(zip(db_raw, meta_raw, strict=True)):
+                                if a != b:
+                                    log_d(mod, f"  First diff at pos {i}: DB={a!r} Meta={b!r}")
+                                    break
+                            if len(db_raw) != len(meta_raw):
+                                log_d(mod, f"  Lengths differ: DB={len(db_raw)} Meta={len(meta_raw)}")
                 else:
                     log_i(mod, f"Schema '{schema}' state matches recorded hash")
             else:
@@ -269,6 +301,46 @@ class MigrationManager:
             log_w(mod, f"Failed migration recorded — revision {plan.revision}")
 
     # ------------------------------------------------------------------
+    # STATE REFRESH (when no operations but hash has drifted)
+    # ------------------------------------------------------------------
+
+    def _refresh_state_if_needed(self, plan: MigrationPlan) -> None:
+        """Re-record migration state when the hash computation logic changed."""
+        now = datetime.now(timezone.utc)
+
+        for schema in self.schemas:
+            state_cls = _SCHEMA_STATE[schema]
+
+            with self.db._engine.begin() as conn:
+                row = conn.execute(select(state_cls).order_by(state_cls.created_at.desc()).limit(1)).first()
+                if row is None:
+                    continue
+                actual_hash = self._compute_db_hash(conn, schema)
+                if row.schema_hash == actual_hash:
+                    continue
+
+                metadata_hash = self._compute_metadata_hash(schema)
+
+                log_i(
+                    mod,
+                    f"Refreshing state for '{schema}' ({row.schema_hash[:12]}… → {actual_hash[:12]}…)",
+                )
+
+                conn.execute(
+                    state_cls.__table__.insert().values(
+                        revision=plan.revision,
+                        schema_hash=metadata_hash,
+                        applied_at=now,
+                        applied_by="system",
+                        operation_count=0,
+                        metadata_snapshot={},
+                        details={},
+                    )
+                )
+
+                log_i(mod, f"Migration state refreshed — revision {plan.revision}")
+
+    # ------------------------------------------------------------------
     # RUN
     # ------------------------------------------------------------------
 
@@ -292,6 +364,8 @@ class MigrationManager:
 
             if not plan.operations:
                 log_i(mod, "No changes detected — nothing to apply")
+                # Re-record state if the hash computation changed (e.g. defaults excluded)
+                self._refresh_state_if_needed(plan)
                 return
 
             if verbose:
@@ -353,7 +427,10 @@ if __name__ == "__main__":
     log_d(here, "Env var loaded")
     settings = KronicleSettings()
     db_url = settings.db.rbac_connection_url
-    # log_d(here, "db_url", db_url)
+    log_d(here, "db_url", settings.db.rbac_connection_url)
 
-    manager = MigrationManager(db_url=db_url)
+    # Optional: override backup connection (e.g. superuser) via env var
+    backup_url = os.environ.get("KRONICLE_BACKUP_URL") or None
+
+    manager = MigrationManager(db_url=db_url, backup_url=backup_url)
     manager.run()

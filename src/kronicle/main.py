@@ -25,9 +25,7 @@ from kronicle.auth.auth_service import AuthService
 from kronicle.auth.jwt_service import JWTService
 from kronicle.auth.pwd.pwd_manager import PasswordManager
 from kronicle.auth.pwd.pwd_policy import PasswordPolicy
-from kronicle.db.core.models.core_zone import Zone
 from kronicle.db.data.channel_db_session import ChannelDbSession
-from kronicle.db.rbac.models.rbac_group import RbacGroup
 from kronicle.db.rbac.rbac_db_session import RbacDbSession
 from kronicle.deps.settings import KronicleSettings
 from kronicle.errors.error_types import KronicleAppError, KronicleHTTPErrorPayload
@@ -116,10 +114,6 @@ class KronicleApp:
             with log_block(here, "Doc generation"):
                 self.generate_doc()
 
-    def setup_table_hierarchy(self):
-        Zone.setup_hierarchy()
-        RbacGroup.setup_hierarchy()
-
     # ----------------------------------------------------------------------------------------------
     # Lifespan: setup DBs and services
     # ----------------------------------------------------------------------------------------------
@@ -143,9 +137,6 @@ class KronicleApp:
         # --- RBAC DB ---
         with log_block(here, "RBAC session manager"):
             self.app.state.rbac_db = RbacDbSession(db_url=db_conf.rbac_connection_url, echo=False)
-
-        with log_block(here, "RBAC hierarchies setup"):
-            self.setup_table_hierarchy()
 
         with log_block(here, "RBAC mappers"):
             configure_mappers()

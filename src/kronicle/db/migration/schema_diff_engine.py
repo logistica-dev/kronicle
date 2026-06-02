@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from sqlalchemy import inspect
+from sqlalchemy import UniqueConstraint, inspect
 from sqlalchemy.engine import Connection
 from sqlalchemy.engine.interfaces import ReflectedColumn
 from sqlalchemy.schema import MetaData, Table
@@ -12,6 +12,7 @@ from kronicle.db.migration.operations import (
     AddCheckConstraintOp,
     AddColumnOp,
     AddForeignKeyOp,
+    AddNonNullableColumnOp,
     AddUniqueConstraintOp,
     AlterColumnNullabilityOp,
     AlterColumnTypeOp,
@@ -83,62 +84,80 @@ class SchemaDiffEngine:
 
     def diff(self) -> SchemaDiff:
         result = SchemaDiff()
+        self._diff_schemas(result)
+        for schema, tables in self._group_metadata_tables().items():
+            self._diff_schema_tables(result, schema, tables)
+        return result
 
-        # ------------------------------------------------------------------
-        # Ensure schemas exist
-        # ------------------------------------------------------------------
+    def _diff_schemas(self, result: SchemaDiff) -> None:
         existing_schemas = set(self.inspector.get_schema_names())
-
         for schema in sorted(self.schemas):
             if schema not in existing_schemas:
                 result.add(CreateSchemaOp(schema=schema))
 
-        # ------------------------------------------------------------------
-        # Compare tables
-        # ------------------------------------------------------------------
-        metadata_tables = self._group_metadata_tables()
+    def _diff_schema_tables(self, result: SchemaDiff, schema: str, tables: dict[str, Table]) -> None:
+        db_tables = set(self.inspector.get_table_names(schema=schema))
+        metadata_names = set(tables.keys())
+        missing_tables = metadata_names - db_tables
+        extra_tables = db_tables - metadata_names
 
-        for schema, tables in metadata_tables.items():
+        matched = self._detect_table_renames(schema, missing_tables, extra_tables)
+        for old_name, new_name in matched:
+            log_w(mod, f"Rename detected: {schema}.{old_name} -> {new_name}")
+            result.add(RenameTableOp(schema=schema, old_name=old_name, new_name=new_name))
+            missing_tables.discard(new_name)
+            extra_tables.discard(old_name)
 
-            db_tables = set(self.inspector.get_table_names(schema=schema))
+        self._create_missing_tables(result, schema, tables, missing_tables)
+        self._diff_tables_in_common(result, schema, tables, metadata_names, db_tables, matched)
+        self._drop_extra_tables(result, schema, extra_tables)
 
-            metadata_names = set(tables.keys())
+    def _create_missing_tables(
+        self, result: SchemaDiff, schema: str, tables: dict[str, Table], missing_tables: set[str]
+    ) -> None:
+        for table_name in sorted(missing_tables):
+            table = tables[table_name]
+            result.add(self._build_create_table_op(table))
+            for idx in table.indexes:
+                if not idx.name or not idx.columns:
+                    continue
+                result.add(
+                    CreateIndexOp(
+                        schema=schema,
+                        table=table_name,
+                        index_name=idx.name,
+                        column_names=tuple(col.name for col in idx.columns),
+                        unique=idx.unique,
+                    )
+                )
+            for cons in table.constraints:
+                if isinstance(cons, UniqueConstraint) and cons.name:
+                    result.add(
+                        AddUniqueConstraintOp(
+                            schema=schema,
+                            table=table_name,
+                            constraint_name=str(cons.name),
+                            columns=tuple(col.name for col in cons.columns),
+                        )
+                    )
 
-            # Tables in metadata but missing from DB → create candidates
-            missing_tables = metadata_names - db_tables
-            # Tables in DB but absent from metadata → drop / rename candidates
-            extra_tables = db_tables - metadata_names
+    def _diff_tables_in_common(
+        self,
+        result: SchemaDiff,
+        schema: str,
+        tables: dict[str, Table],
+        metadata_names: set[str],
+        db_tables: set[str],
+        matched: list[tuple[str, str]],
+    ) -> None:
+        for table_name in sorted(metadata_names & db_tables):
+            self._diff_existing_table(result=result, table=tables[table_name])
+        for old_name, new_name in matched:
+            self._diff_existing_table(result=result, table=tables[new_name], db_table_name=old_name)
 
-            # --------------------------------------------------------------
-            # Rename detection (avoid data-lossy drop+create)
-            # --------------------------------------------------------------
-            matched = self._detect_table_renames(schema, missing_tables, extra_tables)
-            for old_name, new_name in matched:
-                log_w(mod, f"Rename detected: {schema}.{old_name} -> {new_name}")
-                result.add(RenameTableOp(schema=schema, old_name=old_name, new_name=new_name))
-                missing_tables.discard(new_name)
-                extra_tables.discard(old_name)
-
-            # --------------------------------------------------------------
-            # Remaining missing tables → create
-            # --------------------------------------------------------------
-            for table_name in sorted(missing_tables):
-                table = tables[table_name]
-                result.add(self._build_create_table_op(table))
-
-            # --------------------------------------------------------------
-            # Existing tables → compare structure
-            # --------------------------------------------------------------
-            for table_name in sorted(metadata_names & db_tables):
-                self._diff_existing_table(result=result, table=tables[table_name])
-
-            # --------------------------------------------------------------
-            # Remaining extra tables → drop
-            # --------------------------------------------------------------
-            for table_name in sorted(extra_tables):
-                result.add(DropTableOp(schema=schema, table=table_name))
-
-        return result
+    def _drop_extra_tables(self, result: SchemaDiff, schema: str, extra_tables: set[str]) -> None:
+        for table_name in sorted(extra_tables):
+            result.add(DropTableOp(schema=schema, table=table_name))
 
     # ==============================================================================================
     # Metadata helpers
@@ -243,6 +262,10 @@ class SchemaDiffEngine:
 
     def _build_create_table_op(self, table: Table) -> CreateTableOp:
         columns = tuple(col.copy() for col in table.columns)
+        # Strip unique=True from column copies – the constraint is emitted
+        # separately as AddUniqueConstraintOp with the correct explicit name.
+        for col in columns:
+            col.unique = False
         if table.schema is None:
             raise RuntimeError(f"Unscoped table detected: {table.name}")
         return CreateTableOp(
@@ -259,17 +282,19 @@ class SchemaDiffEngine:
         self,
         result: SchemaDiff,
         table: Table,
+        db_table_name: str | None = None,
     ) -> None:
         if table.schema is None:
             raise RuntimeError(f"Unscoped table detected: {table.name}")
 
         schema = table.schema
-        table_name = table.name
+        db_table = db_table_name or table.name
+        target_table = table.name  # operations target the final name (rename runs first)
 
         db_columns_info = {
             col["name"]: col
             for col in self.inspector.get_columns(
-                table_name,
+                db_table,
                 schema=schema,
             )
         }
@@ -285,20 +310,26 @@ class SchemaDiffEngine:
         missing_columns = metadata_column_names - db_column_names
         extra_columns = db_column_names - metadata_column_names
 
-        matched = self._detect_column_renames(table_name, missing_columns, extra_columns)
+        matched = self._detect_column_renames(target_table, missing_columns, extra_columns)
         for old_name, new_name in matched:
-            log_w(mod, f"Column rename detected: {schema}.{table_name}.{old_name} -> {new_name}")
-            result.add(RenameColumnOp(schema=schema, table=table_name, old_name=old_name, new_name=new_name))
+            log_w(mod, f"Column rename detected: {schema}.{target_table}.{old_name} -> {new_name}")
+            result.add(RenameColumnOp(schema=schema, table=target_table, old_name=old_name, new_name=new_name))
             missing_columns.discard(new_name)
             extra_columns.discard(old_name)
 
         for col_name in sorted(missing_columns):
+            col_def = metadata_columns[col_name]
+            op_cls = (
+                AddNonNullableColumnOp
+                if col_def.nullable is False and col_def.server_default is None and col_def.default is None
+                else AddColumnOp
+            )
             result.add(
-                AddColumnOp(
+                op_cls(
                     schema=schema,
-                    table=table_name,
+                    table=target_table,
                     column_name=col_name,
-                    column_def=metadata_columns[col_name].copy(),
+                    column_def=col_def.copy(),
                 )
             )
 
@@ -306,7 +337,7 @@ class SchemaDiffEngine:
             result.add(
                 DropColumnOp(
                     schema=schema,
-                    table=table_name,
+                    table=target_table,
                     column_name=col_name,
                 )
             )
@@ -324,7 +355,7 @@ class SchemaDiffEngine:
             self._diff_column(
                 result=result,
                 schema=schema,
-                table=table_name,
+                table=target_table,
                 db_col=db_col,
                 meta_col=meta_col,
             )
@@ -332,12 +363,12 @@ class SchemaDiffEngine:
         # ------------------------------------------------------------------------------------------
         # Indexes diff
         # ------------------------------------------------------------------------------------------
-        self._diff_indexes(result=result, schema=schema, table=table, table_name=table_name)
+        self._diff_indexes(result=result, schema=schema, table=table, db_table=db_table, target_table=target_table)
 
         # ------------------------------------------------------------------------------------------
         # Constraints diff (unique, check, FK)
         # ------------------------------------------------------------------------------------------
-        self._diff_constraints(result=result, schema=schema, table=table, table_name=table_name)
+        self._diff_constraints(result=result, schema=schema, table=table, db_table=db_table, target_table=target_table)
 
         # ------------------------------------------------------------------------------------------
         # Deduplication: DropIndexOps backed by a DropConstraintOp
@@ -347,14 +378,14 @@ class SchemaDiffEngine:
         drop_constraint_names = {
             op.constraint_name
             for op in result.operations
-            if isinstance(op, DropConstraintOp) and op.table == table_name and op.schema == schema
+            if isinstance(op, DropConstraintOp) and op.table == target_table and op.schema == schema
         }
         result.operations = [
             op
             for op in result.operations
             if not (
                 isinstance(op, DropIndexOp)
-                and op.table == table_name
+                and op.table == target_table
                 and op.schema == schema
                 and op.index_name in drop_constraint_names
             )
@@ -430,11 +461,12 @@ class SchemaDiffEngine:
         result: SchemaDiff,
         schema: str,
         table: Table,
-        table_name: str,
+        db_table: str,
+        target_table: str,
     ) -> None:
         db_indexes = {
             idx["name"]: idx
-            for idx in self.inspector.get_indexes(table_name, schema=schema)
+            for idx in self.inspector.get_indexes(db_table, schema=schema)
             if (
                 idx
                 and idx["name"]
@@ -454,7 +486,7 @@ class SchemaDiffEngine:
             result.add(
                 CreateIndexOp(
                     schema=schema,
-                    table=table_name,
+                    table=target_table,
                     index_name=name,
                     column_names=tuple(col.name for col in idx.columns),
                     unique=idx.unique,
@@ -462,7 +494,7 @@ class SchemaDiffEngine:
             )
 
         for name in sorted(db_names - meta_names):
-            result.add(DropIndexOp(schema=schema, table=table_name, index_name=name))
+            result.add(DropIndexOp(schema=schema, table=target_table, index_name=name))
 
     # ==============================================================================================
     # Constraints diff (unique, check, FK)
@@ -505,7 +537,8 @@ class SchemaDiffEngine:
         result: SchemaDiff,
         schema: str,
         table: Table,
-        table_name: str,
+        db_table: str,
+        target_table: str,
     ) -> None:
         from sqlalchemy import CheckConstraint, ForeignKeyConstraint, UniqueConstraint
 
@@ -513,7 +546,7 @@ class SchemaDiffEngine:
         # Unique constraints
         # ------------------------------------------------------------------
         db_unique = {
-            str(c["name"]): c for c in self.inspector.get_unique_constraints(table_name, schema=schema) if c.get("name")
+            str(c["name"]): c for c in self.inspector.get_unique_constraints(db_table, schema=schema) if c.get("name")
         }
         meta_unique = {str(c.name): c for c in table.constraints if isinstance(c, UniqueConstraint) and c.name}
 
@@ -522,8 +555,8 @@ class SchemaDiffEngine:
 
         matched = self._detect_constraint_renames(meta_uniq_names - db_uniq_names, db_uniq_names - meta_uniq_names)
         for old_name, new_name in matched:
-            log_w(mod, f"Unique constraint rename detected: {schema}.{table_name}.{old_name} -> {new_name}")
-            result.add(RenameConstraintOp(schema=schema, table=table_name, old_name=old_name, new_name=new_name))
+            log_w(mod, f"Unique constraint rename detected: {schema}.{target_table}.{old_name} -> {new_name}")
+            result.add(RenameConstraintOp(schema=schema, table=target_table, old_name=old_name, new_name=new_name))
             meta_uniq_names.discard(new_name)
             db_uniq_names.discard(old_name)
 
@@ -532,20 +565,20 @@ class SchemaDiffEngine:
             result.add(
                 AddUniqueConstraintOp(
                     schema=schema,
-                    table=table_name,
+                    table=target_table,
                     constraint_name=name,
                     columns=tuple(col.name for col in cons.columns),
                 )
             )
 
         for name in sorted(db_uniq_names - meta_uniq_names):
-            result.add(DropConstraintOp(schema=schema, table=table_name, constraint_name=name))
+            result.add(DropConstraintOp(schema=schema, table=target_table, constraint_name=name))
 
         # ------------------------------------------------------------------
         # Check constraints
         # ------------------------------------------------------------------
         db_check = {
-            str(c["name"]): c for c in self.inspector.get_check_constraints(table_name, schema=schema) if c.get("name")
+            str(c["name"]): c for c in self.inspector.get_check_constraints(db_table, schema=schema) if c.get("name")
         }
         meta_check = {str(c.name): c for c in table.constraints if isinstance(c, CheckConstraint) and c.name}
 
@@ -554,8 +587,8 @@ class SchemaDiffEngine:
 
         matched = self._detect_constraint_renames(meta_chk_names - db_chk_names, db_chk_names - meta_chk_names)
         for old_name, new_name in matched:
-            log_w(mod, f"Check constraint rename detected: {schema}.{table_name}.{old_name} -> {new_name}")
-            result.add(RenameConstraintOp(schema=schema, table=table_name, old_name=old_name, new_name=new_name))
+            log_w(mod, f"Check constraint rename detected: {schema}.{target_table}.{old_name} -> {new_name}")
+            result.add(RenameConstraintOp(schema=schema, table=target_table, old_name=old_name, new_name=new_name))
             meta_chk_names.discard(new_name)
             db_chk_names.discard(old_name)
 
@@ -564,19 +597,19 @@ class SchemaDiffEngine:
             result.add(
                 AddCheckConstraintOp(
                     schema=schema,
-                    table=table_name,
+                    table=target_table,
                     constraint_name=name,
                     sqltext=str(cons.sqltext),
                 )
             )
 
         for name in sorted(db_chk_names - meta_chk_names):
-            result.add(DropConstraintOp(schema=schema, table=table_name, constraint_name=name))
+            result.add(DropConstraintOp(schema=schema, table=target_table, constraint_name=name))
 
         # ------------------------------------------------------------------
         # Foreign key constraints
         # ------------------------------------------------------------------
-        db_fk = {str(c["name"]): c for c in self.inspector.get_foreign_keys(table_name, schema=schema) if c.get("name")}
+        db_fk = {str(c["name"]): c for c in self.inspector.get_foreign_keys(db_table, schema=schema) if c.get("name")}
         meta_fk = {str(c.name): c for c in table.constraints if isinstance(c, ForeignKeyConstraint) and c.name}
 
         db_fk_names = set(db_fk.keys())
@@ -584,8 +617,8 @@ class SchemaDiffEngine:
 
         matched = self._detect_constraint_renames(meta_fk_names - db_fk_names, db_fk_names - meta_fk_names)
         for old_name, new_name in matched:
-            log_w(mod, f"FK constraint rename detected: {schema}.{table_name}.{old_name} -> {new_name}")
-            result.add(RenameConstraintOp(schema=schema, table=table_name, old_name=old_name, new_name=new_name))
+            log_w(mod, f"FK constraint rename detected: {schema}.{target_table}.{old_name} -> {new_name}")
+            result.add(RenameConstraintOp(schema=schema, table=target_table, old_name=old_name, new_name=new_name))
             meta_fk_names.discard(new_name)
             db_fk_names.discard(old_name)
 
@@ -595,7 +628,7 @@ class SchemaDiffEngine:
             result.add(
                 AddForeignKeyOp(
                     schema=schema,
-                    table=table_name,
+                    table=target_table,
                     constraint_name=name,
                     referred_table=elements[0].column.table.name,
                     local_columns=tuple(col.name for col in cons.columns),
@@ -606,4 +639,4 @@ class SchemaDiffEngine:
             )
 
         for name in sorted(db_fk_names - meta_fk_names):
-            result.add(DropForeignKeyOp(schema=schema, table=table_name, constraint_name=name))
+            result.add(DropForeignKeyOp(schema=schema, table=target_table, constraint_name=name))

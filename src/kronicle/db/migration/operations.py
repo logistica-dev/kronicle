@@ -172,6 +172,27 @@ class AddColumnOp(DbStructureOperation):
 
 
 @dataclass(frozen=True)
+class AddNonNullableColumnOp(DbStructureOperation):
+    schema: str
+    table: str
+    column_name: str
+    column_def: Column  # SQLAlchemy Column
+
+    priority = 20
+    safety = WarningPolicy()
+
+    def describe(self):
+        return f"add_nonnullable_column:{self.schema}.{self.table}.{self.column_name}"
+
+    def apply(self, op: Operations) -> None:
+        op.add_column(
+            self.table,
+            self.column_def,
+            schema=self.schema,
+        )
+
+
+@dataclass(frozen=True)
 class CreateIndexOp(DbStructureOperation):
     schema: str
     table: str
@@ -210,9 +231,9 @@ class AddUniqueConstraintOp(DbStructureOperation):
 
     def apply(self, op: Operations) -> None:
         op.create_unique_constraint(
-            self.constraint_name,
-            self.table,
-            *self.columns,
+            constraint_name=self.constraint_name,
+            table_name=self.table,
+            columns=self.columns,
             schema=self.schema,
         )
 

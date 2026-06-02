@@ -20,7 +20,7 @@ class ColumnCatalog:
     primary_key: bool
 
     def as_tuple(self) -> tuple:
-        return (self.name, self.type, self.nullable, self.default, self.primary_key)
+        return (self.name, self.type, self.nullable)
 
 
 # ==================================================================================================
@@ -79,19 +79,23 @@ class DatabaseCatalogBuilder:
     def from_database(self, namespace: str) -> DatabaseCatalog:
         tables: list[TableCatalog] = []
 
-        for table_name in self.inspector.get_table_names(schema=namespace):
+        for table_name in sorted(self.inspector.get_table_names(schema=namespace)):
             columns = self.inspector.get_columns(table_name, schema=namespace)
+            pk_cols = set(self.inspector.get_pk_constraint(table_name, schema=namespace).get("constrained_columns", []))
 
-            col_catalogs = [
-                ColumnCatalog(
-                    name=c["name"],
-                    type=str(c["type"]),
-                    nullable=c["nullable"],
-                    default=str(c.get("default")) if c.get("default") else None,
-                    primary_key=c.get("primary_key", False),
-                )
-                for c in columns
-            ]
+            col_catalogs = sorted(
+                (
+                    ColumnCatalog(
+                        name=c["name"],
+                        type=self._normalize_type(str(c["type"])),
+                        nullable=c["nullable"],
+                        default=None,
+                        primary_key=c["name"] in pk_cols,
+                    )
+                    for c in columns
+                ),
+                key=lambda cc: cc.name,
+            )
 
             tables.append(TableCatalog(name=table_name, columns=tuple(col_catalogs)))
 
@@ -100,6 +104,10 @@ class DatabaseCatalogBuilder:
     # ------------------------------------------------------------------
     # SQLAlchemy → catalog
     # ------------------------------------------------------------------
+
+    @staticmethod
+    def _normalize_type(t: str) -> str:
+        return t.replace("DATETIME", "TIMESTAMP")
 
     @classmethod
     def from_metadata(cls, tables: dict[str, Table]) -> DatabaseCatalog:
@@ -110,17 +118,21 @@ class DatabaseCatalogBuilder:
                 raise RuntimeError(f"Unscoped table detected: {table.name}")
             schema = table.schema
 
-            col_catalogs = [
-                ColumnCatalog(
-                    name=c.name,
-                    type=str(c.type),
-                    nullable=c.nullable,
-                    default=str(c.default) if c.default is not None else None,
-                    primary_key=c.primary_key,
-                )
-                for c in table.columns
-            ]
+            col_catalogs = sorted(
+                (
+                    ColumnCatalog(
+                        name=c.name,
+                        type=cls._normalize_type(str(c.type)),
+                        nullable=c.nullable,
+                        default=None,
+                        primary_key=c.primary_key,
+                    )
+                    for c in table.columns
+                ),
+                key=lambda cc: cc.name,
+            )
             grouped.setdefault(schema, []).append(TableCatalog(name=table.name, columns=tuple(col_catalogs)))
 
         namespace = next(iter(grouped.keys()))
-        return DatabaseCatalog(namespace=namespace, tables=tuple(grouped[namespace]))
+        tables_in_order = sorted(grouped[namespace], key=lambda t: t.name)
+        return DatabaseCatalog(namespace=namespace, tables=tuple(tables_in_order))

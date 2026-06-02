@@ -1,9 +1,9 @@
 # kronicle/db/base/kronicle_link.py
 
-from kronicle.db.base.kronicle_base import KronicleBase
+from kronicle.db.base.kronicle_table import KronicleTable
 
 
-class KronicleLink(KronicleBase):
+class KronicleLink(KronicleTable):
     """
     Association/connection between KronicleEntities
     """

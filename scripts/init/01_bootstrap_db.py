@@ -15,12 +15,26 @@ from kronicle.db.core.models import CORE_NAMESPACE
 from kronicle.db.data.models import DATA_NAMESPACE
 from kronicle.db.rbac.models import RBAC_NAMESPACE
 from kronicle.utils.str_utils import normalize_pg_identifier
-from scripts.utils.logger import log_d  # type: ignore
-from scripts.utils.read_conf import KronicleConf  # type: ignore
+from scripts.utils.logger import log_d, log_w  # type: ignore
+from scripts.utils.read_conf import KronicleConf, UserCreds  # type: ignore
 
 mod = "init.01_bootstrap_db"
 
 NAMESPACES = [CORE_NAMESPACE, RBAC_NAMESPACE, DATA_NAMESPACE]
+
+
+def get_namespace_owners(chan_usr: UserCreds, rbac_usr: UserCreds):
+    """
+    Map namespace -> owning user
+    It is important to have Core namespace before RBAC one,
+    so that the tables are created in this order.
+    """
+    namespace_owners = {
+        DATA_NAMESPACE: chan_usr,
+        CORE_NAMESPACE: rbac_usr,  # <--- Core first
+        RBAC_NAMESPACE: rbac_usr,  # <--- RBAC second
+    }
+    return namespace_owners
 
 
 async def ensure_user_exists(db, username: str, password: str) -> str:
@@ -61,6 +75,48 @@ async def enable_timescaledb_extension(db):
     log_d(mod, "TimescaleDB extension enabled")
 
 
+async def create_namespaces_if_missing(
+    db,
+    namespace_owners: dict[str, UserCreds],
+    fail_on_owner_mismatch: bool = True,
+):
+    """
+    Ensure schemas exist in the application database with the correct owner.
+    Idempotent.
+
+    Args:
+        su_conn: asyncpg superuser connection
+        namespace_owners: dict mapping namespace -> owning user
+        fail_on_owner_mismatch: False if ownership should be enforced/overwriten
+    """
+    for namespace, owner in namespace_owners.items():
+        namespace = normalize_pg_identifier(namespace)
+        username = normalize_pg_identifier(owner.username)
+
+        log_d(mod, "Check if schema exists...")
+        exists = await db.fetchval("SELECT 1 FROM pg_namespace WHERE nspname=$1", namespace)
+        if not exists:
+            # Schema does not exist: create it with the intended owner
+            await db.execute(f"CREATE SCHEMA {namespace} AUTHORIZATION {username}")
+            log_d(mod, f"Created schema '{namespace}' with owner '{username}'")
+        else:
+            log_d(mod, "Schema exists: check actual owner...")
+            current_owner = await db.fetchval(
+                "SELECT nspowner::regrole::text FROM pg_namespace WHERE nspname=$1",
+                namespace,
+            )
+            if current_owner != owner.username:
+                msg = f"Schema '{namespace}' exists but is owned by '{current_owner}', expected '{username}'"
+                if fail_on_owner_mismatch:
+                    log_w(mod, msg + " (owner left unchanged, failing)")
+                    raise RuntimeError(msg)
+                # Optionally, alter the owner instead of failing:
+                await db.execute(f"ALTER SCHEMA {namespace} OWNER TO {username}")
+                log_w(mod, msg + " (owner changed)")
+            else:
+                log_d(mod, f"Schema '{namespace}' already exists with correct owner '{username}'")
+
+
 async def main():
     log_d(mod, "Reading configuration...")
     conf: KronicleConf = KronicleConf.read_conf()
@@ -77,6 +133,14 @@ async def main():
 
         log_d(mod, f"Ensure application database '{conf.db.name}' exists...")
         await ensure_database_exists(db, conf.db.name, conf.chan_creds.username)
+
+    # --- Connect to application database as superuser to create schemas ---
+    namespace_owners = get_namespace_owners(chan_usr=conf.chan_creds, rbac_usr=conf.rbac_creds)
+
+    log_d(mod, "Connecting as superuser to create schemas...")
+    async with db_access.session() as su_conn:
+        await create_namespaces_if_missing(su_conn, namespace_owners, fail_on_owner_mismatch=False)
+    log_d(mod, "Superuser connection closed after schema creation")
 
     # --- Connect to application database as app user ---
     log_d(mod, f"Connecting to application DB '{db_access.name}' as user '{db_access.usr}'")

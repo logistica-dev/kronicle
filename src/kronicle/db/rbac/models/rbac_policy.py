@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 from datetime import datetime
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy import Boolean, DateTime, ForeignKey
+from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, declared_attr, mapped_column, relationship
 
 from kronicle.db.rbac.links.rbac_access_profile import (
@@ -35,6 +36,8 @@ class RbacPolicy(RbacLink):
     """
 
     __abstract__ = True
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
 
     @declared_attr
     def access_profile_id(cls) -> Mapped[UUID]:

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from sqlalchemy.engine import Connection
 
-from kronicle.db.base.kronicle_base import Base
+from kronicle.db.base.kronicle_table import Base
 from kronicle.db.migration.operations import DbStructureOperation, SafetyLevel
 from kronicle.db.migration.schema_diff_engine import SchemaDiffEngine
 from kronicle.db.registry import get_migration_schemas

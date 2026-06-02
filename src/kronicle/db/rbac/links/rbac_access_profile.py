@@ -1,5 +1,5 @@
 # kronicle/db/rbac/models/rbac_access_profile.py
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy import ForeignKey, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
@@ -20,6 +20,8 @@ class ResourceAccessProfile(RbacLink):
     """
 
     __abstract__ = True
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
 
     @declared_attr
     def role_id(cls) -> Mapped[UUID]:

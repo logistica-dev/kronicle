@@ -6,8 +6,9 @@ from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from kronicle.db.base.kronicle_base import Base
-from kronicle.db.migration.bootstrap_check import run_bootstrap_checks
+from kronicle.db.base.kronicle_table import Base
+
+# from kronicle.db.migration.bootstrap_check import run_bootstrap_checks
 from kronicle.db.registry import *  # noqa
 from kronicle.db.registry import get_migration_schemas
 from kronicle.deps.settings import KronicleSettings
