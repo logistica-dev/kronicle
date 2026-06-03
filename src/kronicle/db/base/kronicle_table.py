@@ -19,7 +19,6 @@ class KronicleTable(Base):
     """
     Base class for all Core and RBAC tables.
     Provides:
-      - Primary UUID key
       - Created/Updated timestamps
       - Flexible JSONB details
       - Table structure validation at startup

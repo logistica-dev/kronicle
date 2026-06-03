@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import Boolean, DateTime, ForeignKey
+from sqlalchemy import Boolean, DateTime, ForeignKey, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, declared_attr, mapped_column, relationship
 
@@ -77,10 +77,15 @@ class ZonePolicy(RbacPolicy):
     Policy for a Zone instance. Links a ZoneAccessProfile to a Subject.
     """
 
-    UQ_CONSTRAINT = "uq_zone_policy"  # TODO
+    UQ_CONSTRAINT = "uq_zone_policy"
 
     __tablename__ = "zone_policies"
-    __table_args__ = {"schema": RbacLink.namespace(), "extend_existing": True}
+    __table_args__ = (
+        UniqueConstraint(
+            RbacLink.SUBJECT_ID, RbacLink.ACCESS_PROFILE_ID, name=UQ_CONSTRAINT
+        ),  # Tuple of constraints first
+        {"schema": RbacLink.namespace(), "extend_existing": True},
+    )
 
     @declared_attr
     def access_profile_id(cls) -> Mapped[UUID]:
@@ -93,11 +98,18 @@ class ZonePolicy(RbacPolicy):
 
 class ChannelPolicy(RbacPolicy):
     """
-    Policy for a Channel instance. Links a ChannelAccessProfile to a Subject.
+    Policy for a Channel instance. Links a ChannelAccessProfile to a Subject (User or Group).
     """
 
+    UQ_CONSTRAINT = "uq_channel_policies"
+
     __tablename__ = "channel_policies"
-    __table_args__ = {"schema": RbacLink.namespace(), "extend_existing": True}
+    __table_args__ = (
+        UniqueConstraint(
+            RbacLink.SUBJECT_ID, RbacLink.ACCESS_PROFILE_ID, name=UQ_CONSTRAINT
+        ),  # Tuple of constraints first
+        {"schema": RbacLink.namespace(), "extend_existing": True},
+    )
 
     @declared_attr
     def access_profile_id(cls) -> Mapped[UUID]:
@@ -113,8 +125,15 @@ class RowPolicy(RbacPolicy):
     Policy for a single Channel's timeseries row. Links a RowAccessProfile to a Subject.
     """
 
+    UQ_CONSTRAINT = "uq_row_policies"
+
     __tablename__ = "row_policies"
-    __table_args__ = {"schema": RbacLink.namespace(), "extend_existing": True}
+    __table_args__ = (
+        UniqueConstraint(
+            RbacLink.SUBJECT_ID, RbacLink.ACCESS_PROFILE_ID, name=UQ_CONSTRAINT
+        ),  # Tuple of constraints first
+        {"schema": RbacLink.namespace(), "extend_existing": True},
+    )
 
     @declared_attr
     def access_profile_id(cls) -> Mapped[UUID]:

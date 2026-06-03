@@ -1,4 +1,4 @@
-# kronicle/db/data/channel_repository.py
+# kronicle/repo/data/channel_repository.py
 from __future__ import annotations
 
 from uuid import UUID

@@ -75,5 +75,6 @@ class RowAccessProfile(ResourceAccessProfile):
         {"schema": RbacLink.namespace(), "extend_existing": True},  # Options dictionary last
     )
 
+    # Reminder: row_id is based on ChannelTimeseries.row_id which is a BIGSERIAL int
     row_id: Mapped[UUID] = mapped_column(ForeignKey(Row.id), nullable=False)
     row: Mapped[Row] = relationship(Row, backref="access_profiles")

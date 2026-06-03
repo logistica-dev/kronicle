@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from uuid import UUID, uuid4
 
+from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -24,4 +25,9 @@ class KronicleBase(KronicleTable):
     __abstract__ = True  # Do not create a table for this class itself
 
     # Primary key UUID
-    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
+    id: Mapped[UUID] = mapped_column(
+        PgUUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4,
+        server_default=text("gen_random_uuid()"),
+    )

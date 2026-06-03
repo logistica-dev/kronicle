@@ -4,6 +4,7 @@ from uuid import UUID
 from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from kronicle.db.base.kronicle_link import KronicleLink
 from kronicle.db.core.links.core_link import CoreLink
 from kronicle.db.core.models.core_zone import Zone
 
@@ -30,4 +31,4 @@ class ZoneHierarchy(CoreLink):
     parent_id: Mapped[UUID] = mapped_column(ForeignKey(Zone.id, ondelete="CASCADE"), primary_key=True)
     child_id: Mapped[UUID] = mapped_column(ForeignKey(Zone.id, ondelete="CASCADE"), primary_key=True)
 
-    parent = relationship(Zone, foreign_keys=[parent_id], backref="children")
+    parent = relationship(Zone, foreign_keys=[parent_id], backref=KronicleLink.CHILDREN)

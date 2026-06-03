@@ -1,10 +1,9 @@
 # kronicle/db/rbac/links/user_groups.py
 from __future__ import annotations
 
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy import ForeignKey, UniqueConstraint
-from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from kronicle.db.rbac.links.rbac_link import RbacLink
@@ -25,8 +24,6 @@ class RbacUserGroups(RbacLink):
         UniqueConstraint(RbacLink.USER_ID, RbacLink.GROUP_ID, name=UQ_CONSTRAINT),  # Tuple of constraints first
         {"schema": RbacLink.namespace(), "extend_existing": True},  # Options dictionary last
     )
-
-    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), default=uuid4)
 
     # Foreign keys to User and Group
     user_id: Mapped[UUID] = mapped_column(ForeignKey(RbacUser.id, ondelete="CASCADE"), primary_key=True)

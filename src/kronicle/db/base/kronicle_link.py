@@ -1,11 +1,23 @@
 # kronicle/db/base/kronicle_link.py
+from __future__ import annotations
 
-from kronicle.db.base.kronicle_table import KronicleTable
+from typing import TYPE_CHECKING
+
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.sql import delete
+
+from kronicle.db.base.kronicle_base import KronicleBase
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
 
 
-class KronicleLink(KronicleTable):
+class KronicleLink(KronicleBase):
     """
     Association/connection between KronicleEntities
+
+    The Primary Key in such associations is always a (unique) couple representing an association.
+    Thus no id (UUID) here.
     """
 
     __abstract__ = True  # Do not create a table for this class itself
@@ -14,7 +26,7 @@ class KronicleLink(KronicleTable):
     CHILD_ID = "child_id"
 
     PARENT_LINKS = "parent_links"
-    children = "children"
+    CHILDREN = "children"
 
     UQ_CONSTRAINT: str
 
@@ -29,15 +41,30 @@ class KronicleLink(KronicleTable):
             raise TypeError(f"{cls.__name__} must define UQ_CONSTRAINT")
 
         table = getattr(cls, "__table__", None)
-        if table is not None:
-            constraint_names = {c.name for c in table.constraints}
-            if cls.UQ_CONSTRAINT not in constraint_names:
-                raise TypeError(
-                    f"{cls.__name__}: UQ_CONSTRAINT '{cls.UQ_CONSTRAINT}' " f"not found in table constraints"
-                )
+        if table is not None and not table.primary_key.columns:
+            raise TypeError(f"{cls.__name__} has no primary key columns")
 
     @classmethod
     def uq_constraint(cls) -> str:
         if not cls.UQ_CONSTRAINT:
             raise NotImplementedError("KronicleLink classes should define UQ_CONSTRAINT")
         return cls.UQ_CONSTRAINT
+
+    @classmethod
+    def add(cls, db: Session, parent, child) -> None:
+        stmt = (
+            insert(cls.__table__).values(**{cls.PARENT_ID: parent.id, cls.CHILD_ID: child.id}).on_conflict_do_nothing()
+        )
+        db.execute(stmt)
+
+    @classmethod
+    def remove(cls, db: Session, parent, child) -> None:
+        from sqlalchemy import and_
+
+        stmt = delete(cls.__table__).where(
+            and_(
+                getattr(cls.__table__.c, cls.PARENT_ID) == parent.id,
+                getattr(cls.__table__.c, cls.CHILD_ID) == child.id,
+            )
+        )
+        db.execute(stmt)

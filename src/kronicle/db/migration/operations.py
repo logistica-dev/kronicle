@@ -430,6 +430,54 @@ class AlterColumnNullabilityOp(DbStructureOperation):
 
 
 # ==================================================================================================
+# PRIMARY KEY
+# ==================================================================================================
+
+
+@dataclass(frozen=True)
+class DropPrimaryKeyOp(DbStructureOperation):
+    schema: str
+    table: str
+    constraint_name: str
+
+    priority = 79
+    safety = DestructivePolicy()
+
+    def describe(self):
+        return f"drop_primary_key:{self.schema}.{self.table}.{self.constraint_name}"
+
+    def apply(self, op: Operations) -> None:
+        op.drop_constraint(
+            self.constraint_name,
+            self.table,
+            type_="primary",
+            schema=self.schema,
+        )
+
+
+@dataclass(frozen=True)
+class AddPrimaryKeyOp(DbStructureOperation):
+    schema: str
+    table: str
+    constraint_name: str
+    columns: tuple[str, ...]
+
+    priority = 81
+    safety = DestructivePolicy()
+
+    def describe(self):
+        return f"add_primary_key:{self.schema}.{self.table}.{self.constraint_name}"
+
+    def apply(self, op: Operations) -> None:
+        op.create_primary_key(
+            self.constraint_name,
+            self.table,
+            list(self.columns),
+            schema=self.schema,
+        )
+
+
+# ==================================================================================================
 # DROP
 # ==================================================================================================
 
@@ -553,6 +601,8 @@ ALL_OPERATION_TYPES: tuple[type, ...] = (
     DropForeignKeyOp,
     AlterColumnTypeOp,
     AlterColumnNullabilityOp,
+    DropPrimaryKeyOp,
+    AddPrimaryKeyOp,
     DropColumnOp,
     DropIndexOp,
     DropTableOp,

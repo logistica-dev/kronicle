@@ -13,6 +13,7 @@ from kronicle.db.migration.operations import (
     AddColumnOp,
     AddForeignKeyOp,
     AddNonNullableColumnOp,
+    AddPrimaryKeyOp,
     AddUniqueConstraintOp,
     AlterColumnNullabilityOp,
     AlterColumnTypeOp,
@@ -24,6 +25,7 @@ from kronicle.db.migration.operations import (
     DropConstraintOp,
     DropForeignKeyOp,
     DropIndexOp,
+    DropPrimaryKeyOp,
     DropTableOp,
     RenameColumnOp,
     RenameConstraintOp,
@@ -317,6 +319,12 @@ class SchemaDiffEngine:
             missing_columns.discard(new_name)
             extra_columns.discard(old_name)
 
+        # ------------------------------------------------------------------------------------------
+        # Primary key diff — drop old PK before column drops so columns
+        # that are no longer part of the PK can be dropped safely.
+        # ------------------------------------------------------------------------------------------
+        self._diff_primary_key(result, schema, target_table, db_table, table)
+
         for col_name in sorted(missing_columns):
             col_def = metadata_columns[col_name]
             op_cls = (
@@ -390,6 +398,48 @@ class SchemaDiffEngine:
                 and op.index_name in drop_constraint_names
             )
         ]
+
+    # ==============================================================================================
+    # Primary key diff
+    # ==============================================================================================
+
+    def _diff_primary_key(
+        self,
+        result: SchemaDiff,
+        schema: str,
+        target_table: str,
+        db_table: str,
+        table: Table,
+    ) -> None:
+        db_pk_info = self.inspector.get_pk_constraint(db_table, schema=schema)
+        db_pk_columns = set(db_pk_info.get("constrained_columns", []))
+        db_pk_name = db_pk_info.get("name") or f"{db_table}_pkey"
+
+        model_pk_columns = {col.name for col in table.primary_key.columns}
+
+        if db_pk_columns == model_pk_columns:
+            return
+
+        if db_pk_columns:
+            result.add(
+                DropPrimaryKeyOp(
+                    schema=schema,
+                    table=target_table,
+                    constraint_name=db_pk_name,
+                )
+            )
+
+        if model_pk_columns:
+            # Use the model PK constraint name if defined, otherwise construct one
+            model_pk_name = table.primary_key.name or f"{target_table}_pkey"
+            result.add(
+                AddPrimaryKeyOp(
+                    schema=schema,
+                    table=target_table,
+                    constraint_name=str(model_pk_name),
+                    columns=tuple(sorted(model_pk_columns)),
+                )
+            )
 
     # ==============================================================================================
     # Column diff
