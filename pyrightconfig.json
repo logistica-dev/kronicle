@@ -1,0 +1,8 @@
+{
+  "exclude": ["**/__pycache__", "**/node_modules"],
+  "extraPaths": ["src", ".venv/lib/python3.12/site-packages"],
+  "include": ["src", "tests"],
+  "pythonVersion": "3.12",
+  "venv": ".venv",
+  "venvPath": "."
+}

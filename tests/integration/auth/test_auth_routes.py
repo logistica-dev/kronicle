@@ -10,6 +10,7 @@ from kronicle_sdk.utils.log import log_d
 def auth_client():
     co = Settings().connection
     return KronicleUsrLogin(co.url, co.usr, co.pwd)
+    # return KronicleUsrLogin(co.url, co.usr, co.pwd)
 
 
 def test_login(auth_client):
