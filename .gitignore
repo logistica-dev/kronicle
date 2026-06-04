@@ -17,7 +17,7 @@ include
 reports
 
 # VSCode
-.vscode
+# .vscode
 
 # MacOS
 **/.DS_Store
