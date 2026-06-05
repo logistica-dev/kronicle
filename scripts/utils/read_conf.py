@@ -7,6 +7,7 @@ from dataclasses import dataclass
 
 from asyncpg import connect
 
+from kronicle.deps.settings_env import CHAN_CREDS, DB_HOST, DB_NAME, DB_PORT, RBAC_CREDS
 from kronicle.utils.str_utils import decode_b64url, normalize_pg_identifier, pad_b64_str, urlsafe_b64decode
 
 """
@@ -25,17 +26,10 @@ Expected environment variables:
     KRONICLE_SU_INFO      : Base64 encoded "adminuser:admin@example.com:encryptedpwd"
 """
 
-DB_HOST = "KRONICLE_DB_HOST"
-DB_PORT = "KRONICLE_DB_PORT"
-DB_NAME = "KRONICLE_DB_NAME"
-DB_NAME_ALT = "POSTGRES_DB"
 
 DB_SU_CREDS = "KRONICLE_DB_SU_CREDS"  # b64(db_su_usr:db_su_pwd)
 DB_SU_NAME = "POSTGRES_USER"
 DB_SU_PASS = "POSTGRES_PASSWORD"
-
-CHAN_CREDS = "KRONICLE_CHAN_CREDS"  # b64(chan_usr:chan_pwd)
-RBAC_CREDS = "KRONICLE_RBAC_CREDS"  # b64(rbac_usr:rbac_pwd)
 
 APP_SU_INFO = "KRONICLE_SU_INFO"  # b64(adminuser:admin@example.com:encryptedpwd)
 
@@ -133,7 +127,7 @@ class DbAccess:
     def from_env(cls, default_creds: UserCreds) -> DbAccess:
         host = cls._get_env(DB_HOST)
         port = int(cls._get_env(DB_PORT))
-        name = os.getenv(DB_NAME) or os.getenv(DB_NAME_ALT, "kronicle")
+        name = os.getenv(DB_NAME, "kronicle")
         return DbAccess(
             host=host,
             port=port,

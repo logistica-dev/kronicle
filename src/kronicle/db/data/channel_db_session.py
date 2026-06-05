@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from json import dumps, loads
-from typing import Any, AsyncIterator, Callable, Optional
+from typing import Any, AsyncIterator, Callable
 
 from asyncpg import Connection, Pool, create_pool
 from asyncpg.exceptions import PostgresError
@@ -27,7 +27,7 @@ class ChannelDbSession:
     - Optional automatic error interception/logging
     """
 
-    _instance: Optional[ChannelDbSession] = None
+    _instance: ChannelDbSession | None = None
     _initialized: bool = False
 
     def __new__(cls, db_url: str | None = None):
@@ -66,7 +66,7 @@ class ChannelDbSession:
         self.intercept_errors = intercept_errors
         self.logger = logger or log_w
 
-        self._pool: Optional[Pool] = None
+        self._pool: Pool | None = None
         self._initialized = True
 
     # ----------------------------------------------------------------------------------------------

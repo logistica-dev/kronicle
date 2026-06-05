@@ -4,11 +4,11 @@ from uuid import uuid4
 
 import pytest
 
-from kronicle.db.data.channel_repository import ChannelRepository
 from kronicle.db.data.models.channel_metadata import ChannelMetadata
 from kronicle.db.data.models.channel_resource import ChannelResource
 from kronicle.db.data.models.channel_schema import ChannelSchema
 from kronicle.errors.error_types import BadRequestError, ConflictError, NotFoundError
+from kronicle.repo.data.channel_repository import ChannelRepository
 from kronicle.schemas.payload.processed_payload import ProcessedPayload
 
 pytestmark = pytest.mark.asyncio
@@ -73,7 +73,7 @@ async def test_fetch_metadata_by_name_found(repo):
             return_value=fake_meta,
         ),
         patch(
-            "kronicle.db.data.channel_repository.ChannelRepository._metadata_to_channel",
+            "kronicle.repo.data.channel_repository.ChannelRepository._metadata_to_channel",
             new_callable=AsyncMock,
             return_value=fake_channel,
         ),
@@ -113,7 +113,7 @@ async def test_insert_rows_existing_channel(repo, channel_schema_fixture):
     channel_mock.insert_rows.return_value = None
 
     with patch(
-        "kronicle.db.data.channel_repository.ChannelResource.from_processed",
+        "kronicle.repo.data.channel_repository.ChannelResource.from_processed",
         return_value=channel_mock,
     ):
         result = await repo.insert_rows(processed)
@@ -131,7 +131,7 @@ async def test_create_channel_conflict(repo, channel_schema_fixture):
     channel_mock.metadata.update.return_value = None
 
     with patch(
-        "kronicle.db.data.channel_repository.ChannelResource.from_processed",
+        "kronicle.repo.data.channel_repository.ChannelResource.from_processed",
         return_value=channel_mock,
     ):
         with pytest.raises(ConflictError):

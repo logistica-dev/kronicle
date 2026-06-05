@@ -5,6 +5,7 @@ wip*
 bak
 **.bak
 .conf
+backup*
 
 
 # Python
@@ -16,7 +17,7 @@ include
 reports
 
 # VSCode
-.vscode
+# .vscode
 
 # MacOS
 **/.DS_Store
@@ -206,7 +207,7 @@ poetry.toml
 .ruff_cache/
 
 # LSP config files
-pyrightconfig.json
+# pyrightconfig.json
 
 # End of https://www.toptal.com/developers/gitignore/api/python
 

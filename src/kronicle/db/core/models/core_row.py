@@ -1,30 +1,46 @@
 # kronicle/db/core/models/core_row.py
+from __future__ import annotations
 
 from datetime import datetime
+from uuid import UUID
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from kronicle.db.base.kronicle_base import KronicleBase
 from kronicle.db.core.models.core_channel import Channel
-from kronicle.db.core.models.core_entity import CoreEntity
 
 
-class Row(CoreEntity):
-    __tablename__ = "row"
+class Row(KronicleBase):
+    """
+    Represents a row from a ChannelTimeseries as an object of a Policy.
+    The PK is timeseries_row_id matching the BIGSERIAL in the timeseries table.
+    """
+
+    UQ_CONSTRAINT = "uq_channel_row"
+
+    __tablename__ = "rows"
+
+    __table_args__ = (
+        UniqueConstraint("channel_id", "timeseries_row_id", name=UQ_CONSTRAINT),
+        {"schema": "core", "extend_existing": True},
+    )
+
+    @classmethod
+    def namespace(cls) -> str:
+        return "core"
+
+    # Unique timeseries row ID (BIGSERIAL from upstream), not PK — id from KronicleBase is the PK
+    timeseries_row_id: Mapped[int] = mapped_column(unique=True)
 
     # The channel this row belongs to
-    channel_id = Column(ForeignKey("channel.id"))
-    channel: Mapped["Channel"] = relationship("Channel")
+    channel_id: Mapped[UUID] = mapped_column(ForeignKey(Channel.id), nullable=False)
+    channel: Mapped[Channel] = relationship(Channel, backref=__tablename__)
 
-    # Link to Timescale row_id (BIGSERIAL)
-    timeseries_row_id: Mapped[int] = mapped_column(nullable=False, unique=True)
+    # User-friendly name is made optional because it makes no sense at the row level.
+    name: Mapped[str] = mapped_column(String(36), unique=True, nullable=True)
 
     # optional: store metadata like origin_user or public flag if convenient
-    owner = Column(ForeignKey("rbac_user.id"), nullable=True)
-    is_public: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    is_public: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
 
-    release_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        nullable=False,
-    )
+    release_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)

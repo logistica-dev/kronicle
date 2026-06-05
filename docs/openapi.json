@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Kronicle",
-    "summary": "FastAPI-powered TimescaleDB microservice for storing time-series measurements",
-    "version": "0.0.1"
+    "title": "TestApp",
+    "summary": "desc",
+    "version": "1.0"
   },
   "paths": {
     "/health/live": {
@@ -1719,6 +1719,27 @@
             "HTTPBearer": []
           }
         ],
+        "parameters": [
+          {
+            "name": "remove",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Remove user from DB if True",
+              "default": false,
+              "title": "Remove"
+            },
+            "description": "Remove user from DB if True"
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -1729,6 +1750,133 @@
             }
           }
         },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutputUser"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rbac/v1/users/{user_id}": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Get User By Id",
+        "operationId": "get_user_by_id_rbac_v1_users__user_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/OutputUser"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/OutputUser"
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get User By Id Rbac V1 Users  User Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Delete User By Id",
+        "operationId": "delete_user_by_id_rbac_v1_users__user_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "remove",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Remove user from DB if True",
+              "default": false,
+              "title": "Remove"
+            },
+            "description": "Remove user from DB if True"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -2051,7 +2199,7 @@
         "title": "InputPayload",
         "description": "User-provided payload for a channel.\nThe 'channel_schema' field is a dict of column_name -> type string.",
         "example": {
-          "channel_id": "84127a77-b062-4005-b254-555f7506a26c",
+          "channel_id": "88f2179e-d782-4900-8285-585ac36f3525",
           "channel_schema": {
             "humidity": "float",
             "temperature": "float",
@@ -2060,7 +2208,7 @@
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-b3d45",
+          "name": "thermo-d384e",
           "rows": [
             {
               "humidity": 55.1,

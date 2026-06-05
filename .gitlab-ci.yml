@@ -47,7 +47,7 @@ test_db_init:
         --network kronicle-net \
         -e POSTGRES_USER=$POSTGRES_USER \
         -e POSTGRES_PASSWORD=$POSTGRES_PASSWORD \
-        -e POSTGRES_DB=$POSTGRES_DB \
+        -e KRONICLE_DB_NAME=${KRONICLE_DB_NAME:-${POSTGRES_DB:-kronicle_db}} \
         -p 5432:5432 \
         --health-cmd="pg_isready -U $POSTGRES_USER" \
         --health-interval=2s \
@@ -88,7 +88,7 @@ test_db_init:
         --network kronicle-net \
         -e KRONICLE_DB_HOST=kronicle-test-db \
         -e KRONICLE_DB_PORT=5432 \
-        -e POSTGRES_DB=$POSTGRES_DB \
+        -e KRONICLE_DB_NAME=${KRONICLE_DB_NAME:-${POSTGRES_DB:-kronicle_db}} \
         -e POSTGRES_USER=$POSTGRES_USER \
         -e POSTGRES_PASSWORD=$POSTGRES_PASSWORD \
         -e KRONICLE_CHAN_CREDS=$KRONICLE_CHAN_CREDS \

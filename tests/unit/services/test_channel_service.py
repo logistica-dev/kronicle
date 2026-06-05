@@ -4,8 +4,8 @@ from uuid import uuid4
 
 import pytest
 
-from kronicle.db.data.channel_repository import ChannelRepository
 from kronicle.errors.error_types import BadRequestError
+from kronicle.repo.data.channel_repository import ChannelRepository
 from kronicle.schemas.payload.input_payload import InputPayload
 from kronicle.schemas.payload.processed_payload import ProcessedPayload
 from kronicle.schemas.payload.response_payload import ResponsePayload

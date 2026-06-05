@@ -2,105 +2,45 @@
 from __future__ import annotations
 
 from typing import Any
-from uuid import UUID
 
-from pydantic import EmailStr
 from sqlalchemy import Boolean, Index, String, text
-from sqlalchemy.orm import Mapped, Session, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column
 
 from kronicle.db.rbac.models.rbac_entity import RbacEntity
-from kronicle.errors.error_types import BadRequestError
-from kronicle.utils.dev_logs import log_d
 
 
 class RbacUser(RbacEntity):
     __tablename__ = "users"
-
-    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)  # Mandatory!
-    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
-
-    full_name: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
-    external_id: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
-
-    # default -> Python-side default | server_default -> PostgreSQL DB-side default
-    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("true"))
-    is_superuser: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
 
     __table_args__ = (
         Index("ix_users_email", "email"),
         {"schema": RbacEntity.namespace(), "extend_existing": True},
     )
 
+    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)  # Mandatory!
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    full_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    external_id: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
+
+    # default -> Python-side default | server_default -> PostgreSQL DB-side default
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"), nullable=False)
+    is_superuser: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
+
     @property
     def snapshot(self) -> dict[str, Any]:
-        return {
+        result: dict[str, Any] = {
             "id": str(self.id),
             "email": self.email,
             "name": self.name,
-            "full_name": self.full_name,
-            "is_active": self.is_active,
-            "is_superuser": self.is_superuser,
         }
+        if self.full_name is not None:
+            result["full_name"] = self.full_name
+        if not self.is_active:
+            result["is_active"] = False
+        if self.is_superuser:
+            result["is_superuser"] = True
+        return result
 
     def __repr__(self) -> str:
         return f"<User {self.email}>"
-
-    # ----------------------------------------------------------------------------------------------
-    # Read table
-    # ----------------------------------------------------------------------------------------------
-    @classmethod
-    def fetch(
-        cls,
-        db: Session,
-        *,
-        id: UUID | None = None,
-        email: EmailStr | None = None,
-        name: str | None = None,
-        external_id: str | None = None,
-        including_su=True,
-    ) -> RbacUser | list[RbacUser]:
-        q = db.query(RbacUser)
-        q_filtered = None
-        if not including_su:
-            q = q.filter(cls.is_superuser.is_(False))
-        if id:
-            q_filtered = q.filter(cls.id == id)
-        if email:
-            q_filtered = q.filter(cls.email == email)
-        if name:
-            q_filtered = q.filter(cls.name == name)
-        if external_id:
-            q_filtered = q.filter(cls.external_id == external_id)
-        if q_filtered is None:
-            raise BadRequestError("No filter provided")
-        # Log the SQL with literal values for debugging
-        # try:
-        #     sql_str = str(q_filtered.statement.compile(compile_kwargs={"literal_binds": True}))
-        #     log_d("fetch", "sql_query", sql_str)
-        # except Exception as e:
-        #     log_d("fetch", "sql_compile_error", str(e))
-
-        result = q_filtered.first()
-        if not result:
-            log_d("fetch", "warning", "No user found for provided criteria")
-        return result
-
-    @classmethod
-    def fetch_all(cls, db: Session) -> list[RbacUser]:
-        return db.query(RbacUser).filter(RbacUser.is_superuser.is_(False)).all()
-
-    @classmethod
-    def get_by_login(cls, db: Session, login: str, by_email: bool = True) -> RbacUser | None:
-        """
-        Fetch a user by email or username.
-
-        Args:
-            db: SQLAlchemy session
-            login: email or username string
-            by_email: if True, filter by email; else filter by username
-
-        Returns:
-            RbacUser instance if found, else None
-        """
-        field = cls.email if by_email else cls.name
-        return db.query(cls).filter(field == login).first()

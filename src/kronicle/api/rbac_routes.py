@@ -1,4 +1,8 @@
 # kronicle/api/rbac_routes.py
+from __future__ import annotations
+
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, Query
 from pydantic import EmailStr
 
@@ -34,6 +38,17 @@ def list_users(
     return rbac.list_users()
 
 
+@rbac_router.get(
+    "/users/{user_id}",
+    response_model=OutputUser | list[OutputUser] | None,
+)
+def get_user_by_id(
+    user_id: UUID,
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.fetch_user_by_id(user_id)
+
+
 @rbac_router.post(
     "/users",
     response_model=OutputUser,
@@ -64,7 +79,24 @@ def patch_user(
 )
 def delete_user(
     user_in: InputUser,
+    remove: bool | None = Query(False, description="Remove user from DB if True"),
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
 ):
     user_processed = ProcessedUser.from_input(user_in)
-    return rbac.delete_user(user=user_processed)
+    if remove:
+        return rbac.remove_user(user=user_processed)
+    return rbac.deactivate_user(user=user_processed)
+
+
+@rbac_router.delete(
+    "/users/{user_id}",
+    response_model=OutputUser,
+)
+def delete_user_by_id(
+    user_id: UUID,
+    remove: bool | None = Query(False, description="Remove user from DB if True"),
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    if remove:
+        return rbac.remove_user_by_id(id=user_id)
+    return rbac.deactivate_user_by_id(id=user_id)

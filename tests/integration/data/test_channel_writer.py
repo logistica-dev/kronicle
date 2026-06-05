@@ -25,28 +25,24 @@ def test_writer_properties(kronicle_writer):
 
 
 @pytest.mark.integration
-def test_writer_channels(kronicle_writer):
-    """Check that the writer returns channels and max-row channel."""
+def test_writer_channels(kronicle_writer, test_channel_id):
+    """Check that the writer returns channels and that our test channel is accessible."""
     here = "KWrite.chans"
     all_channels = kronicle_writer.all_channels
     for channel in all_channels:
         assert isinstance(channel, KroniclePayload)
 
-    max_chan = kronicle_writer.get_channel_with_max_rows()
-    if max_chan and (max_chan_id := max_chan.channel_id):
-        max_available_rows = max_chan.available_rows
-        log_d(here, "max chan id", max_chan_id, "->", max_available_rows, "rows")
-        channel = kronicle_writer.get_channel(max_chan_id)
-        log_d(here, "channel with max rows", channel)
-        rows = kronicle_writer.get_rows_for_channel(max_chan_id, "list")
-        assert isinstance(rows, list)
-        for row in rows:
-            assert isinstance(row, dict)
-        assert len(rows)
+    channel = kronicle_writer.get_channel(test_channel_id)
+    assert channel is not None
+    rows = kronicle_writer.get_rows_for_channel(test_channel_id, "list")
+    assert isinstance(rows, list)
+    for row in rows:
+        assert isinstance(row, dict)
+    assert len(rows)
 
 
 @pytest.mark.integration
-def test_insert_rows_and_upsert_channel(kronicle_writer):
+def test_insert_rows_and_upsert_channel(kronicle_writer, kronicle_setup):
     """Insert a new channel with sample rows and verify result."""
     here = "KWrite.insert"
     channel_id: str = uuid4_str()
@@ -81,3 +77,5 @@ def test_insert_rows_and_upsert_channel(kronicle_writer):
     assert result is not None
     assert isinstance(result, KroniclePayload)
     assert result.channel_id == UUID(channel_id)
+
+    kronicle_setup.delete_channel(channel_id)

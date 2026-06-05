@@ -298,6 +298,17 @@ def split_strip(s: str, sep: str = ",", norm: Callable | None = None) -> list[st
     return [normed for part in parts if (normed := norm(part))]
 
 
+def obfuscate_pwd_in_connection_url(url: str) -> str:
+    if "@" in url and ":" in url.split("//")[1]:
+        scheme, rest = url.split("://", 1)
+        user_pass, host = rest.split("@", 1)
+        if ":" in user_pass:
+            user, _ = user_pass.split(":", 1)
+            user_pass = f"{user}:******"
+        return f"{scheme}://{user_pass}@{host}"
+    return url
+
+
 if __name__ == "__main__":  # pragma: no cover
     here = "str_utils"
     print(here, "strip_quotes 'testsing':", strip_quotes("'testsing'"))

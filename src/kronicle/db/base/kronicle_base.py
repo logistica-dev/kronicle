@@ -10,9 +10,9 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, declarative_base, mapped_column
 
-from kronicle.utils.dev_logs import log_block, log_e
+from kronicle.utils.dev_logs import log_block, log_e, log_w
 
-mod = "kron_base"
+mod = "kron_table"
 
 Base = declarative_base()
 
@@ -44,7 +44,12 @@ class KronicleBase(Base):
         return f"{cls.namespace()}.{cls.tablename()}"
 
     # Primary key UUID
-    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
+    id: Mapped[UUID] = mapped_column(
+        PgUUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4,
+        server_default=text("gen_random_uuid()"),
+    )
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
@@ -102,9 +107,7 @@ class KronicleBase(Base):
                 expected_type: str = col_obj.type.compile(dialect=conn.dialect)
 
                 if actual_db_type != expected_type:
-                    errors.append(
-                        f"Column '{col_name}' type mismatch: expected {expected_type}, got {{actual_db_type}}"
-                    )
+                    errors.append(f"Column '{col_name}' type mismatch: expected {expected_type}, got {actual_db_type}")
 
                 if actual_columns_info[col_name]["nullable"] != col_obj.nullable:
                     errors.append(
@@ -116,8 +119,8 @@ class KronicleBase(Base):
             declared_columns = set(table_columns.keys())
 
             extra_columns = actual_columns - declared_columns
-            for col_name in extra_columns:
-                errors.append(f"Extra column '{col_name}' exists in DB but not in model")
+            for col_name in sorted(extra_columns):
+                log_w(mod, f"Table '{cls.table()}': extra column '{col_name}' exists in DB but not in model")
 
             if errors:
                 err_msg = f"Table '{cls.table()}' does not match model declaration:\n" + "\n".join(errors)

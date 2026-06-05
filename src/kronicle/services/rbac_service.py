@@ -1,13 +1,24 @@
 # kronicle/services/rbac_service.py
 from uuid import UUID
 
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm.session import Session
+
+from kronicle.db.core.links.zone_hierarchy import ZoneHierarchy
+from kronicle.db.core.models.core_zone import Zone
+from kronicle.db.rbac.links.group_hierarchy import RbacGroupHierarchy
 from kronicle.db.rbac.models.rbac_user import RbacUser
 from kronicle.db.rbac.rbac_db_session import RbacDbSession
-from kronicle.db.rbac.rbac_engine import RbacEngine
 from kronicle.errors.error_types import BadRequestError, NotFoundError, UnauthorizedError
+from kronicle.repo.core.core_zone_repo import CoreZoneRepository
+from kronicle.repo.hierarchy.hierarchy_engine import HierarchyEngine
+from kronicle.repo.hierarchy.hierarchy_service import HierarchyService
+from kronicle.repo.rbac.entities.rbac_group_repo import RbacGroupRepository
+from kronicle.repo.rbac.entities.rbac_user_repo import RbacUserRepository
+from kronicle.repo.rbac.links.rbac_user_group_repo import RbacUserGroupRepository
 from kronicle.schemas.rbac.input_user_schemas import InputUserLogin
 from kronicle.schemas.rbac.safe_user_schemas import OutputUser, ProcessedUser
-from kronicle.utils.dev_logs import log_d
+from kronicle.utils.dev_logs import log_d, log_i, log_w
 
 """
 FastAPI validates inputs.
@@ -24,22 +35,51 @@ class RbacService:
     def __init__(
         self,
         rbac_db_session: RbacDbSession,
-        rbac_engine=RbacEngine,
     ):
         self._db = rbac_db_session
-        self._engine = rbac_engine
+        self._user_repo = RbacUserRepository()
+        self._group_repo = RbacGroupRepository()
+        self._user_groups_repo = RbacUserGroupRepository()
+        self._zone_repo = CoreZoneRepository()
+
+        group_engine = HierarchyEngine(
+            parents_of=lambda g: g.parent_links,
+            children_of=lambda g: g.children,
+        )
+
+        self.group_hierarchy_service = HierarchyService(
+            engine=group_engine,
+            add_edge=RbacGroupHierarchy.add,
+            remove_edge=RbacGroupHierarchy.remove,
+            max_parents=5,
+        )
+
+        zone_engine = HierarchyEngine(
+            parents_of=lambda g: g.parent,
+            children_of=lambda g: g.children,
+        )
+
+        self.zone_hierarchy_service = HierarchyService(
+            engine=zone_engine,
+            add_edge=ZoneHierarchy.add,
+            remove_edge=ZoneHierarchy.remove,
+            max_parents=1,
+        )
 
     # ----------------------------------------------------------------------------------------------
     # Read-only: fetch user info
     # ----------------------------------------------------------------------------------------------
     def _fetch_user_by_login(self, login_input: InputUserLogin) -> RbacUser:
         with self._db.get_db() as db:  # read-only
+            # TODO: remove this!
+            users = self._user_repo.fetch_all(db, include_superusers=True)
+            log_d(mod, "fetch_user_info", "users:", users)
             if login_input.is_email:
                 email = f"{login_input.login}".lower()
-                db_user = self._engine.fetch_user_by_email(db, email, including_su=True)
+                db_user = self._user_repo.get_by_email(db, email=email, include_superusers=True)
             else:
                 name = login_input.login
-                db_user = self._engine.fetch_user_by_name(db, name, including_su=True)
+                db_user = self._user_repo.get_by_name(db, name=name, include_superusers=True)
         if not db_user:
             raise NotFoundError("User not found")
         return db_user
@@ -57,22 +97,27 @@ class RbacService:
 
     def fetch_user_by_email(self, email: str) -> OutputUser | None:
         with self._db.get_db() as db:  # read-only
-            db_user = self._engine.fetch_user_by_email(db, email=email)
+            db_user = self._user_repo.get_by_email(db, email=email)
         return OutputUser.from_db_user(db_user) if db_user else None
 
     def fetch_user_by_name(self, name: str) -> OutputUser | None:
         with self._db.get_db() as db:  # read-only
-            db_user = self._engine.fetch_user_by_name(db, name=name)
+            db_user = self._user_repo.get_by_name(db, name=name)
+        return OutputUser.from_db_user(db_user) if db_user else None
+
+    def fetch_user_by_id(self, id: UUID) -> OutputUser | None:
+        with self._db.get_db() as db:  # read-only
+            db_user = self._user_repo.get_by_id(db, id=id)
         return OutputUser.from_db_user(db_user) if db_user else None
 
     def fetch_user_by_external_id(self, orcid: str) -> OutputUser | None:
         with self._db.get_db() as db:  # read-only
-            db_user = self._engine.fetch_user_by_external_id(db, external_id=orcid)
+            db_user = self._user_repo.get_by_external_id(db, external_id=orcid)
         return OutputUser.from_db_user(db_user) if db_user else None
 
     def list_users(self) -> list[OutputUser]:
         with self._db.get_db() as db:  # read-only
-            users = self._engine.list_users(db)
+            users = self._user_repo.fetch_all(db)
         return [OutputUser.from_db_user(u) for u in users]
 
     # ----------------------------------------------------------------------------------------------
@@ -86,19 +131,19 @@ class RbacService:
         rbac_user = user.to_db_user()
 
         with self._db.transaction() as db:
-            existing = self._engine.fetch_user_by_email(db=db, email=rbac_user.email)
+            existing = self._user_repo.get_by_email(db=db, email=rbac_user.email)
             if existing:
                 raise UnauthorizedError("User already exists")
             log_d(here, rbac_user.name)
-            db_user = self._engine.create_user(db=db, user=rbac_user)
+            db_user = self._user_repo.create_user(db=db, user=rbac_user)
         out_user = OutputUser.from_db_user(db_user)
         return out_user
 
     def patch_user(self, user: ProcessedUser) -> OutputUser:
         here = "patch_user"
-        log_d(here, user.email)
+        log_i(here, user.email)
         with self._db.transaction() as db:
-            db_user: RbacUser = self._engine.fetch_user_by_email(db=db, email=user.email)
+            db_user: RbacUser = self._user_repo.get_by_email(db=db, email=user.email)
             if not db_user:
                 raise UnauthorizedError("User doesn't exists")
             updated = False
@@ -112,25 +157,61 @@ class RbacService:
                 db_user.external_id = user.orcid
                 updated = True
             if updated:
-                db.commit()
-            db.refresh(db_user)
-        return OutputUser.from_db_user(db_user)
+                try:
+                    db.commit()
+                except IntegrityError as e:
+                    log_w(here, "IntegrityError", e)
+                    raise UnauthorizedError("Attempting to patch with existing values") from e
 
-    def delete_user(self, user: ProcessedUser) -> OutputUser:
-        here = "delete_user"
-        log_d(here, user.email)
-        with self._db.transaction() as db:
-            db_user: RbacUser = self._engine.fetch_user_by_email(db=db, email=user.email)
-            if not db_user:
-                raise UnauthorizedError("User doesn't exists")
-            db_user.is_active = False
-            db.commit()
             db.refresh(db_user)
         return OutputUser.from_db_user(db_user)
 
     def update_password_hash(self, user_id: UUID, new_hash: str) -> None:
         with self._db.transaction() as db:
-            self._engine.update_password_hash(db, user_id, new_hash)
+            self._user_repo.update_password_hash(db, user_id=user_id, new_hash=new_hash)
+
+    # ----------------------------------------------------------------------------------------------
+    # Write: delete (deactivate/remove) user
+    # ----------------------------------------------------------------------------------------------
+
+    def _deactivate_user(self, db: Session, db_user: RbacUser | None):
+        here = "_deact_usr"
+        if not db_user:
+            raise UnauthorizedError("User doesn't exists")
+        log_i(here, db_user.snapshot)
+        db_user.is_active = False
+        db.commit()
+        db.refresh(db_user)
+        return OutputUser.from_db_user(db_user)
+
+    def _delete_user(self, db: Session, db_user: RbacUser | None):
+        here = "_del_usr"
+        if not db_user:
+            raise UnauthorizedError("User doesn't exists")
+        log_w(here, db_user.snapshot)
+        deleted_user = self._user_repo.delete_user(db, user=db_user)
+        db.commit()
+        return OutputUser.from_db_user(deleted_user)
+
+    def deactivate_user(self, user: ProcessedUser) -> OutputUser:
+        with self._db.transaction() as db:
+            db_user: RbacUser = self._user_repo.get_by_email(db=db, email=user.email, include_inactive=True)
+            return self._deactivate_user(db, db_user)
+
+    def deactivate_user_by_id(self, id: UUID) -> OutputUser:
+        with self._db.transaction() as db:
+            db_user: RbacUser = self._user_repo.get_by_id(db=db, id=id, include_inactive=True)
+            return self._deactivate_user(db, db_user)
+
+    def remove_user(self, user: ProcessedUser) -> OutputUser:
+        with self._db.transaction() as db:
+            db_user: RbacUser = self._user_repo.get_by_email(db=db, email=user.email, include_inactive=True)
+            return self._delete_user(db, db_user)
+
+    def remove_user_by_id(self, id: UUID) -> OutputUser:
+        with self._db.transaction() as db:
+            db_user: RbacUser = self._user_repo.get_by_id(db=db, id=id, include_inactive=True)
+            return self._delete_user(db, db_user)
 
     # ----------------------------------------------------------------------------------------------
     # Subjects / Groups
@@ -140,4 +221,11 @@ class RbacService:
         Returns a list of group IDs the user belongs to.
         """
         with self._db.get_db() as db:
-            return self._engine.get_user_groups(db, user_id=user_id)
+            return list(self._user_groups_repo.get_group_ids_for_user(db, user_id=user_id))
+
+    # ----------------------------------------------------------------------------------------------
+    # Core: Zones
+    # ----------------------------------------------------------------------------------------------
+    def get_zones(self) -> list[Zone]:
+        with self._db.get_db() as db:
+            return list(self._zone_repo.fetch_all(db))

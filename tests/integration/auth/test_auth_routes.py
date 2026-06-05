@@ -8,8 +8,10 @@ from kronicle_sdk.utils.log import log_d
 
 @pytest.fixture(scope="session")
 def auth_client():
-    co = Settings().connection
+    co = Settings().connection_su
+    assert co
     return KronicleUsrLogin(co.url, co.usr, co.pwd)
+    # return KronicleUsrLogin(co.url, co.usr, co.pwd)
 
 
 def test_login(auth_client):

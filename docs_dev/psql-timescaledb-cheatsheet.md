@@ -122,3 +122,37 @@ psql -U postgres -d dts_db
 - When upgrading TimescaleDB, start `psql` with `-X` and run `ALTER EXTENSION timescaledb UPDATE;` as the **first** command.
 - Use `\timing` to measure query performance while you iterate on SQL.
 - For bulk inserts, use `COPY` or batched `INSERT` to keep insert throughput high.
+
+---
+
+# Examples
+
+```psql
+# \d rbac.users
+                               Table « rbac.users »
+    Colonne    |           Type           | Collationnement | NULL-able | Par défaut
+---------------+--------------------------+-----------------+-----------+-------------
+ email         | character varying(255)   |                 | not null  |
+ password_hash | character varying(255)   |                 |           |
+ full_name     | character varying(255)   |                 |           |
+ external_id   | character varying(255)   |                 |           |
+ is_active     | boolean                  |                 | not null  | true
+ is_superuser  | boolean                  |                 | not null  | false
+ name          | character varying(100)   |                 | not null  |
+ id            | uuid                     |                 | not null  |
+ created_at    | timestamp with time zone |                 | not null  | now()
+ updated_at    | timestamp with time zone |                 | not null  | now()
+ details       | jsonb                    |                 | not null  | '{}'::jsonb
+Index :
+    "users_pkey" PRIMARY KEY, btree (id)
+    "ix_users_email" btree (email)
+    "users_email_key" UNIQUE CONSTRAINT, btree (email)
+    "users_external_id_key" UNIQUE CONSTRAINT, btree (external_id)
+    "users_full_name_key" UNIQUE CONSTRAINT, btree (full_name)
+    "users_name_key" UNIQUE CONSTRAINT, btree (name)
+
+
+
+# SELECT id, name, email, is_active, is_superuser, created_at FROM rbac.users;
+# DELETE FROM rbac.users WHERE created_at > '2026-06-05 11:50';
+```

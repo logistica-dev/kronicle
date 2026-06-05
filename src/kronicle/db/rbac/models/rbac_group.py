@@ -2,19 +2,27 @@
 from __future__ import annotations
 
 from typing import Any
-from uuid import UUID
 
-from sqlalchemy.orm import Mapped, Session, mapped_column
-
-from kronicle.db.base.kronicle_hierarchy import KronicleHierarchyMixin
 from kronicle.db.rbac.models.rbac_entity import RbacEntity
 
 
-class RbacGroup(RbacEntity, KronicleHierarchyMixin):
+class RbacGroup(RbacEntity):
+    """
+    RBAC Group model.
+
+    Groups are hierarchical nodes used for permission inheritance.
+
+    Structure:
+        - A group can have one parent (tree structure)
+        - A group can have multiple children
+        - Hierarchy logic is handled by HierarchyService, not here
+    """
+
     __tablename__ = "groups"
 
-    name: Mapped[str] = mapped_column(nullable=False, unique=True)
-
+    # ----------------------------------------------------------------------------------------------
+    # Snapshot
+    # ----------------------------------------------------------------------------------------------
     @property
     def snapshot(self) -> dict[str, Any]:
         return {
@@ -22,25 +30,3 @@ class RbacGroup(RbacEntity, KronicleHierarchyMixin):
             "name": self.name,
             "user_ids": [str(u.id) for u in getattr(self, "users", [])],
         }
-
-    # ----------------------------------------------------------------------------------------------
-    # Read table
-    # ----------------------------------------------------------------------------------------------
-    @classmethod
-    def fetch(
-        cls,
-        db: Session,
-        id: UUID | None = None,
-        name: str | None = None,
-    ) -> RbacGroup | list[RbacGroup]:
-        q = db.query(RbacGroup)
-        if id:
-            return q.filter(cls.email == id).first()
-        if name:
-            return q.filter(cls.name == name).first()
-        else:
-            return q.all()
-
-
-# Setup the hierarchy table and children relationship dynamically
-# RbacGroup._setup_hierarchy()
