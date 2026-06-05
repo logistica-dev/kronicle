@@ -11,7 +11,7 @@ from alembic.migration import MigrationContext
 from alembic.operations import Operations
 from sqlalchemy import select
 
-from kronicle.db.base.kronicle_table import Base
+from kronicle.db.base.kronicle_base import Base
 from kronicle.db.migration.db_catalog import DatabaseCatalogBuilder
 from kronicle.db.migration.migration_plan import MigrationPlan
 from kronicle.db.migration.migration_proposal import MigrationProposal

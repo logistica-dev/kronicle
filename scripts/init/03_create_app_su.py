@@ -9,6 +9,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from kronicle.db.rbac.models import RbacUser
+from kronicle.repo.rbac.entities.rbac_user_repo import RbacUserRepository
 from scripts.utils.logger import log_d  # type: ignore
 from scripts.utils.read_conf import KronicleConf  # type: ignore
 
@@ -30,8 +31,9 @@ def main():
 
     # Use a session for ORM inserts
     with Session(engine) as session:
+        user_repo = RbacUserRepository()
         # Check if admin user already exists
-        existing_user = RbacUser.get_by_login(session, su_name, by_email=False)
+        existing_user = user_repo.get_by_name(session, name=su_name)
         if existing_user:
             log_d(here, f"Admin user '{su_name}' already exists")
             if not existing_user.is_superuser:

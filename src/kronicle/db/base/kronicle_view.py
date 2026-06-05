@@ -1,5 +1,5 @@
 # kronicle/db/base/kronicle_view.py
-from kronicle.db.base.kronicle_table import Base
+from kronicle.db.base.kronicle_base import Base
 
 
 class KronicleView(Base):
