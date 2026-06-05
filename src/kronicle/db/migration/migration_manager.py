@@ -423,8 +423,8 @@ if __name__ == "__main__":
             m = re.match(r'^(?:export\s+)?(\w+)\s*=\s*["\']?(.*?)["\']?\s*$', line)
             if m:
                 os.environ[m.group(1)] = m.group(2)
+        log_d(here, "Env var loaded")
 
-    log_d(here, "Env var loaded")
     settings = KronicleSettings()
     db_url = settings.db.rbac_connection_url
     log_d(here, "db_url", settings.db.masked_rbac_connection_url)
