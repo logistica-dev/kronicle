@@ -43,8 +43,12 @@ class AuthService:
             log_w(here, "User not found")
             raise UnauthorizedError("Invalid credentials") from e
 
-        if not db_user or not db_user.is_active or not db_user.password_hash:
+        if not db_user or not db_user.password_hash:
             log_w(here, "User does not exist")
+            raise UnauthorizedError("Invalid credentials")
+
+        if not db_user.is_active:
+            log_w(here, "User was deleted")
             raise UnauthorizedError("Invalid credentials")
 
         # Verify raw password against stored hash
@@ -71,8 +75,12 @@ class AuthService:
             log_w(here, "User not found")
             raise UnauthorizedError("Invalid credentials") from e
 
-        if not db_user or not db_user.is_active or not db_user.password_hash:
+        if not db_user or not db_user.password_hash:
             log_w(here, "User does not exist")
+            raise UnauthorizedError("Invalid credentials")
+
+        if not db_user.is_active:
+            log_w(here, "User was deleted")
             raise UnauthorizedError("Invalid credentials")
 
         # Verify raw password against stored hash

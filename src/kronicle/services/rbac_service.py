@@ -1,6 +1,9 @@
 # kronicle/services/rbac_service.py
 from uuid import UUID
 
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm.session import Session
+
 from kronicle.db.core.links.zone_hierarchy import ZoneHierarchy
 from kronicle.db.core.models.core_zone import Zone
 from kronicle.db.rbac.links.group_hierarchy import RbacGroupHierarchy
@@ -15,7 +18,7 @@ from kronicle.repo.rbac.entities.rbac_user_repo import RbacUserRepository
 from kronicle.repo.rbac.links.rbac_user_group_repo import RbacUserGroupRepository
 from kronicle.schemas.rbac.input_user_schemas import InputUserLogin
 from kronicle.schemas.rbac.safe_user_schemas import OutputUser, ProcessedUser
-from kronicle.utils.dev_logs import log_d
+from kronicle.utils.dev_logs import log_d, log_i, log_w
 
 """
 FastAPI validates inputs.
@@ -102,6 +105,11 @@ class RbacService:
             db_user = self._user_repo.get_by_name(db, name=name)
         return OutputUser.from_db_user(db_user) if db_user else None
 
+    def fetch_user_by_id(self, id: UUID) -> OutputUser | None:
+        with self._db.get_db() as db:  # read-only
+            db_user = self._user_repo.get_by_id(db, id=id)
+        return OutputUser.from_db_user(db_user) if db_user else None
+
     def fetch_user_by_external_id(self, orcid: str) -> OutputUser | None:
         with self._db.get_db() as db:  # read-only
             db_user = self._user_repo.get_by_external_id(db, external_id=orcid)
@@ -133,7 +141,7 @@ class RbacService:
 
     def patch_user(self, user: ProcessedUser) -> OutputUser:
         here = "patch_user"
-        log_d(here, user.email)
+        log_i(here, user.email)
         with self._db.transaction() as db:
             db_user: RbacUser = self._user_repo.get_by_email(db=db, email=user.email)
             if not db_user:
@@ -149,25 +157,61 @@ class RbacService:
                 db_user.external_id = user.orcid
                 updated = True
             if updated:
-                db.commit()
-            db.refresh(db_user)
-        return OutputUser.from_db_user(db_user)
+                try:
+                    db.commit()
+                except IntegrityError as e:
+                    log_w(here, "IntegrityError", e)
+                    raise UnauthorizedError("Attempting to patch with existing values") from e
 
-    def delete_user(self, user: ProcessedUser) -> OutputUser:
-        here = "delete_user"
-        log_d(here, user.email)
-        with self._db.transaction() as db:
-            db_user: RbacUser = self._user_repo.get_by_email(db=db, email=user.email)
-            if not db_user:
-                raise UnauthorizedError("User doesn't exists")
-            db_user.is_active = False
-            db.commit()
             db.refresh(db_user)
         return OutputUser.from_db_user(db_user)
 
     def update_password_hash(self, user_id: UUID, new_hash: str) -> None:
         with self._db.transaction() as db:
             self._user_repo.update_password_hash(db, user_id=user_id, new_hash=new_hash)
+
+    # ----------------------------------------------------------------------------------------------
+    # Write: delete (deactivate/remove) user
+    # ----------------------------------------------------------------------------------------------
+
+    def _deactivate_user(self, db: Session, db_user: RbacUser | None):
+        here = "_deact_usr"
+        if not db_user:
+            raise UnauthorizedError("User doesn't exists")
+        log_i(here, db_user.snapshot)
+        db_user.is_active = False
+        db.commit()
+        db.refresh(db_user)
+        return OutputUser.from_db_user(db_user)
+
+    def _delete_user(self, db: Session, db_user: RbacUser | None):
+        here = "_del_usr"
+        if not db_user:
+            raise UnauthorizedError("User doesn't exists")
+        log_w(here, db_user.snapshot)
+        deleted_user = self._user_repo.delete_user(db, user=db_user)
+        db.commit()
+        return OutputUser.from_db_user(deleted_user)
+
+    def deactivate_user(self, user: ProcessedUser) -> OutputUser:
+        with self._db.transaction() as db:
+            db_user: RbacUser = self._user_repo.get_by_email(db=db, email=user.email, include_inactive=True)
+            return self._deactivate_user(db, db_user)
+
+    def deactivate_user_by_id(self, id: UUID) -> OutputUser:
+        with self._db.transaction() as db:
+            db_user: RbacUser = self._user_repo.get_by_id(db=db, id=id, include_inactive=True)
+            return self._deactivate_user(db, db_user)
+
+    def remove_user(self, user: ProcessedUser) -> OutputUser:
+        with self._db.transaction() as db:
+            db_user: RbacUser = self._user_repo.get_by_email(db=db, email=user.email, include_inactive=True)
+            return self._delete_user(db, db_user)
+
+    def remove_user_by_id(self, id: UUID) -> OutputUser:
+        with self._db.transaction() as db:
+            db_user: RbacUser = self._user_repo.get_by_id(db=db, id=id, include_inactive=True)
+            return self._delete_user(db, db_user)
 
     # ----------------------------------------------------------------------------------------------
     # Subjects / Groups

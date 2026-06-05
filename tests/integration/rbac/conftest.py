@@ -24,6 +24,6 @@ def test_user(kronicle_rbac) -> Generator[KronicleUser, None, None]:
     created = kronicle_rbac.create_user(user)
     yield created
     try:
-        kronicle_rbac.delete_user(created)
+        kronicle_rbac.deactivate_user(created)
     except Exception:
         pass

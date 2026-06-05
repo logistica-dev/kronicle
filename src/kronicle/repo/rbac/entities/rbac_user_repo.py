@@ -7,10 +7,13 @@ from sqlalchemy.sql import select
 
 from kronicle.db.rbac.models.rbac_user import RbacUser
 from kronicle.errors.error_types import NotFoundError
-from kronicle.repo.kronicle_repo import KronicleRepository
+from kronicle.repo.kronicle_repo import KronicleRepository, log_repo_error
 
 
 class RbacUserRepository(KronicleRepository[RbacUser]):
+
+    model = RbacUser
+
     # ----------------------------------------------------------------------------------------------
     # Internal helper pattern (important for consistency)
     # ----------------------------------------------------------------------------------------------
@@ -30,6 +33,7 @@ class RbacUserRepository(KronicleRepository[RbacUser]):
     # ----------------------------------------------------------------------------------------------
     # Fetch methods
     # ----------------------------------------------------------------------------------------------
+    @log_repo_error
     def get_by_id(
         self,
         db: Session,
@@ -46,6 +50,7 @@ class RbacUserRepository(KronicleRepository[RbacUser]):
         )
         return db.execute(stmt).scalar_one_or_none()
 
+    @log_repo_error
     def get_by_email(
         self,
         db: Session,
@@ -62,6 +67,7 @@ class RbacUserRepository(KronicleRepository[RbacUser]):
         )
         return db.execute(stmt).scalar_one_or_none()
 
+    @log_repo_error
     def get_by_name(
         self,
         db: Session,
@@ -78,6 +84,7 @@ class RbacUserRepository(KronicleRepository[RbacUser]):
         )
         return db.execute(stmt).scalar_one_or_none()
 
+    @log_repo_error
     def get_by_external_id(
         self,
         db: Session,
@@ -94,6 +101,7 @@ class RbacUserRepository(KronicleRepository[RbacUser]):
         )
         return db.execute(stmt).scalar_one_or_none()
 
+    @log_repo_error
     def fetch_all(
         self,
         db: Session,
@@ -118,6 +126,7 @@ class RbacUserRepository(KronicleRepository[RbacUser]):
     def update_user(self, db: Session, *, user: RbacUser) -> RbacUser:
         return self.save(db, entity=user)
 
+    @log_repo_error
     def update_password_hash(
         self,
         db: Session,
@@ -129,3 +138,6 @@ class RbacUserRepository(KronicleRepository[RbacUser]):
         if not user:
             raise NotFoundError("User not found")
         user.password_hash = new_hash
+
+    def delete_user(self, db: Session, *, user: RbacUser) -> RbacUser:
+        return self.delete_by_id_returning(db, id=user.id)

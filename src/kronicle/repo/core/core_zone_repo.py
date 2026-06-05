@@ -6,4 +6,5 @@ from kronicle.repo.kronicle_repo import KronicleRepository
 
 
 class CoreZoneRepository(KronicleRepository[Zone]):
-    pass
+
+    model = Zone

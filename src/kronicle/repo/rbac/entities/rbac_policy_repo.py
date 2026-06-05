@@ -6,4 +6,5 @@ from kronicle.repo.kronicle_repo import KronicleRepository
 
 
 class RbacRoleRepository(KronicleRepository[RbacPolicy]):
-    pass
+
+    model = RbacPolicy

@@ -6,4 +6,5 @@ from kronicle.repo.kronicle_repo import KronicleRepository
 
 
 class RbacGroupRepository(KronicleRepository[RbacGroup]):
-    pass
+
+    model = RbacGroup

@@ -6,4 +6,5 @@ from kronicle.repo.kronicle_repo import KronicleRepository
 
 
 class CoreChannelRepository(KronicleRepository[Channel]):
-    pass
+
+    model = Channel

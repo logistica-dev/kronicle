@@ -20,7 +20,7 @@ class RbacUser(RbacEntity):
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)  # Mandatory!
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
-    full_name: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
+    full_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     external_id: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
 
     # default -> Python-side default | server_default -> PostgreSQL DB-side default
@@ -29,14 +29,18 @@ class RbacUser(RbacEntity):
 
     @property
     def snapshot(self) -> dict[str, Any]:
-        return {
+        result: dict[str, Any] = {
             "id": str(self.id),
             "email": self.email,
             "name": self.name,
-            "full_name": self.full_name,
-            "is_active": self.is_active,
-            "is_superuser": self.is_superuser,
         }
+        if self.full_name is not None:
+            result["full_name"] = self.full_name
+        if not self.is_active:
+            result["is_active"] = False
+        if self.is_superuser:
+            result["is_superuser"] = True
+        return result
 
     def __repr__(self) -> str:
         return f"<User {self.email}>"

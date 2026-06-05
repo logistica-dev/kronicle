@@ -61,13 +61,8 @@ def test_crud_user(kronicle_rbac):
         name=f"{res.name}_patched",
         full_name="Patched Name",
     )
-    with pytest.raises(Exception):
-        # The PATCH endpoint returns 500 — this is a known server-side issue.
-        # Once fixed, remove the raises wrapper and assert on the patched user.
-        kronicle_rbac.patch_user(patch)
+    kronicle_rbac.patch_user(patch)
 
     # Delete user (cleanup, regardless of patch outcome)
-    try:
-        kronicle_rbac.delete_user(res)
-    except Exception:
-        pass
+    usr = kronicle_rbac.deactivate_user(res)
+    kronicle_rbac.remove_user_by_id(usr.id)
