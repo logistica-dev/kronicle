@@ -13,6 +13,7 @@ from kronicle.db.data.models.channel_metadata import ChannelMetadata
 from kronicle.db.rbac.models.rbac_entity import RbacEntity
 from kronicle.db.rbac.models.rbac_user import RbacUser
 from scripts.init.init import main as init_script  # type: ignore
+from scripts.migration import run_migration  # type: ignore
 from scripts.utils.read_conf import KronicleConf  # type: ignore
 
 # --------------------------------------------------------------------------------------------------
@@ -112,6 +113,16 @@ async def wait_and_init():
             exit(1)
     else:
         print(f"[entry] Database '{DB_NAME}' already exists. Skipping init.")
+
+    if os.environ.get("ALLOW_MIGRATION"):
+        print("[entry] Checking DB migration...")
+        try:
+            run_migration()
+        except Exception as e:
+            print(f"[entry] DB migration failed: {e}", file=stderr)
+            exit(1)
+    else:
+        print("[entry] ALLOW_MIGRATION not set — skipping DB migration")
 
 
 if __name__ == "__main__":  # pragma: no-cover
