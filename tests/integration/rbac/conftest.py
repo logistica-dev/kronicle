@@ -23,7 +23,4 @@ def test_user(kronicle_rbac) -> Generator[KronicleUser, None, None]:
     )
     created = kronicle_rbac.create_user(user)
     yield created
-    try:
-        kronicle_rbac.deactivate_user(created)
-    except Exception:
-        pass
+    kronicle_rbac.remove_user_by_id(created.id)

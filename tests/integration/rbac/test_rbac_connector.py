@@ -65,4 +65,5 @@ def test_crud_user(kronicle_rbac):
 
     # Delete user (cleanup, regardless of patch outcome)
     usr = kronicle_rbac.deactivate_user(res)
+
     kronicle_rbac.remove_user_by_id(usr.id)
