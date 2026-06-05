@@ -11,11 +11,11 @@ CORE_NAMESPACE = CoreEntity.namespace()
 
 # Centralized list of all CORE tables
 ALL_CORE_TABLES = [
-    Row,
-    # Channel must be created after Row
-    Channel,
-    # Zone must be created after Channel
     Zone,
+    # Zone must be created before Channel
+    Channel,
+    # Channel must be created before Row
+    Row,
     # The view for both of these:
     CoreResource,
     ZoneHierarchy,

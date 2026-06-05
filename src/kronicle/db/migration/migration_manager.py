@@ -427,7 +427,7 @@ if __name__ == "__main__":
     log_d(here, "Env var loaded")
     settings = KronicleSettings()
     db_url = settings.db.rbac_connection_url
-    log_d(here, "db_url", settings.db.rbac_connection_url)
+    log_d(here, "db_url", settings.db.masked_rbac_connection_url)
 
     # Optional: override backup connection (e.g. superuser) via env var
     backup_url = os.environ.get("KRONICLE_BACKUP_URL") or None

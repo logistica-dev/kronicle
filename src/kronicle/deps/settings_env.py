@@ -11,7 +11,7 @@ from asyncpg import connect
 from pydantic import SecretStr
 
 from kronicle.utils.dev_logs import log_e, log_w
-from kronicle.utils.str_utils import decode_b64url, normalize_pg_identifier
+from kronicle.utils.str_utils import decode_b64url, normalize_pg_identifier, obfuscate_pwd_in_connection_url
 
 """
 Read Kronicle configuration from environment variables.
@@ -284,15 +284,13 @@ class DBSettings:
     @property
     def masked_connection_url(self) -> str | None:
         """Return URL safe for logging (password hidden)"""
-        url = self.channel_connection_url
-        if "@" in url and ":" in url.split("//")[1]:
-            scheme, rest = url.split("://", 1)
-            user_pass, host = rest.split("@", 1)
-            if ":" in user_pass:
-                user, _ = user_pass.split(":", 1)
-                user_pass = f"{user}:******"
-            return f"{scheme}://{user_pass}@{host}"
-        return url
+        return obfuscate_pwd_in_connection_url(self.channel_connection_url)
+
+    @property
+    def masked_rbac_connection_url(self) -> str:
+        return obfuscate_pwd_in_connection_url(
+            self.get_connection_url(usr=self._rbac_usr, pwd=self._rbac_pwd.get_secret_value())
+        )
 
     def model_dump(self, **kwargs) -> dict[str, str | None]:
         return {"connection_url": self.masked_connection_url}

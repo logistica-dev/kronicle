@@ -33,7 +33,7 @@ def main():
     with Session(engine) as session:
         user_repo = RbacUserRepository()
         # Check if admin user already exists
-        existing_user = user_repo.get_by_name(session, name=su_name)
+        existing_user = user_repo.get_by_name(session, name=su_name, include_superusers=True)
         if existing_user:
             log_d(here, f"Admin user '{su_name}' already exists")
             if not existing_user.is_superuser:

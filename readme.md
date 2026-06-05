@@ -9,7 +9,7 @@ In such condition, here are the resquested information:
 
 - `POSTGRES_USER`: name of the DB superuser
 - `POSTGRES_PASSWORD`: password of the DB superuser (in clear)
-- `POSTGRES_DB`: name of the DB to create
+- `KRONICLE_DB_NAME`: name of the DB to create
 
 - `KRONICLE_SU_INFO`: credentials for the Kronicle app superuser that will be needed to interact with the API
   This is a base64url-encoded triplet of <su_name>:<su_email>:<argon2_hashed_pwd>
@@ -33,7 +33,7 @@ You can for instance set all these variables in a `.env` file
 ```sh
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
-POSTGRES_DB=kronicle_db
+KRONICLE_DB_NAME=kronicle_db
 
 KRONICLE_SU_INFO=S3JvbmljbGVBZG1pbjphZG1pbkBrcm9uaWNsZS5hcHA6JGFyZ29uMmlkJHY9MTkkbT02NTUzNix0PTMscD00JGVkSE56VDc2YjRXUitiMEowTDRObFEkbkZRNVJqclkreG56QkMzbnZma2Z2OEI0N1YvY2lwbGF5Y1VGUUtzS2pZaw
 

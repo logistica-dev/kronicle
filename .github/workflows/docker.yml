@@ -53,7 +53,7 @@ jobs:
             --network kronicle-net \
             -e POSTGRES_USER=${{ secrets.POSTGRES_USER }} \
             -e POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} \
-            -e POSTGRES_DB=${{ secrets.POSTGRES_DB }} \
+            -e KRONICLE_DB_NAME=${{ secrets.KRONICLE_DB_NAME || secrets.POSTGRES_DB }} \
             -p 5433:5432 \
             --health-cmd="pg_isready -U $${POSTGRES_USER}" \
             --health-interval=2s \
@@ -88,7 +88,7 @@ jobs:
         env:
           KRONICLE_DB_HOST: kronicle-test-db
           KRONICLE_DB_PORT: 5432
-          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          KRONICLE_DB_NAME: ${{ secrets.KRONICLE_DB_NAME || secrets.POSTGRES_DB }}
           POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           KRONICLE_CHAN_CREDS: ${{ secrets.KRONICLE_CHAN_CREDS }}
@@ -99,7 +99,7 @@ jobs:
             --network kronicle-net \
             -e KRONICLE_DB_HOST \
             -e KRONICLE_DB_PORT \
-            -e POSTGRES_DB \
+            -e KRONICLE_DB_NAME \
             -e POSTGRES_USER \
             -e POSTGRES_PASSWORD \
             -e KRONICLE_CHAN_CREDS \

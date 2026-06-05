@@ -11,7 +11,7 @@ services:
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      KRONICLE_DB_NAME: ${KRONICLE_DB_NAME:-${POSTGRES_DB:-kronicle_db}}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 2s
@@ -31,7 +31,7 @@ services:
     environment:
       KRONICLE_DB_HOST: ${KRONICLE_DB_HOST}
       KRONICLE_DB_PORT: ${KRONICLE_DB_PORT}
-      KRONICLE_DB_NAME: ${KRONICLE_DB_NAME}
+      KRONICLE_DB_NAME: ${KRONICLE_DB_NAME:-${POSTGRES_DB:-kronicle_db}}
 
       KRONICLE_CHAN_CREDS: ${KRONICLE_CHAN_CREDS}
       KRONICLE_RBAC_CREDS: ${KRONICLE_RBAC_CREDS}

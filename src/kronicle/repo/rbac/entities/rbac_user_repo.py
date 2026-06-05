@@ -22,7 +22,7 @@ class RbacUserRepository(KronicleRepository[RbacUser]):
         include_superusers: bool = False,
     ):
         if not include_inactive:
-            stmt = stmt.where(RbacUser.is_active.is_(False))
+            stmt = stmt.where(RbacUser.is_active.is_(True))
         if not include_superusers:
             stmt = stmt.where(RbacUser.is_superuser.is_(False))
         return stmt

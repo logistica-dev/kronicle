@@ -24,19 +24,18 @@ ALL_RBAC_TABLES = [
     RbacRole,
     # Group hierarchy
     RbacGroupHierarchy,
-    RbacGroupRoles,
     # These should be created afterwards as they link to previous tables
     RbacUserGroups,
     RbacUserRoles,
     RbacGroupRoles,
     RbacSubject,
     # Access profiles (resource <-> role)
-    ChannelAccessProfile,
     ZoneAccessProfile,
+    ChannelAccessProfile,
     RowAccessProfile,
     # Policies
-    ChannelPolicy,
     ZonePolicy,
+    ChannelPolicy,
     RowPolicy,
     # This one should be last
     # RbacEvent,

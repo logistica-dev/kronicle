@@ -30,12 +30,12 @@ class Row(KronicleBase):
     def namespace(cls) -> str:
         return "core"
 
+    # Unique timeseries row ID (BIGSERIAL from upstream), not PK — id from KronicleBase is the PK
+    timeseries_row_id: Mapped[int] = mapped_column(unique=True)
+
     # The channel this row belongs to
     channel_id: Mapped[UUID] = mapped_column(ForeignKey(Channel.id), nullable=False)
     channel: Mapped[Channel] = relationship(Channel, backref=__tablename__)
-
-    # The true PK matching the timeseries BIGSERIAL row_id
-    timeseries_row_id: Mapped[int] = mapped_column(primary_key=True)
 
     # User-friendly name is made optional because it makes no sense at the row level.
     name: Mapped[str] = mapped_column(String(36), unique=True, nullable=True)

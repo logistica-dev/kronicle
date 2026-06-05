@@ -598,7 +598,11 @@ class SchemaDiffEngine:
         db_unique = {
             str(c["name"]): c for c in self.inspector.get_unique_constraints(db_table, schema=schema) if c.get("name")
         }
-        meta_unique = {str(c.name): c for c in table.constraints if isinstance(c, UniqueConstraint) and c.name}
+        meta_unique = {}
+        for c in table.constraints:
+            if isinstance(c, UniqueConstraint):
+                name = str(c.name) if c.name else f"{table.name}_{'_'.join(col.name for col in c.columns)}_key"
+                meta_unique[name] = c
 
         db_uniq_names = set(db_unique.keys())
         meta_uniq_names = set(meta_unique.keys())

@@ -89,7 +89,6 @@ def test_db_access_dsn(monkeypatch):
     monkeypatch.setenv(se.DB_HOST, "localhost")
     monkeypatch.setenv(se.DB_PORT, "5432")
     monkeypatch.setenv(se.DB_NAME, "mydb")
-    monkeypatch.setenv(se.DB_NAME_ALT, "mydb")
     default_creds = se.UserCreds(username="user", password="p!_ERZTHOJHBf")
     db = se.DbAccess.from_env(default_creds)
     dsn = db.dsn()
@@ -101,7 +100,7 @@ def test_db_access_dsn(monkeypatch):
 def test_db_settings(monkeypatch):
     monkeypatch.setenv(se.DB_HOST, "localhost")
     monkeypatch.setenv(se.DB_PORT, "5432")
-    monkeypatch.setenv(se.DB_NAME_ALT, "mydb")
+    monkeypatch.setenv(se.DB_NAME, "mydb")
     val = base64.urlsafe_b64encode(b"chan:pass").decode()
     monkeypatch.setenv(se.CHAN_CREDS, val)
     monkeypatch.setenv(se.RBAC_CREDS, val)
