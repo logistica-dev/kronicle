@@ -21,23 +21,21 @@ def test_reader_alive_and_ready(kronicle_reader):
 
 
 @pytest.mark.integration
-def test_reader_channels(kronicle_reader):
+def test_reader_channels(kronicle_reader, test_channel_id):
     """Check that the reader returns channels and max-row channel."""
     all_channels = kronicle_reader.all_channels
 
     assert isinstance(all_channels, list)
     assert len(all_channels) > 0, "Expected at least one channel"
 
-    max_chan = kronicle_reader.get_channel_with_max_rows()
-    if max_chan and (max_chan_id := max_chan.channel_id):
-        channel = kronicle_reader.get_channel(max_chan_id)
-        assert channel is not None
-        rows = kronicle_reader.get_rows_for_channel(max_chan_id)
-        assert isinstance(rows, list)
-        for row in rows:
-            assert isinstance(row, dict)
-        cols = kronicle_reader.get_cols_for_channel(max_chan_id)
-        assert isinstance(cols, dict)
-        for col, vals in cols.items():
-            assert isinstance(col, str)
-            assert isinstance(vals, list)
+    channel = kronicle_reader.get_channel(test_channel_id)
+    assert channel is not None
+    rows = kronicle_reader.get_rows_for_channel(test_channel_id)
+    assert isinstance(rows, list)
+    for row in rows:
+        assert isinstance(row, dict)
+    cols = kronicle_reader.get_cols_for_channel(test_channel_id)
+    assert isinstance(cols, dict)
+    for col, vals in cols.items():
+        assert isinstance(col, str)
+        assert isinstance(vals, list)

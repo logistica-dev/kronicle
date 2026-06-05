@@ -147,7 +147,7 @@ class DbAccess(ConnectionSettings):
         host = ensure_env_var(DB_HOST)
         port = int(ensure_env_var(DB_PORT))
         try:
-            name = getenv(DB_NAME_ALT) or get_env_var(DB_NAME, "kronicle")
+            name = get_env_var(DB_NAME, getenv(DB_NAME_ALT, "kronicle"))
             name = normalize_pg_identifier(name)
             usr = normalize_pg_identifier(default_creds.username)
         except ValueError as e:

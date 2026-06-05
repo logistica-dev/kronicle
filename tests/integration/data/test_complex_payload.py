@@ -103,7 +103,7 @@ class ObservationPayload(KronicableSample):
 
     # Data Provenance
     added_by: RimsUser = Field(
-        default=RimsUser(email="community@kronicle.org"),
+        default=RimsUser(email="community@kronicle.app"),
         description="Identifier/email/name of the person or system adding the data to Kronicle",
     )  # required
     dataset_id: str = Field(
