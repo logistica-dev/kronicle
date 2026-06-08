@@ -6,9 +6,9 @@ from sys import exit, stderr
 import uvicorn
 from asyncpg import CannotConnectNowError, ConnectionDoesNotExistError, InvalidCatalogNameError, PostgresError
 
-from kronicle.db.core.models.core_channel import Channel
+from kronicle.db.core.models.core_channel import CoreChannel
 from kronicle.db.core.models.core_entity import CoreEntity
-from kronicle.db.core.models.core_zone import Zone
+from kronicle.db.core.models.core_zone import CoreZone
 from kronicle.db.data.models.channel_metadata import ChannelMetadata
 from kronicle.db.rbac.models.rbac_entity import RbacEntity
 from kronicle.db.rbac.models.rbac_user import RbacUser
@@ -24,7 +24,7 @@ DB_NAME = conf.db.name
 
 
 SCHEMAS_TO_CHECK = {
-    CoreEntity.namespace(): [Channel.tablename(), Zone.tablename()],  # example key tables in core schema
+    CoreEntity.namespace(): [CoreChannel.tablename(), CoreZone.tablename()],  # example key tables in core schema
     RbacEntity.namespace(): [RbacUser.tablename()],  # example key tables in rbac schema
     ChannelMetadata.namespace(): [ChannelMetadata.tablename()],  # example key tables in data schema
 }

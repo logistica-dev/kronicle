@@ -1,11 +1,12 @@
 # kronicle/db/registry.py
+# pyright: reportUnusedImport=false
 
 # Schemas
 from kronicle.db.core.models.core_entity import CoreEntity  # noqa
 from kronicle.db.rbac.models.rbac_entity import RbacEntity  # noqa
 
 # Migration status tables (IMPORTANT: force model registration)
-from kronicle.db.migration.persistence.schema_migration_history import (  # noqa
+from kronicle.db.migration.persistence.schema_migration_history import (  # noqa  # pyright: ignore[reportUnusedImport]
     CoreSchemaMigrationHistory,
     RbacSchemaMigrationHistory,
 )

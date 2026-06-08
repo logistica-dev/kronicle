@@ -1,21 +1,21 @@
 # kronicle/db/core/models/__init__.py
 
 from kronicle.db.core.links.zone_hierarchy import ZoneHierarchy
-from kronicle.db.core.models.core_channel import Channel
+from kronicle.db.core.models.core_channel import CoreChannel
 from kronicle.db.core.models.core_entity import CoreEntity
 from kronicle.db.core.models.core_resource import CoreResource
-from kronicle.db.core.models.core_row import Row
-from kronicle.db.core.models.core_zone import Zone
+from kronicle.db.core.models.core_row import CoreRow
+from kronicle.db.core.models.core_zone import CoreZone
 
 CORE_NAMESPACE = CoreEntity.namespace()
 
 # Centralized list of all CORE tables
 ALL_CORE_TABLES = [
-    Zone,
+    CoreZone,
     # Zone must be created before Channel
-    Channel,
+    CoreChannel,
     # Channel must be created before Row
-    Row,
+    CoreRow,
     # The view for both of these:
     CoreResource,
     ZoneHierarchy,

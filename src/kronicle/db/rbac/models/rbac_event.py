@@ -7,7 +7,7 @@ from sqlalchemy import ForeignKey, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, backref, mapped_column, relationship
 
-from kronicle.db.core.models.core_zone import Zone
+from kronicle.db.core.models.core_zone import CoreZone
 from kronicle.db.rbac.models.rbac_entity import RbacEntity
 from kronicle.db.rbac.models.rbac_group import RbacGroup
 from kronicle.db.rbac.models.rbac_role import RbacRole
@@ -69,7 +69,9 @@ class RbacEvent(RbacEntity):
     target_type: Mapped[str] = mapped_column(String(16), nullable=False)
     target_id: Mapped[UUID] = mapped_column(nullable=False)
     target_snapshot: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=True)
-    zone: Mapped[Zone | None] = relationship(Zone, primaryjoin=lambda: Zone.id == RbacEvent.target_id, viewonly=True)
+    zone: Mapped[CoreZone | None] = relationship(
+        CoreZone, primaryjoin=lambda: CoreZone.id == RbacEvent.target_id, viewonly=True
+    )
 
     # ----------------------------------------------------------------------------------------------
     # Role involved

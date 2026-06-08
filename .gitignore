@@ -6,7 +6,7 @@ bak
 **.bak
 .conf
 backup*
-
+uv.lock
 
 # Python
 **/__pycache__

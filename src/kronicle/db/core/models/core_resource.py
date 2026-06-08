@@ -3,9 +3,9 @@ from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from kronicle.db.base.kronicle_view import KronicleView
-from kronicle.db.core.models.core_channel import Channel
+from kronicle.db.core.models.core_channel import CoreChannel
 from kronicle.db.core.models.core_entity import CoreEntity
-from kronicle.db.core.models.core_zone import Zone
+from kronicle.db.core.models.core_zone import CoreZone
 
 
 class CoreResource(KronicleView):
@@ -22,7 +22,7 @@ class CoreResource(KronicleView):
     def create_view_sql(cls) -> str:
         return f"""
         CREATE OR REPLACE VIEW {cls.table()} AS
-        SELECT id, 'zone' AS type FROM {Zone.table()}
+        SELECT id, 'zone' AS type FROM {CoreZone.table()}
         UNION ALL
-        SELECT id, 'channel' AS type FROM {Channel.table()}
+        SELECT id, 'channel' AS type FROM {CoreChannel.table()}
         """

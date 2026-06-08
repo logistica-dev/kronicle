@@ -6,7 +6,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from kronicle.db.base.kronicle_link import KronicleLink
 from kronicle.db.core.links.core_link import CoreLink
-from kronicle.db.core.models.core_zone import Zone
+from kronicle.db.core.models.core_zone import CoreZone
 
 
 class ZoneHierarchy(CoreLink):
@@ -28,7 +28,7 @@ class ZoneHierarchy(CoreLink):
 
     # Note: ondelete=CASCADE
     # => If a referenced RbacGroup row is deleted, automatically delete the rows in this table that point to it.
-    parent_id: Mapped[UUID] = mapped_column(ForeignKey(Zone.id, ondelete="CASCADE"), primary_key=True)
-    child_id: Mapped[UUID] = mapped_column(ForeignKey(Zone.id, ondelete="CASCADE"), primary_key=True)
+    parent_id: Mapped[UUID] = mapped_column(ForeignKey(CoreZone.id, ondelete="CASCADE"), primary_key=True)
+    child_id: Mapped[UUID] = mapped_column(ForeignKey(CoreZone.id, ondelete="CASCADE"), primary_key=True)
 
-    parent = relationship(Zone, foreign_keys=[parent_id], backref=KronicleLink.CHILDREN)
+    parent = relationship(CoreZone, foreign_keys=[parent_id], backref=KronicleLink.CHILDREN)

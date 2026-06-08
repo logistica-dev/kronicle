@@ -6,7 +6,7 @@ from typing import Any
 from kronicle.db.core.models.core_entity import CoreEntity
 
 
-class Zone(CoreEntity):
+class CoreZone(CoreEntity):
     __tablename__ = "zones"
 
     # ----------------------------------------------------------------------------------------------

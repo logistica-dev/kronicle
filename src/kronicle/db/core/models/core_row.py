@@ -8,10 +8,10 @@ from sqlalchemy import Boolean, DateTime, ForeignKey, String, UniqueConstraint, 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from kronicle.db.base.kronicle_base import KronicleBase
-from kronicle.db.core.models.core_channel import Channel
+from kronicle.db.core.models.core_channel import CoreChannel
 
 
-class Row(KronicleBase):
+class CoreRow(KronicleBase):
     """
     Represents a row from a ChannelTimeseries as an object of a Policy.
     The PK is timeseries_row_id matching the BIGSERIAL in the timeseries table.
@@ -34,8 +34,8 @@ class Row(KronicleBase):
     timeseries_row_id: Mapped[int] = mapped_column(unique=True)
 
     # The channel this row belongs to
-    channel_id: Mapped[UUID] = mapped_column(ForeignKey(Channel.id), nullable=False)
-    channel: Mapped[Channel] = relationship(Channel, backref=__tablename__)
+    channel_id: Mapped[UUID] = mapped_column(ForeignKey(CoreChannel.id), nullable=False)
+    channel: Mapped[CoreChannel] = relationship(CoreChannel, backref=__tablename__)
 
     # User-friendly name is made optional because it makes no sense at the row level.
     name: Mapped[str] = mapped_column(String(36), unique=True, nullable=True)

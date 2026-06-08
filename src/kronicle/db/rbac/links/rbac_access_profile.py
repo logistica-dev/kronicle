@@ -5,9 +5,9 @@ from sqlalchemy import ForeignKey, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, declared_attr, mapped_column, relationship
 
-from kronicle.db.core.models.core_channel import Channel
-from kronicle.db.core.models.core_row import Row
-from kronicle.db.core.models.core_zone import Zone
+from kronicle.db.core.models.core_channel import CoreChannel
+from kronicle.db.core.models.core_row import CoreRow
+from kronicle.db.core.models.core_zone import CoreZone
 from kronicle.db.rbac.links.rbac_link import RbacLink
 from kronicle.db.rbac.models.rbac_role import RbacRole
 
@@ -49,8 +49,8 @@ class ZoneAccessProfile(ResourceAccessProfile):
         {"schema": RbacLink.namespace(), "extend_existing": True},
     )
 
-    zone_id: Mapped[UUID] = mapped_column(ForeignKey(Zone.id), nullable=False)
-    zone: Mapped[Zone] = relationship(Zone, backref="access_profiles")
+    zone_id: Mapped[UUID] = mapped_column(ForeignKey(CoreZone.id), nullable=False)
+    zone: Mapped[CoreZone] = relationship(CoreZone, backref="access_profiles")
 
 
 class ChannelAccessProfile(ResourceAccessProfile):
@@ -62,8 +62,8 @@ class ChannelAccessProfile(ResourceAccessProfile):
         {"schema": RbacLink.namespace(), "extend_existing": True},  # Options dictionary last
     )
 
-    channel_id: Mapped[UUID] = mapped_column(ForeignKey(Channel.id), nullable=False)
-    channel: Mapped[Channel] = relationship(Channel, backref="access_profiles")
+    channel_id: Mapped[UUID] = mapped_column(ForeignKey(CoreChannel.id), nullable=False)
+    channel: Mapped[CoreChannel] = relationship(CoreChannel, backref="access_profiles")
 
 
 class RowAccessProfile(ResourceAccessProfile):
@@ -76,5 +76,5 @@ class RowAccessProfile(ResourceAccessProfile):
     )
 
     # Reminder: row_id is based on ChannelTimeseries.row_id which is a BIGSERIAL int
-    row_id: Mapped[UUID] = mapped_column(ForeignKey(Row.id), nullable=False)
-    row: Mapped[Row] = relationship(Row, backref="access_profiles")
+    row_id: Mapped[UUID] = mapped_column(ForeignKey(CoreRow.id), nullable=False)
+    row: Mapped[CoreRow] = relationship(CoreRow, backref="access_profiles")

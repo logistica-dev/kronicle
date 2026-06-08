@@ -19,8 +19,8 @@ class HierarchyService(Generic[T]):
     def __init__(
         self,
         engine: HierarchyEngine[T],
-        add_edge: Callable[[Session, T, T]],
-        remove_edge: Callable[[Session, T, T]],
+        add_edge: Callable[[Session, T, T], None],
+        remove_edge: Callable[[Session, T, T], None],
         max_parents: int = 1,
     ):
         self.engine = engine

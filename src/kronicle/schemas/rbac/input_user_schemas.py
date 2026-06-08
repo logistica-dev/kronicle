@@ -19,7 +19,7 @@ _USERNAME_MAX_LENGTH = 64
 _USERNAME_REGEX = rf"[A-Za-z][{_ALLOWED_CHARS}]{{{_USERNAME_MIN_LENGTH - 1},{_USERNAME_MAX_LENGTH - 1}}}"
 
 
-mod = "outusr"
+mod = "inuser"
 
 
 class InputUserLogin(BaseModel):
