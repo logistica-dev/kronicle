@@ -1,12 +1,12 @@
 # kronicle/schemas/core/input_zone_schemas.py
 from __future__ import annotations
 
-from re import fullmatch
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
 from kronicle.errors.error_types import BadRequestError
+from kronicle.utils.str_utils import validate_name_syntax
 
 # Zone name: allowed characters after the first letter
 _ALLOWED_CHARS = "A-Za-z0-9_ .-"
@@ -25,14 +25,10 @@ class InputZone(BaseModel):
 
     @field_validator("name")
     def validate_zone_name_syntax(cls, v: str | None) -> str | None:
-        if v is None:
-            return v
-        if not fullmatch(_ZONE_NAME_REGEX, v):
-            raise BadRequestError(
-                "Zone name must start with a letter, be 4–64 characters long, "
-                "and only contain letters, digits, '_', '.', '-', or space"
-            )
-        return v
+        try:
+            return validate_name_syntax(v)
+        except ValueError as e:
+            raise BadRequestError(f"Zone {e}") from e
 
 
 class InputZonePatch(BaseModel):
@@ -41,11 +37,7 @@ class InputZonePatch(BaseModel):
 
     @field_validator("name")
     def validate_zone_name_syntax(cls, v: str | None) -> str | None:
-        if v is None:
-            return v
-        if not fullmatch(_ZONE_NAME_REGEX, v):
-            raise BadRequestError(
-                "Zone name must start with a letter, be 4–64 characters long, "
-                "and only contain letters, digits, '_', '.', '-', or space"
-            )
-        return v
+        try:
+            return validate_name_syntax(v)
+        except ValueError as e:
+            raise BadRequestError(f"Zone {e}") from e

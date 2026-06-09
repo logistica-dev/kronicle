@@ -1,7 +1,6 @@
 # kronicle/schemas/rbac/user_schemas.py
 from __future__ import annotations
 
-from re import fullmatch
 from typing import Any
 from uuid import UUID
 
@@ -10,14 +9,13 @@ from pydantic import BaseModel, EmailStr, PrivateAttr, field_validator
 from kronicle.auth.pwd.pwd_manager import PasswordManager
 from kronicle.db.rbac.models.rbac_user import RbacUser
 from kronicle.errors.error_types import BadRequestError
-from kronicle.schemas.rbac.input_user_schemas import InputUser
-
-# Allowed characters after the first letter
-_ALLOWED_CHARS = "A-Za-z0-9_ .@-"
-_USERNAME_MIN_LENGTH = 4
-_USERNAME_MAX_LENGTH = 64
-# Regex: first char is letter, rest are from ALLOWED_CHARS, total length 4–64
-_USERNAME_REGEX = rf"[A-Za-z][{_ALLOWED_CHARS}]{{{_USERNAME_MIN_LENGTH - 1},{_USERNAME_MAX_LENGTH - 1}}}"
+from kronicle.schemas.rbac.input_user_schemas import (
+    _USERNAME_EXTRA_CHARS,
+    _USERNAME_MAX_LENGTH,
+    _USERNAME_MIN_LENGTH,
+    InputUser,
+)
+from kronicle.utils.str_utils import validate_name_syntax
 
 mod = "outusr"
 
@@ -38,15 +36,13 @@ class ProcessedUser(BaseModel):
     zone_name: str | None = None
 
     @field_validator("name")
-    def validate_username_syntax(cls, v: str | None) -> str | None:
-        if v is None:
-            return v
-        if not fullmatch(_USERNAME_REGEX, v):
-            raise BadRequestError(
-                "Username must start with a letter, be 4–64 characters long, "
-                "and only contain letters, digits, '_', '.', '-', '@', or space"
+    def validate_user_name_syntax(cls, v: str | None) -> str | None:
+        try:
+            return validate_name_syntax(
+                v, extra_chars=_USERNAME_EXTRA_CHARS, min_length=_USERNAME_MIN_LENGTH, max_length=_USERNAME_MAX_LENGTH
             )
-        return v
+        except ValueError as e:
+            raise BadRequestError(f"User {e}") from e
 
     @classmethod
     def from_input(cls, data: InputUser):

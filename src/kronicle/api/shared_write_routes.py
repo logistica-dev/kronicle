@@ -3,7 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 
-from kronicle.auth.auth_middleware import require_auth
+from kronicle.auth.auth_middleware import require_auth, require_permission
 from kronicle.deps.channel_deps import channel_service
 from kronicle.schemas.payload.input_payload import InputPayload
 from kronicle.schemas.payload.response_payload import ResponsePayload
@@ -14,7 +14,7 @@ Routes available to users with write permissions.
 These endpoints allow safe retrieval of channel metadata and stored data but mainly adding rows to
 existing (or new) channel.
 """
-shared_writer_router = APIRouter(dependencies=[Depends(require_auth)])
+shared_writer_router = APIRouter(dependencies=[Depends(require_auth), Depends(require_permission("data:write"))])
 
 
 # --------------------------------------------------------------------------------------------------

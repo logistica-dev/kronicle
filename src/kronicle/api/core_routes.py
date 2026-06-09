@@ -5,7 +5,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends
 
-from kronicle.auth.auth_middleware import require_auth
+from kronicle.auth.auth_middleware import require_auth, require_permission
 from kronicle.deps.channel_deps import channel_service
 from kronicle.deps.rbac_deps import rbac_service
 from kronicle.errors.error_types import NotFoundError
@@ -29,6 +29,7 @@ core_router = APIRouter(tags=["Core"], dependencies=[Depends(require_auth)])
     summary="Create a zone",
     description="Creates a new zone for resource isolation and RBAC scoping.",
     response_model=OutputZone,
+    dependencies=[Depends(require_permission("zone:create"))],
 )
 def create_zone(
     zone_in: InputZone,
@@ -71,6 +72,7 @@ def get_zone(
     summary="Patch a zone",
     description="Partially update a zone's name or details.",
     response_model=OutputZone,
+    dependencies=[Depends(require_permission("zone:update"))],
 )
 def patch_zone(
     zone_id: UUID,
@@ -85,6 +87,7 @@ def patch_zone(
     summary="Delete a zone",
     description="Deletes a zone and its hierarchy links.",
     response_model=OutputZone,
+    dependencies=[Depends(require_permission("zone:delete"))],
 )
 def delete_zone(
     zone_id: UUID,
@@ -134,6 +137,7 @@ def get_core_channel(
     summary="Patch a core channel",
     description="Partially update a CoreChannel's name, details, or zone_id.",
     response_model=OutputCoreChannel,
+    dependencies=[Depends(require_permission("core:channel:update"))],
 )
 def patch_core_channel(
     channel_id: UUID,
@@ -161,6 +165,7 @@ def patch_core_channel(
         "in the core RBAC schema. Also ensures a default zone exists."
     ),
     response_model=dict,
+    dependencies=[Depends(require_permission("core:channel:sync"))],
 )
 async def sync_core_channels(
     controller: ChannelService = Depends(channel_service),  # noqa: B008

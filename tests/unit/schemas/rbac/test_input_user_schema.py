@@ -14,7 +14,7 @@ from kronicle.schemas.rbac.input_user_schemas import (
 # --- Mock PasswordManager for testing ---
 class MockPasswordManager:
     def validate_password(self, pwd: str):
-        if len(pwd) < 6:
+        if len(pwd) < 4:
             raise ValueError("Too short")
         return True
 
@@ -48,12 +48,22 @@ def test_login_valid(login, is_email):
     "login",
     [
         "1abc",  # starts with digit
-        "ab",  # too short
-        "thisusernameiswaytoolongtobevalidandshouldfailbecauseitexceeds64chars",
         "invalid*char",  # invalid character
     ],
 )
-def test_login_invalid(login):
+def test_login_chars(login):
+    with pytest.raises(BadRequestError):
+        InputUserLogin(login=login, password="validpass")
+
+
+@pytest.mark.parametrize(
+    "login",
+    [
+        "ab",  # too short
+        "thisusernameiswaytoolongtobevalidandshouldfailbecauseitexceeds64chars",
+    ],
+)
+def test_login_length(login):
     with pytest.raises(ValidationError):
         InputUserLogin(login=login, password="validpass")
 

@@ -266,6 +266,11 @@ class UnauthorizedError(KronicleAppError):
         super().__init__(status=status.HTTP_401_UNAUTHORIZED, error="Unauthorized", message=message, details=details)
 
 
+class ForbiddenError(KronicleAppError):
+    def __init__(self, message: str, details: dict[str, Any] | None = None):
+        super().__init__(status=status.HTTP_403_FORBIDDEN, error="Forbidden", message=message, details=details)
+
+
 class NotFoundError(KronicleAppError):
     def __init__(self, message: str, details: dict[str, Any] | None = None):
         super().__init__(status=status.HTTP_404_NOT_FOUND, error="NotFound", message=message, details=details)

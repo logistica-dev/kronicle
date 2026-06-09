@@ -8,7 +8,7 @@ from fastapi import APIRouter, Body, Depends
 
 from kronicle.api.shared_read_routes import shared_read_router
 from kronicle.api.shared_write_routes import shared_writer_router
-from kronicle.auth.auth_middleware import require_auth
+from kronicle.auth.auth_middleware import require_auth, require_permission
 from kronicle.db.data.models.schema_registry import SchemaRegistry
 from kronicle.deps.channel_deps import channel_service
 from kronicle.schemas.filters.row_query_filter import RowQueryFilter
@@ -46,6 +46,7 @@ setup_router.include_router(shared_writer_router)
         "Create a new channel with metadata and schema. Does not add rows, and fails if the channel already exists."
     ),
     response_model=ResponsePayload,
+    dependencies=[Depends(require_permission("channel:create"))],
 )
 async def create_channel(
     payload: InputPayload,
@@ -62,6 +63,7 @@ async def create_channel(
         "if it does not exist, creates it with the given schema and metadata."
     ),
     response_model=ResponsePayload,
+    dependencies=[Depends(require_permission("channel:update"))],
 )
 async def update_channel(
     payload: InputPayload,
@@ -75,6 +77,7 @@ async def update_channel(
     summary="Partially update a channel",
     description="Update only a subset of metadata, tags, or schema for the specified channel.",
     response_model=ResponsePayload,
+    dependencies=[Depends(require_permission("channel:update"))],
 )
 async def patch_channel(
     payload: InputPayload,
@@ -89,6 +92,7 @@ async def patch_channel(
     description="Creates a new channel by cloning an existing channel's schema and optionally metadata. "
     "Does not copy data rows nor name.",
     response_model=ResponsePayload,
+    dependencies=[Depends(require_permission("channel:create"))],
 )
 async def clone_channel(
     payload: InputPayload,
@@ -109,6 +113,7 @@ async def clone_channel(
         "Returns the metadata of the deleted channel."
     ),
     response_model=ResponsePayload,
+    dependencies=[Depends(require_permission("channel:delete"))],
 )
 async def delete_channel(
     channel_id: UUID,
@@ -122,6 +127,7 @@ async def delete_channel(
     summary="Delete all rows for a channel",
     description="Removes all data rows for the specified channel, while keeping its metadata intact.",
     response_model=ResponsePayload,
+    dependencies=[Depends(require_permission("channel:delete"))],
 )
 async def delete_channel_rows(
     channel_id: UUID,
@@ -136,6 +142,7 @@ async def delete_channel_rows(
     "/channels/batch-delete",
     summary="Delete multiple channels",
     response_model=list[ResponsePayload],
+    dependencies=[Depends(require_permission("channel:delete"))],
 )
 async def batch_delete_channels(
     payload: dict = Body(..., examples=[{"channel_ids": ["uuid1", "uuid2"]}]),  # noqa

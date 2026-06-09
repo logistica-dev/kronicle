@@ -2,6 +2,8 @@
 from collections.abc import Sequence
 from uuid import UUID
 
+from sqlalchemy import cast, func, select
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.session import Session
 
@@ -9,7 +11,10 @@ from kronicle.db.core.links.zone_hierarchy import ZoneHierarchy
 from kronicle.db.core.models.core_channel import CoreChannel
 from kronicle.db.core.models.core_zone import CoreZone
 from kronicle.db.rbac.links.group_hierarchy import RbacGroupHierarchy
+from kronicle.db.rbac.links.group_roles import RbacGroupRoles
+from kronicle.db.rbac.links.user_roles import RbacUserRoles
 from kronicle.db.rbac.models.rbac_group import RbacGroup
+from kronicle.db.rbac.models.rbac_role import RbacRole
 from kronicle.db.rbac.models.rbac_user import RbacUser
 from kronicle.db.rbac.rbac_db_session import RbacDbSession
 from kronicle.errors.error_types import BadRequestError, NotFoundError, UnauthorizedError
@@ -19,12 +24,14 @@ from kronicle.repo.hierarchy.hierarchy_engine import HierarchyEngine
 from kronicle.repo.hierarchy.hierarchy_service import HierarchyService
 from kronicle.repo.hierarchy.zone_hierarchy_repo import ZoneHierarchyRepository
 from kronicle.repo.rbac.entities.rbac_group_repo import RbacGroupRepository
+from kronicle.repo.rbac.entities.rbac_role_repo import RbacRoleRepository
 from kronicle.repo.rbac.entities.rbac_user_repo import RbacUserRepository
 from kronicle.repo.rbac.links.rbac_user_group_repo import RbacUserGroupRepository
 from kronicle.schemas.core.safe_core_channel_schemas import OutputCoreChannel
 from kronicle.schemas.core.safe_zone_schemas import OutputZone
 from kronicle.schemas.rbac.input_user_schemas import InputUserLogin
 from kronicle.schemas.rbac.safe_group_schemas import OutputGroup
+from kronicle.schemas.rbac.safe_role_schemas import OutputRole
 from kronicle.schemas.rbac.safe_user_schemas import OutputUser, ProcessedUser
 from kronicle.utils.dev_logs import log_d, log_i, log_w
 
@@ -47,6 +54,7 @@ class RbacService:
         self._db = rbac_db_session
         self._user_repo = RbacUserRepository()
         self._group_repo = RbacGroupRepository()
+        self._role_repo = RbacRoleRepository()
         self._user_groups_repo = RbacUserGroupRepository()
         self._channel_repo = CoreChannelRepository()
         self._zone_repo = CoreZoneRepository()
@@ -232,6 +240,335 @@ class RbacService:
         """
         with self._db.get_db() as db:
             return list(self._user_groups_repo.get_group_ids_for_user(db, user_id=user_id))
+
+    # ----------------------------------------------------------------------------------------------
+    # Permissions
+    # ----------------------------------------------------------------------------------------------
+    def user_has_permission(self, user_id: UUID, permission: str) -> bool:
+        with self._db.get_db() as db:
+            perm_jsonb = cast(func.json_build_array(permission), JSONB)
+            # Direct user roles
+            has_direct = db.execute(
+                select(RbacUserRoles.role_id)
+                .join(RbacRole, RbacRole.id == RbacUserRoles.role_id)
+                .where(RbacUserRoles.user_id == user_id)
+                .where(RbacRole.permissions.op("@>")(perm_jsonb))
+            ).first()
+            if has_direct:
+                return True
+            # Group roles
+            group_ids = self._user_groups_repo.get_group_ids_for_user(db, user_id=user_id)
+            if not group_ids:
+                return False
+            has_group = db.execute(
+                select(RbacGroupRoles.role_id)
+                .join(RbacRole, RbacRole.id == RbacGroupRoles.role_id)
+                .where(RbacGroupRoles.group_id.in_(group_ids))
+                .where(RbacRole.permissions.op("@>")(perm_jsonb))
+            ).first()
+            return has_group is not None
+
+    # ----------------------------------------------------------------------------------------------
+    # Roles
+    # ----------------------------------------------------------------------------------------------
+    def create_role(
+        self,
+        name: str,
+        description: str | None = None,
+        permissions: list[str] | None = None,
+        restrictions: list[str] | None = None,
+        details: dict | None = None,
+    ) -> OutputRole:
+        here = "create_role"
+        log_d(here, name)
+        from kronicle.db.rbac.models.rbac_role import RbacRole
+
+        role = RbacRole(
+            name=name,
+            description=description or "",
+            permissions=permissions or [],
+            restrictions=restrictions or [],
+            details=details or {},
+        )
+        with self._db.transaction() as db:
+            existing = self._role_repo.get_by_name(db, name=name)
+            if existing:
+                raise BadRequestError(f"Role '{name}' already exists")
+            db.add(role)
+            db.flush()
+        return OutputRole.from_db_role(role)
+
+    def get_roles(self) -> list[OutputRole]:
+        with self._db.get_db() as db:
+            roles = self._role_repo.fetch_all(db)
+        return [OutputRole.from_db_role(r) for r in roles]
+
+    def get_role(self, role_id: UUID) -> OutputRole | None:
+        with self._db.get_db() as db:
+            role = self._role_repo.get_by_id(db, id=role_id)
+        return OutputRole.from_db_role(role) if role else None
+
+    def patch_role(
+        self,
+        role_id: UUID,
+        name: str | None = None,
+        description: str | None = None,
+        permissions: list[str] | None = None,
+        restrictions: list[str] | None = None,
+        details: dict | None = None,
+    ) -> OutputRole:
+        here = "patch_role"
+        log_d(here, role_id)
+        with self._db.transaction() as db:
+            role = self._role_repo.get_by_id(db, id=role_id)
+            if not role:
+                raise NotFoundError(f"Role '{role_id}' not found")
+            if name is not None:
+                role.name = name
+            if description is not None:
+                role.description = description
+            if permissions is not None:
+                role.permissions = permissions
+            if restrictions is not None:
+                role.restrictions = restrictions
+            if details is not None:
+                role.details = details
+            db.flush()
+            db.refresh(role)
+        return OutputRole.from_db_role(role)
+
+    def delete_role(self, role_id: UUID) -> OutputRole | None:
+        here = "delete_role"
+        log_w(here, role_id)
+        with self._db.transaction() as db:
+            role = self._role_repo.get_by_id(db, id=role_id)
+            if not role:
+                raise NotFoundError(f"Role '{role_id}' not found")
+            db.delete(role)
+            db.flush()
+        return OutputRole.from_db_role(role)
+
+    # ----------------------------------------------------------------------------------------------
+    # Policies
+    # ----------------------------------------------------------------------------------------------
+    def _ensure_subject(self, db: Session, subject_id: UUID) -> None:
+        """Ensure an RbacSubject entry exists for a user or group ID."""
+        from kronicle.db.rbac.models.rbac_subject import RbacSubject
+
+        existing = db.get(RbacSubject, subject_id)
+        if existing:
+            return
+
+        # Determine if it's a user or group
+        user = self._user_repo.get_by_id(db, id=subject_id, include_inactive=True)
+        if user:
+            subject = RbacSubject(id=subject_id, type="user")
+            db.add(subject)
+            db.flush()
+            return
+
+        group = self._group_repo.get_by_id(db, id=subject_id)
+        if group:
+            subject = RbacSubject(id=subject_id, type="group")
+            db.add(subject)
+            db.flush()
+            return
+
+        raise NotFoundError(f"Subject '{subject_id}' not found as user or group")
+
+    def _ensure_zone_access_profile(self, db: Session, role_id: UUID, zone_id: UUID) -> UUID:
+        """Find or create a ZoneAccessProfile for the given role and zone. Returns its ID."""
+        from kronicle.db.rbac.links.rbac_access_profile import ZoneAccessProfile
+
+        existing = db.query(ZoneAccessProfile).filter_by(role_id=role_id, zone_id=zone_id).first()
+        if existing:
+            return existing.id
+
+        # Verify zone exists
+        zone = self._zone_repo.get_by_id(db, id=zone_id)
+        if not zone:
+            raise NotFoundError(f"Zone '{zone_id}' not found")
+
+        profile = ZoneAccessProfile(role_id=role_id, zone_id=zone_id)
+        db.add(profile)
+        db.flush()
+        return profile.id
+
+    def _ensure_channel_access_profile(self, db: Session, role_id: UUID, channel_id: UUID) -> UUID:
+        """Find or create a ChannelAccessProfile for the given role and channel. Returns its ID."""
+        from kronicle.db.rbac.links.rbac_access_profile import ChannelAccessProfile
+
+        existing = db.query(ChannelAccessProfile).filter_by(role_id=role_id, channel_id=channel_id).first()
+        if existing:
+            return existing.id
+
+        # Verify channel exists
+        channel = self._channel_repo.get_by_id(db, id=channel_id)
+        if not channel:
+            raise NotFoundError(f"CoreChannel '{channel_id}' not found")
+
+        profile = ChannelAccessProfile(role_id=role_id, channel_id=channel_id)
+        db.add(profile)
+        db.flush()
+        return profile.id
+
+    def create_zone_policy(self, subject_id: UUID, role_id: UUID, zone_id: UUID) -> dict:
+        """Assign a role to a subject (user or group) for a specific zone."""
+        here = "create_zone_policy"
+        log_d(here, subject_id, role_id, zone_id)
+
+        from kronicle.db.rbac.models.rbac_policy import ZonePolicy
+        from kronicle.db.rbac.models.rbac_role import RbacRole
+
+        with self._db.transaction() as db:
+            # Verify role exists
+            role = db.get(RbacRole, role_id)
+            if not role:
+                raise NotFoundError(f"Role '{role_id}' not found")
+
+            # Ensure subject exists in rbac.subjects
+            self._ensure_subject(db, subject_id)
+
+            # Find or create the ZoneAccessProfile
+            access_profile_id = self._ensure_zone_access_profile(db, role_id, zone_id)
+
+            # Create the policy
+            policy = ZonePolicy(
+                subject_id=subject_id,
+                access_profile_id=access_profile_id,
+            )
+            db.add(policy)
+            db.flush()
+            db.refresh(policy)
+
+        return {
+            "id": str(policy.id),
+            "subject_id": str(subject_id),
+            "role_id": str(role_id),
+            "role_name": role.name,
+            "zone_id": str(zone_id),
+            "is_delegation": policy.is_delegation,
+        }
+
+    def create_channel_policy(self, subject_id: UUID, role_id: UUID, channel_id: UUID) -> dict:
+        """Assign a role to a subject (user or group) for a specific channel."""
+        here = "create_channel_policy"
+        log_d(here, subject_id, role_id, channel_id)
+
+        from kronicle.db.rbac.models.rbac_policy import ChannelPolicy
+        from kronicle.db.rbac.models.rbac_role import RbacRole
+
+        with self._db.transaction() as db:
+            # Verify role exists
+            role = db.get(RbacRole, role_id)
+            if not role:
+                raise NotFoundError(f"Role '{role_id}' not found")
+
+            # Ensure subject exists
+            self._ensure_subject(db, subject_id)
+
+            # Find or create the ChannelAccessProfile
+            access_profile_id = self._ensure_channel_access_profile(db, role_id, channel_id)
+
+            # Create the policy
+            policy = ChannelPolicy(
+                subject_id=subject_id,
+                access_profile_id=access_profile_id,
+            )
+            db.add(policy)
+            db.flush()
+            db.refresh(policy)
+
+        return {
+            "id": str(policy.id),
+            "subject_id": str(subject_id),
+            "role_id": str(role_id),
+            "role_name": role.name,
+            "channel_id": str(channel_id),
+            "is_delegation": policy.is_delegation,
+        }
+
+    def list_zone_policies(self, zone_id: UUID) -> list[dict]:
+        """List all policies for a zone."""
+        from kronicle.db.rbac.links.rbac_access_profile import ZoneAccessProfile
+        from kronicle.db.rbac.models.rbac_policy import ZonePolicy
+        from kronicle.db.rbac.models.rbac_role import RbacRole
+
+        with self._db.get_db() as db:
+            policies = (
+                db.query(ZonePolicy)
+                .join(ZoneAccessProfile, ZonePolicy.access_profile_id == ZoneAccessProfile.id)
+                .join(RbacRole, ZoneAccessProfile.role_id == RbacRole.id)
+                .filter(ZoneAccessProfile.zone_id == zone_id)
+                .all()
+            )
+            results = []
+            for p in policies:
+                profile = db.query(ZoneAccessProfile).filter_by(id=p.access_profile_id).first()
+                role = db.get(RbacRole, profile.role_id) if profile else None
+                results.append(
+                    {
+                        "id": str(p.id),
+                        "subject_id": str(p.subject_id),
+                        "role_id": str(profile.role_id) if profile else None,
+                        "role_name": role.name if role else None,
+                        "zone_id": str(zone_id),
+                        "is_delegation": p.is_delegation,
+                    }
+                )
+            return results
+
+    def list_channel_policies(self, channel_id: UUID) -> list[dict]:
+        """List all policies for a channel."""
+        from kronicle.db.rbac.links.rbac_access_profile import ChannelAccessProfile
+        from kronicle.db.rbac.models.rbac_policy import ChannelPolicy
+        from kronicle.db.rbac.models.rbac_role import RbacRole
+
+        with self._db.get_db() as db:
+            policies = (
+                db.query(ChannelPolicy)
+                .join(ChannelAccessProfile, ChannelPolicy.access_profile_id == ChannelAccessProfile.id)
+                .join(RbacRole, ChannelAccessProfile.role_id == RbacRole.id)
+                .filter(ChannelAccessProfile.channel_id == channel_id)
+                .all()
+            )
+            results = []
+            for p in policies:
+                profile = db.query(ChannelAccessProfile).filter_by(id=p.access_profile_id).first()
+                role = db.get(RbacRole, profile.role_id) if profile else None
+                results.append(
+                    {
+                        "id": str(p.id),
+                        "subject_id": str(p.subject_id),
+                        "role_id": str(profile.role_id) if profile else None,
+                        "role_name": role.name if role else None,
+                        "channel_id": str(channel_id),
+                        "is_delegation": p.is_delegation,
+                    }
+                )
+            return results
+
+    def delete_zone_policy(self, policy_id: UUID) -> None:
+        """Delete a zone policy by ID."""
+        from kronicle.db.rbac.models.rbac_policy import ZonePolicy
+
+        with self._db.transaction() as db:
+            policy = db.get(ZonePolicy, policy_id)
+            if not policy:
+                raise NotFoundError(f"ZonePolicy '{policy_id}' not found")
+            db.delete(policy)
+            db.flush()
+
+    def delete_channel_policy(self, policy_id: UUID) -> None:
+        """Delete a channel policy by ID."""
+        from kronicle.db.rbac.models.rbac_policy import ChannelPolicy
+
+        with self._db.transaction() as db:
+            policy = db.get(ChannelPolicy, policy_id)
+            if not policy:
+                raise NotFoundError(f"ChannelPolicy '{policy_id}' not found")
+            db.delete(policy)
+            db.flush()
 
     # ----------------------------------------------------------------------------------------------
     # Core: Zones

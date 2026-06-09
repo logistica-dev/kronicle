@@ -309,6 +309,35 @@ def obfuscate_pwd_in_connection_url(url: str) -> str:
     return url
 
 
+_EXTRA_CHARS = "_.- "
+_NAME_MIN_LENGTH = 4
+_NAME_MAX_LENGTH = 64
+
+
+def name_regex_str(
+    *, extra_chars: str = _EXTRA_CHARS, min_length: int = _NAME_MIN_LENGTH, max_length: int = _NAME_MAX_LENGTH
+) -> str:
+    return rf"[A-Za-z][\w{extra_chars}]{{{min_length - 1},{max_length - 1}}}"
+
+
+def validate_name_syntax(
+    v: str | None,
+    *,
+    extra_chars: str = _EXTRA_CHARS,
+    min_length: int = _NAME_MIN_LENGTH,
+    max_length: int = _NAME_MAX_LENGTH,
+) -> str | None:
+    if v is None:
+        return v
+    rgx = name_regex_str(extra_chars=extra_chars, min_length=min_length, max_length=max_length)
+    if not fullmatch(rgx, v):
+        raise ValueError(
+            f"must start with a letter, be {min_length}–{max_length} characters long, "
+            f"and only contain letters, digits, '{', '.join(extra_chars)}'"
+        )
+    return v
+
+
 if __name__ == "__main__":  # pragma: no cover
     here = "str_utils"
     print(here, "strip_quotes 'testsing':", strip_quotes("'testsing'"))

@@ -6,7 +6,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 
-from kronicle.auth.auth_middleware import require_auth
+from kronicle.auth.auth_middleware import require_auth, require_permission
 from kronicle.deps.channel_deps import channel_service
 from kronicle.schemas.filters.row_query_filter import RowQueryFilter
 from kronicle.schemas.filters.row_request_filter import RowRequestFilter
@@ -18,7 +18,7 @@ from kronicle.utils.dev_logs import log_d
 Routes available to users with read-only permissions.
 These endpoints allow safe retrieval of channel metadata and stored data.
 """
-shared_read_router = APIRouter(dependencies=[Depends(require_auth)])
+shared_read_router = APIRouter(dependencies=[Depends(require_auth), Depends(require_permission("data:read"))])
 
 
 # def parse_from_date(

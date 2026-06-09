@@ -22,7 +22,6 @@ class JWTService:
         payload = {
             "sub": str(user.id),
             "exp": int(expire.timestamp()),
-            "roles": ["writer"],  # TODO
         }
         if user.is_su:
             payload["is_superuser"] = True

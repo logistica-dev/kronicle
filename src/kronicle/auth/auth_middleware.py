@@ -4,6 +4,7 @@ Authentication middleware for FastAPI
 """
 
 from typing import Callable
+from uuid import UUID
 
 from fastapi import Depends, HTTPException, Request, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -11,7 +12,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
 from kronicle.auth.jwt_service import JWTService
-from kronicle.errors.error_types import KronicleAppError, UnauthorizedError
+from kronicle.errors.error_types import ForbiddenError, KronicleAppError, UnauthorizedError
 from kronicle.errors.exception_handlers import app_error_adapter
 from kronicle.utils.dev_logs import log_d
 
@@ -134,3 +135,53 @@ def require_auth(
     - Middleware still validates the token.
     """
     return get_current_user_from_request(request)
+
+
+def require_superuser(
+    request: Request,
+    user: dict = Depends(require_auth),  # noqa: B008
+) -> dict:
+    """
+    Dependency that requires the current user to be a superuser.
+    Must be used AFTER require_auth (or on a router that already has require_auth).
+    """
+    if not user.get("is_superuser"):
+        raise ForbiddenError("Superuser privileges required")
+    return user
+
+
+def require_permission(permission: str):
+    """
+    Factory that returns a dependency which checks if the authenticated user
+    has a specific permission via the RBAC policy engine.
+
+    Superuser flag in JWT bypasses all permission checks.
+
+    Usage:
+        @router.get("/admin", dependencies=[Depends(require_permission("admin:access"))])
+        def admin_endpoint(): ...
+    """
+
+    def _require_permission(
+        request: Request,
+        user: dict = Depends(require_auth),  # noqa: B008
+    ) -> dict:
+        # Superusers have all permissions
+        if user.get("is_superuser"):
+            return user
+
+        # Per-request cache: avoids repeated DB queries for the same permission
+        cache: dict = request.state.__dict__.setdefault("_perm_cache", {})
+        if permission in cache:
+            if not cache[permission]:
+                raise ForbiddenError(f"Missing required permission: '{permission}'")
+            return user
+
+        rbac = request.app.state.rbac_service
+        has_perm = rbac.user_has_permission(UUID(user["sub"]), permission)
+        cache[permission] = has_perm
+        if not has_perm:
+            raise ForbiddenError(f"Missing required permission: '{permission}'")
+        return user
+
+    return _require_permission

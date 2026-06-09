@@ -1,7 +1,6 @@
 # kronicle/schemas/rbac/input_user_schemas.py
 from __future__ import annotations
 
-from re import fullmatch
 from typing import Annotated
 
 from email_validator import validate_email
@@ -9,15 +8,12 @@ from pydantic import BaseModel, EmailStr, Field, field_validator, model_validato
 
 from kronicle.auth.pwd.pwd_manager import PasswordManager
 from kronicle.errors.error_types import BadRequestError
+from kronicle.utils.str_utils import validate_name_syntax
 
 # Username: allowed characters after the first letter
-_ALLOWED_CHARS = "A-Za-z0-9_ .@-"
 _USERNAME_MIN_LENGTH = 4
 _USERNAME_MAX_LENGTH = 64
-
-# Regex: first char is letter, rest are from ALLOWED_CHARS, total length 4–64
-_USERNAME_REGEX = rf"[A-Za-z][{_ALLOWED_CHARS}]{{{_USERNAME_MIN_LENGTH - 1},{_USERNAME_MAX_LENGTH - 1}}}"
-
+_USERNAME_EXTRA_CHARS = "_ .@-"
 
 mod = "inuser"
 
@@ -40,7 +36,9 @@ class InputUserLogin(BaseModel):
 
     @field_validator("login")
     @classmethod
-    def validate_login(cls, v: str, info) -> str:
+    def validate_login(cls, v: str | None, info) -> str:
+        if v is None:
+            raise BadRequestError("Input login must be provided")
         try:
             validate_email(v)
             # Mark that this is an email
@@ -48,11 +46,10 @@ class InputUserLogin(BaseModel):
             return v.lower()
         except Exception:
             pass
-        if not fullmatch(_USERNAME_REGEX, v):
-            raise ValueError(
-                "Login must be a valid email or a username starting with a letter, "
-                "4–64 characters, only letters, digits, '_', '.', '-', '@', or space"
-            )
+        try:
+            validate_name_syntax(v, extra_chars="_ .@-", min_length=4, max_length=64)
+        except ValueError as e:
+            raise BadRequestError(f"User {e}") from e
         info.data["_is_email"] = False
         return v
 
@@ -99,12 +96,10 @@ class InputUser(BaseModel):
         return v
 
     @field_validator("name", "full_name")
-    def validate_username_syntax(cls, v: str | None) -> str | None:
-        if v is None:
-            return v
-        if not fullmatch(_USERNAME_REGEX, v):
-            raise BadRequestError(
-                "Username must start with a letter, be 4–64 characters long, "
-                "and only contain letters, digits, '_', '.', '-', '@', or space"
+    def validate_user_name_syntax(cls, v: str | None) -> str | None:
+        try:
+            return validate_name_syntax(
+                v, extra_chars=_USERNAME_EXTRA_CHARS, min_length=_USERNAME_MIN_LENGTH, max_length=_USERNAME_MAX_LENGTH
             )
-        return v
+        except ValueError as e:
+            raise BadRequestError(f"User {e}") from e
