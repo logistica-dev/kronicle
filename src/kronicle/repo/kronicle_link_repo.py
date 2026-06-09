@@ -28,7 +28,7 @@ class KronicleLinkRepository(Generic[T]):
 
     @classmethod
     def remove_link(cls, db: Session, filters):
-        stmt = delete(cls.model).where(*filters)
+        stmt = delete(cls.model).where(*[col == val for col, val in filters.items()])
         db.execute(stmt)
 
     def add_parent(self, db: Session, parent: T, child: T):

@@ -22,13 +22,17 @@ def uuid4_str() -> str:
     return str(uuid4())
 
 
+def uuid_to_str(u: UUID | None) -> str | None:
+    return u.hex if u else None
+
+
 def tiny_id(n: int | None = 8) -> str:
     if not n or n < 1:
         n = 8
     return uuid4().hex[0:n]
 
 
-def is_uuid_v4(id: str | UUID) -> bool:
+def is_uuid4(id: str | UUID) -> bool:
     if id is None or not isinstance(id, (str, UUID)):
         return False
     try:

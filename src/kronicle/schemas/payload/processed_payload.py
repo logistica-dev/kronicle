@@ -12,7 +12,7 @@ from kronicle.schemas.payload.input_payload import InputPayload
 from kronicle.schemas.payload.op_feedback import OpFeedback
 from kronicle.types.iso_datetime import IsoDateTime
 from kronicle.types.tag_type import TagType
-from kronicle.utils.str_utils import ensure_uuid4, normalize_name, sanitize_dict
+from kronicle.utils.str_utils import ensure_uuid4, normalize_name, sanitize_dict, uuid_to_str
 
 
 class ProcessedPayload(BaseModel):
@@ -154,7 +154,7 @@ class ProcessedPayload(BaseModel):
         if not self.channel_schema:
             raise BadRequestError(
                 "Cannot validate rows: no schema available.",
-                details={"channel_id": str(self.channel_id)},
+                details={"channel_id": uuid_to_str(self.channel_id)},
             )
         validated_rows: list[dict[str, Any]] = []
 

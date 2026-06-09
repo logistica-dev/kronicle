@@ -1,8 +1,11 @@
 # kronicle/utils/dev_logs.py
+import logging
+import sys
+import traceback
 from contextlib import contextmanager
 from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING, Formatter, LogRecord, StreamHandler, getLogger
-from logging.handlers import SysLogHandler
-from os import getenv
+from logging.handlers import RotatingFileHandler, SysLogHandler
+from os import getenv, makedirs
 from pathlib import Path
 from sys import base_prefix, prefix
 from time import time
@@ -47,12 +50,10 @@ class OneLetterRichHandler(RichHandler):
         super().__init__(*args, **kwargs)
 
         # Add virtualenv path to suppressed frames
-        suppress_paths = list(getattr(self, "tracebacks_suppress", []))
         venv_root = Path(prefix).resolve()
-        # Only add suppress if it's not the same as system Python
         if venv_root != Path(base_prefix).resolve():
             suppress_paths = list(getattr(self, "tracebacks_suppress", []))
-            suppress_paths.append([str(venv_root), "starlette", "asyncpg"])
+            suppress_paths.extend([str(venv_root), "starlette", "asyncpg"])
             self.tracebacks_suppress = suppress_paths
 
     def get_level_text(self, record):
@@ -111,11 +112,12 @@ class SingleLetterFormatter(Formatter):
 # Loggers
 # ------------------------------------------------------
 basic_logger = getLogger("kronicle_basic_logger")
+file_logger = getLogger("kronicle_file_log")
 request_logger = getLogger("kronicle_request_logger")
 
 
 def setup_logging():
-    """Initialize application logging with RichHandler."""
+    """Initialize application logging with RichHandler and file logging."""
     global _logging_initialized
 
     if _logging_initialized:
@@ -150,6 +152,38 @@ def setup_logging():
     basic_logger.addHandler(basic_handler)
 
     # ---------------------
+    # File logger — captures raw messages (no Rich markup) to ./logs/
+    # ---------------------
+    log_file = "unknown"
+    try:
+        from datetime import datetime
+
+        log_dir = Path(__file__).resolve().parent.parent.parent.parent / "logs"
+        makedirs(str(log_dir), exist_ok=True)
+        log_file = log_dir / f'{datetime.now().strftime("%Y%m%d_%H%M%S")}_kronicle_app.log'
+
+        file_formatter = Formatter(
+            "%(asctime)s [%(levelname)s] %(message)s",
+            DATE_FORMAT,
+        )
+        file_handler = RotatingFileHandler(
+            str(log_file),
+            maxBytes=10 * 1024 * 1024,
+            backupCount=3,
+        )
+        file_handler.setFormatter(file_formatter)
+        file_handler.setLevel(DEBUG)
+        file_handler.terminator = "\n"
+        file_handler.flush()
+
+        file_logger.handlers.clear()
+        file_logger.setLevel(DEBUG)
+        file_logger.propagate = False
+        file_logger.addHandler(file_handler)
+    except Exception:
+        print(f"[WARN] Failed to set up file logger at {log_file}", file=sys.stderr)
+        traceback.print_exc()
+    # ---------------------
     # Request logger
     # ---------------------
     request_formatter = Formatter("%(asctime)s [%(levelname)s] %(message)s", DATE_FORMAT)
@@ -163,10 +197,10 @@ def setup_logging():
     # ---------------------
     # Syslog
     # ---------------------
-    syslog_handler = SysLogHandler(address="/dev/log")  # or ('host', port) for remote syslog
+    syslog_handler = SysLogHandler(address="/dev/log")
     syslog_formatter = Formatter(
         "%(asctime)s %(name)s %(levelname)s: %(message)s",
-        datefmt="%b %d %H:%M:%S",  # standard syslog date format
+        datefmt="%b %d %H:%M:%S",
     )
     syslog_handler.setFormatter(syslog_formatter)
 
@@ -199,14 +233,20 @@ def format_input(here: str, *args, **kwargs) -> str:
     here_str = f"[{enforce_length(here, HERE_LEN)}]"
     content = " | ".join(parts) if parts else ""
     raw = f"{here_str} {content}" if content else f"{here_str} <"
-    return escape(raw)
+    return raw
 
 
 def _log(level_func, color: str, here: str, *args, stacklevel=2, **kwargs):
     """Internal helper to log colored messages according to LOG_LEVEL."""
     _ensure_logging()
+    exc_info = kwargs.pop("exc_info", None)
     msg = format_input(here, *args, **kwargs)
-    level_func(f"[{color}]{msg}[/{color}]", stacklevel=stacklevel)
+    try:
+        level_name = getattr(level_func, "__name__", "debug").upper()
+        file_logger.log(getattr(logging, level_name, logging.DEBUG), msg, exc_info=exc_info)
+    except Exception as e:
+        print(e)
+    level_func(f"[{color}]{escape(msg)}[/{color}]", stacklevel=stacklevel, exc_info=exc_info)
 
 
 def log_e(here, *args, stacklevel=3, **kwargs):

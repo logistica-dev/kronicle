@@ -5,6 +5,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from kronicle.db.rbac.models.rbac_entity import RbacEntity
+from kronicle.utils.str_utils import uuid_to_str
 
 
 class RbacRole(RbacEntity):
@@ -28,7 +29,7 @@ class RbacRole(RbacEntity):
     @property
     def snapshot(self) -> dict[str, Any]:
         return {
-            "id": str(self.id),
+            "id": uuid_to_str(self.id),
             "name": self.name,
             "permissions": self.permissions,
             "restrictions": self.restrictions,

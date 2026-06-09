@@ -14,6 +14,7 @@ from kronicle.errors.error_types import BadRequestError, NotFoundError
 from kronicle.schemas.payload.op_feedback import OpFeedback
 from kronicle.schemas.payload.processed_payload import ProcessedPayload
 from kronicle.utils.dev_logs import log_e
+from kronicle.utils.str_utils import uuid_to_str
 
 mod = "chan_rsrc"
 
@@ -160,7 +161,7 @@ class ChannelResource:
     async def _fetch_metadata(cls, db: PoolConnectionProxy, channel_id: UUID) -> ChannelResource:
         metadata = await ChannelMetadata.fetch_by_id(db, channel_id)
         if not metadata:
-            raise NotFoundError("No metadata found", details={"channel_id": channel_id})
+            raise NotFoundError("No metadata found", details={"channel_id": uuid_to_str(channel_id)})
         resource = ChannelResource(metadata)
         await resource.count_rows(db)
         return resource

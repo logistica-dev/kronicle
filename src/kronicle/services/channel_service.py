@@ -5,14 +5,14 @@ from uuid import UUID, uuid4
 from fastapi._compat.v2 import normalize_name
 
 from kronicle.db.data.models.channel_schema import ChannelSchema
-from kronicle.errors.error_types import BadRequestError
+from kronicle.errors.error_types import BadRequestError, NotFoundError
 from kronicle.repo.data.channel_repository import ChannelRepository
 from kronicle.schemas.filters.row_request_filter import RowRequestFilter
 from kronicle.schemas.payload.input_payload import InputPayload
 from kronicle.schemas.payload.processed_payload import ProcessedPayload
 from kronicle.schemas.payload.response_payload import ResponsePayload
 from kronicle.utils.dev_logs import log_d
-from kronicle.utils.str_utils import ensure_uuid4, extract_tags
+from kronicle.utils.str_utils import ensure_uuid4, extract_tags, uuid_to_str
 
 mod = "chan_srvc"
 
@@ -85,10 +85,9 @@ class ChannelService:
         return ResponsePayload.from_channel_resource(channel)
 
     async def fetch_metadata(self, channel_id: UUID) -> ResponsePayload:
-        """
-        Fetch metadata for a given channel_id.
-        """
         channel = await self._repo.fetch_channel(ensure_uuid4(channel_id))
+        if channel is None:
+            raise NotFoundError(f"Channel '{channel_id}' not found")
         return ResponsePayload.from_channel_resource(channel)
 
     async def fetch_all_metadata(self) -> list[ResponsePayload]:
@@ -143,7 +142,9 @@ class ChannelService:
         channel_id: UUID = payload.ensure_channel_id()
         rows = payload.rows
         if not rows:
-            raise BadRequestError("No rows found in input payload", details={"channel_id": channel_id, "rows": rows})
+            raise BadRequestError(
+                "No rows found in input payload", details={"channel_id": uuid_to_str(channel_id), "rows": rows}
+            )
 
         if payload.channel_schema:
             channel_schema = ChannelSchema.from_user_json(payload.channel_schema)

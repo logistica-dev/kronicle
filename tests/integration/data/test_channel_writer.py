@@ -14,7 +14,8 @@ from kronicle_sdk.utils.str_utils import tiny_id, uuid4_str
 @pytest.fixture(scope="session")
 def kronicle_writer():
     """Return a connected KronicleWriter."""
-    co = Settings().connection
+    co = Settings().connection_su
+    assert co
     writer = KronicleWriter(co.url, co.usr, co.pwd)
     return writer
 
@@ -27,7 +28,6 @@ def test_writer_properties(kronicle_writer):
 @pytest.mark.integration
 def test_writer_channels(kronicle_writer, test_channel_id):
     """Check that the writer returns channels and that our test channel is accessible."""
-    here = "KWrite.chans"
     all_channels = kronicle_writer.all_channels
     for channel in all_channels:
         assert isinstance(channel, KroniclePayload)

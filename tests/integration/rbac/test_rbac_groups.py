@@ -68,8 +68,8 @@ def test_delete_group(kronicle_rbac):
     created = kronicle_rbac.create_group(group)
     deleted = kronicle_rbac.delete_group(created.id)
     assert deleted is not None
-    gone = kronicle_rbac.get_group(created.id)
-    assert gone is None
+    groups = kronicle_rbac.get_groups()
+    assert created.id not in {g.id for g in groups}
 
 
 @pytest.mark.integration

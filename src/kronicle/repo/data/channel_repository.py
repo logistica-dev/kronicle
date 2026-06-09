@@ -13,6 +13,7 @@ from kronicle.errors.error_types import BadRequestError, ConflictError, NotFound
 from kronicle.schemas.filters.row_request_filter import RowRequestFilter
 from kronicle.schemas.payload.processed_payload import ProcessedPayload
 from kronicle.utils.dev_logs import log_e
+from kronicle.utils.str_utils import uuid_to_str
 
 
 class ChannelRepository:
@@ -142,7 +143,7 @@ class ChannelRepository:
         async with self._db.transaction() as db:
             existing = await channel.metadata.exists(db)
             if not existing:
-                raise NotFoundError("No channel found", details={"channel_id": channel.channel_id})
+                raise NotFoundError("No channel found", details={"channel_id": uuid_to_str(channel.channel_id)})
             await channel.insert_rows(db, strict=strict)  # Here we want to get a list of the rows
         return channel
 
@@ -185,7 +186,7 @@ class ChannelRepository:
         async with self._db.transaction() as db:
             channel = await self._fetch_metadata(db, channel_id)
             if not channel.row_nb:
-                raise NotFoundError("No rows found for channel", details={"channel_id": channel_id})
+                raise NotFoundError("No rows found for channel", details={"channel_id": uuid_to_str(channel_id)})
             row_filter = RowFetchContext(column_types=channel.column_types, in_filters=filter or RowRequestFilter())
             return await channel.fetch_rows(db, context=row_filter)
 
@@ -193,7 +194,7 @@ class ChannelRepository:
         async with self._db.transaction() as db:
             channel = await self._fetch_metadata(db, channel_id)
             if not channel.row_nb:
-                raise NotFoundError("No rows found for channel", details={"channel_id": channel_id})
+                raise NotFoundError("No rows found for channel", details={"channel_id": uuid_to_str(channel_id)})
             row_filter = RowFetchContext(column_types=channel.column_types, in_filters=filter or RowRequestFilter())
             return await channel.delete_rows(db, context=row_filter)
 
@@ -221,11 +222,13 @@ class ChannelRepository:
         async with self._db.transaction() as db:
             meta_exists = await channel.metadata.exists(db)
             if meta_exists:
-                raise ConflictError("A resource already exists", details={"channel_id": str(channel.channel_id)})
+                raise ConflictError(
+                    "A resource already exists", details={"channel_id": uuid_to_str(channel.channel_id)}
+                )
 
             ts_exists = await channel.timeseries.table_exists(db)
             if ts_exists:  # Should never happen
-                raise ConflictError("Data already exists", details={"channel_id": str(channel.channel_id)})
+                raise ConflictError("Data already exists", details={"channel_id": uuid_to_str(channel.channel_id)})
 
             await channel.timeseries.ensure_table(db)
             try:

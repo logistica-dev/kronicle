@@ -5,6 +5,7 @@ from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from kronicle.db.base.kronicle_base import KronicleBase
+from kronicle.utils.str_utils import uuid_to_str
 
 
 class KronicleEntity(KronicleBase):
@@ -28,7 +29,7 @@ class KronicleEntity(KronicleBase):
         This does **not** represent the full database or table state.
         """
         return {
-            "id": str(self.id),
+            "id": uuid_to_str(self.id),
             "name": self.name if self.name else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,

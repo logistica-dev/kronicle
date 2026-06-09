@@ -9,13 +9,15 @@ from kronicle_sdk.utils.str_utils import tiny_id, uuid4_str
 
 @pytest.fixture(scope="session")
 def kronicle_rbac_setup():
-    co = Settings().connection
+    co = Settings().connection_su
+    assert co
     return KronicleRbacResourceSetup(co.url, co.usr, co.pwd)
 
 
 @pytest.fixture(scope="session")
 def kronicle_setup():
-    co = Settings().connection
+    co = Settings().connection_su
+    assert co
     return KronicleSetup(co.url, co.usr, co.pwd)
 
 

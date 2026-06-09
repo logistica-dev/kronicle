@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Any
 
 from kronicle.db.rbac.models.rbac_entity import RbacEntity
+from kronicle.utils.str_utils import uuid_to_str
 
 
 class RbacGroup(RbacEntity):
@@ -26,7 +27,7 @@ class RbacGroup(RbacEntity):
     @property
     def snapshot(self) -> dict[str, Any]:
         return {
-            "id": str(self.id),
+            "id": uuid_to_str(self.id),
             "name": self.name,
             "user_ids": [str(u.id) for u in getattr(self, "users", [])],
         }

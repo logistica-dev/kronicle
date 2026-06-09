@@ -15,6 +15,7 @@ from kronicle.schemas.core.safe_core_channel_schemas import OutputCoreChannel
 from kronicle.schemas.core.safe_zone_schemas import OutputZone
 from kronicle.services.channel_service import ChannelService
 from kronicle.services.rbac_service import RbacService
+from kronicle.utils.str_utils import uuid_to_str
 
 core_router = APIRouter(tags=["Core"], dependencies=[Depends(require_auth)])
 
@@ -181,5 +182,5 @@ async def sync_core_channels(
         "detail": f"Synced {len(channel_ids)} data channels",
         "total_data_channels": len(channel_ids),
         "created_core_channels": len(created),
-        "default_zone_id": str(default_zone.id),
+        "default_zone_id": uuid_to_str(default_zone.id),
     }

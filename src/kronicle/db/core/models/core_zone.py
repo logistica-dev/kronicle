@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Any
 
 from kronicle.db.core.models.core_entity import CoreEntity
+from kronicle.utils.str_utils import uuid_to_str
 
 
 class CoreZone(CoreEntity):
@@ -15,6 +16,6 @@ class CoreZone(CoreEntity):
     @property
     def snapshot(self) -> dict[str, Any]:
         return {
-            "id": str(self.id),
+            "id": uuid_to_str(self.id),
             "name": self.name,
         }

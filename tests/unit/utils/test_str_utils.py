@@ -14,7 +14,7 @@ from kronicle.utils.str_utils import (
     extract_tags,
     generate_uuid4,
     is_base64_url,
-    is_uuid_v4,
+    is_uuid4,
     normalize_name,
     normalize_name_accept_subs,
     normalize_pg_identifier,
@@ -62,11 +62,11 @@ def test_tiny_id_invalid_length():
 
 def test_is_uuid_v4_valid():
     uid = UUID("123e4567-e89b-42d3-a456-426614174000")
-    assert is_uuid_v4(uid)
+    assert is_uuid4(uid)
 
 
 def test_is_uuid_v4_invalid():
-    assert not is_uuid_v4("not-a-uuid")
+    assert not is_uuid4("not-a-uuid")
 
 
 def test_check_is_uuid4_valid():
@@ -93,8 +93,8 @@ def test_ensure_uuid4_wrong_version():
 def test_uuid4_str_and_generate_uuid4():
     s = uuid4_str()
     u = generate_uuid4()
-    assert is_uuid_v4(s)
-    assert is_uuid_v4(u)
+    assert is_uuid4(s)
+    assert is_uuid4(u)
     assert isinstance(u, UUID)
 
 
@@ -117,7 +117,7 @@ def test_tiny_id_length(n):
     ],
 )
 def test_is_uuid_v4(val, expected):
-    assert is_uuid_v4(val) is expected
+    assert is_uuid4(val) is expected
 
 
 @mark.parametrize(
@@ -136,7 +136,7 @@ def test_check_is_uuid4(val, should_raise):
             check_is_uuid4(val)
     else:
         result = check_is_uuid4(val)
-        assert is_uuid_v4(result)
+        assert is_uuid4(result)
 
 
 def test_ensure_uuid4_raises_on_invalid_or_wrong_version():

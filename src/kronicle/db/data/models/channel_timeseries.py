@@ -14,7 +14,7 @@ from kronicle.errors.error_types import BadRequestError, NotFoundError
 from kronicle.schemas.payload.op_feedback import OpFeedback
 from kronicle.utils.asyncpg_utils import table_exists
 from kronicle.utils.dev_logs import log_i, log_w
-from kronicle.utils.str_utils import ensure_uuid4
+from kronicle.utils.str_utils import ensure_uuid4, uuid_to_str
 
 mod = "chan_ts"
 
@@ -150,7 +150,7 @@ class ChannelTimeseries:
         - This method replaces the previous ProcessedPayload._validate_rows functionality.
         """
         if not rows:
-            raise BadRequestError("No rows to validate", details={"channel_id": str(self.channel_id)})
+            raise BadRequestError("No rows to validate", details={"channel_id": uuid_to_str(self.channel_id)})
 
         validated_rows = []
 

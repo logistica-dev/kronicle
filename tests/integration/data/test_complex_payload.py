@@ -168,7 +168,8 @@ class ObservationPayload(KronicableSample):
 @pytest.fixture(scope="session")
 def kronicle_setup():
     """Return a connected KronicleWriter."""
-    co = Settings().connection
+    co = Settings().connection_su
+    assert co
     writer = KronicleSetup(co.url, co.usr, co.pwd)
     return writer
 

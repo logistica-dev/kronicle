@@ -7,6 +7,7 @@ from sqlalchemy import Boolean, Index, String, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from kronicle.db.rbac.models.rbac_entity import RbacEntity
+from kronicle.utils.str_utils import uuid_to_str
 
 
 class RbacUser(RbacEntity):
@@ -30,7 +31,7 @@ class RbacUser(RbacEntity):
     @property
     def snapshot(self) -> dict[str, Any]:
         result: dict[str, Any] = {
-            "id": str(self.id),
+            "id": uuid_to_str(self.id),
             "email": self.email,
             "name": self.name,
         }

@@ -36,6 +36,7 @@ from kronicle.schemas.rbac.safe_group_schemas import OutputGroup
 from kronicle.schemas.rbac.safe_role_schemas import OutputRole
 from kronicle.schemas.rbac.safe_user_schemas import OutputUser, ProcessedUser
 from kronicle.utils.dev_logs import log_d, log_i, log_w
+from kronicle.utils.str_utils import uuid_to_str
 
 
 def log_service_error(method):
@@ -497,11 +498,11 @@ class RbacService:
             db.refresh(policy)
 
         return {
-            "id": str(policy.id),
-            "subject_id": str(subject_id),
-            "role_id": str(role_id),
+            "id": uuid_to_str(policy.id),
+            "subject_id": uuid_to_str(subject_id),
+            "role_id": uuid_to_str(role_id),
             "role_name": role.name,
-            "zone_id": str(zone_id),
+            "zone_id": uuid_to_str(zone_id),
             "is_delegation": policy.is_delegation,
         }
 
@@ -535,11 +536,11 @@ class RbacService:
             db.refresh(policy)
 
         return {
-            "id": str(policy.id),
-            "subject_id": str(subject_id),
-            "role_id": str(role_id),
+            "id": uuid_to_str(policy.id),
+            "subject_id": uuid_to_str(subject_id),
+            "role_id": uuid_to_str(role_id),
             "role_name": role.name,
-            "channel_id": str(channel_id),
+            "channel_id": uuid_to_str(channel_id),
             "is_delegation": policy.is_delegation,
         }
 
@@ -563,11 +564,11 @@ class RbacService:
                 role = db.get(RbacRole, profile.role_id) if profile else None
                 results.append(
                     {
-                        "id": str(p.id),
-                        "subject_id": str(p.subject_id),
-                        "role_id": str(profile.role_id) if profile else None,
+                        "id": uuid_to_str(p.id),
+                        "subject_id": uuid_to_str(p.subject_id),
+                        "role_id": uuid_to_str(profile.role_id) if profile else None,
                         "role_name": role.name if role else None,
-                        "zone_id": str(zone_id),
+                        "zone_id": uuid_to_str(zone_id),
                         "is_delegation": p.is_delegation,
                     }
                 )
@@ -593,11 +594,11 @@ class RbacService:
                 role = db.get(RbacRole, profile.role_id) if profile else None
                 results.append(
                     {
-                        "id": str(p.id),
-                        "subject_id": str(p.subject_id),
-                        "role_id": str(profile.role_id) if profile else None,
+                        "id": uuid_to_str(p.id),
+                        "subject_id": uuid_to_str(p.subject_id),
+                        "role_id": uuid_to_str(profile.role_id) if profile else None,
                         "role_name": role.name if role else None,
-                        "channel_id": str(channel_id),
+                        "channel_id": uuid_to_str(channel_id),
                         "is_delegation": p.is_delegation,
                     }
                 )

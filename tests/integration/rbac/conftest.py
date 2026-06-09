@@ -9,7 +9,8 @@ from kronicle_sdk.utils.str_utils import tiny_id
 
 @pytest.fixture(scope="session")
 def kronicle_rbac():
-    co = Settings().connection
+    co = Settings().connection_su
+    assert co
     return KronicleRbacIdentitySetup(co.url, co.usr, co.pwd)
 
 

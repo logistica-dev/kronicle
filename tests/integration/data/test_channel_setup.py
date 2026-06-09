@@ -14,7 +14,8 @@ from kronicle_sdk.utils.str_utils import tiny_id, uuid4_str
 @pytest.fixture(scope="session")
 def kronicle_setup():
     """Return a connected KronicleSetup instance."""
-    co = Settings().connection
+    co = Settings().connection_su
+    assert co
     setup = KronicleSetup(co.url, co.usr, co.pwd)
     return setup
 

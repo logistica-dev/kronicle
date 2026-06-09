@@ -8,14 +8,6 @@ from pydantic import BaseModel, Field, field_validator
 from kronicle.errors.error_types import BadRequestError
 from kronicle.utils.str_utils import validate_name_syntax
 
-# Group name: allowed characters after the first letter
-_ALLOWED_CHARS = "A-Za-z0-9_ .-"
-_GROUP_NAME_MIN_LENGTH = 4
-_GROUP_NAME_MAX_LENGTH = 64
-
-# Regex: first char is letter, rest are from ALLOWED_CHARS, total length 4–64
-_GROUP_NAME_REGEX = rf"[A-Za-z][{_ALLOWED_CHARS}]{{{_GROUP_NAME_MIN_LENGTH - 1},{_GROUP_NAME_MAX_LENGTH - 1}}}"
-
 mod = "ingrp"
 
 

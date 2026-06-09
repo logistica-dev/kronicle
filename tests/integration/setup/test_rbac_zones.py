@@ -57,5 +57,5 @@ def test_delete_zone(kronicle_rbac_setup):
     created = kronicle_rbac_setup.create_zone(zone)
     deleted = kronicle_rbac_setup.delete_zone(created.id)
     assert deleted is not None
-    gone = kronicle_rbac_setup.get_zone(created.id)
-    assert gone is None
+    zones = kronicle_rbac_setup.get_zones()
+    assert created.id not in {z.id for z in zones}

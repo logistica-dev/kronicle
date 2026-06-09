@@ -17,7 +17,13 @@ from kronicle.types.iso_datetime import IsoDateTime
 from kronicle.types.tag_type import TagType
 from kronicle.utils.asyncpg_utils import table_exists
 from kronicle.utils.dev_logs import log_d, log_e
-from kronicle.utils.str_utils import ensure_uuid4, normalize_name, normalize_pg_identifier, normalize_to_snake_case
+from kronicle.utils.str_utils import (
+    ensure_uuid4,
+    normalize_name,
+    normalize_pg_identifier,
+    normalize_to_snake_case,
+    uuid_to_str,
+)
 
 mod = "chan_meta"
 
@@ -132,7 +138,7 @@ class ChannelMetadata(BaseModel):
     # ----------------------------------------------------------------------------------------------
     def to_json(self) -> dict:
         meta = {
-            "channel_id": str(self.channel_id),
+            "channel_id": uuid_to_str(self.channel_id),
             "channel_schema": self.channel_schema.to_user_json(),
             "name": self.name,
             "user_metadata": self.user_metadata,
@@ -199,7 +205,7 @@ class ChannelMetadata(BaseModel):
                     raise BadRequestError(
                         "This payload is not compatible with the existing channel schema",
                         details={
-                            "channel_id": channel_id,
+                            "channel_id": uuid_to_str(channel_id),
                             "channel_schema": {
                                 "expected": channel_truth,
                                 "received": processed.channel_schema,
@@ -366,7 +372,7 @@ class ChannelMetadata(BaseModel):
         # log_d(here)
         # Check if metadata exists
         if await self.exists(db):
-            raise ConflictError("ChannelMetadata already exists", details={"channel_id": str(self.channel_id)})
+            raise ConflictError("ChannelMetadata already exists", details={"channel_id": uuid_to_str(self.channel_id)})
         columns = list(self.table_schema().keys())
         placeholders = [f"${i + 1}" for i in range(len(columns))]
         sql = f"""
@@ -381,7 +387,7 @@ class ChannelMetadata(BaseModel):
             if record is None:
                 log_e(here, f"INSERT did not return a record - channel_id={self.channel_id}")
                 raise DatabaseInstructionError(
-                    "INSERT did not return a record", details={"channel_id": self.channel_id}
+                    "INSERT did not return a record", details={"channel_id": uuid_to_str(self.channel_id)}
                 )
             log_d(mod, f"ChannelMetadata created: {self.channel_id}")
             return self.update_with_db(record)
@@ -390,7 +396,7 @@ class ChannelMetadata(BaseModel):
             constraint = getattr(e, "constraint_name", "")  # asyncpg sets this if the DB reports the constraint name
             if constraint == f"{self.tablename()}_pkey":
                 raise ConflictError(
-                    "ChannelMetadata with this ID already exists", details={"channel_id": str(self.channel_id)}
+                    "ChannelMetadata with this ID already exists", details={"channel_id": uuid_to_str(self.channel_id)}
                 ) from e
             elif constraint == f"{self.tablename()}_name_key":
                 raise ConflictError("ChannelMetadata with this name already exists", details={"name": self.name}) from e
@@ -398,7 +404,7 @@ class ChannelMetadata(BaseModel):
                 # fallback: include original error args
                 raise ConflictError(
                     "ChannelMetadata violates a unique constraint",
-                    details={"channel_id": str(self.channel_id), "name": self.name},
+                    details={"channel_id": uuid_to_str(self.channel_id), "name": self.name},
                 ) from e
 
     # ----------------------------------------------------------------------------------------------
@@ -432,7 +438,7 @@ class ChannelMetadata(BaseModel):
         try:
             record = await db.fetchrow(sql, *values)
             if record is None:
-                raise NotFoundError("No ChannelMetadata found", details={"channel_id": self.channel_id})
+                raise NotFoundError("No ChannelMetadata found", details={"channel_id": uuid_to_str(self.channel_id)})
             log_d(mod, f"ChannelMetadata updated: {self.channel_id}")
             # Return a new instance built from the updated metadata
             return self.update_with_db(record)
@@ -443,7 +449,7 @@ class ChannelMetadata(BaseModel):
             else:
                 raise ConflictError(
                     "ChannelMetadata violates a unique constraint",
-                    details={"channel_id": str(self.channel_id), "name": self.name},
+                    details={"channel_id": uuid_to_str(self.channel_id), "name": self.name},
                 ) from e
 
     # ----------------------------------------------------------------------------------------------

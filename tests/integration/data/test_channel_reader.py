@@ -8,7 +8,8 @@ from kronicle_sdk.connectors.channel.channel_reader import KronicleReader
 @pytest.fixture(scope="session")
 def kronicle_reader():
     """Return a connected KronicleReader."""
-    co = Settings().connection
+    co = Settings().connection_su
+    assert co
     reader = KronicleReader(co.url, co.usr, co.pwd)
     return reader
 
