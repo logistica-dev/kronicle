@@ -2296,6 +2296,130 @@
         }
       }
     },
+    "/rbac/v1/users/{user_id}/roles": {
+      "post": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Assign a role to a user",
+        "description": "Grants a role directly to a user.",
+        "operationId": "assign_role_to_user_rbac_v1_users__user_id__roles_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "role_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "UUID of the role to assign",
+              "title": "Role Id"
+            },
+            "description": "UUID of the role to assign"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Assign Role To User Rbac V1 Users  User Id  Roles Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rbac/v1/users/{user_id}/roles/{role_id}": {
+      "delete": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Remove a role from a user",
+        "description": "Revokes a role directly from a user.",
+        "operationId": "remove_role_from_user_rbac_v1_users__user_id__roles__role_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "role_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Role Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Remove Role From User Rbac V1 Users  User Id  Roles  Role Id  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rbac/v1/groups": {
       "get": {
         "tags": [
@@ -2639,6 +2763,130 @@
                   "type": "object",
                   "additionalProperties": true,
                   "title": "Response Remove User From Group Rbac V1 Groups  Group Id  Users  User Id  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rbac/v1/groups/{group_id}/roles": {
+      "post": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Assign a role to a group",
+        "description": "Grants a role to all members of a group.",
+        "operationId": "assign_role_to_group_rbac_v1_groups__group_id__roles_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          },
+          {
+            "name": "role_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "UUID of the role to assign",
+              "title": "Role Id"
+            },
+            "description": "UUID of the role to assign"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Assign Role To Group Rbac V1 Groups  Group Id  Roles Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rbac/v1/groups/{group_id}/roles/{role_id}": {
+      "delete": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Remove a role from a group",
+        "description": "Revokes a role from all members of a group.",
+        "operationId": "remove_role_from_group_rbac_v1_groups__group_id__roles__role_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          },
+          {
+            "name": "role_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Role Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Remove Role From Group Rbac V1 Groups  Group Id  Roles  Role Id  Delete"
                 }
               }
             }
@@ -3587,7 +3835,7 @@
         "title": "InputPayload",
         "description": "User-provided payload for a channel.\nThe 'channel_schema' field is a dict of column_name -> type string.",
         "example": {
-          "channel_id": "e6836746-32b9-4661-8170-8626d1d9eb55",
+          "channel_id": "f7d12921-283e-4c08-9484-219baedf9ee2",
           "channel_schema": {
             "humidity": "float",
             "temperature": "float",
@@ -3596,7 +3844,7 @@
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-afbb2",
+          "name": "thermo-05b7f",
           "rows": [
             {
               "humidity": 55.1,

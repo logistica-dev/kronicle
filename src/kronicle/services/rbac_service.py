@@ -1,9 +1,10 @@
 # kronicle/services/rbac_service.py
+import functools
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy import cast, func, select
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import and_, cast, delete, func, select
+from sqlalchemy.dialects.postgresql import JSONB, insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.session import Session
 
@@ -12,6 +13,7 @@ from kronicle.db.core.models.core_channel import CoreChannel
 from kronicle.db.core.models.core_zone import CoreZone
 from kronicle.db.rbac.links.group_hierarchy import RbacGroupHierarchy
 from kronicle.db.rbac.links.group_roles import RbacGroupRoles
+from kronicle.db.rbac.links.user_groups import RbacUserGroups
 from kronicle.db.rbac.links.user_roles import RbacUserRoles
 from kronicle.db.rbac.models.rbac_group import RbacGroup
 from kronicle.db.rbac.models.rbac_role import RbacRole
@@ -34,6 +36,21 @@ from kronicle.schemas.rbac.safe_group_schemas import OutputGroup
 from kronicle.schemas.rbac.safe_role_schemas import OutputRole
 from kronicle.schemas.rbac.safe_user_schemas import OutputUser, ProcessedUser
 from kronicle.utils.dev_logs import log_d, log_i, log_w
+
+
+def log_service_error(method):
+    """Log the exception with the method name and re-raise."""
+
+    @functools.wraps(method)
+    def wrapper(self, *args, **kwargs):
+        try:
+            return method(self, *args, **kwargs)
+        except Exception as e:
+            log_w(method.__name__, type(e).__name__, str(e))
+            raise
+
+    return wrapper
+
 
 """
 FastAPI validates inputs.
@@ -267,6 +284,44 @@ class RbacService:
                 .where(RbacRole.permissions.op("@>")(perm_jsonb))
             ).first()
             return has_group is not None
+
+    # ----------------------------------------------------------------------------------------------
+    # User ↔ Role assignment
+    # ----------------------------------------------------------------------------------------------
+
+    def assign_role_to_user(self, user_id: UUID, role_id: UUID) -> None:
+        with self._db.transaction() as db:
+            stmt = insert(RbacUserRoles.__table__).values(user_id=user_id, role_id=role_id).on_conflict_do_nothing()
+            db.execute(stmt)
+
+    def remove_role_from_user(self, user_id: UUID, role_id: UUID) -> None:
+        with self._db.transaction() as db:
+            stmt = delete(RbacUserRoles.__table__).where(
+                and_(
+                    RbacUserRoles.user_id == user_id,
+                    RbacUserRoles.role_id == role_id,
+                )
+            )
+            db.execute(stmt)
+
+    # ----------------------------------------------------------------------------------------------
+    # Group ↔ Role assignment
+    # ----------------------------------------------------------------------------------------------
+
+    def assign_role_to_group(self, group_id: UUID, role_id: UUID) -> None:
+        with self._db.transaction() as db:
+            stmt = insert(RbacGroupRoles.__table__).values(group_id=group_id, role_id=role_id).on_conflict_do_nothing()
+            db.execute(stmt)
+
+    def remove_role_from_group(self, group_id: UUID, role_id: UUID) -> None:
+        with self._db.transaction() as db:
+            stmt = delete(RbacGroupRoles.__table__).where(
+                and_(
+                    RbacGroupRoles.group_id == group_id,
+                    RbacGroupRoles.role_id == role_id,
+                )
+            )
+            db.execute(stmt)
 
     # ----------------------------------------------------------------------------------------------
     # Roles
@@ -738,6 +793,7 @@ class RbacService:
             db.refresh(group)
         return OutputGroup.from_db_group(group)
 
+    @log_service_error
     def delete_group(self, group_id: UUID) -> OutputGroup | None:
         here = "delete_group"
         log_w(here, group_id)
@@ -745,6 +801,8 @@ class RbacService:
             group = self._group_repo.get_by_id(db, id=group_id)
             if not group:
                 raise NotFoundError(f"Group '{group_id}' not found")
+            db.execute(delete(RbacGroupRoles.__table__).where(RbacGroupRoles.group_id == group_id))
+            db.execute(delete(RbacUserGroups.__table__).where(RbacUserGroups.group_id == group_id))
             db.delete(group)
             db.flush()
         return OutputGroup.from_db_group(group)

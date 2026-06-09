@@ -2,7 +2,7 @@
 
 from base64 import urlsafe_b64decode, urlsafe_b64encode
 from random import choices
-from re import compile, fullmatch, sub
+from re import compile, escape, fullmatch, sub
 from string import ascii_lowercase, digits
 from typing import Any, Callable
 from uuid import UUID, uuid4
@@ -96,6 +96,7 @@ def normalize_name_keep_dots(s: str, *, prefix: str | None = "") -> str:
 
 
 def normalize_name(s: str, *, keep_dots=False, prefix: str | None = "") -> str:
+    # print("[normalize_name]", s)
     if not isinstance(s, str):
         raise TypeError("Name should be a string")
     if s is None or len(s) < 1:
@@ -317,7 +318,8 @@ _NAME_MAX_LENGTH = 64
 def name_regex_str(
     *, extra_chars: str = _EXTRA_CHARS, min_length: int = _NAME_MIN_LENGTH, max_length: int = _NAME_MAX_LENGTH
 ) -> str:
-    return rf"[A-Za-z][\w{extra_chars}]{{{min_length - 1},{max_length - 1}}}"
+    safe_chars = escape(extra_chars)
+    return rf"[A-Za-z][\w{safe_chars}]{{{min_length - 1},{max_length - 1}}}"
 
 
 def validate_name_syntax(
@@ -331,10 +333,17 @@ def validate_name_syntax(
         return v
     rgx = name_regex_str(extra_chars=extra_chars, min_length=min_length, max_length=max_length)
     if not fullmatch(rgx, v):
-        raise ValueError(
-            f"must start with a letter, be {min_length}–{max_length} characters long, "
-            f"and only contain letters, digits, '{', '.join(extra_chars)}'"
-        )
+        if extra_chars:
+            allowed = "' or '".join(extra_chars)
+            raise ValueError(
+                f"must start with a letter, be {min_length} to {max_length} character long, "
+                f"and only contain letters, digits, and '{allowed}'"
+            )
+        else:
+            raise ValueError(
+                f"must start with a letter, be {min_length} to {max_length} character long, "
+                f"and only contain letters and digits"
+            )
     return v
 
 
@@ -352,7 +361,7 @@ if __name__ == "__main__":  # pragma: no cover
     print("q_ident", q_ident("testsing'testsinge''o\"o"))
     print(isinstance(["ert", 4], TagType))
 
-    print(extract_tags(["one:two", "three", "four:False", "five:5", "6:six", "seven:True", "eight:8.8"]))
+    print(extract_tags(["one:two", "three:3", "four:False", "five:5", "s6:six", "seven:True", "eight:8.8"]))
     try:
         print(normalize_name(6))  # type: ignore
     except TypeError:
@@ -364,3 +373,6 @@ if __name__ == "__main__":  # pragma: no cover
 
     print(normalize_name('; DROP TABLE; aregluhgar brf zgr  é"& caught; SELECT * DROP()'))
     print(normalize_name_keep_dots('aregluhgar. brf.__zgr  é"& caught; SELECT * DROP()'))
+
+    # print(validate_name_syntax('aerpouihaefb&"pç!§è§é2547568653)'))
+    print(validate_name_syntax("aerpouihaefb_.-@AZEGRE B12435", extra_chars=".- @"))

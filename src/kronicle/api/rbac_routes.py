@@ -112,6 +112,43 @@ def delete_user_by_id(
 
 
 # --------------------------------------------------------------------------------------------------
+# User ↔ Role endpoints
+# --------------------------------------------------------------------------------------------------
+
+
+@rbac_router.post(
+    "/users/{user_id}/roles",
+    summary="Assign a role to a user",
+    description="Grants a role directly to a user.",
+    response_model=dict,
+    dependencies=[Depends(require_permission("role:assign"))],
+)
+def assign_role_to_user(
+    user_id: UUID,
+    role_id: UUID = Query(..., description="UUID of the role to assign"),  # noqa: B008
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    rbac.assign_role_to_user(user_id=user_id, role_id=role_id)
+    return {"detail": f"Role '{role_id}' assigned to user '{user_id}'"}
+
+
+@rbac_router.delete(
+    "/users/{user_id}/roles/{role_id}",
+    summary="Remove a role from a user",
+    description="Revokes a role directly from a user.",
+    response_model=dict,
+    dependencies=[Depends(require_permission("role:assign"))],
+)
+def remove_role_from_user(
+    user_id: UUID,
+    role_id: UUID,
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    rbac.remove_role_from_user(user_id=user_id, role_id=role_id)
+    return {"detail": f"Role '{role_id}' removed from user '{user_id}'"}
+
+
+# --------------------------------------------------------------------------------------------------
 # Group endpoints
 # --------------------------------------------------------------------------------------------------
 
@@ -222,6 +259,43 @@ def remove_user_from_group(
 ):
     rbac.remove_user_from_group(user_id=user_id, group_id=group_id)
     return {"detail": f"User '{user_id}' removed from group '{group_id}'"}
+
+
+# --------------------------------------------------------------------------------------------------
+# Group ↔ Role endpoints
+# --------------------------------------------------------------------------------------------------
+
+
+@rbac_router.post(
+    "/groups/{group_id}/roles",
+    summary="Assign a role to a group",
+    description="Grants a role to all members of a group.",
+    response_model=dict,
+    dependencies=[Depends(require_permission("role:assign"))],
+)
+def assign_role_to_group(
+    group_id: UUID,
+    role_id: UUID = Query(..., description="UUID of the role to assign"),  # noqa: B008
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    rbac.assign_role_to_group(group_id=group_id, role_id=role_id)
+    return {"detail": f"Role '{role_id}' assigned to group '{group_id}'"}
+
+
+@rbac_router.delete(
+    "/groups/{group_id}/roles/{role_id}",
+    summary="Remove a role from a group",
+    description="Revokes a role from all members of a group.",
+    response_model=dict,
+    dependencies=[Depends(require_permission("role:assign"))],
+)
+def remove_role_from_group(
+    group_id: UUID,
+    role_id: UUID,
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    rbac.remove_role_from_group(group_id=group_id, role_id=role_id)
+    return {"detail": f"Role '{role_id}' removed from group '{group_id}'"}
 
 
 # --------------------------------------------------------------------------------------------------

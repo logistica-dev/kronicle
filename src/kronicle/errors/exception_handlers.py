@@ -7,6 +7,8 @@ from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 from starlette.exceptions import HTTPException as StarletteHttpException
 
+import traceback
+
 from kronicle.errors.error_types import KronicleAppError, KronicleHTTPErrorPayload, new_request_id
 from kronicle.utils.dev_logs import log_e, log_w
 
@@ -120,22 +122,11 @@ def pydantic_exception_adapter(request: Request, exc: Exception) -> JSONResponse
 
 
 def generic_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    """
-    Catch-all handler for unexpected exceptions.
-    Logs the full traceback internally and returns a generic InternalServerError payload.
-
-    Args:
-        request: FastAPI request object
-        exc: Exception instance
-
-    Returns:
-        JSONResponse with status=500 and generic InternalServerError info
-    """
     here = "Unhandled exception"
-    log_e(here, type(exc).__name__)
+    log_e(here, f"[{type(exc).__name__}] {exc}")
     request_id = getattr(request.state, "request_id", new_request_id())
     log_e(here, request_id, f"{request.method} {request.url.path}: {exc}")
-    # log_e(traceback.format_exc())
+    log_e(here, traceback.format_exc())
 
     return KronicleHTTPErrorPayload.from_exception(
         request=request,

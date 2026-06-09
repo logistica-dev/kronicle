@@ -49,3 +49,54 @@ def test_create_user_already_exists(rbac_service):
 
     with pytest.raises(UnauthorizedError):
         rbac_service.create_user(user)
+
+
+# --------------------------------------------------------------------------------------------------
+# user_has_permission
+# --------------------------------------------------------------------------------------------------
+
+
+def test_user_has_permission_direct_role(rbac_service):
+    user_id = uuid4()
+    db = rbac_service._db.get_db.return_value.__enter__.return_value
+    db.execute.return_value.first.return_value = (uuid4(),)
+
+    result = rbac_service.user_has_permission(user_id, "data:read")
+
+    assert result is True
+    db.execute.assert_called_once()
+
+
+def test_user_has_permission_group_role(rbac_service):
+    user_id = uuid4()
+    db = rbac_service._db.get_db.return_value.__enter__.return_value
+    db.execute.return_value.first.side_effect = [None, (uuid4(),)]
+    rbac_service._user_groups_repo.get_group_ids_for_user = MagicMock(return_value={uuid4()})
+
+    result = rbac_service.user_has_permission(user_id, "data:write")
+
+    assert result is True
+    assert db.execute.call_count == 2
+
+
+def test_user_has_permission_no_match(rbac_service):
+    user_id = uuid4()
+    db = rbac_service._db.get_db.return_value.__enter__.return_value
+    db.execute.return_value.first.return_value = None
+    rbac_service._user_groups_repo.get_group_ids_for_user = MagicMock(return_value=set())
+
+    result = rbac_service.user_has_permission(user_id, "data:read")
+
+    assert result is False
+    db.execute.assert_called_once()
+
+
+def test_user_has_permission_empty_groups_no_match(rbac_service):
+    user_id = uuid4()
+    db = rbac_service._db.get_db.return_value.__enter__.return_value
+    db.execute.return_value.first.side_effect = [None, None]
+    rbac_service._user_groups_repo.get_group_ids_for_user = MagicMock(return_value={uuid4()})
+
+    result = rbac_service.user_has_permission(user_id, "data:read")
+
+    assert result is False

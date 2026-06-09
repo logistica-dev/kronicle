@@ -51,10 +51,10 @@ class RbacDbSession:
     # Transaction (for write operations that need rollback)
     # ----------------------------------------------------------------------------------------------
     @contextmanager
-    def transaction(self):
+    def transaction(self) -> Generator[Session, None, None]:
         """
         Yield a session inside a transaction context.
-        This is what should be use when writing the DB.
+        This is what should be used when writing the DB.
         """
         session = self._session_factory()
         try:

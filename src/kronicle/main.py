@@ -3,7 +3,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from json import dump
 from pathlib import Path
-from traceback import extract_tb
+from traceback import extract_tb, format_exc
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi import HTTPException as FastApiHttpException
@@ -262,20 +262,17 @@ class KronicleApp:
                 log_w(here, exc)
                 raise exc
             except Exception as exc:
-                log_e(here, type(exc).__name__)
-                # Filter out .venv lines
+                log_e(here, f"[{type(exc).__name__}] {exc}")
+                log_e(here, format_exc())
 
                 tb = extract_tb(exc.__traceback__)
-                # log_w(here, "trace:", tb)
                 filtered = [f for f in tb if "src/kronicle" in f.filename]
+                if filtered:
+                    rel_root = Path(__file__).resolve().parents[2]
+                    for f in filtered:
+                        rel_file = Path(f.filename).relative_to(rel_root)
+                        log_d(here, f"{rel_file}:{f.lineno} ->", f.name)
 
-                # Make filenames relative for shorter output
-                rel_root = Path(__file__).resolve().parents[2]  # adjust to project root
-                for f in filtered:
-                    rel_file = Path(f.filename).relative_to(rel_root)
-                    log_e(here, f"{rel_file}:{f.lineno} ->", f.name)
-
-                # Return standard JSON error
                 return KronicleHTTPErrorPayload.from_exception(
                     request=request,
                     exc=exc,
