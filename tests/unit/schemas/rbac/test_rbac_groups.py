@@ -1,0 +1,82 @@
+# tests/unit/schemas/rbac/test_rbac_groups.py
+
+import pytest
+from kronicle_sdk.models.rbac.kronicle_group import KronicleGroup
+from kronicle_sdk.utils.log import log_d
+from kronicle_sdk.utils.str_utils import tiny_id
+
+
+@pytest.fixture(scope="module")
+def test_group(kronicle_rbac):
+    tag = tiny_id()
+    group = KronicleGroup(name=f"test_group_{tag}")
+    created = kronicle_rbac.create_group(group)
+    yield created
+    kronicle_rbac.delete_group(created.id)
+
+
+@pytest.mark.integration
+def test_list_groups(kronicle_rbac, test_group):
+    here = "rbac_groups"
+    groups = kronicle_rbac.get_groups()
+    log_d(here, f"Number of groups: {len(groups)}")
+    assert isinstance(groups, list)
+    assert len(groups) > 0
+    assert test_group.name in {g.name for g in groups}
+
+
+@pytest.mark.integration
+def test_get_group(kronicle_rbac, test_group):
+    group_id = test_group.id
+    group = kronicle_rbac.get_group(group_id)
+    assert group is not None
+    assert group.id == group_id
+    assert group.name == test_group.name
+
+
+@pytest.mark.integration
+def test_create_group(kronicle_rbac):
+    here = "rbac_groups"
+    tag = tiny_id()
+    group = KronicleGroup(name=f"crud_group_{tag}")
+    created = kronicle_rbac.create_group(group)
+    log_d(here, "Created", created)
+    assert created is not None
+    assert isinstance(created, KronicleGroup)
+    assert created.name == group.name
+    kronicle_rbac.delete_group(created.id)
+
+
+@pytest.mark.integration
+def test_patch_group(kronicle_rbac):
+    here = "rbac_groups"
+    tag = tiny_id()
+    group = KronicleGroup(name=f"patch_group_{tag}")
+    created = kronicle_rbac.create_group(group)
+    patched_name = f"{created.name}_patched"
+    patch = KronicleGroup(name=patched_name)
+    patched = kronicle_rbac.patch_group(created.id, patch)
+    log_d(here, "Patched", patched)
+    assert patched.name == patched_name
+    kronicle_rbac.delete_group(created.id)
+
+
+@pytest.mark.integration
+def test_delete_group(kronicle_rbac):
+    tag = tiny_id()
+    group = KronicleGroup(name=f"del_group_{tag}")
+    created = kronicle_rbac.create_group(group)
+    deleted = kronicle_rbac.delete_group(created.id)
+    assert deleted is not None
+    gone = kronicle_rbac.get_group(created.id)
+    assert gone is None
+
+
+@pytest.mark.integration
+def test_add_and_remove_user_from_group(kronicle_rbac, test_group, test_user):
+    group_id = test_group.id
+    user_id = test_user.id
+    result = kronicle_rbac.add_user_to_group(group_id, user_id)
+    assert result is not None
+    result = kronicle_rbac.remove_user_from_group(group_id, user_id)
+    assert result is not None

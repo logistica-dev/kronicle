@@ -1,4 +1,4 @@
-# tests/unit/schemas/rbac/test_user_schema.py
+# tests/unit/schemas/rbac/test_input_user_schema.py
 
 import pytest
 from pydantic import ValidationError

@@ -8,13 +8,13 @@ from pydantic import BaseModel, Field, field_validator
 
 from kronicle.errors.error_types import BadRequestError
 
-# Username: allowed characters after the first letter
+# Group name: allowed characters after the first letter
 _ALLOWED_CHARS = "A-Za-z0-9_ .-"
-_GROUPNAME_MIN_LENGTH = 4
-_GROUPNAME_MAX_LENGTH = 64
+_GROUP_NAME_MIN_LENGTH = 4
+_GROUP_NAME_MAX_LENGTH = 64
 
 # Regex: first char is letter, rest are from ALLOWED_CHARS, total length 4–64
-_GROUPNAME_REGEX = rf"[A-Za-z][{_ALLOWED_CHARS}]{{{_GROUPNAME_MIN_LENGTH - 1},{_GROUPNAME_MAX_LENGTH - 1}}}"
+_GROUP_NAME_REGEX = rf"[A-Za-z][{_ALLOWED_CHARS}]{{{_GROUP_NAME_MIN_LENGTH - 1},{_GROUP_NAME_MAX_LENGTH - 1}}}"
 
 mod = "ingrp"
 
@@ -24,10 +24,10 @@ class InputGroup(BaseModel):
     details: dict[str, Any] = Field(default_factory=dict, description="Optional JSONB metadata")
 
     @field_validator("name")
-    def validate_groupname_syntax(cls, v: str | None) -> str | None:
+    def validate_group_name_syntax(cls, v: str | None) -> str | None:
         if v is None:
             return v
-        if not fullmatch(_GROUPNAME_REGEX, v):
+        if not fullmatch(_GROUP_NAME_REGEX, v):
             raise BadRequestError(
                 "Group name must start with a letter, be 4–64 characters long, "
                 "and only contain letters, digits, '_', '.', '-', or space"
