@@ -2,7 +2,7 @@ from collections.abc import Generator
 
 import pytest
 from kronicle_sdk.conf.read_conf import Settings
-from kronicle_sdk.connectors.rbac.rbac_connector import KronicleRbacConnector
+from kronicle_sdk.connectors.rbac.rbac_identity_setup import KronicleRbacIdentitySetup
 from kronicle_sdk.models.rbac.kronicle_user import KronicleUser
 from kronicle_sdk.utils.str_utils import tiny_id
 
@@ -10,7 +10,7 @@ from kronicle_sdk.utils.str_utils import tiny_id
 @pytest.fixture(scope="session")
 def kronicle_rbac():
     co = Settings().connection
-    return KronicleRbacConnector(co.url, co.usr, co.pwd)
+    return KronicleRbacIdentitySetup(co.url, co.usr, co.pwd)
 
 
 @pytest.fixture(scope="module")

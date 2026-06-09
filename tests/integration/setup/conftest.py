@@ -3,14 +3,14 @@ from collections.abc import Generator
 import pytest
 from kronicle_sdk.conf.read_conf import Settings
 from kronicle_sdk.connectors.channel.channel_setup import KronicleSetup
-from kronicle_sdk.connectors.rbac.rbac_setup import KronicleRbacSetup
+from kronicle_sdk.connectors.rbac.rbac_resource_setup import KronicleRbacResourceSetup
 from kronicle_sdk.utils.str_utils import tiny_id, uuid4_str
 
 
 @pytest.fixture(scope="session")
 def kronicle_rbac_setup():
     co = Settings().connection
-    return KronicleRbacSetup(co.url, co.usr, co.pwd)
+    return KronicleRbacResourceSetup(co.url, co.usr, co.pwd)
 
 
 @pytest.fixture(scope="session")
