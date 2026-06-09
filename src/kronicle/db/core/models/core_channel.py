@@ -1,7 +1,9 @@
 # kronicle/db/core/models/core_channel.py
 from __future__ import annotations
 
-from sqlalchemy import UUID, ForeignKey
+from uuid import UUID
+
+from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from kronicle.db.core.models.core_entity import CoreEntity

@@ -2,9 +2,10 @@
 from configparser import ConfigParser, ExtendedInterpolation
 from hashlib import md5, sha256, sha512
 from json import dump, load
-from os import makedirs, stat
+from os import environ, makedirs, stat
 from os.path import abspath, exists, expanduser
 from pathlib import Path
+from re import match
 from time import time
 from typing import Literal
 
@@ -186,6 +187,15 @@ def load_ini_file(ini_path: str) -> ConfigParser:
     parser = ConfigParser(interpolation=ExtendedInterpolation())
     parser.read(path)
     return parser
+
+
+def load_env_file(file_path: Path):
+    if not file_path.exists():
+        raise FileNotFoundError(f"No file found at this path: {file_path}")
+    for line in file_path.read_text().splitlines():
+        m = match(r'^(?:export\s+)?(\w+)\s*=\s*["\']?(.*?)["\']?\s*$', line)
+        if m:
+            environ[m.group(1)] = m.group(2)
 
 
 # class FileDetails(Serializable):

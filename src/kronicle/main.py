@@ -15,6 +15,7 @@ from sqlalchemy.orm import configure_mappers
 from starlette.exceptions import HTTPException as StarletteHttpException
 
 from kronicle.api.auth_routes import auth_router
+from kronicle.api.core_routes import core_router
 from kronicle.api.health_check import health_check
 from kronicle.api.rbac_routes import rbac_router
 from kronicle.api.read_routes import reader_router
@@ -195,6 +196,7 @@ class KronicleApp:
         self.app.include_router(writer_router, prefix=f"/data/{api_version}")
         self.app.include_router(setup_router, prefix=f"/setup/{api_version}")
 
+        self.app.include_router(core_router, prefix=f"/core/{api_version}")
         self.app.include_router(rbac_router, prefix=f"/rbac/{api_version}")
 
         # Add root and favicon routes

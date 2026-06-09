@@ -1,4 +1,4 @@
-# kronicle/schemas/rbac/safe_zone_schemas.py
+# kronicle/schemas/core/safe_zone_schemas.py
 from __future__ import annotations
 
 from typing import Any
