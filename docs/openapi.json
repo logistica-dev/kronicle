@@ -8,9 +8,7 @@
   "paths": {
     "/health/live": {
       "get": {
-        "tags": [
-          "Check health"
-        ],
+        "tags": ["Check health"],
         "summary": "Liveness",
         "operationId": "liveness_health_live_get",
         "responses": {
@@ -27,9 +25,7 @@
     },
     "/health/ready": {
       "get": {
-        "tags": [
-          "Check health"
-        ],
+        "tags": ["Check health"],
         "summary": "Readiness",
         "operationId": "readiness_health_ready_get",
         "responses": {
@@ -46,9 +42,7 @@
     },
     "/health/version": {
       "get": {
-        "tags": [
-          "Check health"
-        ],
+        "tags": ["Check health"],
         "summary": "Version",
         "operationId": "version_health_version_get",
         "responses": {
@@ -65,9 +59,7 @@
     },
     "/auth/v1/login": {
       "post": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Login",
         "operationId": "login_auth_v1_login_post",
         "requestBody": {
@@ -104,9 +96,7 @@
     },
     "/auth/v1/change_password": {
       "post": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Update Password",
         "operationId": "update_password_auth_v1_change_password_post",
         "requestBody": {
@@ -143,9 +133,7 @@
     },
     "/api/v1/channels": {
       "get": {
-        "tags": [
-          "Read data"
-        ],
+        "tags": ["Read data"],
         "summary": "list all available channels",
         "description": "Fetches metadata for all registered channels.\nEach entry includes schema, metadata, tags, and the number of available rows.\nNo data rows are returned in this endpoint.\nOptionally, filter by a name or tag_key/tag_value pair.",
         "operationId": "fetch_all_channels_metadata_api_v1_channels_get",
@@ -239,9 +227,7 @@
     },
     "/api/v1/channels/{channel_id}": {
       "get": {
-        "tags": [
-          "Read data"
-        ],
+        "tags": ["Read data"],
         "summary": "Fetch metadata for a specific channel",
         "description": "Retrieves metadata for the specified `channel_id`, including schema, tags, and metadata.\nThe response also includes the number of rows stored for that channel\nbut does not include the row data itself.",
         "operationId": "fetch_channel_api_v1_channels__channel_id__get",
@@ -288,9 +274,7 @@
     },
     "/api/v1/channels/{channel_id}/rows": {
       "get": {
-        "tags": [
-          "Read data"
-        ],
+        "tags": ["Read data"],
         "summary": "Fetch stored rows for a specific channel",
         "description": "Retrieves all stored time-series rows for the specified `channel_id`.\nFiltering, ordering, pagination, and column selection are supported via query parameters.\nThe response includes both metadata and data rows according to the channel\u2019s schema.",
         "operationId": "fetch_channel_rows_api_v1_channels__channel_id__rows_get",
@@ -337,9 +321,7 @@
     },
     "/api/v1/channels/{channel_id}/columns": {
       "get": {
-        "tags": [
-          "Read data"
-        ],
+        "tags": ["Read data"],
         "summary": "Fetch the data as columns for a specific channel",
         "description": "Retrieves all stored time-series rows for the specified `channel_id` and present them as columns.\nThe response includes both metadata and data columns according to the channel\u2019s schema.",
         "operationId": "fetch_channel_columns_api_v1_channels__channel_id__columns_get",
@@ -386,9 +368,7 @@
     },
     "/data/v1/channels": {
       "get": {
-        "tags": [
-          "Input data"
-        ],
+        "tags": ["Input data"],
         "summary": "list all available channels",
         "description": "Fetches metadata for all registered channels.\nEach entry includes schema, metadata, tags, and the number of available rows.\nNo data rows are returned in this endpoint.\nOptionally, filter by a name or tag_key/tag_value pair.",
         "operationId": "fetch_all_channels_metadata_data_v1_channels_get",
@@ -480,9 +460,7 @@
         }
       },
       "post": {
-        "tags": [
-          "Input data"
-        ],
+        "tags": ["Input data"],
         "summary": "Upsert metadata and insert rows",
         "description": "Append-only operation: creates new metadata if missing and inserts channel data rows",
         "operationId": "upsert_metadata_and_rows_data_v1_channels_post",
@@ -541,9 +519,7 @@
     },
     "/data/v1/channels/{channel_id}": {
       "get": {
-        "tags": [
-          "Input data"
-        ],
+        "tags": ["Input data"],
         "summary": "Fetch metadata for a specific channel",
         "description": "Retrieves metadata for the specified `channel_id`, including schema, tags, and metadata.\nThe response also includes the number of rows stored for that channel\nbut does not include the row data itself.",
         "operationId": "fetch_channel_data_v1_channels__channel_id__get",
@@ -590,9 +566,7 @@
     },
     "/data/v1/channels/{channel_id}/rows": {
       "get": {
-        "tags": [
-          "Input data"
-        ],
+        "tags": ["Input data"],
         "summary": "Fetch stored rows for a specific channel",
         "description": "Retrieves all stored time-series rows for the specified `channel_id`.\nFiltering, ordering, pagination, and column selection are supported via query parameters.\nThe response includes both metadata and data rows according to the channel\u2019s schema.",
         "operationId": "fetch_channel_rows_data_v1_channels__channel_id__rows_get",
@@ -637,9 +611,7 @@
         }
       },
       "post": {
-        "tags": [
-          "Input data"
-        ],
+        "tags": ["Input data"],
         "summary": "Insert rows for a  channel",
         "description": "Append-only operation: insert new rows for an existing channel. Does not modify metadata or schema.",
         "operationId": "insert_rows_data_v1_channels__channel_id__rows_post",
@@ -708,9 +680,7 @@
     },
     "/data/v1/channels/{channel_id}/columns": {
       "get": {
-        "tags": [
-          "Input data"
-        ],
+        "tags": ["Input data"],
         "summary": "Fetch the data as columns for a specific channel",
         "description": "Retrieves all stored time-series rows for the specified `channel_id` and present them as columns.\nThe response includes both metadata and data columns according to the channel\u2019s schema.",
         "operationId": "fetch_channel_columns_data_v1_channels__channel_id__columns_get",
@@ -757,9 +727,7 @@
     },
     "/setup/v1/channels": {
       "get": {
-        "tags": [
-          "Setup data channels"
-        ],
+        "tags": ["Setup data channels"],
         "summary": "list all available channels",
         "description": "Fetches metadata for all registered channels.\nEach entry includes schema, metadata, tags, and the number of available rows.\nNo data rows are returned in this endpoint.\nOptionally, filter by a name or tag_key/tag_value pair.",
         "operationId": "fetch_all_channels_metadata_setup_v1_channels_get",
@@ -851,9 +819,7 @@
         }
       },
       "post": {
-        "tags": [
-          "Setup data channels"
-        ],
+        "tags": ["Setup data channels"],
         "summary": "Create a new channel",
         "description": "Create a new channel with metadata and schema. Does not add rows, and fails if the channel already exists.",
         "operationId": "create_channel_setup_v1_channels_post",
@@ -896,9 +862,7 @@
         }
       },
       "put": {
-        "tags": [
-          "Setup data channels"
-        ],
+        "tags": ["Setup data channels"],
         "summary": "Update or create a channel",
         "description": "Upsert a channel: if it exists, updates metadata (schema must match if provided); if it does not exist, creates it with the given schema and metadata.",
         "operationId": "update_channel_setup_v1_channels_put",
@@ -943,9 +907,7 @@
     },
     "/setup/v1/channels/{channel_id}": {
       "get": {
-        "tags": [
-          "Setup data channels"
-        ],
+        "tags": ["Setup data channels"],
         "summary": "Fetch metadata for a specific channel",
         "description": "Retrieves metadata for the specified `channel_id`, including schema, tags, and metadata.\nThe response also includes the number of rows stored for that channel\nbut does not include the row data itself.",
         "operationId": "fetch_channel_setup_v1_channels__channel_id__get",
@@ -990,9 +952,7 @@
         }
       },
       "patch": {
-        "tags": [
-          "Setup data channels"
-        ],
+        "tags": ["Setup data channels"],
         "summary": "Partially update a channel",
         "description": "Update only a subset of metadata, tags, or schema for the specified channel.",
         "operationId": "patch_channel_setup_v1_channels__channel_id__patch",
@@ -1035,9 +995,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Setup data channels"
-        ],
+        "tags": ["Setup data channels"],
         "summary": "Delete a channel",
         "description": "Deletes a channel and its metadata. All data associated with the channel is also removed. Returns the metadata of the deleted channel.",
         "operationId": "delete_channel_setup_v1_channels__channel_id__delete",
@@ -1084,9 +1042,7 @@
     },
     "/setup/v1/channels/{channel_id}/rows": {
       "get": {
-        "tags": [
-          "Setup data channels"
-        ],
+        "tags": ["Setup data channels"],
         "summary": "Fetch stored rows for a specific channel",
         "description": "Retrieves all stored time-series rows for the specified `channel_id`.\nFiltering, ordering, pagination, and column selection are supported via query parameters.\nThe response includes both metadata and data rows according to the channel\u2019s schema.",
         "operationId": "fetch_channel_rows_setup_v1_channels__channel_id__rows_get",
@@ -1131,9 +1087,7 @@
         }
       },
       "post": {
-        "tags": [
-          "Setup data channels"
-        ],
+        "tags": ["Setup data channels"],
         "summary": "Insert rows for a  channel",
         "description": "Append-only operation: insert new rows for an existing channel. Does not modify metadata or schema.",
         "operationId": "insert_rows_setup_v1_channels__channel_id__rows_post",
@@ -1200,9 +1154,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Setup data channels"
-        ],
+        "tags": ["Setup data channels"],
         "summary": "Delete all rows for a channel",
         "description": "Removes all data rows for the specified channel, while keeping its metadata intact.",
         "operationId": "delete_channel_rows_setup_v1_channels__channel_id__rows_delete",
@@ -1329,9 +1281,7 @@
     },
     "/setup/v1/channels/{channel_id}/columns": {
       "get": {
-        "tags": [
-          "Setup data channels"
-        ],
+        "tags": ["Setup data channels"],
         "summary": "Fetch the data as columns for a specific channel",
         "description": "Retrieves all stored time-series rows for the specified `channel_id` and present them as columns.\nThe response includes both metadata and data columns according to the channel\u2019s schema.",
         "operationId": "fetch_channel_columns_setup_v1_channels__channel_id__columns_get",
@@ -1378,9 +1328,7 @@
     },
     "/setup/v1/channels/{channel_id}/clone": {
       "post": {
-        "tags": [
-          "Setup data channels"
-        ],
+        "tags": ["Setup data channels"],
         "summary": "Clone a channel",
         "description": "Creates a new channel by cloning an existing channel's schema and optionally metadata. Does not copy data rows nor name.",
         "operationId": "clone_channel_setup_v1_channels__channel_id__clone_post",
@@ -1425,9 +1373,7 @@
     },
     "/setup/v1/channels/batch-delete": {
       "post": {
-        "tags": [
-          "Setup data channels"
-        ],
+        "tags": ["Setup data channels"],
         "summary": "Delete multiple channels",
         "operationId": "batch_delete_channels_setup_v1_channels_batch_delete_post",
         "requestBody": {
@@ -1439,10 +1385,7 @@
                 "title": "Payload",
                 "examples": [
                   {
-                    "channel_ids": [
-                      "uuid1",
-                      "uuid2"
-                    ]
+                    "channel_ids": ["uuid1", "uuid2"]
                   }
                 ]
               }
@@ -1485,9 +1428,7 @@
     },
     "/setup/v1/schemas/column_types": {
       "get": {
-        "tags": [
-          "Setup data channels"
-        ],
+        "tags": ["Setup data channels"],
         "summary": "list the types available to describe the columns",
         "description": "Retrieves every Python-like type that can be used to describe the type of a data column",
         "operationId": "get_column_types_setup_v1_schemas_column_types_get",
@@ -1516,9 +1457,7 @@
     },
     "/core/v1/zones": {
       "get": {
-        "tags": [
-          "Core"
-        ],
+        "tags": ["Core"],
         "summary": "List all zones",
         "description": "Returns all zones.",
         "operationId": "list_zones_core_v1_zones_get",
@@ -1545,9 +1484,7 @@
         ]
       },
       "post": {
-        "tags": [
-          "Core"
-        ],
+        "tags": ["Core"],
         "summary": "Create a zone",
         "description": "Creates a new zone for resource isolation and RBAC scoping.",
         "operationId": "create_zone_core_v1_zones_post",
@@ -1592,9 +1529,7 @@
     },
     "/core/v1/zones/{zone_id}": {
       "get": {
-        "tags": [
-          "Core"
-        ],
+        "tags": ["Core"],
         "summary": "Get a zone by ID",
         "description": "Returns a single zone.",
         "operationId": "get_zone_core_v1_zones__zone_id__get",
@@ -1639,9 +1574,7 @@
         }
       },
       "patch": {
-        "tags": [
-          "Core"
-        ],
+        "tags": ["Core"],
         "summary": "Patch a zone",
         "description": "Partially update a zone's name or details.",
         "operationId": "patch_zone_core_v1_zones__zone_id__patch",
@@ -1696,9 +1629,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Core"
-        ],
+        "tags": ["Core"],
         "summary": "Delete a zone",
         "description": "Deletes a zone and its hierarchy links.",
         "operationId": "delete_zone_core_v1_zones__zone_id__delete",
@@ -1745,9 +1676,7 @@
     },
     "/core/v1/channels": {
       "get": {
-        "tags": [
-          "Core"
-        ],
+        "tags": ["Core"],
         "summary": "List all core channels",
         "description": "Returns all CoreChannels.",
         "operationId": "list_core_channels_core_v1_channels_get",
@@ -1776,9 +1705,7 @@
     },
     "/core/v1/channels/{channel_id}": {
       "get": {
-        "tags": [
-          "Core"
-        ],
+        "tags": ["Core"],
         "summary": "Get a core channel by ID",
         "description": "Returns a single CoreChannel.",
         "operationId": "get_core_channel_core_v1_channels__channel_id__get",
@@ -1823,9 +1750,7 @@
         }
       },
       "patch": {
-        "tags": [
-          "Core"
-        ],
+        "tags": ["Core"],
         "summary": "Patch a core channel",
         "description": "Partially update a CoreChannel's name, details, or zone_id.",
         "operationId": "patch_core_channel_core_v1_channels__channel_id__patch",
@@ -1882,9 +1807,7 @@
     },
     "/core/v1/sync": {
       "post": {
-        "tags": [
-          "Core"
-        ],
+        "tags": ["Core"],
         "summary": "Sync data channels to CoreChannels",
         "description": "Scans all ChannelResources in the data DB and creates missing CoreChannel records in the core RBAC schema. Also ensures a default zone exists.",
         "operationId": "sync_core_channels_core_v1_sync_post",
@@ -1911,9 +1834,7 @@
     },
     "/rbac/v1/users": {
       "get": {
-        "tags": [
-          "RBAC"
-        ],
+        "tags": ["RBAC"],
         "summary": "List Users",
         "operationId": "list_users_rbac_v1_users_get",
         "security": [
@@ -2016,9 +1937,7 @@
         }
       },
       "post": {
-        "tags": [
-          "RBAC"
-        ],
+        "tags": ["RBAC"],
         "summary": "Create User",
         "operationId": "create_user_rbac_v1_users_post",
         "security": [
@@ -2060,9 +1979,7 @@
         }
       },
       "patch": {
-        "tags": [
-          "RBAC"
-        ],
+        "tags": ["RBAC"],
         "summary": "Patch User",
         "operationId": "patch_user_rbac_v1_users_patch",
         "security": [
@@ -2104,9 +2021,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "RBAC"
-        ],
+        "tags": ["RBAC"],
         "summary": "Delete User",
         "operationId": "delete_user_rbac_v1_users_delete",
         "security": [
@@ -2171,9 +2086,7 @@
     },
     "/rbac/v1/users/{user_id}": {
       "get": {
-        "tags": [
-          "RBAC"
-        ],
+        "tags": ["RBAC"],
         "summary": "Get User By Id",
         "operationId": "get_user_by_id_rbac_v1_users__user_id__get",
         "security": [
@@ -2231,9 +2144,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "RBAC"
-        ],
+        "tags": ["RBAC"],
         "summary": "Delete User By Id",
         "operationId": "delete_user_by_id_rbac_v1_users__user_id__delete",
         "security": [
@@ -2298,9 +2209,7 @@
     },
     "/rbac/v1/users/{user_id}/roles": {
       "post": {
-        "tags": [
-          "RBAC"
-        ],
+        "tags": ["RBAC"],
         "summary": "Assign a role to a user",
         "description": "Grants a role directly to a user.",
         "operationId": "assign_role_to_user_rbac_v1_users__user_id__roles_post",
@@ -2361,9 +2270,7 @@
     },
     "/rbac/v1/users/{user_id}/roles/{role_id}": {
       "delete": {
-        "tags": [
-          "RBAC"
-        ],
+        "tags": ["RBAC"],
         "summary": "Remove a role from a user",
         "description": "Revokes a role directly from a user.",
         "operationId": "remove_role_from_user_rbac_v1_users__user_id__roles__role_id__delete",
@@ -2422,9 +2329,7 @@
     },
     "/rbac/v1/groups": {
       "get": {
-        "tags": [
-          "RBAC"
-        ],
+        "tags": ["RBAC"],
         "summary": "List all groups",
         "description": "Returns all RBAC groups.",
         "operationId": "list_groups_rbac_v1_groups_get",
@@ -2451,9 +2356,7 @@
         ]
       },
       "post": {
-        "tags": [
-          "RBAC"
-        ],
+        "tags": ["RBAC"],
         "summary": "Create a group",
         "description": "Creates a new RBAC group.",
         "operationId": "create_group_rbac_v1_groups_post",
@@ -2498,9 +2401,7 @@
     },
     "/rbac/v1/groups/{group_id}": {
       "get": {
-        "tags": [
-          "RBAC"
-        ],
+        "tags": ["RBAC"],
         "summary": "Get a group by ID",
         "description": "Returns a single RBAC group.",
         "operationId": "get_group_rbac_v1_groups__group_id__get",
@@ -2545,9 +2446,7 @@
         }
       },
       "patch": {
-        "tags": [
-          "RBAC"
-        ],
+        "tags": ["RBAC"],
         "summary": "Update a group",
         "description": "Partially update a group's name or details.",
         "operationId": "patch_group_rbac_v1_groups__group_id__patch",
@@ -2609,9 +2508,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "RBAC"
-        ],
+        "tags": ["RBAC"],
         "summary": "Delete a group",
         "description": "Deletes an RBAC group.",
         "operationId": "delete_group_rbac_v1_groups__group_id__delete",
@@ -2658,9 +2555,7 @@
     },
     "/rbac/v1/groups/{group_id}/users": {
       "post": {
-        "tags": [
-          "RBAC"
-        ],
+        "tags": ["RBAC"],
         "summary": "Add user to group",
         "description": "Adds a user as member of a group.",
         "operationId": "add_user_to_group_rbac_v1_groups__group_id__users_post",
@@ -2721,9 +2616,7 @@
     },
     "/rbac/v1/groups/{group_id}/users/{user_id}": {
       "delete": {
-        "tags": [
-          "RBAC"
-        ],
+        "tags": ["RBAC"],
         "summary": "Remove user from group",
         "description": "Removes a user from a group.",
         "operationId": "remove_user_from_group_rbac_v1_groups__group_id__users__user_id__delete",
@@ -2782,9 +2675,7 @@
     },
     "/rbac/v1/groups/{group_id}/roles": {
       "post": {
-        "tags": [
-          "RBAC"
-        ],
+        "tags": ["RBAC"],
         "summary": "Assign a role to a group",
         "description": "Grants a role to all members of a group.",
         "operationId": "assign_role_to_group_rbac_v1_groups__group_id__roles_post",
@@ -2845,9 +2736,7 @@
     },
     "/rbac/v1/groups/{group_id}/roles/{role_id}": {
       "delete": {
-        "tags": [
-          "RBAC"
-        ],
+        "tags": ["RBAC"],
         "summary": "Remove a role from a group",
         "description": "Revokes a role from all members of a group.",
         "operationId": "remove_role_from_group_rbac_v1_groups__group_id__roles__role_id__delete",
@@ -2906,9 +2795,7 @@
     },
     "/rbac/v1/roles": {
       "get": {
-        "tags": [
-          "RBAC"
-        ],
+        "tags": ["RBAC"],
         "summary": "List all roles",
         "description": "Returns all RBAC roles.",
         "operationId": "list_roles_rbac_v1_roles_get",
@@ -2935,9 +2822,7 @@
         ]
       },
       "post": {
-        "tags": [
-          "RBAC"
-        ],
+        "tags": ["RBAC"],
         "summary": "Create a role",
         "description": "Creates a new RBAC role with permissions and restrictions.",
         "operationId": "create_role_rbac_v1_roles_post",
@@ -2982,9 +2867,7 @@
     },
     "/rbac/v1/roles/{role_id}": {
       "get": {
-        "tags": [
-          "RBAC"
-        ],
+        "tags": ["RBAC"],
         "summary": "Get a role by ID",
         "description": "Returns a single RBAC role.",
         "operationId": "get_role_rbac_v1_roles__role_id__get",
@@ -3029,9 +2912,7 @@
         }
       },
       "patch": {
-        "tags": [
-          "RBAC"
-        ],
+        "tags": ["RBAC"],
         "summary": "Update a role",
         "description": "Partially update a role's name, description, permissions, or restrictions.",
         "operationId": "patch_role_rbac_v1_roles__role_id__patch",
@@ -3093,9 +2974,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "RBAC"
-        ],
+        "tags": ["RBAC"],
         "summary": "Delete a role",
         "description": "Deletes an RBAC role.",
         "operationId": "delete_role_rbac_v1_roles__role_id__delete",
@@ -3142,9 +3021,7 @@
     },
     "/rbac/v1/policies/zones": {
       "post": {
-        "tags": [
-          "RBAC"
-        ],
+        "tags": ["RBAC"],
         "summary": "Assign a role to a subject for a zone",
         "description": "Creates a policy that grants a role to a user or group for a specific zone.",
         "operationId": "create_zone_policy_rbac_v1_policies_zones_post",
@@ -3191,9 +3068,7 @@
     },
     "/rbac/v1/policies/zones/{zone_id}": {
       "get": {
-        "tags": [
-          "RBAC"
-        ],
+        "tags": ["RBAC"],
         "summary": "List policies for a zone",
         "description": "Returns all policies assigned for a specific zone.",
         "operationId": "list_zone_policies_rbac_v1_policies_zones__zone_id__get",
@@ -3245,9 +3120,7 @@
     },
     "/rbac/v1/policies/zones/{policy_id}": {
       "delete": {
-        "tags": [
-          "RBAC"
-        ],
+        "tags": ["RBAC"],
         "summary": "Delete a zone policy",
         "description": "Removes a zone policy by its ID.",
         "operationId": "delete_zone_policy_rbac_v1_policies_zones__policy_id__delete",
@@ -3292,9 +3165,7 @@
     },
     "/rbac/v1/policies/channels": {
       "post": {
-        "tags": [
-          "RBAC"
-        ],
+        "tags": ["RBAC"],
         "summary": "Assign a role to a subject for a channel",
         "description": "Creates a policy that grants a role to a user or group for a specific channel.",
         "operationId": "create_channel_policy_rbac_v1_policies_channels_post",
@@ -3341,9 +3212,7 @@
     },
     "/rbac/v1/policies/channels/{channel_id}": {
       "get": {
-        "tags": [
-          "RBAC"
-        ],
+        "tags": ["RBAC"],
         "summary": "List policies for a channel",
         "description": "Returns all policies assigned for a specific channel.",
         "operationId": "list_channel_policies_rbac_v1_policies_channels__channel_id__get",
@@ -3395,9 +3264,7 @@
     },
     "/rbac/v1/policies/channels/{policy_id}": {
       "delete": {
-        "tags": [
-          "RBAC"
-        ],
+        "tags": ["RBAC"],
         "summary": "Delete a channel policy",
         "description": "Removes a channel policy by its ID.",
         "operationId": "delete_channel_policy_rbac_v1_policies_channels__policy_id__delete",
@@ -3615,9 +3482,7 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": [
-          "column_types"
-        ],
+        "required": ["column_types"],
         "title": "ChannelSchema",
         "description": "ChannelSchema is a pure structural definition of a channel's timeseries layout.\n\nResponsibilities:\n- Define user-facing column names and their types.\n- Provide validation rules for rows.\n- Provide deterministic user\u2194internal column normalization.\n- Offer structural comparison (e.g. for migration/versioning).\n\nIt is:\n- Storage-agnostic (no table name, no SQL, no DB types).\n- Immutable (once created, structure does not change).\n- Safe to serialize and embed in API payloads (part of ChannelMetadata).\n\nIt does NOT:\n- Know about channel_id.\n- Generate SQL.\n- Know about row id or received_at.\n- Compare itself to a live database table.\n\nDatabase materialization is handled by ChannelTimeseries."
       },
@@ -3656,11 +3521,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "subject_id",
-          "role_id",
-          "channel_id"
-        ],
+        "required": ["subject_id", "role_id", "channel_id"],
         "title": "InputChannelPolicy",
         "description": "Assign a role to a subject (user or group) for a specific channel."
       },
@@ -3726,9 +3587,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "name"
-        ],
+        "required": ["name"],
         "title": "InputGroup"
       },
       "InputPayload": {
@@ -3835,7 +3694,7 @@
         "title": "InputPayload",
         "description": "User-provided payload for a channel.\nThe 'channel_schema' field is a dict of column_name -> type string.",
         "example": {
-          "channel_id": "c7e8076d-5374-429d-b65c-7677178ad171",
+          "channel_id": "d8f1516f-0345-4c78-97b6-ef7a9de08ebf",
           "channel_schema": {
             "humidity": "float",
             "temperature": "float",
@@ -3844,7 +3703,7 @@
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-725f5",
+          "name": "thermo-5cb11",
           "rows": [
             {
               "humidity": 55.1,
@@ -3918,9 +3777,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "name"
-        ],
+        "required": ["name"],
         "title": "InputRole",
         "description": "Schema for creating or updating a role."
       },
@@ -3977,9 +3834,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "email"
-        ],
+        "required": ["email"],
         "title": "InputUser",
         "description": "Represents raw input data for user creation.\nValidates and sanitizes user-provided data before processing.\nMay reject invalid data (e.g., weak passwords, invalid emails)."
       },
@@ -4009,12 +3864,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "login",
-          "password",
-          "new_password",
-          "confirm_password"
-        ],
+        "required": ["login", "password", "new_password", "confirm_password"],
         "title": "InputUserChangePwd"
       },
       "InputUserLogin": {
@@ -4033,10 +3883,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "login",
-          "password"
-        ],
+        "required": ["login", "password"],
         "title": "InputUserLogin"
       },
       "InputZone": {
@@ -4056,9 +3903,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "name"
-        ],
+        "required": ["name"],
         "title": "InputZone"
       },
       "InputZonePatch": {
@@ -4116,11 +3961,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "subject_id",
-          "role_id",
-          "zone_id"
-        ],
+        "required": ["subject_id", "role_id", "zone_id"],
         "title": "InputZonePolicy",
         "description": "Assign a role to a subject (user or group) for a specific zone."
       },
@@ -4161,10 +4002,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "id",
-          "name"
-        ],
+        "required": ["id", "name"],
         "title": "OutputCoreChannel"
       },
       "OutputGroup": {
@@ -4192,10 +4030,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "id",
-          "name"
-        ],
+        "required": ["id", "name"],
         "title": "OutputGroup"
       },
       "OutputRole": {
@@ -4250,10 +4085,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "id",
-          "name"
-        ],
+        "required": ["id", "name"],
         "title": "OutputRole"
       },
       "OutputUser": {
@@ -4311,10 +4143,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "id",
-          "email"
-        ],
+        "required": ["id", "email"],
         "title": "OutputUser",
         "description": "Represents validated and processed user data ready for database insertion.\nContains derived fields (e.g., hashed passwords) and metadata."
       },
@@ -4343,10 +4172,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "id",
-          "name"
-        ],
+        "required": ["id", "name"],
         "title": "OutputZone"
       },
       "ResponsePayload": {
@@ -4446,10 +4272,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "channel_id",
-          "channel_schema"
-        ],
+        "required": ["channel_id", "channel_schema"],
         "title": "ResponsePayload",
         "description": "Payload returned in responses to the user.\n- issued_at: when the response was generated\n- available_rows: number of rows stored for this channel (None if unknown)"
       },
@@ -4466,9 +4289,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "name"
-        ],
+        "required": ["name"],
         "title": "SchemaType",
         "description": "Immutable, hashable type descriptor for channel columns.\n\nResponsibilities:\n- Stores canonical type name and optional flag.\n- Delegates validation and type mapping to SchemaRegistry.\n- Supports optional types via 'optional[...]' notation."
       },
@@ -4505,11 +4326,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "loc",
-          "msg",
-          "type"
-        ],
+        "required": ["loc", "msg", "type"],
         "title": "ValidationError"
       }
     },
