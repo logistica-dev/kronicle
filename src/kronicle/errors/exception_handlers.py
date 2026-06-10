@@ -1,4 +1,5 @@
 # kronicle/errors/exception_handlers.py
+import traceback
 
 from fastapi import HTTPException as FastApiHttpException
 from fastapi import Request
@@ -121,7 +122,17 @@ def pydantic_exception_adapter(request: Request, exc: Exception) -> JSONResponse
 
 def generic_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     here = "Unhandled exception"
-    log_e(here, f"[{type(exc).__name__}] {exc}", exc_info=(type(exc), exc, exc.__traceback__))
+    tb = traceback.extract_tb(exc.__traceback__)
+    filtered = [f for f in tb if "src/kronicle" in f.filename]
+    if filtered:
+        trace_lines = []
+        for f in filtered:
+            trace_lines.append(f'  File "{f.filename}", line {f.lineno}, in {f.name}')
+        tb_str = "\n".join(trace_lines)
+        log_e(here, f"[{type(exc).__name__}] {exc}\nTraceback (user frames only):\n{tb_str}")
+    else:
+        log_e(here, f"[{type(exc).__name__}] {exc}")
+
     request_id = getattr(request.state, "request_id", new_request_id())
     log_e(here, request_id, f"{request.method} {request.url.path}: {exc}")
 

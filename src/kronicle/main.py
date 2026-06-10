@@ -240,11 +240,12 @@ class KronicleApp:
             allow_headers=["*"],
         )
 
-        # Add request logging middleware
+        # Add request logging middleware (file only; uvicorn handles console)
         @self.app.middleware("http")
         async def log_requests(request: Request, call_next):
-            request_logger.info(f"{request.method} {request.url.path}")
-            return await call_next(request)
+            response = await call_next(request)
+            request_logger.info(f'"{request.method} {request.url.path} HTTP/1.1" {response.status_code}')
+            return response
 
         # Add trailing slash stripping middleware
         @self.app.middleware("http")
@@ -262,15 +263,19 @@ class KronicleApp:
                 log_w(here, exc)
                 raise exc
             except Exception as exc:
-                log_e(here, f"[{type(exc).__name__}] {exc}", exc_info=(type(exc), exc, exc.__traceback__))
-
                 tb = extract_tb(exc.__traceback__)
                 filtered = [f for f in tb if "src/kronicle" in f.filename]
+
                 if filtered:
                     rel_root = Path(__file__).resolve().parents[2]
+                    trace_lines = []
                     for f in filtered:
-                        rel_file = Path(f.filename).relative_to(rel_root)
-                        log_d(here, f"{rel_file}:{f.lineno} ->", f.name)
+                        rel = Path(f.filename).relative_to(rel_root)
+                        trace_lines.append(f'  File "{rel}", line {f.lineno}, in {f.name}')
+                    tb_str = "\n".join(trace_lines)
+                    log_e(here, f"[{type(exc).__name__}] {exc}\nTraceback (user frames only):\n{tb_str}")
+                else:
+                    log_e(here, f"[{type(exc).__name__}] {exc}")
 
                 return KronicleHTTPErrorPayload.from_exception(
                     request=request,

@@ -19,7 +19,7 @@ from kronicle.db.rbac.models.rbac_group import RbacGroup
 from kronicle.db.rbac.models.rbac_role import RbacRole
 from kronicle.db.rbac.models.rbac_user import RbacUser
 from kronicle.db.rbac.rbac_db_session import RbacDbSession
-from kronicle.errors.error_types import BadRequestError, NotFoundError, UnauthorizedError
+from kronicle.errors.error_types import BadRequestError, ConflictError, NotFoundError, UnauthorizedError
 from kronicle.repo.core.core_channel_repo import CoreChannelRepository
 from kronicle.repo.core.core_zone_repo import CoreZoneRepository
 from kronicle.repo.hierarchy.hierarchy_engine import HierarchyEngine
@@ -225,6 +225,21 @@ class RbacService:
         if not db_user:
             raise UnauthorizedError("User doesn't exists")
         log_w(here, db_user.snapshot)
+
+        role_count = db.execute(
+            select(func.count(RbacUserRoles.user_id)).where(RbacUserRoles.user_id == db_user.id)
+        ).scalar()
+        if role_count:
+            raise ConflictError(
+                f"User '{db_user.email}' cannot be deleted: assigned to {role_count} role(s). "
+                "Remove these role assignments first."
+            )
+
+        # Clear group memberships explicitly — even with ondelete=CASCADE,
+        # SQLAlchemy's unitofwork processor tries to NULL PK columns before
+        # the DB-level cascade, causing an AssertionError.
+        db.execute(delete(RbacUserGroups.__table__).where(RbacUserGroups.user_id == db_user.id))
+
         deleted_user = self._user_repo.delete_user(db, user=db_user)
         db.commit()
         return OutputUser.from_db_user(deleted_user)
@@ -400,6 +415,26 @@ class RbacService:
             role = self._role_repo.get_by_id(db, id=role_id)
             if not role:
                 raise NotFoundError(f"Role '{role_id}' not found")
+
+            # Check for dependent assignments before deletion
+            conflicts = []
+            user_count = db.execute(
+                select(func.count(RbacUserRoles.role_id)).where(RbacUserRoles.role_id == role_id)
+            ).scalar()
+            if user_count:
+                conflicts.append(f"assigned to {user_count} user(s)")
+
+            group_count = db.execute(
+                select(func.count(RbacGroupRoles.role_id)).where(RbacGroupRoles.role_id == role_id)
+            ).scalar()
+            if group_count:
+                conflicts.append(f"assigned to {group_count} group(s)")
+
+            if conflicts:
+                raise ConflictError(
+                    f"Role '{role.name}' cannot be deleted: {'; '.join(conflicts)}. " "Remove these assignments first."
+                )
+
             db.delete(role)
             db.flush()
         return OutputRole.from_db_role(role)
@@ -802,8 +837,20 @@ class RbacService:
             group = self._group_repo.get_by_id(db, id=group_id)
             if not group:
                 raise NotFoundError(f"Group '{group_id}' not found")
-            db.execute(delete(RbacGroupRoles.__table__).where(RbacGroupRoles.group_id == group_id))
+
+            role_count = db.execute(
+                select(func.count(RbacGroupRoles.group_id)).where(RbacGroupRoles.group_id == group_id)
+            ).scalar()
+            if role_count:
+                raise ConflictError(
+                    f"Group '{group.name}' cannot be deleted: assigned to {role_count} role(s). "
+                    "Remove these role assignments first."
+                )
+
+            # Clear group memberships explicitly — SQLAlchemy's unitofwork can't
+            # handle PK-as-FK with ondelete=CASCADE (tries to NULL the PK first).
             db.execute(delete(RbacUserGroups.__table__).where(RbacUserGroups.group_id == group_id))
+
             db.delete(group)
             db.flush()
         return OutputGroup.from_db_group(group)

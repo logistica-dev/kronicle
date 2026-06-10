@@ -3,7 +3,7 @@ import logging
 import sys
 import traceback
 from contextlib import contextmanager
-from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING, Formatter, LogRecord, StreamHandler, getLogger
+from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING, Formatter, LogRecord, getLogger
 from logging.handlers import RotatingFileHandler, SysLogHandler
 from os import getenv, makedirs
 from pathlib import Path
@@ -108,6 +108,20 @@ class SingleLetterFormatter(Formatter):
         return super().format(record)
 
 
+class StripPrefixFormatter(Formatter):
+    """Formatter that strips a known base path from record.pathname."""
+
+    def __init__(self, fmt, datefmt, base_path):
+        super().__init__(fmt, datefmt)
+        self.base = str(Path(base_path).resolve()) + "/"
+
+    def format(self, record):
+        path = record.pathname
+        if path.startswith(self.base):
+            record.pathname = "/" + path[len(self.base) :]
+        return super().format(record)
+
+
 # ------------------------------------------------------
 # Loggers
 # ------------------------------------------------------
@@ -162,9 +176,11 @@ def setup_logging():
         makedirs(str(log_dir), exist_ok=True)
         log_file = log_dir / f'{datetime.now().strftime("%Y%m%d_%H%M%S")}_kronicle_app.log'
 
-        file_formatter = Formatter(
-            "%(asctime)s [%(levelname)s] %(message)s",
+        kronicle_base = Path(__file__).resolve().parent.parent
+        file_formatter = StripPrefixFormatter(
+            "%(asctime)s [%(levelname)s] %(message)s\tf:/%(pathname)s:%(lineno)d",
             DATE_FORMAT,
+            kronicle_base,
         )
         file_handler = RotatingFileHandler(
             str(log_file),
@@ -180,19 +196,16 @@ def setup_logging():
         file_logger.setLevel(DEBUG)
         file_logger.propagate = False
         file_logger.addHandler(file_handler)
+
+        request_logger.addHandler(file_handler)
     except Exception:
         print(f"[WARN] Failed to set up file logger at {log_file}", file=sys.stderr)
         traceback.print_exc()
     # ---------------------
-    # Request logger
+    # Request logger (file only; uvicorn handles console)
     # ---------------------
-    request_formatter = Formatter("%(asctime)s [%(levelname)s] %(message)s", DATE_FORMAT)
-    request_handler = StreamHandler()
-    request_handler.setFormatter(request_formatter)
-
     request_logger.setLevel(INFO)
     request_logger.propagate = False
-    request_logger.addHandler(request_handler)
 
     # ---------------------
     # Syslog
@@ -243,7 +256,7 @@ def _log(level_func, color: str, here: str, *args, stacklevel=2, **kwargs):
     msg = format_input(here, *args, **kwargs)
     try:
         level_name = getattr(level_func, "__name__", "debug").upper()
-        file_logger.log(getattr(logging, level_name, logging.DEBUG), msg, exc_info=exc_info)
+        file_logger.log(getattr(logging, level_name, logging.DEBUG), msg, exc_info=exc_info, stacklevel=stacklevel)
     except Exception as e:
         print(e)
     level_func(f"[{color}]{escape(msg)}[/{color}]", stacklevel=stacklevel, exc_info=exc_info)
