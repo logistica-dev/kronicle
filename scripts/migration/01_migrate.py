@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import argparse
 import os
-import re
 from pathlib import Path
 
 from kronicle.db.migration.migration_manager import MigrationManager
 from kronicle.deps.settings import KronicleSettings
 from kronicle.utils.dev_logs import log_d
+from kronicle.utils.file_utils import load_env_file
 from kronicle.utils.str_utils import obfuscate_pwd_in_connection_url
 
 
@@ -27,10 +27,7 @@ def load_secrets(conf_path: str | None = None) -> None:
     )
 
     if secrets_path.exists():
-        for line in secrets_path.read_text().splitlines():
-            m = re.match(r'^(?:export\s+)?(\w+)\s*=\s*["\']?(.*?)["\']?\s*$', line)
-            if m:
-                os.environ[m.group(1)] = m.group(2)
+        load_env_file(secrets_path)
         log_d("load_secrets", "Env vars loaded from", secrets_path)
     else:
         log_d("load_secrets", "Secrets file not found", secrets_path)
