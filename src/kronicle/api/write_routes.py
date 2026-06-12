@@ -4,11 +4,11 @@ from fastapi import APIRouter, Depends, Query
 
 from kronicle.api.shared_read_routes import shared_read_router
 from kronicle.api.shared_write_routes import shared_writer_router
-from kronicle.auth.auth_middleware import require_auth, require_permission
-from kronicle.schemas.permissions.permission import Permission, PermissionAction, PermissionTarget
+from kronicle.auth.auth_middleware import require_auth, require_permission_set
 from kronicle.deps.channel_deps import channel_service
 from kronicle.schemas.payload.input_payload import InputPayload
 from kronicle.schemas.payload.response_payload import ResponsePayload
+from kronicle.schemas.permissions.permission import Permission, PermissionAction, PermissionTarget
 from kronicle.services.channel_service import ChannelService
 
 writer_router = APIRouter(tags=["Input data"], dependencies=[Depends(require_auth)])
@@ -30,7 +30,14 @@ writer_router.include_router(shared_writer_router)
     summary="Upsert metadata and insert rows",
     description="Append-only operation: creates new metadata if missing and inserts channel data rows",
     response_model=ResponsePayload,
-    dependencies=[Depends(require_permission(Permission(PermissionTarget.DATA, PermissionAction.WRITE)))],
+    dependencies=[
+        Depends(
+            require_permission_set(
+                Permission(PermissionTarget.CHANNEL, PermissionAction.CREATE),
+                Permission(PermissionTarget.ROW, PermissionAction.CREATE),
+            )
+        )
+    ],
 )
 async def upsert_metadata_and_rows(
     payload: InputPayload,

@@ -7,9 +7,9 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import EmailStr
 
 from kronicle.auth.auth_middleware import require_auth, require_permission
-from kronicle.schemas.permissions.permission import Permission, PermissionAction, PermissionTarget
 from kronicle.deps.rbac_deps import rbac_service
 from kronicle.errors.error_types import BadRequestError, NotFoundError
+from kronicle.schemas.permissions.permission import Permission, PermissionAction, PermissionTarget
 from kronicle.schemas.rbac.input_group_schemas import InputGroup
 from kronicle.schemas.rbac.input_policy_schemas import InputChannelPolicy, InputZonePolicy
 from kronicle.schemas.rbac.input_role_schemas import InputRole
@@ -25,6 +25,7 @@ rbac_router = APIRouter(tags=["RBAC"], dependencies=[Depends(require_auth)])
 @rbac_router.get(
     "/users",
     response_model=OutputUser | list[OutputUser] | None,
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.USER, PermissionAction.READ)))],
 )
 def list_users(
     email: EmailStr | None = Query(None, description="Optional email to filter by"),  # noqa: B008
@@ -48,6 +49,7 @@ def list_users(
 @rbac_router.get(
     "/users/{user_id}",
     response_model=OutputUser | list[OutputUser] | None,
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.USER, PermissionAction.READ)))],
 )
 def get_user_by_id(
     user_id: UUID,
@@ -174,6 +176,7 @@ def create_group(
     summary="List all groups",
     description="Returns all RBAC groups.",
     response_model=list[OutputGroup],
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.GROUP, PermissionAction.READ)))],
 )
 def list_groups(
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
@@ -186,6 +189,7 @@ def list_groups(
     summary="Get a group by ID",
     description="Returns a single RBAC group.",
     response_model=OutputGroup,
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.GROUP, PermissionAction.READ)))],
 )
 def get_group(
     group_id: UUID,
@@ -330,6 +334,7 @@ def create_role(
     summary="List all roles",
     description="Returns all RBAC roles.",
     response_model=list[OutputRole],
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.ROLE, PermissionAction.READ)))],
 )
 def list_roles(
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
@@ -342,6 +347,7 @@ def list_roles(
     summary="Get a role by ID",
     description="Returns a single RBAC role.",
     response_model=OutputRole,
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.ROLE, PermissionAction.READ)))],
 )
 def get_role(
     role_id: UUID,
@@ -425,6 +431,7 @@ def create_zone_policy(
     summary="List policies for a zone",
     description="Returns all policies assigned for a specific zone.",
     response_model=list[dict],
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.POLICY, PermissionAction.READ)))],
 )
 def list_zone_policies(
     zone_id: UUID,
@@ -475,6 +482,7 @@ def create_channel_policy(
     summary="List policies for a channel",
     description="Returns all policies assigned for a specific channel.",
     response_model=list[dict],
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.POLICY, PermissionAction.READ)))],
 )
 def list_channel_policies(
     channel_id: UUID,

@@ -151,6 +151,22 @@ def require_superuser(
     return user
 
 
+def _check_permission(request: Request, user: dict, perm_obj: Permission) -> bool | None:
+    """Check a single permission with caching. Returns True/False/None (superuser)."""
+    if user.get("is_superuser"):
+        return None
+
+    perm_str = str(perm_obj)
+    cache: dict = request.state.__dict__.setdefault("_perm_cache", {})
+    if perm_str in cache:
+        return cache[perm_str]
+
+    rbac = request.app.state.rbac_service
+    has_perm = rbac.user_has_permission(UUID(user["sub"]), perm_obj)
+    cache[perm_str] = has_perm
+    return has_perm
+
+
 def require_permission(permission: str | Permission):
     """
     Factory that returns a dependency which checks if the authenticated user
@@ -164,32 +180,72 @@ def require_permission(permission: str | Permission):
     """
 
     if isinstance(permission, str):
-        perm_str: str = permission
         perm_obj: Permission = Permission.parse(permission)
     else:
         perm_obj = permission
-        perm_str = str(permission)
 
     def _require_permission(
         request: Request,
         user: dict = Depends(require_auth),  # noqa: B008
     ) -> dict:
-        # Superusers have all permissions
-        if user.get("is_superuser"):
+        result = _check_permission(request, user, perm_obj)
+        if result is None:
             return user
-
-        # Per-request cache: avoids repeated DB queries for the same permission
-        cache: dict = request.state.__dict__.setdefault("_perm_cache", {})
-        if perm_str in cache:
-            if not cache[perm_str]:
-                raise ForbiddenError(f"Missing required permission: '{perm_str}'")
-            return user
-
-        rbac = request.app.state.rbac_service
-        has_perm = rbac.user_has_permission(UUID(user["sub"]), perm_obj)
-        cache[perm_str] = has_perm
-        if not has_perm:
-            raise ForbiddenError(f"Missing required permission: '{perm_str}'")
+        if not result:
+            raise ForbiddenError(f"Missing required permission: '{perm_obj}'")
         return user
 
     return _require_permission
+
+
+def require_permission_set(*permissions: str | Permission):
+    """
+    Factory returning a dependency that passes if the user has ALL specified permissions (AND).
+
+    Usage:
+        @router.post("/clone", dependencies=[Depends(require_permission_set("channel:read", "channel:create"))])
+        def clone_endpoint(): ...
+    """
+
+    perm_objects = [Permission.parse(p) if isinstance(p, str) else p for p in permissions]
+
+    def _require_set(
+        request: Request,
+        user: dict = Depends(require_auth),  # noqa: B008
+    ) -> dict:
+        for perm in perm_objects:
+            result = _check_permission(request, user, perm)
+            if result is None:
+                return user
+            if not result:
+                raise ForbiddenError(f"Missing required permission: '{perm}'")
+        return user
+
+    return _require_set
+
+
+def require_any_permission(*permissions: str | Permission):
+    """
+    Factory returning a dependency that passes if the user has ANY of the specified permissions (OR).
+
+    Usage:
+        @router.get("/rows", dependencies=[Depends(require_any_permission("channel:read", "row:read"))])
+        def rows_endpoint(): ...
+    """
+
+    perm_objects = [Permission.parse(p) if isinstance(p, str) else p for p in permissions]
+
+    def _require_any(
+        request: Request,
+        user: dict = Depends(require_auth),  # noqa: B008
+    ) -> dict:
+        for perm in perm_objects:
+            result = _check_permission(request, user, perm)
+            if result is None:
+                return user
+            if result:
+                return user
+        names = ", ".join(str(p) for p in perm_objects)
+        raise ForbiddenError(f"Missing required permission: need one of ({names})")
+
+    return _require_any

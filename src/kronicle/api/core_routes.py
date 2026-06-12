@@ -6,7 +6,6 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 
 from kronicle.auth.auth_middleware import require_auth, require_permission
-from kronicle.schemas.permissions.permission import Permission, PermissionAction, PermissionTarget
 from kronicle.deps.channel_deps import channel_service
 from kronicle.deps.rbac_deps import rbac_service
 from kronicle.errors.error_types import NotFoundError
@@ -14,6 +13,7 @@ from kronicle.schemas.core.input_core_channel_schemas import InputCoreChannelPat
 from kronicle.schemas.core.input_zone_schemas import InputZone, InputZonePatch
 from kronicle.schemas.core.safe_core_channel_schemas import OutputCoreChannel
 from kronicle.schemas.core.safe_zone_schemas import OutputZone
+from kronicle.schemas.permissions.permission import Permission, PermissionAction, PermissionTarget
 from kronicle.services.channel_service import ChannelService
 from kronicle.services.rbac_service import RbacService
 from kronicle.utils.str_utils import uuid_to_str
@@ -45,6 +45,7 @@ def create_zone(
     summary="List all zones",
     description="Returns all zones.",
     response_model=list[OutputZone],
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.ZONE, PermissionAction.READ)))],
 )
 def list_zones(
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
@@ -58,6 +59,7 @@ def list_zones(
     summary="Get a zone by ID",
     description="Returns a single zone.",
     response_model=OutputZone,
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.ZONE, PermissionAction.READ)))],
 )
 def get_zone(
     zone_id: UUID,
@@ -111,6 +113,7 @@ def delete_zone(
     summary="List all core channels",
     description="Returns all CoreChannels.",
     response_model=list[OutputCoreChannel],
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.CHANNEL, PermissionAction.READ)))],
 )
 def list_core_channels(
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
@@ -123,6 +126,7 @@ def list_core_channels(
     summary="Get a core channel by ID",
     description="Returns a single CoreChannel.",
     response_model=OutputCoreChannel,
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.CHANNEL, PermissionAction.READ)))],
 )
 def get_core_channel(
     channel_id: UUID,
@@ -139,7 +143,7 @@ def get_core_channel(
     summary="Patch a core channel",
     description="Partially update a CoreChannel's name, details, or zone_id.",
     response_model=OutputCoreChannel,
-    dependencies=[Depends(require_permission(Permission(PermissionTarget.CORE_CHANNEL, PermissionAction.UPDATE)))],
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.CHANNEL, PermissionAction.UPDATE)))],
 )
 def patch_core_channel(
     channel_id: UUID,
@@ -167,7 +171,7 @@ def patch_core_channel(
         "in the core RBAC schema. Also ensures a default zone exists."
     ),
     response_model=dict,
-    dependencies=[Depends(require_permission(Permission(PermissionTarget.CORE_CHANNEL, PermissionAction.SYNC)))],
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.CHANNEL, PermissionAction.SYNC)))],
 )
 async def sync_core_channels(
     controller: ChannelService = Depends(channel_service),  # noqa: B008

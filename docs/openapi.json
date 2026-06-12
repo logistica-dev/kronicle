@@ -292,8 +292,8 @@
           "Read data"
         ],
         "summary": "Fetch stored rows for a specific channel",
-        "description": "Retrieves all stored time-series rows for the specified `channel_id`.\nFiltering, ordering, pagination, and column selection are supported via query parameters.\nThe response includes both metadata and data rows according to the channel\u2019s schema.",
-        "operationId": "fetch_channel_rows_api_v1_channels__channel_id__rows_get",
+        "description": "Retrieves all stored time-series rows for the specified `channel_id`.\nFiltering, ordering, pagination, and column selection are supported via query parameters.\nThe response includes both metadata and data rows according to the channel's schema.",
+        "operationId": "fetch_channel_rows_v2_api_v1_channels__channel_id__rows_get",
         "security": [
           {
             "HTTPBearer": []
@@ -341,7 +341,7 @@
           "Read data"
         ],
         "summary": "Fetch the data as columns for a specific channel",
-        "description": "Retrieves all stored time-series rows for the specified `channel_id` and present them as columns.\nThe response includes both metadata and data columns according to the channel\u2019s schema.",
+        "description": "Retrieves all stored time-series rows for the specified `channel_id` and present them as columns.\nThe response includes both metadata and data columns according to the channel's schema.",
         "operationId": "fetch_channel_columns_api_v1_channels__channel_id__columns_get",
         "security": [
           {
@@ -594,8 +594,8 @@
           "Input data"
         ],
         "summary": "Fetch stored rows for a specific channel",
-        "description": "Retrieves all stored time-series rows for the specified `channel_id`.\nFiltering, ordering, pagination, and column selection are supported via query parameters.\nThe response includes both metadata and data rows according to the channel\u2019s schema.",
-        "operationId": "fetch_channel_rows_data_v1_channels__channel_id__rows_get",
+        "description": "Retrieves all stored time-series rows for the specified `channel_id`.\nFiltering, ordering, pagination, and column selection are supported via query parameters.\nThe response includes both metadata and data rows according to the channel's schema.",
+        "operationId": "fetch_channel_rows_v2_data_v1_channels__channel_id__rows_get",
         "security": [
           {
             "HTTPBearer": []
@@ -712,7 +712,7 @@
           "Input data"
         ],
         "summary": "Fetch the data as columns for a specific channel",
-        "description": "Retrieves all stored time-series rows for the specified `channel_id` and present them as columns.\nThe response includes both metadata and data columns according to the channel\u2019s schema.",
+        "description": "Retrieves all stored time-series rows for the specified `channel_id` and present them as columns.\nThe response includes both metadata and data columns according to the channel's schema.",
         "operationId": "fetch_channel_columns_data_v1_channels__channel_id__columns_get",
         "security": [
           {
@@ -1088,8 +1088,8 @@
           "Setup data channels"
         ],
         "summary": "Fetch stored rows for a specific channel",
-        "description": "Retrieves all stored time-series rows for the specified `channel_id`.\nFiltering, ordering, pagination, and column selection are supported via query parameters.\nThe response includes both metadata and data rows according to the channel\u2019s schema.",
-        "operationId": "fetch_channel_rows_setup_v1_channels__channel_id__rows_get",
+        "description": "Retrieves all stored time-series rows for the specified `channel_id`.\nFiltering, ordering, pagination, and column selection are supported via query parameters.\nThe response includes both metadata and data rows according to the channel's schema.",
+        "operationId": "fetch_channel_rows_v2_setup_v1_channels__channel_id__rows_get",
         "security": [
           {
             "HTTPBearer": []
@@ -1333,7 +1333,7 @@
           "Setup data channels"
         ],
         "summary": "Fetch the data as columns for a specific channel",
-        "description": "Retrieves all stored time-series rows for the specified `channel_id` and present them as columns.\nThe response includes both metadata and data columns according to the channel\u2019s schema.",
+        "description": "Retrieves all stored time-series rows for the specified `channel_id` and present them as columns.\nThe response includes both metadata and data columns according to the channel's schema.",
         "operationId": "fetch_channel_columns_setup_v1_channels__channel_id__columns_get",
         "security": [
           {
@@ -3854,7 +3854,7 @@
         "title": "InputPayload",
         "description": "User-provided payload for a channel.\nThe 'channel_schema' field is a dict of column_name -> type string.",
         "example": {
-          "channel_id": "1dcda45a-f50a-457e-ab57-f15e9141f6ee",
+          "channel_id": "875bfef7-c0ee-49e3-af44-d82f9f92ada2",
           "channel_schema": {
             "humidity": "float",
             "temperature": "float",
@@ -3863,7 +3863,7 @@
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-21175",
+          "name": "thermo-98285",
           "rows": [
             {
               "humidity": 55.1,

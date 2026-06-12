@@ -6,12 +6,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 
-from kronicle.auth.auth_middleware import require_auth, require_permission
-from kronicle.schemas.permissions.permission import Permission, PermissionAction, PermissionTarget
+from kronicle.auth.auth_middleware import require_any_permission, require_auth, require_permission
 from kronicle.deps.channel_deps import channel_service
 from kronicle.schemas.filters.row_query_filter import RowQueryFilter
 from kronicle.schemas.filters.row_request_filter import RowRequestFilter
 from kronicle.schemas.payload.response_payload import ResponsePayload
+from kronicle.schemas.permissions.permission import Permission, PermissionAction, PermissionTarget
 from kronicle.services.channel_service import ChannelService
 from kronicle.utils.dev_logs import log_d
 
@@ -19,12 +19,7 @@ from kronicle.utils.dev_logs import log_d
 Routes available to users with read-only permissions.
 These endpoints allow safe retrieval of channel metadata and stored data.
 """
-shared_read_router = APIRouter(
-    dependencies=[
-        Depends(require_auth),
-        Depends(require_permission(Permission(PermissionTarget.DATA, PermissionAction.READ))),
-    ]
-)
+shared_read_router = APIRouter(dependencies=[Depends(require_auth)])
 
 
 # def parse_from_date(
@@ -55,6 +50,7 @@ shared_read_router = APIRouter(
         "Optionally, filter by a name or tag_key/tag_value pair."
     ),
     response_model=list[ResponsePayload] | ResponsePayload,
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.CHANNEL, PermissionAction.READ)))],
 )
 async def fetch_all_channels_metadata(
     name: str | None = Query(None, description="Optional name to filter by"),
@@ -91,6 +87,7 @@ async def fetch_all_channels_metadata(
         "but does not include the row data itself."
     ),
     response_model=ResponsePayload,
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.CHANNEL, PermissionAction.READ)))],
 )
 async def fetch_channel(
     channel_id: UUID,
@@ -105,9 +102,17 @@ async def fetch_channel(
     description=(
         "Retrieves all stored time-series rows for the specified `channel_id`.\n"
         "Filtering, ordering, pagination, and column selection are supported via query parameters.\n"
-        "The response includes both metadata and data rows according to the channel’s schema.\n"
+        "The response includes both metadata and data rows according to the channel's schema.\n"
     ),
     response_model=ResponsePayload,
+    dependencies=[
+        Depends(
+            require_any_permission(
+                Permission(PermissionTarget.CHANNEL, PermissionAction.READ),
+                Permission(PermissionTarget.ROW, PermissionAction.READ),
+            )
+        )
+    ],
 )
 async def fetch_channel_rows(
     channel_id: UUID,
@@ -123,9 +128,17 @@ async def fetch_channel_rows(
     summary="Fetch the data as columns for a specific channel",
     description=(
         "Retrieves all stored time-series rows for the specified `channel_id` and present them as columns.\n"
-        "The response includes both metadata and data columns according to the channel’s schema.\n"
+        "The response includes both metadata and data columns according to the channel's schema.\n"
     ),
     response_model=ResponsePayload,
+    dependencies=[
+        Depends(
+            require_any_permission(
+                Permission(PermissionTarget.CHANNEL, PermissionAction.READ),
+                Permission(PermissionTarget.ROW, PermissionAction.READ),
+            )
+        )
+    ],
 )
 async def fetch_channel_columns(
     channel_id: UUID,

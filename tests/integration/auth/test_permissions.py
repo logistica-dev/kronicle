@@ -71,7 +71,7 @@ def role_data_reader(su_client) -> Generator[dict, None, None]:
         {
             "name": f"test_data_reader_{tag}",
             "description": "Can read channel data",
-            "permissions": ["data:read"],
+            "permissions": ["data:read", "core:channel:read"],
         },
     )
     yield role

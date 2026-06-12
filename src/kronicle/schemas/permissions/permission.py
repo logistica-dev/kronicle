@@ -7,11 +7,10 @@ class PermissionTarget(StrEnum):
     USER = "user"
     ROLE = "role"
     GROUP = "group"
-    DATA = "data"
-    ZONE = "zone"
-    CORE_CHANNEL = "core:channel"
-    CHANNEL = "channel"
     POLICY = "policy"
+    ZONE = "zone"
+    CHANNEL = "channel"
+    ROW = "row"
 
 
 class PermissionAction(StrEnum):
@@ -22,6 +21,7 @@ class PermissionAction(StrEnum):
     ASSIGN = "assign"
     SYNC = "sync"
     WRITE = "write"
+    DELEGATE = "delegate"
 
 
 class Permission:

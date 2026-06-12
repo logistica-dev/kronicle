@@ -8,14 +8,14 @@ from fastapi import APIRouter, Body, Depends
 
 from kronicle.api.shared_read_routes import shared_read_router
 from kronicle.api.shared_write_routes import shared_writer_router
-from kronicle.auth.auth_middleware import require_auth, require_permission
-from kronicle.schemas.permissions.permission import Permission, PermissionAction, PermissionTarget
+from kronicle.auth.auth_middleware import require_auth, require_permission, require_permission_set
 from kronicle.db.data.models.schema_registry import SchemaRegistry
 from kronicle.deps.channel_deps import channel_service
 from kronicle.schemas.filters.row_query_filter import RowQueryFilter
 from kronicle.schemas.filters.row_request_filter import RowRequestFilter
 from kronicle.schemas.payload.input_payload import InputPayload
 from kronicle.schemas.payload.response_payload import ResponsePayload
+from kronicle.schemas.permissions.permission import Permission, PermissionAction, PermissionTarget
 from kronicle.services.channel_service import ChannelService
 
 """
@@ -93,7 +93,14 @@ async def patch_channel(
     description="Creates a new channel by cloning an existing channel's schema and optionally metadata. "
     "Does not copy data rows nor name.",
     response_model=ResponsePayload,
-    dependencies=[Depends(require_permission(Permission(PermissionTarget.CHANNEL, PermissionAction.CREATE)))],
+    dependencies=[
+        Depends(
+            require_permission_set(
+                Permission(PermissionTarget.CHANNEL, PermissionAction.READ),
+                Permission(PermissionTarget.CHANNEL, PermissionAction.CREATE),
+            )
+        )
+    ],
 )
 async def clone_channel(
     payload: InputPayload,
@@ -128,7 +135,7 @@ async def delete_channel(
     summary="Delete all rows for a channel",
     description="Removes all data rows for the specified channel, while keeping its metadata intact.",
     response_model=ResponsePayload,
-    dependencies=[Depends(require_permission(Permission(PermissionTarget.CHANNEL, PermissionAction.DELETE)))],
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.ROW, PermissionAction.DELETE)))],
 )
 async def delete_channel_rows(
     channel_id: UUID,
@@ -157,6 +164,7 @@ async def batch_delete_channels(
     summary="list the types available to describe the columns",
     description=("Retrieves every Python-like type that can be used to describe the type of a data column"),
     response_model=list[str],
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.CHANNEL, PermissionAction.READ)))],
 )
 async def get_column_types():
     return SchemaRegistry().allowed_types

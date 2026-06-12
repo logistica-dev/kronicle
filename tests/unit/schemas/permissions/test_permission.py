@@ -8,11 +8,10 @@ class TestPermissionTarget:
         assert PermissionTarget.USER.value == "user"
         assert PermissionTarget.ROLE.value == "role"
         assert PermissionTarget.GROUP.value == "group"
-        assert PermissionTarget.DATA.value == "data"
         assert PermissionTarget.ZONE.value == "zone"
-        assert PermissionTarget.CORE_CHANNEL.value == "core:channel"
         assert PermissionTarget.CHANNEL.value == "channel"
         assert PermissionTarget.POLICY.value == "policy"
+        assert PermissionTarget.ROW.value == "row"
 
 
 class TestPermissionAction:
@@ -24,6 +23,7 @@ class TestPermissionAction:
         assert PermissionAction.ASSIGN.value == "assign"
         assert PermissionAction.SYNC.value == "sync"
         assert PermissionAction.WRITE.value == "write"
+        assert PermissionAction.DELEGATE.value == "delegate"
 
 
 class TestPermissionConstruct:
@@ -39,12 +39,12 @@ class TestPermissionConstruct:
 
     def test_parse_compound_target(self):
         p = Permission.parse("core:channel:update")
-        assert p.target == PermissionTarget.CORE_CHANNEL
+        assert p.target == PermissionTarget.CHANNEL
         assert p.action == PermissionAction.UPDATE
 
     def test_parse_compound_target_sync(self):
         p = Permission.parse("core:channel:sync")
-        assert p.target == PermissionTarget.CORE_CHANNEL
+        assert p.target == PermissionTarget.CHANNEL
         assert p.action == PermissionAction.SYNC
 
     def test_parse_invalid_no_colon(self):
@@ -74,7 +74,7 @@ class TestPermissionStr:
         assert str(p) == "zone:create"
 
     def test_str_compound_target(self):
-        p = Permission(PermissionTarget.CORE_CHANNEL, PermissionAction.UPDATE)
+        p = Permission(PermissionTarget.CHANNEL, PermissionAction.UPDATE)
         assert str(p) == "core:channel:update"
 
     def test_str_roundtrip(self):
@@ -145,8 +145,8 @@ class TestPermissionAllStrings:
             ("zone:create", PermissionTarget.ZONE, PermissionAction.CREATE),
             ("zone:update", PermissionTarget.ZONE, PermissionAction.UPDATE),
             ("zone:delete", PermissionTarget.ZONE, PermissionAction.DELETE),
-            ("core:channel:update", PermissionTarget.CORE_CHANNEL, PermissionAction.UPDATE),
-            ("core:channel:sync", PermissionTarget.CORE_CHANNEL, PermissionAction.SYNC),
+            ("core:channel:update", PermissionTarget.CHANNEL, PermissionAction.UPDATE),
+            ("core:channel:sync", PermissionTarget.CHANNEL, PermissionAction.SYNC),
             ("channel:create", PermissionTarget.CHANNEL, PermissionAction.CREATE),
             ("channel:update", PermissionTarget.CHANNEL, PermissionAction.UPDATE),
             ("channel:delete", PermissionTarget.CHANNEL, PermissionAction.DELETE),
