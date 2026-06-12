@@ -4,6 +4,7 @@ from __future__ import annotations
 import os
 import subprocess
 from datetime import datetime, timezone
+from json import dumps
 from pathlib import Path
 
 from alembic.config import Config
@@ -165,13 +166,12 @@ class MigrationManager:
                         log_d(mod, "  metadata == actual — diff engine agrees, hash mismatch is false positive")
                     else:
                         log_d(mod, f"  metadata ({metadata_hash[:12]}…) ≠ actual — real structural difference")
-                        import json
 
                         db_cat = DatabaseCatalogBuilder(conn).from_database(schema)
                         meta_tables = {n: t for n, t in Base.metadata.tables.items() if t.schema == schema}
                         meta_cat = DatabaseCatalogBuilder.from_metadata(meta_tables)
-                        db_raw = json.dumps(db_cat.as_tuple(), default=str)
-                        meta_raw = json.dumps(meta_cat.as_tuple(), default=str)
+                        db_raw = dumps(db_cat.as_tuple(), default=str)
+                        meta_raw = dumps(meta_cat.as_tuple(), default=str)
                         log_d(mod, f"  DB catalog len={len(db_raw)}  Meta catalog len={len(meta_raw)}")
                         log_d(mod, f"  DB catalog:   {db_raw[:2000]}")
                         log_d(mod, f"  Meta catalog: {meta_raw[:2000]}")

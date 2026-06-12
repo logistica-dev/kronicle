@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from hashlib import sha256
+from json import dumps
 
 from sqlalchemy import inspect
 from sqlalchemy.schema import Table
@@ -51,11 +53,9 @@ class DatabaseCatalog:
         return (self.namespace, tuple(t.as_tuple() for t in self.tables))
 
     def compute_hash(self) -> str:
-        import hashlib
-        import json
 
-        raw = json.dumps(self.as_tuple(), sort_keys=True)
-        return hashlib.sha256(raw.encode()).hexdigest()
+        raw = dumps(self.as_tuple(), sort_keys=True)
+        return sha256(raw.encode()).hexdigest()
 
 
 # ==================================================================================================

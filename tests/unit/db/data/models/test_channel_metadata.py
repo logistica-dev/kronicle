@@ -1,4 +1,4 @@
-import json
+from json import dumps
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
@@ -165,10 +165,10 @@ def test_from_db_with_dict_json(sample_metadata):
 def test_from_db_with_stringified_json(sample_metadata):
     row = {
         "channel_id": sample_metadata.channel_id,
-        "channel_schema": json.dumps(sample_metadata.channel_schema.to_db_json()),
+        "channel_schema": dumps(sample_metadata.channel_schema.to_db_json()),
         "name": sample_metadata.name,
-        "user_metadata": json.dumps(sample_metadata.user_metadata),
-        "tags": json.dumps(sample_metadata.tags),
+        "user_metadata": dumps(sample_metadata.user_metadata),
+        "tags": dumps(sample_metadata.tags),
         "received_at": IsoDateTime.now_local(),
     }
 

@@ -4,6 +4,7 @@ from collections.abc import Generator
 import pytest
 import requests as req
 from kronicle_sdk.conf.read_conf import ConnectionInformation, Settings
+from kronicle_sdk.connectors.abc_connector import KroniclePayload
 from kronicle_sdk.connectors.channel.channel_setup import KronicleSetup
 from kronicle_sdk.connectors.rbac.rbac_identity_setup import KronicleRbacIdentitySetup
 from kronicle_sdk.utils.str_utils import tiny_id, uuid4_str
@@ -165,14 +166,16 @@ def test_user(
 @pytest.fixture(scope="module")
 def test_channel(su_setup_client) -> Generator[str, None, None]:
     channel_id = uuid4_str()
-    payload = {
-        "channel_id": channel_id,
-        "channel_name": f"perm_test_chan_{tiny_id()}",
-        "channel_schema": {"time": "datetime", "temp": "float"},
-        "metadata": {"source": "perm-test"},
-        "tags": {"test": "true"},
-        "rows": [{"time": "2025-01-10T00:00:00Z", "temp": 22.5}],
-    }
+    payload = KroniclePayload.from_json(
+        {
+            "channel_id": channel_id,
+            "channel_name": f"perm_test_chan_{tiny_id()}",
+            "channel_schema": {"time": "datetime", "temp": "float"},
+            "metadata": {"source": "perm-test"},
+            "tags": {"test": "true"},
+            "rows": [{"time": "2025-01-10T00:00:00Z", "temp": 22.5}],
+        }
+    )
     su_setup_client.insert_rows_and_upsert_channel(payload)
     yield channel_id
     try:

@@ -151,9 +151,11 @@ class RbacService:
             db_user = self._user_repo.get_by_external_id(db, external_id=orcid)
         return OutputUser.from_db_user(db_user) if db_user else None
 
-    def list_users(self) -> list[OutputUser]:
+    def list_users(self, *, include_inactive: bool = False) -> list[OutputUser]:
+        here = mod + ".list_users"
+        log_d(here, "include_inactive", include_inactive)
         with self._db.get_db() as db:  # read-only
-            users = self._user_repo.fetch_all(db)
+            users = self._user_repo.fetch_all(db, include_inactive=include_inactive)
         return [OutputUser.from_db_user(u) for u in users]
 
     # ----------------------------------------------------------------------------------------------
@@ -226,18 +228,10 @@ class RbacService:
             raise UnauthorizedError("User doesn't exists")
         log_w(here, db_user.snapshot)
 
-        role_count = db.execute(
-            select(func.count(RbacUserRoles.user_id)).where(RbacUserRoles.user_id == db_user.id)
-        ).scalar()
-        if role_count:
-            raise ConflictError(
-                f"User '{db_user.email}' cannot be deleted: assigned to {role_count} role(s). "
-                "Remove these role assignments first."
-            )
-
-        # Clear group memberships explicitly — even with ondelete=CASCADE,
+        # Clear role and group assignments explicitly — even with ondelete=CASCADE,
         # SQLAlchemy's unitofwork processor tries to NULL PK columns before
         # the DB-level cascade, causing an AssertionError.
+        db.execute(delete(RbacUserRoles.__table__).where(RbacUserRoles.user_id == db_user.id))
         db.execute(delete(RbacUserGroups.__table__).where(RbacUserGroups.user_id == db_user.id))
 
         deleted_user = self._user_repo.delete_user(db, user=db_user)

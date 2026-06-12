@@ -1976,6 +1976,25 @@
               "title": "Orcid"
             },
             "description": "Optional ORCID to filter by"
+          },
+          {
+            "name": "include_inactive",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional flag, list includes inactive users if True",
+              "default": false,
+              "title": "Include Inactive"
+            },
+            "description": "Optional flag, list includes inactive users if True"
           }
         ],
         "responses": {
@@ -3835,7 +3854,7 @@
         "title": "InputPayload",
         "description": "User-provided payload for a channel.\nThe 'channel_schema' field is a dict of column_name -> type string.",
         "example": {
-          "channel_id": "a1b3c4bf-7043-49b5-b73d-8a308275a243",
+          "channel_id": "13826442-1146-4d47-927f-b3b860bb07f9",
           "channel_schema": {
             "humidity": "float",
             "temperature": "float",
@@ -3844,7 +3863,7 @@
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-cd88e",
+          "name": "thermo-16749",
           "rows": [
             {
               "humidity": 55.1,
@@ -4308,6 +4327,17 @@
             "default": {
               "auth_method": "local"
             }
+          },
+          "is_active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Active"
           }
         },
         "type": "object",

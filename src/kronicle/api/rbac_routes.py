@@ -29,6 +29,7 @@ def list_users(
     email: EmailStr | None = Query(None, description="Optional email to filter by"),  # noqa: B008
     name: str | None = Query(None, description="Optional name to filter by"),
     orcid: str | None = Query(None, description="Optional ORCID to filter by"),
+    include_inactive: bool | None = Query(False, description="Optional flag, list includes inactive users if True"),
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
 ):
     if email:
@@ -40,7 +41,7 @@ def list_users(
     for query in [email, name, orcid]:
         if query is not None:
             raise BadRequestError(f"Query {query} cannot be empty")
-    return rbac.list_users()
+    return rbac.list_users(include_inactive=True if include_inactive is True else False)
 
 
 @rbac_router.get(
