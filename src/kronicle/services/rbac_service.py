@@ -31,6 +31,7 @@ from kronicle.repo.rbac.entities.rbac_user_repo import RbacUserRepository
 from kronicle.repo.rbac.links.rbac_user_group_repo import RbacUserGroupRepository
 from kronicle.schemas.core.safe_core_channel_schemas import OutputCoreChannel
 from kronicle.schemas.core.safe_zone_schemas import OutputZone
+from kronicle.schemas.permissions.permission import Permission
 from kronicle.schemas.rbac.input_user_schemas import InputUserLogin
 from kronicle.schemas.rbac.safe_group_schemas import OutputGroup
 from kronicle.schemas.rbac.safe_role_schemas import OutputRole
@@ -271,9 +272,11 @@ class RbacService:
     # ----------------------------------------------------------------------------------------------
     # Permissions
     # ----------------------------------------------------------------------------------------------
-    def user_has_permission(self, user_id: UUID, permission: str) -> bool:
+    def user_has_permission(self, user_id: UUID, permission: str | Permission) -> bool:
+        perm_str = str(permission) if isinstance(permission, Permission) else permission
+        Permission.parse(perm_str)
         with self._db.get_db() as db:
-            perm_jsonb = cast(func.json_build_array(permission), JSONB)
+            perm_jsonb = cast(func.json_build_array(perm_str), JSONB)
             # Direct user roles
             has_direct = db.execute(
                 select(RbacUserRoles.role_id)

@@ -6,6 +6,7 @@ import pytest
 
 from kronicle.db.rbac.models.rbac_user import RbacUser
 from kronicle.errors.error_types import UnauthorizedError
+from kronicle.schemas.permissions.permission import Permission, PermissionAction, PermissionTarget
 from kronicle.schemas.rbac.safe_user_schemas import OutputUser, ProcessedUser
 from kronicle.services.rbac_service import RbacService
 
@@ -100,3 +101,15 @@ def test_user_has_permission_empty_groups_no_match(rbac_service):
     result = rbac_service.user_has_permission(user_id, "data:read")
 
     assert result is False
+
+
+def test_user_has_permission_with_permission_object(rbac_service):
+    user_id = uuid4()
+    db = rbac_service._db.get_db.return_value.__enter__.return_value
+    db.execute.return_value.first.return_value = (uuid4(),)
+
+    perm = Permission(PermissionTarget.DATA, PermissionAction.READ)
+    result = rbac_service.user_has_permission(user_id, perm)
+
+    assert result is True
+    db.execute.assert_called_once()

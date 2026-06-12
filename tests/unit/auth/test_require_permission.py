@@ -7,6 +7,7 @@ from fastapi import Request
 
 from kronicle.auth.auth_middleware import require_permission
 from kronicle.errors.error_types import ForbiddenError
+from kronicle.schemas.permissions.permission import Permission, PermissionAction, PermissionTarget
 
 
 class MockState:
@@ -41,7 +42,8 @@ def test_permission_granted(mock_request):
     result = dep(request=mock_request, user=user)
 
     assert result == user
-    mock_request.app.state.rbac_service.user_has_permission.assert_called_once_with(user_id, "zone:create")
+    expected_perm = Permission(PermissionTarget.ZONE, PermissionAction.CREATE)
+    mock_request.app.state.rbac_service.user_has_permission.assert_called_once_with(user_id, expected_perm)
 
 
 def test_permission_denied(mock_request):

@@ -14,6 +14,7 @@ from starlette.responses import JSONResponse
 from kronicle.auth.jwt_service import JWTService
 from kronicle.errors.error_types import ForbiddenError, KronicleAppError, UnauthorizedError
 from kronicle.errors.exception_handlers import app_error_adapter
+from kronicle.schemas.permissions.permission import Permission
 from kronicle.utils.dev_logs import log_d
 
 
@@ -150,7 +151,7 @@ def require_superuser(
     return user
 
 
-def require_permission(permission: str):
+def require_permission(permission: str | Permission):
     """
     Factory that returns a dependency which checks if the authenticated user
     has a specific permission via the RBAC policy engine.
@@ -162,6 +163,13 @@ def require_permission(permission: str):
         def admin_endpoint(): ...
     """
 
+    if isinstance(permission, str):
+        perm_str: str = permission
+        perm_obj: Permission = Permission.parse(permission)
+    else:
+        perm_obj = permission
+        perm_str = str(permission)
+
     def _require_permission(
         request: Request,
         user: dict = Depends(require_auth),  # noqa: B008
@@ -172,16 +180,16 @@ def require_permission(permission: str):
 
         # Per-request cache: avoids repeated DB queries for the same permission
         cache: dict = request.state.__dict__.setdefault("_perm_cache", {})
-        if permission in cache:
-            if not cache[permission]:
-                raise ForbiddenError(f"Missing required permission: '{permission}'")
+        if perm_str in cache:
+            if not cache[perm_str]:
+                raise ForbiddenError(f"Missing required permission: '{perm_str}'")
             return user
 
         rbac = request.app.state.rbac_service
-        has_perm = rbac.user_has_permission(UUID(user["sub"]), permission)
-        cache[permission] = has_perm
+        has_perm = rbac.user_has_permission(UUID(user["sub"]), perm_obj)
+        cache[perm_str] = has_perm
         if not has_perm:
-            raise ForbiddenError(f"Missing required permission: '{permission}'")
+            raise ForbiddenError(f"Missing required permission: '{perm_str}'")
         return user
 
     return _require_permission

@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import EmailStr
 
 from kronicle.auth.auth_middleware import require_auth, require_permission
+from kronicle.schemas.permissions.permission import Permission, PermissionAction, PermissionTarget
 from kronicle.deps.rbac_deps import rbac_service
 from kronicle.errors.error_types import BadRequestError, NotFoundError
 from kronicle.schemas.rbac.input_group_schemas import InputGroup
@@ -58,7 +59,7 @@ def get_user_by_id(
 @rbac_router.post(
     "/users",
     response_model=OutputUser,
-    dependencies=[Depends(require_permission("user:create"))],
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.USER, PermissionAction.CREATE)))],
 )
 def create_user(
     user_in: InputUser,
@@ -71,7 +72,7 @@ def create_user(
 @rbac_router.patch(
     "/users",
     response_model=OutputUser,
-    dependencies=[Depends(require_permission("user:update"))],
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.USER, PermissionAction.UPDATE)))],
 )
 def patch_user(
     user_in: InputUser,
@@ -84,7 +85,7 @@ def patch_user(
 @rbac_router.delete(
     "/users",
     response_model=OutputUser,
-    dependencies=[Depends(require_permission("user:delete"))],
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.USER, PermissionAction.DELETE)))],
 )
 def delete_user(
     user_in: InputUser,
@@ -100,7 +101,7 @@ def delete_user(
 @rbac_router.delete(
     "/users/{user_id}",
     response_model=OutputUser,
-    dependencies=[Depends(require_permission("user:delete"))],
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.USER, PermissionAction.DELETE)))],
 )
 def delete_user_by_id(
     user_id: UUID,
@@ -122,7 +123,7 @@ def delete_user_by_id(
     summary="Assign a role to a user",
     description="Grants a role directly to a user.",
     response_model=dict,
-    dependencies=[Depends(require_permission("role:assign"))],
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.ROLE, PermissionAction.ASSIGN)))],
 )
 def assign_role_to_user(
     user_id: UUID,
@@ -138,7 +139,7 @@ def assign_role_to_user(
     summary="Remove a role from a user",
     description="Revokes a role directly from a user.",
     response_model=dict,
-    dependencies=[Depends(require_permission("role:assign"))],
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.ROLE, PermissionAction.ASSIGN)))],
 )
 def remove_role_from_user(
     user_id: UUID,
@@ -159,7 +160,7 @@ def remove_role_from_user(
     summary="Create a group",
     description="Creates a new RBAC group.",
     response_model=OutputGroup,
-    dependencies=[Depends(require_permission("group:create"))],
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.GROUP, PermissionAction.CREATE)))],
 )
 def create_group(
     group_in: InputGroup,
@@ -201,7 +202,7 @@ def get_group(
     summary="Update a group",
     description="Partially update a group's name or details.",
     response_model=OutputGroup,
-    dependencies=[Depends(require_permission("group:update"))],
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.GROUP, PermissionAction.UPDATE)))],
 )
 def patch_group(
     group_id: UUID,
@@ -218,7 +219,7 @@ def patch_group(
     summary="Delete a group",
     description="Deletes an RBAC group.",
     response_model=OutputGroup,
-    dependencies=[Depends(require_permission("group:delete"))],
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.GROUP, PermissionAction.DELETE)))],
 )
 def delete_group(
     group_id: UUID,
@@ -235,7 +236,7 @@ def delete_group(
     summary="Add user to group",
     description="Adds a user as member of a group.",
     response_model=dict,
-    dependencies=[Depends(require_permission("group:assign"))],
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.GROUP, PermissionAction.ASSIGN)))],
 )
 def add_user_to_group(
     group_id: UUID,
@@ -251,7 +252,7 @@ def add_user_to_group(
     summary="Remove user from group",
     description="Removes a user from a group.",
     response_model=dict,
-    dependencies=[Depends(require_permission("group:assign"))],
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.GROUP, PermissionAction.ASSIGN)))],
 )
 def remove_user_from_group(
     group_id: UUID,
@@ -272,7 +273,7 @@ def remove_user_from_group(
     summary="Assign a role to a group",
     description="Grants a role to all members of a group.",
     response_model=dict,
-    dependencies=[Depends(require_permission("role:assign"))],
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.ROLE, PermissionAction.ASSIGN)))],
 )
 def assign_role_to_group(
     group_id: UUID,
@@ -288,7 +289,7 @@ def assign_role_to_group(
     summary="Remove a role from a group",
     description="Revokes a role from all members of a group.",
     response_model=dict,
-    dependencies=[Depends(require_permission("role:assign"))],
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.ROLE, PermissionAction.ASSIGN)))],
 )
 def remove_role_from_group(
     group_id: UUID,
@@ -309,7 +310,7 @@ def remove_role_from_group(
     summary="Create a role",
     description="Creates a new RBAC role with permissions and restrictions.",
     response_model=OutputRole,
-    dependencies=[Depends(require_permission("role:create"))],
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.ROLE, PermissionAction.CREATE)))],
 )
 def create_role(
     role_in: InputRole,
@@ -357,7 +358,7 @@ def get_role(
     summary="Update a role",
     description="Partially update a role's name, description, permissions, or restrictions.",
     response_model=OutputRole,
-    dependencies=[Depends(require_permission("role:update"))],
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.ROLE, PermissionAction.UPDATE)))],
 )
 def patch_role(
     role_id: UUID,
@@ -384,7 +385,7 @@ def patch_role(
     summary="Delete a role",
     description="Deletes an RBAC role.",
     response_model=OutputRole,
-    dependencies=[Depends(require_permission("role:delete"))],
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.ROLE, PermissionAction.DELETE)))],
 )
 def delete_role(
     role_id: UUID,
@@ -406,7 +407,7 @@ def delete_role(
     summary="Assign a role to a subject for a zone",
     description="Creates a policy that grants a role to a user or group for a specific zone.",
     response_model=dict,
-    dependencies=[Depends(require_permission("policy:create"))],
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.POLICY, PermissionAction.CREATE)))],
 )
 def create_zone_policy(
     policy_in: InputZonePolicy,
@@ -436,7 +437,7 @@ def list_zone_policies(
     "/policies/zones/{policy_id}",
     summary="Delete a zone policy",
     description="Removes a zone policy by its ID.",
-    dependencies=[Depends(require_permission("policy:delete"))],
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.POLICY, PermissionAction.DELETE)))],
 )
 def delete_zone_policy(
     policy_id: UUID,
@@ -456,7 +457,7 @@ def delete_zone_policy(
     summary="Assign a role to a subject for a channel",
     description="Creates a policy that grants a role to a user or group for a specific channel.",
     response_model=dict,
-    dependencies=[Depends(require_permission("policy:create"))],
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.POLICY, PermissionAction.CREATE)))],
 )
 def create_channel_policy(
     policy_in: InputChannelPolicy,
@@ -486,7 +487,7 @@ def list_channel_policies(
     "/policies/channels/{policy_id}",
     summary="Delete a channel policy",
     description="Removes a channel policy by its ID.",
-    dependencies=[Depends(require_permission("policy:delete"))],
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.POLICY, PermissionAction.DELETE)))],
 )
 def delete_channel_policy(
     policy_id: UUID,
