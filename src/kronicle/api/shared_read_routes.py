@@ -62,20 +62,20 @@ async def fetch_all_channels_metadata(
         None,
         description="Optional tags as comma-separated key:value pairs, e.g., color:red",
     ),
-    controller: ChannelService = Depends(channel_service),  # noqa: B008
+    data_service: ChannelService = Depends(channel_service),  # noqa: B008
 ) -> list[ResponsePayload] | ResponsePayload:
     here = "fetch_all_channels_metadata"
     # Name filter takes priority
     if name:
-        return await controller.fetch_metadata_by_name(name=name)
+        return await data_service.fetch_metadata_by_name(name=name)
     # Tags filter
     if tags:
         log_d(here, "tags:", tags)
-        return await controller.fetch_metadata_by_tags(tags=tags)
+        return await data_service.fetch_metadata_by_tags(tags=tags)
     if metadata:
         log_d(here, "metadata:", metadata)
-        return await controller.fetch_metadata_by_user_meta(user_meta=metadata)
-    return await controller.fetch_all_metadata()
+        return await data_service.fetch_metadata_by_user_meta(user_meta=metadata)
+    return await data_service.fetch_all_metadata()
 
 
 @shared_read_router.get(
@@ -91,9 +91,9 @@ async def fetch_all_channels_metadata(
 )
 async def fetch_channel(
     channel_id: UUID,
-    controller: ChannelService = Depends(channel_service),  # noqa: B008
+    data_service: ChannelService = Depends(channel_service),  # noqa: B008
 ) -> ResponsePayload:
-    return await controller.fetch_metadata(channel_id)
+    return await data_service.fetch_metadata(channel_id)
 
 
 @shared_read_router.get(
@@ -117,10 +117,10 @@ async def fetch_channel(
 async def fetch_channel_rows(
     channel_id: UUID,
     filter: Annotated[RowQueryFilter, Depends(RowQueryFilter.from_query_params)],
-    controller: ChannelService = Depends(channel_service),  # noqa: B008
+    data_service: ChannelService = Depends(channel_service),  # noqa: B008
 ) -> ResponsePayload:
     request_filter = RowRequestFilter.from_query(filter)
-    return await controller.fetch_rows(channel_id, filter=request_filter)
+    return await data_service.fetch_rows(channel_id, filter=request_filter)
 
 
 @shared_read_router.get(
@@ -143,7 +143,7 @@ async def fetch_channel_rows(
 async def fetch_channel_columns(
     channel_id: UUID,
     filter: Annotated[RowQueryFilter, Depends(RowQueryFilter.from_query_params)],
-    controller: ChannelService = Depends(channel_service),  # noqa: B008
+    data_service: ChannelService = Depends(channel_service),  # noqa: B008
 ) -> ResponsePayload:
     request_filter = RowRequestFilter.from_query(filter)
-    return await controller.fetch_columns(channel_id, filter=request_filter)
+    return await data_service.fetch_columns(channel_id, filter=request_filter)

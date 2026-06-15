@@ -71,7 +71,7 @@ def role_data_reader(su_client) -> Generator[dict, None, None]:
         {
             "name": f"test_data_reader_{tag}",
             "description": "Can read channel data",
-            "permissions": ["data:read", "core:channel:read"],
+            "permissions": ["channel:read", "rbac:access", "setup:access"],
         },
     )
     yield role
@@ -89,7 +89,7 @@ def role_data_writer(su_client) -> Generator[dict, None, None]:
         {
             "name": f"test_data_writer_{tag}",
             "description": "Can write channel data",
-            "permissions": ["data:write"],
+            "permissions": ["row:create", "data:access"],
         },
     )
     yield role
@@ -176,7 +176,7 @@ def test_channel(su_setup_client) -> Generator[str, None, None]:
             "rows": [{"time": "2025-01-10T00:00:00Z", "temp": 22.5}],
         }
     )
-    su_setup_client.insert_rows_and_upsert_channel(payload)
+    su_setup_client.create_channel(payload)
     yield channel_id
     try:
         su_setup_client.delete_channel(channel_id)
@@ -195,12 +195,12 @@ def user_jwt(base_url, test_user):
 
 
 # ==============================================================================
-# Direct role (data:read) — positive
+# Direct role (channel:read) — positive
 # ==============================================================================
 
 
 class TestDirectRolePermission:
-    """User has data:read via direct user-role assignment."""
+    """User has channel:read via direct user-role assignment."""
 
     def test_read_channels(self, base_url, user_jwt, test_channel):
         resp = _get(base_url, user_jwt, "/setup/v1/channels")
@@ -218,12 +218,12 @@ class TestDirectRolePermission:
 
 
 # ==============================================================================
-# Direct role (data:write) — positive
+# Direct role (row:create) — positive
 # ==============================================================================
 
 
 class TestDirectRoleWritePermission:
-    """User has data:write via direct user-role assignment."""
+    """User has row:create via direct user-role assignment."""
 
     def test_write_rows(self, base_url, user_jwt, test_channel):
         resp = _post(

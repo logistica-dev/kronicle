@@ -35,7 +35,7 @@ def test_channel(kronicle_setup) -> Generator[str, None, None]:
             {"time": "2025-01-10T00:00:00Z", "value": 1.0},
         ],
     }
-    kronicle_setup.insert_rows_and_upsert_channel(payload)
+    kronicle_setup.create_channel(payload)
     yield channel_id
     try:
         kronicle_setup.delete_channel(channel_id)

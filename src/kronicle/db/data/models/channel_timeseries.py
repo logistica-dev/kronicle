@@ -113,7 +113,7 @@ class ChannelTimeseries:
     def rows(self):
         return self._rows
 
-    def add_rows(self, rows: list[dict[str, Any]], strict: bool = False) -> ChannelTimeseries:
+    def add_rows(self, rows: list[dict[str, Any]], *, strict: bool = False) -> ChannelTimeseries:
         """
         Validate and store multiple rows in the channel timeseries.
 

@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Kronicle",
-    "summary": "FastAPI-powered TimescaleDB microservice for storing time-series measurements",
-    "version": "0.0.1"
+    "title": "TestApp",
+    "summary": "desc",
+    "version": "1.0"
   },
   "paths": {
     "/health/live": {
@@ -293,7 +293,7 @@
         ],
         "summary": "Fetch stored rows for a specific channel",
         "description": "Retrieves all stored time-series rows for the specified `channel_id`.\nFiltering, ordering, pagination, and column selection are supported via query parameters.\nThe response includes both metadata and data rows according to the channel's schema.",
-        "operationId": "fetch_channel_rows_v2_api_v1_channels__channel_id__rows_get",
+        "operationId": "fetch_channel_rows_api_v1_channels__channel_id__rows_get",
         "security": [
           {
             "HTTPBearer": []
@@ -478,65 +478,6 @@
             }
           }
         }
-      },
-      "post": {
-        "tags": [
-          "Input data"
-        ],
-        "summary": "Upsert metadata and insert rows",
-        "description": "Append-only operation: creates new metadata if missing and inserts channel data rows",
-        "operationId": "upsert_metadata_and_rows_data_v1_channels_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "strict",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "description": "If true, abort on any validation error",
-              "default": false,
-              "title": "Strict"
-            },
-            "description": "If true, abort on any validation error"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/InputPayload"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponsePayload"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
       }
     },
     "/data/v1/channels/{channel_id}": {
@@ -586,6 +527,85 @@
             }
           }
         }
+      },
+      "post": {
+        "tags": [
+          "Input data"
+        ],
+        "summary": "Update channel metadata and insert rows",
+        "description": "Updates metadata for an existing channel and inserts data rows.\nThe channel must already exist.",
+        "operationId": "update_channel_and_insert_rows_data_v1_channels__channel_id__post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "channel_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Channel Id"
+            }
+          },
+          {
+            "name": "zone_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Zone Id"
+            }
+          },
+          {
+            "name": "strict",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "If true, abort on any validation error",
+              "default": false,
+              "title": "Strict"
+            },
+            "description": "If true, abort on any validation error"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InputPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponsePayload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/data/v1/channels/{channel_id}/rows": {
@@ -595,7 +615,7 @@
         ],
         "summary": "Fetch stored rows for a specific channel",
         "description": "Retrieves all stored time-series rows for the specified `channel_id`.\nFiltering, ordering, pagination, and column selection are supported via query parameters.\nThe response includes both metadata and data rows according to the channel's schema.",
-        "operationId": "fetch_channel_rows_v2_data_v1_channels__channel_id__rows_get",
+        "operationId": "fetch_channel_rows_data_v1_channels__channel_id__rows_get",
         "security": [
           {
             "HTTPBearer": []
@@ -731,6 +751,77 @@
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponsePayload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/data/v1/zones/{zone_id}/channels": {
+      "post": {
+        "tags": [
+          "Input data"
+        ],
+        "summary": "Create a channel in a zone with optional rows",
+        "description": "Creates a new channel inside the specified zone and inserts data rows.\nThe channel must not already exist.",
+        "operationId": "create_channel_in_zone_data_v1_zones__zone_id__channels_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "zone_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Zone Id"
+            }
+          },
+          {
+            "name": "strict",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "If true, abort on any validation error",
+              "default": false,
+              "title": "Strict"
+            },
+            "description": "If true, abort on any validation error"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InputPayload"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -1089,7 +1180,7 @@
         ],
         "summary": "Fetch stored rows for a specific channel",
         "description": "Retrieves all stored time-series rows for the specified `channel_id`.\nFiltering, ordering, pagination, and column selection are supported via query parameters.\nThe response includes both metadata and data rows according to the channel's schema.",
-        "operationId": "fetch_channel_rows_v2_setup_v1_channels__channel_id__rows_get",
+        "operationId": "fetch_channel_rows_setup_v1_channels__channel_id__rows_get",
         "security": [
           {
             "HTTPBearer": []
@@ -1743,6 +1834,59 @@
         }
       }
     },
+    "/core/v1/zones/{zone_id}/channels": {
+      "get": {
+        "tags": [
+          "Core"
+        ],
+        "summary": "List all core channels",
+        "description": "Returns all CoreChannels.",
+        "operationId": "list_zone_channels_core_v1_zones__zone_id__channels_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "zone_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Zone Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OutputCoreChannel"
+                  },
+                  "title": "Response List Zone Channels Core V1 Zones  Zone Id  Channels Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/core/v1/channels": {
       "get": {
         "tags": [
@@ -1750,7 +1894,7 @@
         ],
         "summary": "List all core channels",
         "description": "Returns all CoreChannels.",
-        "operationId": "list_core_channels_core_v1_channels_get",
+        "operationId": "list_channels_core_v1_channels_get",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -1761,7 +1905,7 @@
                     "$ref": "#/components/schemas/OutputCoreChannel"
                   },
                   "type": "array",
-                  "title": "Response List Core Channels Core V1 Channels Get"
+                  "title": "Response List Channels Core V1 Channels Get"
                 }
               }
             }
@@ -3854,7 +3998,7 @@
         "title": "InputPayload",
         "description": "User-provided payload for a channel.\nThe 'channel_schema' field is a dict of column_name -> type string.",
         "example": {
-          "channel_id": "875bfef7-c0ee-49e3-af44-d82f9f92ada2",
+          "channel_id": "0782d328-b20c-4866-a241-9bad0174e781",
           "channel_schema": {
             "humidity": "float",
             "temperature": "float",
@@ -3863,7 +4007,7 @@
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-98285",
+          "name": "thermo-99abb",
           "rows": [
             {
               "humidity": 55.1,

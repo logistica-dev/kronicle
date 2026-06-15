@@ -42,9 +42,9 @@ def test_writer_channels(kronicle_writer, test_channel_id):
 
 
 @pytest.mark.integration
-def test_insert_rows_and_upsert_channel(kronicle_writer, kronicle_setup):
-    """Insert a new channel with sample rows and verify result."""
-    here = "KWrite.insert"
+def test_create_and_update_channel(kronicle_setup, kronicle_writer):
+    """Create a channel via setup, then update and insert rows via writer."""
+    here = "KWrite.create"
     channel_id: str = uuid4_str()
     channel_name: str = f"demo_channel_{tiny_id()}"
     now_tag = now_local()
@@ -62,8 +62,23 @@ def test_insert_rows_and_upsert_channel(kronicle_writer, kronicle_setup):
     }
     log_d(here, "payload", payload)
 
-    result = kronicle_writer.insert_rows_and_upsert_channel(payload)
-    result = kronicle_writer.add_row(payload)
+    # Create channel via setup (admin path, no zone_id needed)
+    result = kronicle_setup.create_channel(payload)
+    assert result is not None
+    assert result.channel_id == UUID(channel_id)
+
+    # Update channel metadata + insert more rows via writer (data path)
+    payload["rows"] = [
+        {"time": now_local(), "temperature": 42.0},
+    ]
+    result = kronicle_writer.insert_rows_and_update_channel(payload)
+    log_d(here, "result", result)
+
+    assert result is not None
+    assert isinstance(result, KroniclePayload)
+    assert result.channel_id == UUID(channel_id)
+
+    # Insert additional rows directly
     result = kronicle_writer.insert_rows(
         id=channel_id,
         rows=[
@@ -71,9 +86,6 @@ def test_insert_rows_and_upsert_channel(kronicle_writer, kronicle_setup):
             {"time": now_local(), "temperature": 12.5},
         ],
     )
-    log_d(here, "result", result)
-
-    # Basic assertions
     assert result is not None
     assert isinstance(result, KroniclePayload)
     assert result.channel_id == UUID(channel_id)

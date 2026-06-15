@@ -25,7 +25,13 @@ Admin/setup routes:
 - Delete all rows for a channel
 - list all channels with metadata and row counts
 """
-setup_router = APIRouter(tags=["Setup data channels"], dependencies=[Depends(require_auth)])
+setup_router = APIRouter(
+    tags=["Setup data channels"],
+    dependencies=[
+        Depends(require_auth),
+        Depends(require_permission(Permission(PermissionTarget.SETUP, PermissionAction.ACCESS))),
+    ],
+)
 
 
 # --------------------------------------------------------------------------------------------------
@@ -51,9 +57,9 @@ setup_router.include_router(shared_writer_router)
 )
 async def create_channel(
     payload: InputPayload,
-    controller: ChannelService = Depends(channel_service),  # noqa: B008
+    data_service: ChannelService = Depends(channel_service),  # noqa: B008
 ):
-    return await controller.create_channel(payload)
+    return await data_service.create_channel(payload)
 
 
 @setup_router.put(
@@ -68,9 +74,9 @@ async def create_channel(
 )
 async def update_channel(
     payload: InputPayload,
-    controller: ChannelService = Depends(channel_service),  # noqa: B008
+    data_service: ChannelService = Depends(channel_service),  # noqa: B008
 ):
-    return await controller.upsert_metadata(payload)
+    return await data_service.upsert_metadata(payload)
 
 
 @setup_router.patch(
@@ -82,9 +88,9 @@ async def update_channel(
 )
 async def patch_channel(
     payload: InputPayload,
-    controller: ChannelService = Depends(channel_service),  # noqa: B008
+    data_service: ChannelService = Depends(channel_service),  # noqa: B008
 ):
-    return await controller.patch_metadata(payload)
+    return await data_service.patch_metadata(payload)
 
 
 @setup_router.post(
@@ -104,9 +110,9 @@ async def patch_channel(
 )
 async def clone_channel(
     payload: InputPayload,
-    controller: ChannelService = Depends(channel_service),  # noqa: B008
+    data_service: ChannelService = Depends(channel_service),  # noqa: B008
 ):
-    return await controller.clone_channel(payload)
+    return await data_service.clone_channel(payload)
 
 
 # --------------------------------------------------------------------------------------------------
@@ -125,9 +131,9 @@ async def clone_channel(
 )
 async def delete_channel(
     channel_id: UUID,
-    controller: ChannelService = Depends(channel_service),  # noqa: B008
+    data_service: ChannelService = Depends(channel_service),  # noqa: B008
 ):
-    return await controller.delete_channel(channel_id)
+    return await data_service.delete_channel(channel_id)
 
 
 @setup_router.delete(
@@ -140,10 +146,10 @@ async def delete_channel(
 async def delete_channel_rows(
     channel_id: UUID,
     filter: Annotated[RowQueryFilter, Depends()],
-    controller: ChannelService = Depends(channel_service),  # noqa: B008
+    data_service: ChannelService = Depends(channel_service),  # noqa: B008
 ):
     request_filter = RowRequestFilter.from_query(filter)
-    return await controller.delete_rows_for_channel(channel_id, filter=request_filter)
+    return await data_service.delete_rows_for_channel(channel_id, filter=request_filter)
 
 
 @setup_router.post(
@@ -154,9 +160,9 @@ async def delete_channel_rows(
 )
 async def batch_delete_channels(
     payload: dict = Body(..., examples=[{"channel_ids": ["uuid1", "uuid2"]}]),  # noqa
-    controller: ChannelService = Depends(channel_service),  # noqa: B008
+    data_service: ChannelService = Depends(channel_service),  # noqa: B008
 ):
-    return await controller.delete_channels(payload["channel_ids"])
+    return await data_service.delete_channels(payload["channel_ids"])
 
 
 @setup_router.get(

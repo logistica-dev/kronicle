@@ -211,7 +211,7 @@ def test_complex_payload(kronicle_setup):
         "tags": {"test": True},
         "rows": [obs.to_row()],
     }
-    result = kronicle_setup.insert_rows_and_upsert_channel(payload)
+    result = kronicle_setup.create_channel(payload)
     new_channel = kronicle_setup.clone_channel(result.channel_id)
     kronicle_setup.delete_channel(result.channel_id)
     kronicle_setup.delete_channel(new_channel.channel_id)

@@ -19,7 +19,13 @@ from kronicle.schemas.rbac.safe_role_schemas import OutputRole
 from kronicle.schemas.rbac.safe_user_schemas import OutputUser, ProcessedUser
 from kronicle.services.rbac_service import RbacService
 
-rbac_router = APIRouter(tags=["RBAC"], dependencies=[Depends(require_auth)])
+rbac_router = APIRouter(
+    tags=["RBAC"],
+    dependencies=[
+        Depends(require_auth),
+        Depends(require_permission(Permission(PermissionTarget.RBAC, PermissionAction.ACCESS))),
+    ],
+)
 
 
 @rbac_router.get(

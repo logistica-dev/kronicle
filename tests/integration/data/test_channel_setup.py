@@ -63,7 +63,7 @@ def test_insert_rows_and_upsert_channel(kronicle_setup):
     }
     log_d(here, "payload", payload)
 
-    result = kronicle_setup.insert_rows_and_upsert_channel(payload)
+    result = kronicle_setup.create_channel(payload)
     log_d(here, "result", result)
     log_d(here, "column types", kronicle_setup.column_types)
 

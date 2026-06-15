@@ -109,13 +109,27 @@ def delete_zone(
 
 
 @core_router.get(
+    "/zones/{zone_id}/channels",
+    summary="List all core channels",
+    description="Returns all CoreChannels.",
+    response_model=list[OutputCoreChannel],
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.CHANNEL, PermissionAction.READ)))],
+)
+def list_zone_channels(
+    zone_id: UUID,
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.get_core_channels(zone_id=zone_id)
+
+
+@core_router.get(
     "/channels",
     summary="List all core channels",
     description="Returns all CoreChannels.",
     response_model=list[OutputCoreChannel],
     dependencies=[Depends(require_permission(Permission(PermissionTarget.CHANNEL, PermissionAction.READ)))],
 )
-def list_core_channels(
+def list_channels(
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
 ):
     return rbac.get_core_channels()
@@ -174,10 +188,10 @@ def patch_core_channel(
     dependencies=[Depends(require_permission(Permission(PermissionTarget.CHANNEL, PermissionAction.SYNC)))],
 )
 async def sync_core_channels(
-    controller: ChannelService = Depends(channel_service),  # noqa: B008
+    data_service: ChannelService = Depends(channel_service),  # noqa: B008
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
 ):
-    data_channels = await controller.fetch_all_metadata()
+    data_channels = await data_service.fetch_all_metadata()
     channel_ids = [c.channel_id for c in data_channels]
 
     default_zone = rbac.ensure_default_zone()

@@ -750,15 +750,29 @@ class RbacService:
     # ----------------------------------------------------------------------------------------------
     # Core Channels
     # ----------------------------------------------------------------------------------------------
-    def get_core_channels(self) -> list[OutputCoreChannel]:
+    def get_core_channels(self, *, zone_id: UUID | None = None) -> list[OutputCoreChannel]:
         with self._db.get_db() as db:
-            channels = self._channel_repo.fetch_all(db)
+            if zone_id:
+                channels = self._channel_repo.get_by_zone(db, zone_id=zone_id)
+            else:
+                channels = self._channel_repo.fetch_all(db)
         return [OutputCoreChannel.from_db_core_channel(c) for c in channels]
 
     def get_core_channel(self, channel_id: UUID) -> OutputCoreChannel | None:
         with self._db.get_db() as db:
             channel = self._channel_repo.get_by_id(db, id=channel_id)
         return OutputCoreChannel.from_db_core_channel(channel) if channel else None
+
+    def create_core_channel(self, channel_id: UUID, zone_id: UUID, name: str | None = None) -> OutputCoreChannel:
+        with self._db.transaction() as db:
+            core_channel = CoreChannel(
+                id=channel_id,
+                name=name or str(channel_id),
+                zone_id=zone_id,
+            )
+            db.add(core_channel)
+            db.flush()
+        return OutputCoreChannel.from_db_core_channel(core_channel)
 
     def patch_core_channel(
         self,

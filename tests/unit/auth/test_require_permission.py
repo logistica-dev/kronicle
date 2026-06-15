@@ -5,7 +5,7 @@ from uuid import uuid4
 import pytest
 from fastapi import Request
 
-from kronicle.auth.auth_middleware import require_permission
+from kronicle.auth.auth_middleware import require_any_permission, require_permission, require_permission_set
 from kronicle.errors.error_types import ForbiddenError
 from kronicle.schemas.permissions.permission import Permission, PermissionAction, PermissionTarget
 
@@ -79,3 +79,84 @@ def test_cache_hit_blocks(mock_request):
         dep(request=mock_request, user=user)
 
     assert mock_request.app.state.rbac_service.user_has_permission.call_count == 1
+
+
+# ==============================================================================
+# require_permission_set (AND)
+# ==============================================================================
+
+
+def test_permission_set_all_pass(mock_request):
+    user = {"sub": str(uuid4()), "is_superuser": False}
+    mock_request.app.state.rbac_service.user_has_permission.return_value = True
+
+    dep = require_permission_set("channel:read", "channel:create")
+    result = dep(request=mock_request, user=user)
+
+    assert result == user
+    assert mock_request.app.state.rbac_service.user_has_permission.call_count == 2
+
+
+def test_permission_set_one_fails(mock_request):
+    user = {"sub": str(uuid4()), "is_superuser": False}
+    mock_request.app.state.rbac_service.user_has_permission.side_effect = [True, False]
+
+    dep = require_permission_set("channel:read", "channel:create")
+    with pytest.raises(ForbiddenError, match="channel:create"):
+        dep(request=mock_request, user=user)
+
+
+def test_permission_set_superuser_bypass(mock_request):
+    user = {"sub": str(uuid4()), "is_superuser": True}
+
+    dep = require_permission_set("channel:read", "channel:create")
+    result = dep(request=mock_request, user=user)
+
+    assert result == user
+    mock_request.app.state.rbac_service.user_has_permission.assert_not_called()
+
+
+# ==============================================================================
+# require_any_permission (OR)
+# ==============================================================================
+
+
+def test_any_permission_first_match(mock_request):
+    user = {"sub": str(uuid4()), "is_superuser": False}
+    mock_request.app.state.rbac_service.user_has_permission.return_value = True
+
+    dep = require_any_permission("channel:read", "row:read")
+    result = dep(request=mock_request, user=user)
+
+    assert result == user
+    mock_request.app.state.rbac_service.user_has_permission.assert_called_once()
+
+
+def test_any_permission_second_match(mock_request):
+    user = {"sub": str(uuid4()), "is_superuser": False}
+    mock_request.app.state.rbac_service.user_has_permission.side_effect = [False, True]
+
+    dep = require_any_permission("channel:read", "row:read")
+    result = dep(request=mock_request, user=user)
+
+    assert result == user
+    assert mock_request.app.state.rbac_service.user_has_permission.call_count == 2
+
+
+def test_any_permission_none_match(mock_request):
+    user = {"sub": str(uuid4()), "is_superuser": False}
+    mock_request.app.state.rbac_service.user_has_permission.return_value = False
+
+    dep = require_any_permission("channel:read", "row:read")
+    with pytest.raises(ForbiddenError, match="need one of"):
+        dep(request=mock_request, user=user)
+
+
+def test_any_permission_superuser_bypass(mock_request):
+    user = {"sub": str(uuid4()), "is_superuser": True}
+
+    dep = require_any_permission("channel:read", "row:read")
+    result = dep(request=mock_request, user=user)
+
+    assert result == user
+    mock_request.app.state.rbac_service.user_has_permission.assert_not_called()

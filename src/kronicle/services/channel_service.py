@@ -176,7 +176,7 @@ class ChannelService:
         )
         return ResponsePayload.from_channel_resource(updated_resource)
 
-    async def upsert_metadata_and_insert_rows(self, payload: InputPayload, strict: bool = False) -> ResponsePayload:
+    async def upsert_metadata_and_insert_rows(self, payload: InputPayload, *, strict: bool = False) -> ResponsePayload:
         """
         Upsert metadata and insert rows in one operation.
         - Metadata is validated first; if invalid, no rows are inserted.
@@ -185,10 +185,8 @@ class ChannelService:
         here = "up_meta_add_rows"
         # log_d(here)
         processed = await self._process_payload_for_insertion(payload, strict=strict)
-        updated_resource = await self._repo.upsert_metadata_and_insert_rows(
-            processed=processed,
-            strict=strict,
-        )
+        # Zone-channel binding is validated by `validate_zone_channel_binding` dependency in write_routes.py.
+        updated_resource = await self._repo.upsert_metadata_and_insert_rows(processed=processed, strict=strict)
         log_d(here, "updated resource", updated_resource.channel_id)
 
         return ResponsePayload.from_channel_resource(updated_resource)

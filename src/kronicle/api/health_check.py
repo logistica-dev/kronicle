@@ -17,11 +17,11 @@ def liveness():
 
 @health_check.get("/ready", include_in_schema=True)
 async def readiness(
-    controller: ChannelService = Depends(channel_service),  # noqa: B008
+    data_service: ChannelService = Depends(channel_service),  # noqa: B008
 ):
     try:
         # Minimal DB probe
-        is_ready: bool = await controller.ping()  # type: ignore[attr-defined]
+        is_ready: bool = await data_service.ping()  # type: ignore[attr-defined]
         return {"status": "ready"} if is_ready else {"status": "not_ready"}
     except Exception as e:
         return {"status": "not_ready", "error": str(e)}

@@ -137,7 +137,7 @@ class ProcessedPayload(BaseModel):
     # Internal row validation
     # ----------------------------------------------------------------------------------
 
-    def _validate_rows(self, strict: bool = False) -> ProcessedPayload:
+    def _validate_rows(self, *, strict: bool = False) -> ProcessedPayload:
         """
         Validate rows against the channel schema.
 

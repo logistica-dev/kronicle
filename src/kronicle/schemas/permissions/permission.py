@@ -11,6 +11,9 @@ class PermissionTarget(StrEnum):
     ZONE = "zone"
     CHANNEL = "channel"
     ROW = "row"
+    RBAC = "rbac"
+    DATA = "data"
+    SETUP = "setup"
 
 
 class PermissionAction(StrEnum):
@@ -22,6 +25,7 @@ class PermissionAction(StrEnum):
     SYNC = "sync"
     WRITE = "write"
     DELEGATE = "delegate"
+    ACCESS = "access"
 
 
 class Permission:

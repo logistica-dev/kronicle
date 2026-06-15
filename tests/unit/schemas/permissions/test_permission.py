@@ -12,6 +12,9 @@ class TestPermissionTarget:
         assert PermissionTarget.CHANNEL.value == "channel"
         assert PermissionTarget.POLICY.value == "policy"
         assert PermissionTarget.ROW.value == "row"
+        assert PermissionTarget.RBAC.value == "rbac"
+        assert PermissionTarget.DATA.value == "data"
+        assert PermissionTarget.SETUP.value == "setup"
 
 
 class TestPermissionAction:
@@ -24,6 +27,7 @@ class TestPermissionAction:
         assert PermissionAction.SYNC.value == "sync"
         assert PermissionAction.WRITE.value == "write"
         assert PermissionAction.DELEGATE.value == "delegate"
+        assert PermissionAction.ACCESS.value == "access"
 
 
 class TestPermissionConstruct:
@@ -37,13 +41,12 @@ class TestPermissionConstruct:
         assert p.target == PermissionTarget.ZONE
         assert p.action == PermissionAction.CREATE
 
-    def test_parse_compound_target(self):
-        p = Permission.parse("core:channel:update")
-        assert p.target == PermissionTarget.CHANNEL
-        assert p.action == PermissionAction.UPDATE
+    def test_parse_compound_target_no_longer_supported(self):
+        with pytest.raises(ValueError, match="Unknown permission target"):
+            Permission.parse("core:channel:update")
 
-    def test_parse_compound_target_sync(self):
-        p = Permission.parse("core:channel:sync")
+    def test_parse_simple_channel(self):
+        p = Permission.parse("channel:sync")
         assert p.target == PermissionTarget.CHANNEL
         assert p.action == PermissionAction.SYNC
 
@@ -57,7 +60,7 @@ class TestPermissionConstruct:
 
     def test_parse_invalid_empty_action(self):
         with pytest.raises(ValueError):
-            Permission.parse("data:")
+            Permission.parse("zone:")
 
     def test_parse_invalid_target(self):
         with pytest.raises(ValueError, match="Unknown permission target"):
@@ -65,7 +68,7 @@ class TestPermissionConstruct:
 
     def test_parse_invalid_action(self):
         with pytest.raises(ValueError, match="Unknown permission action"):
-            Permission.parse("data:unknown")
+            Permission.parse("zone:unknown")
 
 
 class TestPermissionStr:
@@ -73,12 +76,12 @@ class TestPermissionStr:
         p = Permission(PermissionTarget.ZONE, PermissionAction.CREATE)
         assert str(p) == "zone:create"
 
-    def test_str_compound_target(self):
+    def test_str_channel(self):
         p = Permission(PermissionTarget.CHANNEL, PermissionAction.UPDATE)
-        assert str(p) == "core:channel:update"
+        assert str(p) == "channel:update"
 
     def test_str_roundtrip(self):
-        raw = "data:write"
+        raw = "channel:read"
         assert str(Permission.parse(raw)) == raw
 
 
@@ -108,17 +111,17 @@ class TestPermissionEquality:
 
 class TestPermissionHash:
     def test_hashable(self):
-        p = Permission(PermissionTarget.DATA, PermissionAction.READ)
+        p = Permission(PermissionTarget.ZONE, PermissionAction.READ)
         s = {p}
         assert p in s
 
     def test_set_membership(self):
-        p1 = Permission(PermissionTarget.DATA, PermissionAction.READ)
-        p2 = Permission(PermissionTarget.DATA, PermissionAction.WRITE)
+        p1 = Permission(PermissionTarget.ZONE, PermissionAction.READ)
+        p2 = Permission(PermissionTarget.ZONE, PermissionAction.WRITE)
         s = {p1, p2}
-        assert Permission(PermissionTarget.DATA, PermissionAction.READ) in s
-        assert Permission(PermissionTarget.DATA, PermissionAction.WRITE) in s
-        assert Permission(PermissionTarget.ZONE, PermissionAction.CREATE) not in s
+        assert Permission(PermissionTarget.ZONE, PermissionAction.READ) in s
+        assert Permission(PermissionTarget.ZONE, PermissionAction.WRITE) in s
+        assert Permission(PermissionTarget.CHANNEL, PermissionAction.CREATE) not in s
 
     def test_hash_consistent_with_equality(self):
         a = Permission.parse("zone:create")
@@ -130,28 +133,37 @@ class TestPermissionAllStrings:
     def test_all_known_permissions_roundtrip(self):
         cases = [
             ("user:create", PermissionTarget.USER, PermissionAction.CREATE),
+            ("user:read", PermissionTarget.USER, PermissionAction.READ),
             ("user:update", PermissionTarget.USER, PermissionAction.UPDATE),
             ("user:delete", PermissionTarget.USER, PermissionAction.DELETE),
             ("role:assign", PermissionTarget.ROLE, PermissionAction.ASSIGN),
             ("role:create", PermissionTarget.ROLE, PermissionAction.CREATE),
+            ("role:read", PermissionTarget.ROLE, PermissionAction.READ),
             ("role:update", PermissionTarget.ROLE, PermissionAction.UPDATE),
             ("role:delete", PermissionTarget.ROLE, PermissionAction.DELETE),
             ("group:create", PermissionTarget.GROUP, PermissionAction.CREATE),
+            ("group:read", PermissionTarget.GROUP, PermissionAction.READ),
             ("group:update", PermissionTarget.GROUP, PermissionAction.UPDATE),
             ("group:delete", PermissionTarget.GROUP, PermissionAction.DELETE),
             ("group:assign", PermissionTarget.GROUP, PermissionAction.ASSIGN),
-            ("data:read", PermissionTarget.DATA, PermissionAction.READ),
-            ("data:write", PermissionTarget.DATA, PermissionAction.WRITE),
             ("zone:create", PermissionTarget.ZONE, PermissionAction.CREATE),
+            ("zone:read", PermissionTarget.ZONE, PermissionAction.READ),
             ("zone:update", PermissionTarget.ZONE, PermissionAction.UPDATE),
             ("zone:delete", PermissionTarget.ZONE, PermissionAction.DELETE),
-            ("core:channel:update", PermissionTarget.CHANNEL, PermissionAction.UPDATE),
-            ("core:channel:sync", PermissionTarget.CHANNEL, PermissionAction.SYNC),
             ("channel:create", PermissionTarget.CHANNEL, PermissionAction.CREATE),
+            ("channel:read", PermissionTarget.CHANNEL, PermissionAction.READ),
             ("channel:update", PermissionTarget.CHANNEL, PermissionAction.UPDATE),
             ("channel:delete", PermissionTarget.CHANNEL, PermissionAction.DELETE),
+            ("channel:sync", PermissionTarget.CHANNEL, PermissionAction.SYNC),
             ("policy:create", PermissionTarget.POLICY, PermissionAction.CREATE),
+            ("policy:read", PermissionTarget.POLICY, PermissionAction.READ),
             ("policy:delete", PermissionTarget.POLICY, PermissionAction.DELETE),
+            ("row:read", PermissionTarget.ROW, PermissionAction.READ),
+            ("row:create", PermissionTarget.ROW, PermissionAction.CREATE),
+            ("row:delete", PermissionTarget.ROW, PermissionAction.DELETE),
+            ("rbac:access", PermissionTarget.RBAC, PermissionAction.ACCESS),
+            ("data:access", PermissionTarget.DATA, PermissionAction.ACCESS),
+            ("setup:access", PermissionTarget.SETUP, PermissionAction.ACCESS),
         ]
         for raw_str, expected_target, expected_action in cases:
             p = Permission.parse(raw_str)
