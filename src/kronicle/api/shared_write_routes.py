@@ -1,4 +1,6 @@
 # kronicle/api/write_routes.py
+from __future__ import annotations
+
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
@@ -33,8 +35,8 @@ shared_writer_router = APIRouter(dependencies=[Depends(require_auth)])
 async def insert_rows(
     channel_id: UUID,
     payload: InputPayload,
-    controller: ChannelService = Depends(channel_service),  # noqa: B008
+    data_service: ChannelService = Depends(channel_service),  # noqa: B008
     strict: bool = Query(False, description="If true, abort on any validation error"),
 ):
     payload.channel_id = channel_id  # path param overrides any payload channel_id
-    return await controller.insert_channel_rows(payload, strict=strict)
+    return await data_service.insert_channel_rows(payload, strict=strict)

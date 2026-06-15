@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends
 
 from kronicle.auth.auth_middleware import require_auth, require_permission
 from kronicle.deps.channel_deps import channel_service
-from kronicle.deps.rbac_deps import rbac_service
+from kronicle.deps.rbac_deps import core_service
 from kronicle.errors.error_types import NotFoundError
 from kronicle.schemas.core.input_core_channel_schemas import InputCoreChannelPatch
 from kronicle.schemas.core.input_zone_schemas import InputZone, InputZonePatch
@@ -15,7 +15,7 @@ from kronicle.schemas.core.safe_core_channel_schemas import OutputCoreChannel
 from kronicle.schemas.core.safe_zone_schemas import OutputZone
 from kronicle.schemas.permissions.permission import Permission, PermissionAction, PermissionTarget
 from kronicle.services.channel_service import ChannelService
-from kronicle.services.rbac_service import RbacService
+from kronicle.services.core_service import CoreService
 from kronicle.utils.str_utils import uuid_to_str
 
 core_router = APIRouter(tags=["Core"], dependencies=[Depends(require_auth)])
@@ -35,9 +35,9 @@ core_router = APIRouter(tags=["Core"], dependencies=[Depends(require_auth)])
 )
 def create_zone(
     zone_in: InputZone,
-    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+    core: CoreService = Depends(core_service),  # noqa: B008
 ):
-    return rbac.create_zone(name=zone_in.name, details=zone_in.details)
+    return core.create_zone(name=zone_in.name, details=zone_in.details)
 
 
 @core_router.get(
@@ -48,9 +48,9 @@ def create_zone(
     dependencies=[Depends(require_permission(Permission(PermissionTarget.ZONE, PermissionAction.READ)))],
 )
 def list_zones(
-    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+    core: CoreService = Depends(core_service),  # noqa: B008
 ):
-    zones = rbac.get_zones()
+    zones = core.get_zones()
     return [OutputZone.from_db_zone(z) for z in zones]
 
 
@@ -63,9 +63,9 @@ def list_zones(
 )
 def get_zone(
     zone_id: UUID,
-    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+    core: CoreService = Depends(core_service),  # noqa: B008
 ):
-    zone = rbac.get_zone(zone_id)
+    zone = core.get_zone(zone_id)
     if not zone:
         raise NotFoundError(f"Zone '{zone_id}' not found")
     return zone
@@ -81,9 +81,9 @@ def get_zone(
 def patch_zone(
     zone_id: UUID,
     zone_in: InputZonePatch,
-    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+    core: CoreService = Depends(core_service),  # noqa: B008
 ):
-    return rbac.patch_zone(zone_id, name=zone_in.name, details=zone_in.details)
+    return core.patch_zone(zone_id, name=zone_in.name, details=zone_in.details)
 
 
 @core_router.delete(
@@ -95,11 +95,9 @@ def patch_zone(
 )
 def delete_zone(
     zone_id: UUID,
-    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+    core: CoreService = Depends(core_service),  # noqa: B008
 ):
-    zone = rbac.delete_zone(zone_id)
-    if not zone:
-        raise NotFoundError(f"Zone '{zone_id}' not found")
+    zone = core.delete_zone(zone_id)
     return zone
 
 
@@ -110,16 +108,16 @@ def delete_zone(
 
 @core_router.get(
     "/zones/{zone_id}/channels",
-    summary="List all core channels",
-    description="Returns all CoreChannels.",
+    summary="List all core channels in a zone",
+    description="Returns all CoreChannels belonging to the specified zone.",
     response_model=list[OutputCoreChannel],
     dependencies=[Depends(require_permission(Permission(PermissionTarget.CHANNEL, PermissionAction.READ)))],
 )
 def list_zone_channels(
     zone_id: UUID,
-    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+    core: CoreService = Depends(core_service),  # noqa: B008
 ):
-    return rbac.get_core_channels(zone_id=zone_id)
+    return core.get_core_channels(zone_id=zone_id)
 
 
 @core_router.get(
@@ -130,9 +128,9 @@ def list_zone_channels(
     dependencies=[Depends(require_permission(Permission(PermissionTarget.CHANNEL, PermissionAction.READ)))],
 )
 def list_channels(
-    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+    core: CoreService = Depends(core_service),  # noqa: B008
 ):
-    return rbac.get_core_channels()
+    return core.get_core_channels()
 
 
 @core_router.get(
@@ -144,9 +142,9 @@ def list_channels(
 )
 def get_core_channel(
     channel_id: UUID,
-    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+    core: CoreService = Depends(core_service),  # noqa: B008
 ):
-    channel = rbac.get_core_channel(channel_id)
+    channel = core.get_core_channel(channel_id)
     if not channel:
         raise NotFoundError(f"CoreChannel '{channel_id}' not found")
     return channel
@@ -162,9 +160,9 @@ def get_core_channel(
 def patch_core_channel(
     channel_id: UUID,
     channel_in: InputCoreChannelPatch,
-    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+    core: CoreService = Depends(core_service),  # noqa: B008
 ):
-    return rbac.patch_core_channel(
+    return core.patch_core_channel(
         channel_id,
         name=channel_in.name,
         details=channel_in.details,
@@ -189,13 +187,13 @@ def patch_core_channel(
 )
 async def sync_core_channels(
     data_service: ChannelService = Depends(channel_service),  # noqa: B008
-    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+    core: CoreService = Depends(core_service),  # noqa: B008
 ):
     data_channels = await data_service.fetch_all_metadata()
     channel_ids = [c.channel_id for c in data_channels]
 
-    default_zone = rbac.ensure_default_zone()
-    created = rbac.sync_core_channels(channel_ids, default_zone_id=default_zone.id)
+    default_zone = core.ensure_default_zone()
+    created = core.sync_core_channels(channel_ids, default_zone_id=default_zone.id)
 
     return {
         "detail": f"Synced {len(channel_ids)} data channels",

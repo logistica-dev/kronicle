@@ -1,4 +1,5 @@
 # kronicle/services/channel_service.py
+from __future__ import annotations
 
 from uuid import UUID, uuid4
 
@@ -185,7 +186,7 @@ class ChannelService:
         here = "up_meta_add_rows"
         # log_d(here)
         processed = await self._process_payload_for_insertion(payload, strict=strict)
-        # Zone-channel binding is validated by `validate_zone_channel_binding` dependency in write_routes.py.
+        # Zone-channel binding is validated in `create_channel_in_zone` via rbac.ensure_channel_in_zone().
         updated_resource = await self._repo.upsert_metadata_and_insert_rows(processed=processed, strict=strict)
         log_d(here, "updated resource", updated_resource.channel_id)
 

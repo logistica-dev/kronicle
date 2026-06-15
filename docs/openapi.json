@@ -552,16 +552,6 @@
             }
           },
           {
-            "name": "zone_id",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Zone Id"
-            }
-          },
-          {
             "name": "strict",
             "in": "query",
             "required": false,
@@ -1839,8 +1829,8 @@
         "tags": [
           "Core"
         ],
-        "summary": "List all core channels",
-        "description": "Returns all CoreChannels.",
+        "summary": "List all core channels in a zone",
+        "description": "Returns all CoreChannels belonging to the specified zone.",
         "operationId": "list_zone_channels_core_v1_zones__zone_id__channels_get",
         "security": [
           {
@@ -3998,7 +3988,7 @@
         "title": "InputPayload",
         "description": "User-provided payload for a channel.\nThe 'channel_schema' field is a dict of column_name -> type string.",
         "example": {
-          "channel_id": "0782d328-b20c-4866-a241-9bad0174e781",
+          "channel_id": "c5021613-1b1f-408b-9b34-4ff04485b39f",
           "channel_schema": {
             "humidity": "float",
             "temperature": "float",
@@ -4007,7 +3997,7 @@
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-99abb",
+          "name": "thermo-72ee8",
           "rows": [
             {
               "humidity": 55.1,

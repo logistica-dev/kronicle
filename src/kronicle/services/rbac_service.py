@@ -1,6 +1,7 @@
 # kronicle/services/rbac_service.py
+from __future__ import annotations
+
 import functools
-from collections.abc import Sequence
 from uuid import UUID
 
 from sqlalchemy import and_, cast, delete, func, select
@@ -8,9 +9,6 @@ from sqlalchemy.dialects.postgresql import JSONB, insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.session import Session
 
-from kronicle.db.core.links.zone_hierarchy import ZoneHierarchy
-from kronicle.db.core.models.core_channel import CoreChannel
-from kronicle.db.core.models.core_zone import CoreZone
 from kronicle.db.rbac.links.group_hierarchy import RbacGroupHierarchy
 from kronicle.db.rbac.links.group_roles import RbacGroupRoles
 from kronicle.db.rbac.links.user_groups import RbacUserGroups
@@ -24,13 +22,10 @@ from kronicle.repo.core.core_channel_repo import CoreChannelRepository
 from kronicle.repo.core.core_zone_repo import CoreZoneRepository
 from kronicle.repo.hierarchy.hierarchy_engine import HierarchyEngine
 from kronicle.repo.hierarchy.hierarchy_service import HierarchyService
-from kronicle.repo.hierarchy.zone_hierarchy_repo import ZoneHierarchyRepository
 from kronicle.repo.rbac.entities.rbac_group_repo import RbacGroupRepository
 from kronicle.repo.rbac.entities.rbac_role_repo import RbacRoleRepository
 from kronicle.repo.rbac.entities.rbac_user_repo import RbacUserRepository
 from kronicle.repo.rbac.links.rbac_user_group_repo import RbacUserGroupRepository
-from kronicle.schemas.core.safe_core_channel_schemas import OutputCoreChannel
-from kronicle.schemas.core.safe_zone_schemas import OutputZone
 from kronicle.schemas.permissions.permission import Permission
 from kronicle.schemas.rbac.input_user_schemas import InputUserLogin
 from kronicle.schemas.rbac.safe_group_schemas import OutputGroup
@@ -77,7 +72,6 @@ class RbacService:
         self._user_groups_repo = RbacUserGroupRepository()
         self._channel_repo = CoreChannelRepository()
         self._zone_repo = CoreZoneRepository()
-        self._zone_hierarchy_repo = ZoneHierarchyRepository()
 
         group_engine = HierarchyEngine(
             parents_of=lambda g: g.parent_links,
@@ -89,18 +83,6 @@ class RbacService:
             add_edge=RbacGroupHierarchy.add,
             remove_edge=RbacGroupHierarchy.remove,
             max_parents=5,
-        )
-
-        zone_engine = HierarchyEngine(
-            parents_of=lambda g: g.parent,
-            children_of=lambda g: g.children,
-        )
-
-        self.zone_hierarchy_service = HierarchyService(
-            engine=zone_engine,
-            add_edge=ZoneHierarchy.add,
-            remove_edge=ZoneHierarchy.remove,
-            max_parents=1,
         )
 
     # ----------------------------------------------------------------------------------------------
@@ -657,148 +639,6 @@ class RbacService:
                 raise NotFoundError(f"ChannelPolicy '{policy_id}' not found")
             db.delete(policy)
             db.flush()
-
-    # ----------------------------------------------------------------------------------------------
-    # Core: Zones
-    # ----------------------------------------------------------------------------------------------
-    def get_zones(self) -> list[CoreZone]:
-        with self._db.get_db() as db:
-            return list(self._zone_repo.fetch_all(db))
-
-    def create_zone(self, name: str, details: dict | None = None) -> OutputZone:
-        here = "create_zone"
-        log_d(here, name)
-        zone = CoreZone(name=name, details=details or {})
-        with self._db.transaction() as db:
-            existing = self._zone_repo.get_by_name(db, name=name)
-            if existing:
-                raise BadRequestError(f"Zone '{name}' already exists")
-            db.add(zone)
-            db.flush()
-        return OutputZone.from_db_zone(zone)
-
-    def get_zone(self, zone_id: UUID) -> OutputZone | None:
-        with self._db.get_db() as db:
-            zone = self._zone_repo.get_by_id(db, id=zone_id)
-        return OutputZone.from_db_zone(zone) if zone else None
-
-    def delete_zone(self, zone_id: UUID) -> OutputZone | None:
-        here = "delete_zone"
-        log_w(here, zone_id)
-        with self._db.transaction() as db:
-            zone = self._zone_repo.get_by_id(db, id=zone_id)
-            if not zone:
-                raise NotFoundError(f"Zone '{zone_id}' not found")
-            db.delete(zone)
-            db.flush()
-        return OutputZone.from_db_zone(zone)
-
-    def patch_zone(self, zone_id: UUID, name: str | None = None, details: dict | None = None) -> OutputZone:
-        here = "patch_zone"
-        log_d(here, zone_id)
-        with self._db.transaction() as db:
-            zone = self._zone_repo.get_by_id(db, id=zone_id)
-            if not zone:
-                raise NotFoundError(f"Zone '{zone_id}' not found")
-            if name is not None:
-                zone.name = name
-            if details is not None:
-                zone.details = details
-            db.flush()
-            db.refresh(zone)
-        return OutputZone.from_db_zone(zone)
-
-    # ----------------------------------------------------------------------------------------------
-    # Sync: Channels
-    # ----------------------------------------------------------------------------------------------
-    def list_core_channel_ids(self) -> set[UUID]:
-        with self._db.get_db() as db:
-            channels = self._channel_repo.fetch_all(db)
-        return {c.id for c in channels}
-
-    def sync_core_channels(self, channel_ids: Sequence[UUID], default_zone_id: UUID | None = None) -> list[UUID]:
-        here = "sync_core_channels"
-        existing = self.list_core_channel_ids()
-        missing = [cid for cid in channel_ids if cid not in existing]
-        if not missing:
-            log_d(here, "All channels already synced")
-            return []
-
-        created: list[UUID] = []
-        with self._db.transaction() as db:
-            for cid in missing:
-                core_channel = CoreChannel(id=cid, name=str(cid), zone_id=default_zone_id)
-                db.add(core_channel)
-                created.append(cid)
-                log_d(here, f"Created CoreChannel for {cid}")
-            db.flush()
-        log_i(here, f"Created {len(created)} CoreChannels")
-        return created
-
-    def ensure_default_zone(self, name: str = "default") -> CoreZone:
-        with self._db.get_db() as db:
-            existing = self._zone_repo.get_by_name(db, name=name)
-            if existing:
-                return existing
-        zone = CoreZone(name=name)
-        with self._db.transaction() as db:
-            db.add(zone)
-            db.flush()
-        log_i("ensure_default_zone", f"Created default zone '{name}'")
-        return zone
-
-    # ----------------------------------------------------------------------------------------------
-    # Core Channels
-    # ----------------------------------------------------------------------------------------------
-    def get_core_channels(self, *, zone_id: UUID | None = None) -> list[OutputCoreChannel]:
-        with self._db.get_db() as db:
-            if zone_id:
-                channels = self._channel_repo.get_by_zone(db, zone_id=zone_id)
-            else:
-                channels = self._channel_repo.fetch_all(db)
-        return [OutputCoreChannel.from_db_core_channel(c) for c in channels]
-
-    def get_core_channel(self, channel_id: UUID) -> OutputCoreChannel | None:
-        with self._db.get_db() as db:
-            channel = self._channel_repo.get_by_id(db, id=channel_id)
-        return OutputCoreChannel.from_db_core_channel(channel) if channel else None
-
-    def create_core_channel(self, channel_id: UUID, zone_id: UUID, name: str | None = None) -> OutputCoreChannel:
-        with self._db.transaction() as db:
-            core_channel = CoreChannel(
-                id=channel_id,
-                name=name or str(channel_id),
-                zone_id=zone_id,
-            )
-            db.add(core_channel)
-            db.flush()
-        return OutputCoreChannel.from_db_core_channel(core_channel)
-
-    def patch_core_channel(
-        self,
-        channel_id: UUID,
-        name: str | None = None,
-        details: dict | None = None,
-        zone_id: UUID | None = None,
-    ) -> OutputCoreChannel:
-        here = "patch_core_channel"
-        log_d(here, channel_id)
-        with self._db.transaction() as db:
-            channel: CoreChannel = self._channel_repo.get_by_id(db, id=channel_id)
-            if not channel:
-                raise NotFoundError(f"CoreChannel '{channel_id}' not found")
-            if name is not None:
-                channel.name = name
-            if details is not None:
-                channel.details = details
-            if zone_id is not None:
-                zone = self._zone_repo.get_by_id(db, id=zone_id)
-                if not zone:
-                    raise NotFoundError(f"CoreZone '{zone_id}' not found")
-                channel.zone_id = zone_id
-            db.flush()
-            db.refresh(channel)
-        return OutputCoreChannel.from_db_core_channel(channel)
 
     # ----------------------------------------------------------------------------------------------
     # Groups

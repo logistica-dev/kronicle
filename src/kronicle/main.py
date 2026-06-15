@@ -1,4 +1,6 @@
 # kronicle/main.py
+from __future__ import annotations
+
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from json import dump
@@ -39,6 +41,7 @@ from kronicle.errors.exception_handlers import (
 from kronicle.logging.log_bus.mid_sanitize import RequestSanitizerMiddleware
 from kronicle.repo.data.channel_repository import ChannelRepository
 from kronicle.services.channel_service import ChannelService
+from kronicle.services.core_service import CoreService
 from kronicle.services.rbac_service import RbacService
 from kronicle.utils.dev_logs import log_block, log_d, log_e, log_w, request_logger
 
@@ -144,6 +147,9 @@ class KronicleApp:
 
         with log_block(here, "RBAC tables validation"):
             self.app.state.rbac_db.validate_tables()  # Add all RBAC models here
+
+        with log_block(here, "Core service"):
+            self.app.state.core_service = CoreService(self.app.state.rbac_db)
 
         with log_block(here, "RBAC service"):
             rbac_service = RbacService(self.app.state.rbac_db)
