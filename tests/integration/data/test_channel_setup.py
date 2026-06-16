@@ -3,21 +3,11 @@
 from uuid import UUID
 
 import pytest
-from kronicle_sdk.conf.read_conf import Settings
 from kronicle_sdk.connectors.abc_connector import KroniclePayload
-from kronicle_sdk.connectors.channel.channel_setup import KronicleSetup
 from kronicle_sdk.models.iso_datetime import now_local
+from kronicle_sdk.models.rbac.kronicle_zone import KronicleZone
 from kronicle_sdk.utils.log import log_d, log_w
 from kronicle_sdk.utils.str_utils import tiny_id, uuid4_str
-
-
-@pytest.fixture(scope="session")
-def kronicle_setup():
-    """Return a connected KronicleSetup instance."""
-    co = Settings().connection_su
-    assert co
-    setup = KronicleSetup(co.url, co.usr, co.pwd)
-    return setup
 
 
 @pytest.mark.integration
@@ -43,12 +33,15 @@ def test_list_channels(kronicle_setup, test_channel_id):
 
 
 @pytest.mark.integration
-def test_insert_rows_and_upsert_channel(kronicle_setup):
-    """Insert a new channel and verify it is added correctly."""
+def test_insert_rows_and_upsert_channel(kronicle_writer, kronicle_setup, kronicle_rbac_setup):
+    """Insert a new channel in a zone and verify it is added correctly."""
     here = "ksetup"
     channel_id = uuid4_str()
     channel_name = f"demo_channel_{tiny_id()}"
     now_tag = now_local()
+    tag = tiny_id()
+
+    zone = kronicle_rbac_setup.create_zone(KronicleZone(name=f"setup_test_zone_{tag}"))
 
     payload = {
         "channel_id": channel_id,
@@ -63,14 +56,16 @@ def test_insert_rows_and_upsert_channel(kronicle_setup):
     }
     log_d(here, "payload", payload)
 
-    result = kronicle_setup.create_channel(payload)
+    result = kronicle_writer.create_channel(zone_id=zone.id, body=payload)
     log_d(here, "result", result)
     log_d(here, "column types", kronicle_setup.column_types)
 
     assert result is not None
     assert isinstance(result, KroniclePayload)
     assert result.channel_id == UUID(channel_id)
+
     kronicle_setup.delete_channel(channel_id)
+    kronicle_rbac_setup.delete_zone(zone.id)
 
 
 @pytest.mark.integration

@@ -3,21 +3,11 @@
 from uuid import UUID
 
 import pytest
-from kronicle_sdk.conf.read_conf import Settings
 from kronicle_sdk.connectors.abc_connector import KroniclePayload
-from kronicle_sdk.connectors.channel.channel_writer import KronicleWriter
 from kronicle_sdk.models.iso_datetime import IsoDateTime, now_local
+from kronicle_sdk.models.rbac.kronicle_zone import KronicleZone
 from kronicle_sdk.utils.log import log_d
 from kronicle_sdk.utils.str_utils import tiny_id, uuid4_str
-
-
-@pytest.fixture(scope="session")
-def kronicle_writer():
-    """Return a connected KronicleWriter."""
-    co = Settings().connection_su
-    assert co
-    writer = KronicleWriter(co.url, co.usr, co.pwd)
-    return writer
 
 
 @pytest.mark.integration
@@ -42,12 +32,15 @@ def test_writer_channels(kronicle_writer, test_channel_id):
 
 
 @pytest.mark.integration
-def test_create_and_update_channel(kronicle_setup, kronicle_writer):
-    """Create a channel via setup, then update and insert rows via writer."""
+def test_create_and_update_channel(kronicle_setup, kronicle_writer, kronicle_rbac_setup):
+    """Create a channel in a zone, then update and insert rows via writer."""
     here = "KWrite.create"
     channel_id: str = uuid4_str()
     channel_name: str = f"demo_channel_{tiny_id()}"
     now_tag = now_local()
+    tag = tiny_id()
+
+    zone = kronicle_rbac_setup.create_zone(KronicleZone(name=f"writer_test_zone_{tag}"))
 
     payload = {
         "channel_id": channel_id,
@@ -62,12 +55,12 @@ def test_create_and_update_channel(kronicle_setup, kronicle_writer):
     }
     log_d(here, "payload", payload)
 
-    # Create channel via setup (admin path, no zone_id needed)
-    result = kronicle_setup.create_channel(payload)
+    # Create channel in zone via writer (zone-aware data path)
+    result = kronicle_writer.create_channel(zone_id=zone.id, body=payload)
     assert result is not None
     assert result.channel_id == UUID(channel_id)
 
-    # Update channel metadata + insert more rows via writer (data path)
+    # Update channel metadata + insert more rows via writer
     payload["rows"] = [
         {"time": now_local(), "temperature": 42.0},
     ]
@@ -91,3 +84,4 @@ def test_create_and_update_channel(kronicle_setup, kronicle_writer):
     assert result.channel_id == UUID(channel_id)
 
     kronicle_setup.delete_channel(channel_id)
+    kronicle_rbac_setup.delete_zone(zone.id)

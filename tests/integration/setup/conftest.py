@@ -3,7 +3,9 @@ from collections.abc import Generator
 import pytest
 from kronicle_sdk.conf.read_conf import Settings
 from kronicle_sdk.connectors.channel.channel_setup import KronicleSetup
+from kronicle_sdk.connectors.channel.channel_writer import KronicleWriter
 from kronicle_sdk.connectors.rbac.rbac_resource_setup import KronicleRbacResourceSetup
+from kronicle_sdk.models.rbac.kronicle_zone import KronicleZone
 from kronicle_sdk.utils.str_utils import tiny_id, uuid4_str
 
 
@@ -21,8 +23,26 @@ def kronicle_setup():
     return KronicleSetup(co.url, co.usr, co.pwd)
 
 
+@pytest.fixture(scope="session")
+def kronicle_writer():
+    co = Settings().connection_su
+    assert co
+    return KronicleWriter(co.url, co.usr, co.pwd)
+
+
 @pytest.fixture(scope="module")
-def test_channel(kronicle_setup) -> Generator[str, None, None]:
+def test_zone(kronicle_rbac_setup) -> Generator[str, None, None]:
+    tag = tiny_id()
+    zone = kronicle_rbac_setup.create_zone(KronicleZone(name=f"setup_zone_{tag}"))
+    yield str(zone.id)
+    try:
+        kronicle_rbac_setup.delete_zone(zone.id)
+    except Exception:
+        pass
+
+
+@pytest.fixture(scope="module")
+def test_channel(kronicle_writer, kronicle_setup, test_zone) -> Generator[str, None, None]:
     channel_id = uuid4_str()
     channel_name = f"sync_chan_{tiny_id()}"
     payload = {
@@ -35,7 +55,7 @@ def test_channel(kronicle_setup) -> Generator[str, None, None]:
             {"time": "2025-01-10T00:00:00Z", "value": 1.0},
         ],
     }
-    kronicle_setup.create_channel(payload)
+    kronicle_writer.create_channel(zone_id=test_zone, body=payload)
     yield channel_id
     try:
         kronicle_setup.delete_channel(channel_id)
