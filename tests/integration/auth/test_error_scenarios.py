@@ -8,8 +8,8 @@ import requests
 from kronicle_sdk.conf.read_conf import Settings
 from kronicle_sdk.connectors.auth.kronicle_auth import KronicleUsrLogin
 from kronicle_sdk.connectors.channel.channel_setup import KronicleSetup
-from kronicle_sdk.connectors.rbac.rbac_identity_setup import KronicleRbacIdentitySetup
-from kronicle_sdk.connectors.rbac.rbac_resource_setup import KronicleRbacResourceSetup
+from kronicle_sdk.connectors.rbac.core_setup import KronicleCore
+from kronicle_sdk.connectors.rbac.rbac_setup import KronicleRbac
 from kronicle_sdk.models.rbac.kronicle_group import KronicleGroup
 from kronicle_sdk.models.rbac.kronicle_zone import KronicleZone
 from kronicle_sdk.utils.str_utils import tiny_id
@@ -26,17 +26,17 @@ def base_url():
 def su_client():
     co = Settings().connection_su
     assert co
-    return KronicleUsrLogin(co.url, co.usr, co.pwd)
+    return KronicleUsrLogin.from_connection_info(co)
 
 
 @pytest.fixture(scope="session")
 def rbac(su_client):
-    return KronicleRbacIdentitySetup(su_client.url, su_client.usr, su_client.pwd)
+    return KronicleRbac(su_client.url, su_client.usr, su_client.pwd)
 
 
 @pytest.fixture(scope="session")
 def rbac_setup(su_client):
-    return KronicleRbacResourceSetup(su_client.url, su_client.usr, su_client.pwd)
+    return KronicleCore(su_client.url, su_client.usr, su_client.pwd)
 
 
 @pytest.fixture(scope="session")
@@ -124,7 +124,7 @@ class TestNotFound:
     def test_get_nonexistent_group(self, rbac):
         fake_id = uuid.uuid4()
         with pytest.raises(Exception) as exc_info:
-            rbac.get_group(fake_id)
+            rbac.get_group_by_id(fake_id)
         assert "404" in str(exc_info.value) or "Not Found" in str(exc_info.value)
 
     def test_get_nonexistent_zone(self, rbac_setup):
@@ -180,11 +180,13 @@ class TestBadRequest:
         name = f"dup_group_{tag}"
         group = KronicleGroup(name=name)
         created = rbac.create_group(group)
-        assert created is not None
-        with pytest.raises(Exception) as exc_info:
-            rbac.create_group(KronicleGroup(name=name))
-        assert "400" in str(exc_info.value) or "Bad Request" in str(exc_info.value)
-        rbac.delete_group(created.id)
+        try:
+            assert created is not None
+            with pytest.raises(Exception) as exc_info:
+                rbac.create_group(KronicleGroup(name=name))
+            assert "400" in str(exc_info.value) or "Bad Request" in str(exc_info.value)
+        finally:
+            rbac.delete_group(id=created.id)
 
     def test_group_name_too_short(self, rbac, base_url):
         resp = requests.post(
@@ -202,11 +204,13 @@ class TestBadRequest:
         name = f"dup_zone_{tag}"
         zone = KronicleZone(name=name)
         created = rbac_setup.create_zone(zone)
-        assert created is not None
-        with pytest.raises(Exception) as exc_info:
-            rbac_setup.create_zone(KronicleZone(name=name))
-        assert "400" in str(exc_info.value) or "Bad Request" in str(exc_info.value)
-        rbac_setup.delete_zone(created.id)
+        try:
+            assert created is not None
+            with pytest.raises(Exception) as exc_info:
+                rbac_setup.create_zone(KronicleZone(name=name))
+            assert "400" in str(exc_info.value) or "Bad Request" in str(exc_info.value)
+        finally:
+            rbac_setup.delete_zone(created.id)
 
 
 # ---------------------------------------------------------------------------

@@ -185,8 +185,11 @@ def create_group(
     dependencies=[Depends(require_permission(Permission(PermissionTarget.GROUP, PermissionAction.READ)))],
 )
 def list_groups(
+    name: str | None = Query(None, description="Optional name to filter by"),
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
 ):
+    if name:
+        return rbac.get_group_by_name(name)
     return rbac.get_groups()
 
 
@@ -201,7 +204,7 @@ def get_group(
     group_id: UUID,
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
 ):
-    group = rbac.get_group(group_id)
+    group = rbac.get_group_by_id(group_id)
     if not group:
         raise NotFoundError(f"Group '{group_id}' not found")
     return group
@@ -255,6 +258,22 @@ def add_user_to_group(
 ):
     rbac.add_user_to_group(user_id=user_id, group_id=group_id)
     return {"detail": f"User '{user_id}' added to group '{group_id}'"}
+
+
+@rbac_router.get(
+    "/groups/{group_id}/users",
+    summary="Get users from group",
+    description="Returns all users assigned to the identified group.",
+    response_model=list[OutputUser],
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.GROUP, PermissionAction.READ)))],
+)
+def get_users_from_group(
+    group_id: UUID,
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    if not group_id:
+        return []
+    return rbac.get_users_from_group(group_id=group_id)
 
 
 @rbac_router.delete(

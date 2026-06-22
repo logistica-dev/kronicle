@@ -6,7 +6,9 @@ import requests as req
 from kronicle_sdk.conf.read_conf import ConnectionInformation, Settings
 from kronicle_sdk.connectors.abc_connector import KroniclePayload
 from kronicle_sdk.connectors.channel.channel_setup import KronicleSetup
-from kronicle_sdk.connectors.rbac.rbac_identity_setup import KronicleRbacIdentitySetup
+from kronicle_sdk.connectors.rbac.core_setup import KronicleCore
+from kronicle_sdk.connectors.rbac.rbac_setup import KronicleRbac
+from kronicle_sdk.models.rbac.kronicle_zone import KronicleZone
 from kronicle_sdk.utils.str_utils import tiny_id, uuid4_str
 
 pytestmark = pytest.mark.integration
@@ -47,7 +49,7 @@ def su_client():
     """SU-based connector for identity operations."""
     co = Settings().connection_su
     assert co
-    return KronicleRbacIdentitySetup(co.url, co.usr, co.pwd)
+    return KronicleRbac.from_connection_info(co)
 
 
 @pytest.fixture(scope="session")
@@ -55,7 +57,15 @@ def su_setup_client():
     """SU-based connector for data channel operations."""
     co = Settings().connection_su
     assert co
-    return KronicleSetup(co.url, co.usr, co.pwd)
+    return KronicleSetup.from_connection_info(co)
+
+
+@pytest.fixture(scope="session")
+def su_core_client():
+    """SU-based connector for core operations (zones)."""
+    co = Settings().connection_su
+    assert co
+    return KronicleCore.from_connection_info(co)
 
 
 # ==============================================================================
@@ -164,7 +174,18 @@ def test_user(
 
 
 @pytest.fixture(scope="module")
-def test_channel(su_setup_client) -> Generator[str, None, None]:
+def test_zone(su_core_client) -> Generator[str, None, None]:
+    tag = tiny_id()
+    zone = su_core_client.create_zone(KronicleZone(name=f"perm_test_zone_{tag}"))
+    yield str(zone.id)
+    try:
+        su_core_client.delete_zone(zone.id)
+    except Exception:
+        pass
+
+
+@pytest.fixture(scope="module")
+def test_channel(su_setup_client, test_zone) -> Generator[str, None, None]:
     channel_id = uuid4_str()
     payload = KroniclePayload.from_json(
         {
@@ -176,7 +197,7 @@ def test_channel(su_setup_client) -> Generator[str, None, None]:
             "rows": [{"time": "2025-01-10T00:00:00Z", "temp": 22.5}],
         }
     )
-    su_setup_client.create_channel(payload)
+    su_setup_client.create_channel(payload, zone_id=test_zone)
     yield channel_id
     try:
         su_setup_client.delete_channel(channel_id)
@@ -263,7 +284,7 @@ class TestGroupRolePermission:
         assert resp.status_code == 200
         connection_su = Settings().connection_su
         assert isinstance(connection_su, ConnectionInformation)
-        su = KronicleSetup(url=connection_su.url, usr=connection_su.usr, pwd=connection_su.pwd)
+        su = KronicleSetup.from_connection_info(connection_su)
         try:
             su.delete_channel(channel_id)
         except Exception:

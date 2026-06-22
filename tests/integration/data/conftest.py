@@ -4,7 +4,7 @@ import pytest
 from kronicle_sdk.conf.read_conf import Settings
 from kronicle_sdk.connectors.channel.channel_setup import KronicleSetup
 from kronicle_sdk.connectors.channel.channel_writer import KronicleWriter
-from kronicle_sdk.connectors.rbac.rbac_resource_setup import KronicleRbacResourceSetup
+from kronicle_sdk.connectors.rbac.core_setup import KronicleCore
 from kronicle_sdk.models.rbac.kronicle_zone import KronicleZone
 from kronicle_sdk.utils.str_utils import tiny_id, uuid4_str
 
@@ -13,21 +13,21 @@ from kronicle_sdk.utils.str_utils import tiny_id, uuid4_str
 def kronicle_rbac_setup():
     co = Settings().connection_su
     assert co
-    return KronicleRbacResourceSetup(co.url, co.usr, co.pwd)
+    return KronicleCore.from_connection_info(co)
 
 
 @pytest.fixture(scope="session")
 def kronicle_writer():
     co = Settings().connection_su
     assert co
-    return KronicleWriter(co.url, co.usr, co.pwd)
+    return KronicleWriter.from_connection_info(co)
 
 
 @pytest.fixture(scope="session")
 def kronicle_setup():
     co = Settings().connection_su
     assert co
-    return KronicleSetup(co.url, co.usr, co.pwd)
+    return KronicleSetup.from_connection_info(co)
 
 
 @pytest.fixture(scope="module")

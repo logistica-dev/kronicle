@@ -10,7 +10,7 @@ def kronicle_reader():
     """Return a connected KronicleReader."""
     co = Settings().connection_su
     assert co
-    reader = KronicleReader(co.url, co.usr, co.pwd)
+    reader = KronicleReader.from_connection_info(co)
     return reader
 
 

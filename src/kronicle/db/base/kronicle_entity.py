@@ -1,4 +1,5 @@
 # kronicle/db/base/kronicle_entity.py
+from json import dumps
 from typing import Any
 
 from sqlalchemy import String
@@ -35,3 +36,7 @@ class KronicleEntity(KronicleBase):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "details": self.details,
         }
+
+    def __str__(self) -> str:
+        return f"{type(self).__name__} {{'id': {self.id}, 'name': {self.name}, 'details': {dumps(self.details)}}}"
+        # return super().__str__()

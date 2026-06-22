@@ -1,11 +1,11 @@
 """Clean up leftover perm_test_*@kronicle.app users from old test runs."""
 
 from kronicle_sdk.conf.read_conf import Settings
-from kronicle_sdk.connectors.rbac.rbac_identity_setup import KronicleRbacIdentitySetup
+from kronicle_sdk.connectors.rbac.rbac_setup import KronicleRbac
 
 co = Settings().connection_su
 assert co
-kronicle_rbac = KronicleRbacIdentitySetup(co.url, co.usr, co.pwd)
+kronicle_rbac = KronicleRbac.from_connection_info(co)
 
 usr_list = kronicle_rbac.get_all_users(include_inactive=True)
 count = 0

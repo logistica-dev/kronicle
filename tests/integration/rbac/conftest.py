@@ -2,7 +2,8 @@ from collections.abc import Generator
 
 import pytest
 from kronicle_sdk.conf.read_conf import Settings
-from kronicle_sdk.connectors.rbac.rbac_identity_setup import KronicleRbacIdentitySetup
+from kronicle_sdk.connectors.rbac.rbac_setup import KronicleRbac
+from kronicle_sdk.models.rbac.kronicle_group import KronicleGroup
 from kronicle_sdk.models.rbac.kronicle_user import KronicleUser
 from kronicle_sdk.utils.str_utils import tiny_id
 
@@ -11,7 +12,7 @@ from kronicle_sdk.utils.str_utils import tiny_id
 def kronicle_rbac():
     co = Settings().connection_su
     assert co
-    return KronicleRbacIdentitySetup(co.url, co.usr, co.pwd)
+    return KronicleRbac.from_connection_info(co)
 
 
 @pytest.fixture(scope="module")
@@ -24,4 +25,19 @@ def test_user(kronicle_rbac) -> Generator[KronicleUser, None, None]:
     )
     created = kronicle_rbac.create_user(user)
     yield created
-    kronicle_rbac.remove_user_by_id(created.id)
+    try:
+        kronicle_rbac.remove_user_by_id(created.id)
+    except Exception:
+        pass
+
+
+@pytest.fixture(scope="module")
+def test_group(kronicle_rbac) -> Generator[KronicleGroup, None, None]:
+    tag = tiny_id()
+    group = KronicleGroup(name=f"test_group_{tag}")
+    created = kronicle_rbac.create_group(group)
+    yield created
+    try:
+        kronicle_rbac.delete_group(created.id)
+    except Exception:
+        pass

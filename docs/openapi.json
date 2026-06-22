@@ -2574,35 +2574,6 @@
       }
     },
     "/rbac/v1/groups": {
-      "get": {
-        "tags": [
-          "RBAC"
-        ],
-        "summary": "List all groups",
-        "description": "Returns all RBAC groups.",
-        "operationId": "list_groups_rbac_v1_groups_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/OutputGroup"
-                  },
-                  "type": "array",
-                  "title": "Response List Groups Rbac V1 Groups Get"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      },
       "post": {
         "tags": [
           "RBAC"
@@ -2610,15 +2581,20 @@
         "summary": "Create a group",
         "description": "Creates a new RBAC group.",
         "operationId": "create_group_rbac_v1_groups_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/InputGroup"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -2641,12 +2617,66 @@
               }
             }
           }
-        },
+        }
+      },
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "List all groups",
+        "description": "Returns all RBAC groups.",
+        "operationId": "list_groups_rbac_v1_groups_get",
         "security": [
           {
             "HTTPBearer": []
           }
-        ]
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional name to filter by",
+              "title": "Name"
+            },
+            "description": "Optional name to filter by"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OutputGroup"
+                  },
+                  "title": "Response List Groups Rbac V1 Groups Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/rbac/v1/groups/{group_id}": {
@@ -2855,6 +2885,57 @@
                   "type": "object",
                   "additionalProperties": true,
                   "title": "Response Add User To Group Rbac V1 Groups  Group Id  Users Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Get users from group",
+        "description": "Returns all users assigned to the identified group.",
+        "operationId": "get_users_from_group_rbac_v1_groups__group_id__users_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OutputUser"
+                  },
+                  "title": "Response Get Users From Group Rbac V1 Groups  Group Id  Users Get"
                 }
               }
             }
@@ -3988,7 +4069,7 @@
         "title": "InputPayload",
         "description": "User-provided payload for a channel.\nThe 'channel_schema' field is a dict of column_name -> type string.",
         "example": {
-          "channel_id": "23d7391a-7339-40d5-b059-04bbb3446db4",
+          "channel_id": "239c77a7-e8ec-43cb-b603-2ffea842c3f8",
           "channel_schema": {
             "humidity": "float",
             "temperature": "float",
@@ -3997,7 +4078,7 @@
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-297b3",
+          "name": "thermo-ad00e",
           "rows": [
             {
               "humidity": 55.1,

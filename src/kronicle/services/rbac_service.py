@@ -411,7 +411,8 @@ class RbacService:
 
             if conflicts:
                 raise ConflictError(
-                    f"Role '{role.name}' cannot be deleted: {'; '.join(conflicts)}. " "Remove these assignments first."
+                    f"Role '{role.name}' cannot be deleted: {'; '.join(conflicts)}. Remove these assignments first.",
+                    details={"role": f"{role}"},
                 )
 
             db.delete(role)
@@ -660,10 +661,25 @@ class RbacService:
             groups = self._group_repo.fetch_all(db)
         return [OutputGroup.from_db_group(g) for g in groups]
 
-    def get_group(self, group_id: UUID) -> OutputGroup | None:
+    def get_group_by_id(self, group_id: UUID) -> OutputGroup | None:
         with self._db.get_db() as db:
             group = self._group_repo.get_by_id(db, id=group_id)
         return OutputGroup.from_db_group(group) if group else None
+
+    def get_group_by_name(self, name: str) -> OutputGroup | None:
+        with self._db.get_db() as db:
+            group = self._group_repo.get_by_name(db, name=name)
+        return OutputGroup.from_db_group(group) if group else None
+
+    def get_users_from_group(self, *, group_id: UUID) -> list[OutputUser]:
+        list_users = []
+        with self._db.get_db() as db:
+            user_id_list = self._user_groups_repo.get_user_ids_for_group(db, group_id=group_id)
+            for u_id in user_id_list:
+                usr = self._user_repo.get_by_id(db, id=u_id)
+                if usr:
+                    list_users.append(OutputUser.from_db_user(usr))
+        return list_users
 
     def patch_group(self, group_id: UUID, name: str | None = None, details: dict | None = None) -> OutputGroup:
         here = "patch_group"
@@ -689,14 +705,22 @@ class RbacService:
             if not group:
                 raise NotFoundError(f"Group '{group_id}' not found")
 
-            role_count = db.execute(
-                select(func.count(RbacGroupRoles.group_id)).where(RbacGroupRoles.group_id == group_id)
-            ).scalar()
-            if role_count:
+            # Refuse deletion if users are still assigned
+            stmt = (
+                select(RbacUser)
+                .join(RbacUserGroups, RbacUser.id == RbacUserGroups.user_id)
+                .where(RbacUserGroups.group_id == group_id)
+            )
+            group_users = db.execute(stmt).scalars().all()
+
+            if group_users:
                 raise ConflictError(
-                    f"Group '{group.name}' cannot be deleted: assigned to {role_count} role(s). "
-                    "Remove these role assignments first."
+                    f"Group '{group.name}' cannot be deleted: {len(group_users)} user(s) still assigned.",
+                    details={"group": f"{group}", "users": [u.snapshot for u in group_users]},
                 )
+
+            # Remove role assignments (clean up links instead of blocking)
+            db.execute(delete(RbacGroupRoles.__table__).where(RbacGroupRoles.group_id == group_id))
 
             # Clear group memberships explicitly — SQLAlchemy's unitofwork can't
             # handle PK-as-FK with ondelete=CASCADE (tries to NULL the PK first).

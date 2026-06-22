@@ -2,7 +2,7 @@
 from uuid import UUID
 
 from sqlalchemy.orm import Session
-from sqlalchemy.sql import select
+from sqlalchemy.sql import delete, select
 
 from kronicle.db.rbac.links.group_roles import RbacGroupRoles
 from kronicle.repo.kronicle_link_repo import KronicleLinkRepository
@@ -39,3 +39,7 @@ class RbacGroupRolesRepository(KronicleLinkRepository[RbacGroupRoles]):
 
     def remove_role_from_group(self, db: Session, group_id: UUID, role_id: UUID):
         self.remove_link(db, {self.model.GROUP_ID: group_id, self.model.ROLE_ID: role_id})
+
+    def remove_all_roles_from_group(self, db: Session, group_id: UUID):
+        stmt = delete(self.model).where(self.model.group_id == group_id)
+        db.execute(stmt)
