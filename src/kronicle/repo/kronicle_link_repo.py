@@ -1,4 +1,4 @@
-# kronicle/db/base/kronicle_repo.py
+# kronicle/repo/kronicle_link_repo.py
 from typing import Generic, Type, TypeVar
 
 from sqlalchemy.dialects.postgresql import insert

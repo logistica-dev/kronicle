@@ -1,4 +1,4 @@
-# kronicle/db/rbac/repo/rbac_group_repo.py
+# kronicle/repo/rbac/entities/rbac_role_repo.py
 
 
 from kronicle.db.rbac.models.rbac_role import RbacRole

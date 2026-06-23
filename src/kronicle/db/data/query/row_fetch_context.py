@@ -1,4 +1,4 @@
-# kronicle/db/data/query/row_query_builder.py
+# kronicle/db/data/query/row_fetch_context.py
 from __future__ import annotations
 
 from typing import Any

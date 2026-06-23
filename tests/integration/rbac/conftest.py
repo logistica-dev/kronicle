@@ -1,3 +1,4 @@
+# tests/integration/rbac/conftest.py
 from collections.abc import Generator
 
 import pytest

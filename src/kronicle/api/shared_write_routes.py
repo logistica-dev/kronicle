@@ -1,4 +1,4 @@
-# kronicle/api/write_routes.py
+# kronicle/api/shared_write_routes.py
 from __future__ import annotations
 
 from uuid import UUID
@@ -9,7 +9,7 @@ from kronicle.auth.auth_middleware import require_auth, require_permission
 from kronicle.deps.channel_deps import channel_service
 from kronicle.schemas.payload.input_payload import InputPayload
 from kronicle.schemas.payload.response_payload import ResponsePayload
-from kronicle.schemas.permissions.permission import Permission, PermissionAction, PermissionTarget
+from kronicle.schemas.permissions.permission import PermStr
 from kronicle.services.channel_service import ChannelService
 
 """
@@ -30,7 +30,7 @@ shared_writer_router = APIRouter(dependencies=[Depends(require_auth)])
     summary="Insert rows for a  channel",
     description="Append-only operation: insert new rows for an existing channel. Does not modify metadata or schema.",
     response_model=ResponsePayload,
-    dependencies=[Depends(require_permission(Permission(PermissionTarget.ROW, PermissionAction.CREATE)))],
+    dependencies=[Depends(require_permission(PermStr.ROW_CREATE))],
 )
 async def insert_rows(
     channel_id: UUID,

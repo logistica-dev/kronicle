@@ -1,4 +1,4 @@
-# tests/unit/schemas/rbac/test_rbac_zones.py
+# tests/integration/setup/test_rbac_zones.py
 
 import pytest
 from kronicle_sdk.models.rbac.kronicle_zone import KronicleZone

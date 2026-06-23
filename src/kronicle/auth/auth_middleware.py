@@ -14,7 +14,7 @@ from starlette.responses import JSONResponse
 from kronicle.auth.jwt_service import JWTService
 from kronicle.errors.error_types import ForbiddenError, KronicleAppError, UnauthorizedError
 from kronicle.errors.exception_handlers import app_error_adapter
-from kronicle.schemas.permissions.permission import Permission
+from kronicle.schemas.permissions.permission import Permission, PermStr
 from kronicle.utils.dev_logs import log_d
 
 
@@ -167,7 +167,7 @@ def _check_permission(request: Request, user: dict, perm_obj: Permission) -> boo
     return has_perm
 
 
-def require_permission(permission: str | Permission):
+def require_permission(permission: PermStr | str | Permission):
     """
     Factory that returns a dependency which checks if the authenticated user
     has a specific permission via the RBAC policy engine.
@@ -175,12 +175,14 @@ def require_permission(permission: str | Permission):
     Superuser flag in JWT bypasses all permission checks.
 
     Usage:
-        @router.get("/admin", dependencies=[Depends(require_permission("admin:access"))])
+        @router.get("/admin", dependencies=[Depends(require_permission(PermStr.RBAC_ACCESS))])
         def admin_endpoint(): ...
     """
 
-    if isinstance(permission, str):
-        perm_obj: Permission = Permission.parse(permission)
+    if isinstance(permission, PermStr):
+        perm_obj = permission.to_permission()
+    elif isinstance(permission, str):
+        perm_obj = Permission.parse(permission)
     else:
         perm_obj = permission
 
@@ -198,12 +200,12 @@ def require_permission(permission: str | Permission):
     return _require_permission
 
 
-def require_permission_set(*permissions: str | Permission):
+def require_permission_set(*permissions: PermStr | str | Permission):
     """
     Factory returning a dependency that passes if the user has ALL specified permissions (AND).
 
     Usage:
-        @router.post("/clone", dependencies=[Depends(require_permission_set("channel:read", "channel:create"))])
+        @router.post("/clone", dependencies=[Depends(require_permission_set(PermStr.CHANNEL_READ, PermStr.CHANNEL_CREATE))])
         def clone_endpoint(): ...
     """
 
@@ -224,12 +226,12 @@ def require_permission_set(*permissions: str | Permission):
     return _require_set
 
 
-def require_any_permission(*permissions: str | Permission):
+def require_any_permission(*permissions: PermStr | str | Permission):
     """
     Factory returning a dependency that passes if the user has ANY of the specified permissions (OR).
 
     Usage:
-        @router.get("/rows", dependencies=[Depends(require_any_permission("channel:read", "row:read"))])
+        @router.get("/rows", dependencies=[Depends(require_any_permission(PermStr.CHANNEL_READ, PermStr.ROW_READ))])
         def rows_endpoint(): ...
     """
 

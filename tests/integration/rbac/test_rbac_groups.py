@@ -1,4 +1,4 @@
-# tests/unit/schemas/rbac/test_rbac_groups.py
+# tests/integration/rbac/test_rbac_groups.py
 
 import pytest
 from kronicle_sdk.models.rbac.kronicle_group import KronicleGroup

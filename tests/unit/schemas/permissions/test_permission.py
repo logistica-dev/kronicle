@@ -1,45 +1,46 @@
+# tests/unit/schemas/permissions/test_permission.py
 import pytest
 
-from kronicle.schemas.permissions.permission import Permission, PermissionAction, PermissionTarget
+from kronicle.schemas.permissions.permission import PermAction, Permission, PermTarget
 
 
 class TestPermissionTarget:
     def test_enum_values(self):
-        assert PermissionTarget.USER.value == "user"
-        assert PermissionTarget.ROLE.value == "role"
-        assert PermissionTarget.GROUP.value == "group"
-        assert PermissionTarget.ZONE.value == "zone"
-        assert PermissionTarget.CHANNEL.value == "channel"
-        assert PermissionTarget.POLICY.value == "policy"
-        assert PermissionTarget.ROW.value == "row"
-        assert PermissionTarget.RBAC.value == "rbac"
-        assert PermissionTarget.DATA.value == "data"
-        assert PermissionTarget.SETUP.value == "setup"
+        assert PermTarget.USER.value == "user"
+        assert PermTarget.ROLE.value == "role"
+        assert PermTarget.GROUP.value == "group"
+        assert PermTarget.ZONE.value == "zone"
+        assert PermTarget.CHANNEL.value == "channel"
+        assert PermTarget.POLICY.value == "policy"
+        assert PermTarget.ROW.value == "row"
+        assert PermTarget.RBAC.value == "rbac"
+        assert PermTarget.DATA.value == "data"
+        assert PermTarget.SETUP.value == "setup"
 
 
 class TestPermissionAction:
     def test_enum_values(self):
-        assert PermissionAction.CREATE.value == "create"
-        assert PermissionAction.READ.value == "read"
-        assert PermissionAction.UPDATE.value == "update"
-        assert PermissionAction.DELETE.value == "delete"
-        assert PermissionAction.ASSIGN.value == "assign"
-        assert PermissionAction.SYNC.value == "sync"
-        assert PermissionAction.WRITE.value == "write"
-        assert PermissionAction.DELEGATE.value == "delegate"
-        assert PermissionAction.ACCESS.value == "access"
+        assert PermAction.CREATE.value == "create"
+        assert PermAction.READ.value == "read"
+        assert PermAction.UPDATE.value == "update"
+        assert PermAction.DELETE.value == "delete"
+        assert PermAction.ASSIGN.value == "assign"
+        assert PermAction.SYNC.value == "sync"
+        assert PermAction.WRITE.value == "write"
+        assert PermAction.DELEGATE.value == "delegate"
+        assert PermAction.ACCESS.value == "access"
 
 
 class TestPermissionConstruct:
     def test_two_arg_constructor(self):
-        p = Permission(PermissionTarget.ZONE, PermissionAction.CREATE)
-        assert p.target == PermissionTarget.ZONE
-        assert p.action == PermissionAction.CREATE
+        p = Permission(PermTarget.ZONE, PermAction.CREATE)
+        assert p.target == PermTarget.ZONE
+        assert p.action == PermAction.CREATE
 
     def test_parse_simple(self):
         p = Permission.parse("zone:create")
-        assert p.target == PermissionTarget.ZONE
-        assert p.action == PermissionAction.CREATE
+        assert p.target == PermTarget.ZONE
+        assert p.action == PermAction.CREATE
 
     def test_parse_compound_target_no_longer_supported(self):
         with pytest.raises(ValueError, match="Unknown permission target"):
@@ -47,8 +48,8 @@ class TestPermissionConstruct:
 
     def test_parse_simple_channel(self):
         p = Permission.parse("channel:sync")
-        assert p.target == PermissionTarget.CHANNEL
-        assert p.action == PermissionAction.SYNC
+        assert p.target == PermTarget.CHANNEL
+        assert p.action == PermAction.SYNC
 
     def test_parse_invalid_no_colon(self):
         with pytest.raises(ValueError, match="Invalid permission string"):
@@ -73,11 +74,11 @@ class TestPermissionConstruct:
 
 class TestPermissionStr:
     def test_str_simple(self):
-        p = Permission(PermissionTarget.ZONE, PermissionAction.CREATE)
+        p = Permission(PermTarget.ZONE, PermAction.CREATE)
         assert str(p) == "zone:create"
 
     def test_str_channel(self):
-        p = Permission(PermissionTarget.CHANNEL, PermissionAction.UPDATE)
+        p = Permission(PermTarget.CHANNEL, PermAction.UPDATE)
         assert str(p) == "channel:update"
 
     def test_str_roundtrip(self):
@@ -87,83 +88,83 @@ class TestPermissionStr:
 
 class TestPermissionEquality:
     def test_equal_same_target_action(self):
-        a = Permission(PermissionTarget.USER, PermissionAction.CREATE)
-        b = Permission(PermissionTarget.USER, PermissionAction.CREATE)
+        a = Permission(PermTarget.USER, PermAction.CREATE)
+        b = Permission(PermTarget.USER, PermAction.CREATE)
         assert a == b
 
     def test_not_equal_different_target(self):
-        a = Permission(PermissionTarget.USER, PermissionAction.CREATE)
-        b = Permission(PermissionTarget.ROLE, PermissionAction.CREATE)
+        a = Permission(PermTarget.USER, PermAction.CREATE)
+        b = Permission(PermTarget.ROLE, PermAction.CREATE)
         assert a != b
 
     def test_not_equal_different_action(self):
-        a = Permission(PermissionTarget.USER, PermissionAction.CREATE)
-        b = Permission(PermissionTarget.USER, PermissionAction.DELETE)
+        a = Permission(PermTarget.USER, PermAction.CREATE)
+        b = Permission(PermTarget.USER, PermAction.DELETE)
         assert a != b
 
     def test_equal_parse_vs_construct(self):
-        assert Permission.parse("zone:create") == Permission(PermissionTarget.ZONE, PermissionAction.CREATE)
+        assert Permission.parse("zone:create") == Permission(PermTarget.ZONE, PermAction.CREATE)
 
     def test_not_equal_wrong_type(self):
-        p = Permission(PermissionTarget.ZONE, PermissionAction.CREATE)
+        p = Permission(PermTarget.ZONE, PermAction.CREATE)
         assert p != "zone:create"
 
 
 class TestPermissionHash:
     def test_hashable(self):
-        p = Permission(PermissionTarget.ZONE, PermissionAction.READ)
+        p = Permission(PermTarget.ZONE, PermAction.READ)
         s = {p}
         assert p in s
 
     def test_set_membership(self):
-        p1 = Permission(PermissionTarget.ZONE, PermissionAction.READ)
-        p2 = Permission(PermissionTarget.ZONE, PermissionAction.WRITE)
+        p1 = Permission(PermTarget.ZONE, PermAction.READ)
+        p2 = Permission(PermTarget.ZONE, PermAction.WRITE)
         s = {p1, p2}
-        assert Permission(PermissionTarget.ZONE, PermissionAction.READ) in s
-        assert Permission(PermissionTarget.ZONE, PermissionAction.WRITE) in s
-        assert Permission(PermissionTarget.CHANNEL, PermissionAction.CREATE) not in s
+        assert Permission(PermTarget.ZONE, PermAction.READ) in s
+        assert Permission(PermTarget.ZONE, PermAction.WRITE) in s
+        assert Permission(PermTarget.CHANNEL, PermAction.CREATE) not in s
 
     def test_hash_consistent_with_equality(self):
         a = Permission.parse("zone:create")
-        b = Permission(PermissionTarget.ZONE, PermissionAction.CREATE)
+        b = Permission(PermTarget.ZONE, PermAction.CREATE)
         assert hash(a) == hash(b)
 
 
 class TestPermissionAllStrings:
     def test_all_known_permissions_roundtrip(self):
         cases = [
-            ("user:create", PermissionTarget.USER, PermissionAction.CREATE),
-            ("user:read", PermissionTarget.USER, PermissionAction.READ),
-            ("user:update", PermissionTarget.USER, PermissionAction.UPDATE),
-            ("user:delete", PermissionTarget.USER, PermissionAction.DELETE),
-            ("role:assign", PermissionTarget.ROLE, PermissionAction.ASSIGN),
-            ("role:create", PermissionTarget.ROLE, PermissionAction.CREATE),
-            ("role:read", PermissionTarget.ROLE, PermissionAction.READ),
-            ("role:update", PermissionTarget.ROLE, PermissionAction.UPDATE),
-            ("role:delete", PermissionTarget.ROLE, PermissionAction.DELETE),
-            ("group:create", PermissionTarget.GROUP, PermissionAction.CREATE),
-            ("group:read", PermissionTarget.GROUP, PermissionAction.READ),
-            ("group:update", PermissionTarget.GROUP, PermissionAction.UPDATE),
-            ("group:delete", PermissionTarget.GROUP, PermissionAction.DELETE),
-            ("group:assign", PermissionTarget.GROUP, PermissionAction.ASSIGN),
-            ("zone:create", PermissionTarget.ZONE, PermissionAction.CREATE),
-            ("zone:read", PermissionTarget.ZONE, PermissionAction.READ),
-            ("zone:update", PermissionTarget.ZONE, PermissionAction.UPDATE),
-            ("zone:delete", PermissionTarget.ZONE, PermissionAction.DELETE),
-            ("channel:create", PermissionTarget.CHANNEL, PermissionAction.CREATE),
-            ("channel:read", PermissionTarget.CHANNEL, PermissionAction.READ),
-            ("channel:update", PermissionTarget.CHANNEL, PermissionAction.UPDATE),
-            ("channel:delete", PermissionTarget.CHANNEL, PermissionAction.DELETE),
-            ("channel:sync", PermissionTarget.CHANNEL, PermissionAction.SYNC),
-            ("policy:create", PermissionTarget.POLICY, PermissionAction.CREATE),
-            ("policy:read", PermissionTarget.POLICY, PermissionAction.READ),
-            ("policy:delete", PermissionTarget.POLICY, PermissionAction.DELETE),
-            ("row:read", PermissionTarget.ROW, PermissionAction.READ),
-            ("row:create", PermissionTarget.ROW, PermissionAction.CREATE),
-            ("row:delete", PermissionTarget.ROW, PermissionAction.DELETE),
-            ("rbac:access", PermissionTarget.RBAC, PermissionAction.ACCESS),
-            ("data:access", PermissionTarget.DATA, PermissionAction.ACCESS),
-            ("setup:access", PermissionTarget.SETUP, PermissionAction.ACCESS),
+            ("user:create", PermTarget.USER, PermAction.CREATE),
+            ("user:read", PermTarget.USER, PermAction.READ),
+            ("user:update", PermTarget.USER, PermAction.UPDATE),
+            ("user:delete", PermTarget.USER, PermAction.DELETE),
+            ("role:assign", PermTarget.ROLE, PermAction.ASSIGN),
+            ("role:create", PermTarget.ROLE, PermAction.CREATE),
+            ("role:read", PermTarget.ROLE, PermAction.READ),
+            ("role:update", PermTarget.ROLE, PermAction.UPDATE),
+            ("role:delete", PermTarget.ROLE, PermAction.DELETE),
+            ("group:create", PermTarget.GROUP, PermAction.CREATE),
+            ("group:read", PermTarget.GROUP, PermAction.READ),
+            ("group:update", PermTarget.GROUP, PermAction.UPDATE),
+            ("group:delete", PermTarget.GROUP, PermAction.DELETE),
+            ("group:assign", PermTarget.GROUP, PermAction.ASSIGN),
+            ("zone:create", PermTarget.ZONE, PermAction.CREATE),
+            ("zone:read", PermTarget.ZONE, PermAction.READ),
+            ("zone:update", PermTarget.ZONE, PermAction.UPDATE),
+            ("zone:delete", PermTarget.ZONE, PermAction.DELETE),
+            ("channel:create", PermTarget.CHANNEL, PermAction.CREATE),
+            ("channel:read", PermTarget.CHANNEL, PermAction.READ),
+            ("channel:update", PermTarget.CHANNEL, PermAction.UPDATE),
+            ("channel:delete", PermTarget.CHANNEL, PermAction.DELETE),
+            ("channel:sync", PermTarget.CHANNEL, PermAction.SYNC),
+            ("policy:create", PermTarget.POLICY, PermAction.CREATE),
+            ("policy:read", PermTarget.POLICY, PermAction.READ),
+            ("policy:delete", PermTarget.POLICY, PermAction.DELETE),
+            ("row:read", PermTarget.ROW, PermAction.READ),
+            ("row:create", PermTarget.ROW, PermAction.CREATE),
+            ("row:delete", PermTarget.ROW, PermAction.DELETE),
+            ("rbac:access", PermTarget.RBAC, PermAction.ACCESS),
+            ("data:access", PermTarget.DATA, PermAction.ACCESS),
+            ("setup:access", PermTarget.SETUP, PermAction.ACCESS),
         ]
         for raw_str, expected_target, expected_action in cases:
             p = Permission.parse(raw_str)

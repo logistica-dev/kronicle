@@ -1,4 +1,4 @@
-# tests/unit/schemas/filters/test_col_filters.py
+# tests/unit/db/data/query/test_col_filters.py
 from datetime import datetime
 
 from pytest import fixture, mark, raises

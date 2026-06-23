@@ -15,7 +15,7 @@ from kronicle.schemas.filters.row_query_filter import RowQueryFilter
 from kronicle.schemas.filters.row_request_filter import RowRequestFilter
 from kronicle.schemas.payload.input_payload import InputPayload
 from kronicle.schemas.payload.response_payload import ResponsePayload
-from kronicle.schemas.permissions.permission import Permission, PermissionAction, PermissionTarget
+from kronicle.schemas.permissions.permission import PermStr
 from kronicle.services.channel_service import ChannelService
 
 """
@@ -29,7 +29,7 @@ setup_router = APIRouter(
     tags=["Setup data channels"],
     dependencies=[
         Depends(require_auth),
-        Depends(require_permission(Permission(PermissionTarget.SETUP, PermissionAction.ACCESS))),
+        Depends(require_permission(PermStr.SETUP_ACCESS)),
     ],
 )
 
@@ -53,7 +53,7 @@ setup_router.include_router(shared_writer_router)
         "Create a new channel with metadata and schema. Does not add rows, and fails if the channel already exists."
     ),
     response_model=ResponsePayload,
-    dependencies=[Depends(require_permission(Permission(PermissionTarget.CHANNEL, PermissionAction.CREATE)))],
+    dependencies=[Depends(require_permission(PermStr.CHANNEL_CREATE))],
 )
 async def create_channel(
     payload: InputPayload,
@@ -70,7 +70,7 @@ async def create_channel(
         "if it does not exist, creates it with the given schema and metadata."
     ),
     response_model=ResponsePayload,
-    dependencies=[Depends(require_permission(Permission(PermissionTarget.CHANNEL, PermissionAction.UPDATE)))],
+    dependencies=[Depends(require_permission(PermStr.CHANNEL_UPDATE))],
 )
 async def update_channel(
     payload: InputPayload,
@@ -84,7 +84,7 @@ async def update_channel(
     summary="Partially update a channel",
     description="Update only a subset of metadata, tags, or schema for the specified channel.",
     response_model=ResponsePayload,
-    dependencies=[Depends(require_permission(Permission(PermissionTarget.CHANNEL, PermissionAction.UPDATE)))],
+    dependencies=[Depends(require_permission(PermStr.CHANNEL_UPDATE))],
 )
 async def patch_channel(
     payload: InputPayload,
@@ -102,8 +102,8 @@ async def patch_channel(
     dependencies=[
         Depends(
             require_permission_set(
-                Permission(PermissionTarget.CHANNEL, PermissionAction.READ),
-                Permission(PermissionTarget.CHANNEL, PermissionAction.CREATE),
+                PermStr.CHANNEL_READ,
+                PermStr.CHANNEL_CREATE,
             )
         )
     ],
@@ -127,7 +127,7 @@ async def clone_channel(
         "Returns the metadata of the deleted channel."
     ),
     response_model=ResponsePayload,
-    dependencies=[Depends(require_permission(Permission(PermissionTarget.CHANNEL, PermissionAction.DELETE)))],
+    dependencies=[Depends(require_permission(PermStr.CHANNEL_DELETE))],
 )
 async def delete_channel(
     channel_id: UUID,
@@ -141,7 +141,7 @@ async def delete_channel(
     summary="Delete all rows for a channel",
     description="Removes all data rows for the specified channel, while keeping its metadata intact.",
     response_model=ResponsePayload,
-    dependencies=[Depends(require_permission(Permission(PermissionTarget.ROW, PermissionAction.DELETE)))],
+    dependencies=[Depends(require_permission(PermStr.ROW_DELETE))],
 )
 async def delete_channel_rows(
     channel_id: UUID,
@@ -156,7 +156,7 @@ async def delete_channel_rows(
     "/channels/batch-delete",
     summary="Delete multiple channels",
     response_model=list[ResponsePayload],
-    dependencies=[Depends(require_permission(Permission(PermissionTarget.CHANNEL, PermissionAction.DELETE)))],
+    dependencies=[Depends(require_permission(PermStr.CHANNEL_DELETE))],
 )
 async def batch_delete_channels(
     payload: dict = Body(..., examples=[{"channel_ids": ["uuid1", "uuid2"]}]),  # noqa
@@ -170,7 +170,7 @@ async def batch_delete_channels(
     summary="list the types available to describe the columns",
     description=("Retrieves every Python-like type that can be used to describe the type of a data column"),
     response_model=list[str],
-    dependencies=[Depends(require_permission(Permission(PermissionTarget.CHANNEL, PermissionAction.READ)))],
+    dependencies=[Depends(require_permission(PermStr.CHANNEL_READ))],
 )
 async def get_column_types():
     return SchemaRegistry().allowed_types

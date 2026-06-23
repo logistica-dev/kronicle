@@ -1,4 +1,4 @@
-# tests/test_abc_connector_instantiation.py
+# tests/integration/test_abc_connector.py
 
 import pytest
 from kronicle_sdk.connectors.abc_connector import KronicleAbstractConnector

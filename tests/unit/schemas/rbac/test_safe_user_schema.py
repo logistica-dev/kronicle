@@ -1,4 +1,4 @@
-# tests/unit/schemas/rbac/test_user_schema.py
+# tests/unit/schemas/rbac/test_safe_user_schema.py
 from uuid import uuid4
 
 import pytest

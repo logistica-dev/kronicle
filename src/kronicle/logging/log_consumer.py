@@ -1,3 +1,4 @@
+# kronicle/logging/log_consumer.py
 from kronicle.logging.log_event import LogEvent
 from kronicle.logging.log_producer import event_queue
 

@@ -1,3 +1,4 @@
+# tests/unit/db/data/models/test_channel_metadata.py
 from json import dumps
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4

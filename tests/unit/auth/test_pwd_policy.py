@@ -1,4 +1,4 @@
-# tests/test_password_policy.py
+# tests/unit/auth/test_pwd_policy.py
 from __future__ import annotations
 
 import unittest

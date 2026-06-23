@@ -1,3 +1,4 @@
+# kronicle/logging/log_bus/event_bus.py
 import asyncio
 
 setup_queue = asyncio.Queue()

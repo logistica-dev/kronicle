@@ -1,4 +1,4 @@
-# tests/iam/test_pwd_manager.py
+# tests/unit/auth/test_pwd_manager.py
 from pytest import fixture, raises
 
 from kronicle.auth.pwd.pwd_manager import PasswordManager

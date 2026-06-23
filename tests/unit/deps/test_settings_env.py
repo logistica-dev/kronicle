@@ -1,4 +1,4 @@
-# tests/test_settings_env.py
+# tests/unit/deps/test_settings_env.py
 import base64
 
 import pytest

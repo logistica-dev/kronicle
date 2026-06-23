@@ -1,9 +1,10 @@
+# kronicle/schemas/permissions/permission.py
 from __future__ import annotations
 
 from enum import StrEnum
 
 
-class PermissionTarget(StrEnum):
+class PermTarget(StrEnum):
     USER = "user"
     ROLE = "role"
     GROUP = "group"
@@ -16,7 +17,7 @@ class PermissionTarget(StrEnum):
     SETUP = "setup"
 
 
-class PermissionAction(StrEnum):
+class PermAction(StrEnum):
     CREATE = "create"
     READ = "read"
     UPDATE = "update"
@@ -26,6 +27,14 @@ class PermissionAction(StrEnum):
     WRITE = "write"
     DELEGATE = "delegate"
     ACCESS = "access"
+
+
+Tgt = PermTarget
+Act = PermAction
+
+
+def perm(target: PermTarget, action: PermAction) -> str:
+    return f"{target}:{action}"
 
 
 class Permission:
@@ -42,24 +51,27 @@ class Permission:
 
     __slots__ = ("_target", "_action")
 
-    def __init__(self, target: PermissionTarget, action: PermissionAction) -> None:
-        self._target = target if isinstance(target, PermissionTarget) else PermissionTarget(target)
-        self._action = action if isinstance(action, PermissionAction) else PermissionAction(action)
+    def __init__(self, target: PermTarget, action: PermAction) -> None:
+        self._target = target if isinstance(target, PermTarget) else PermTarget(target)
+        self._action = action if isinstance(action, PermAction) else PermAction(action)
 
     # -- read-only properties ------------------------------------------------
 
     @property
-    def target(self) -> PermissionTarget:
+    def target(self) -> PermTarget:
         return self._target
 
     @property
-    def action(self) -> PermissionAction:
+    def action(self) -> PermAction:
         return self._action
 
     # -- string serialisation ------------------------------------------------
 
     def __str__(self) -> str:
         return f"{self._target.value}:{self._action.value}"
+
+    def to_str(self) -> str:
+        return self.__str__()
 
     def __repr__(self) -> str:
         return f"Permission({self._target.value!r}, {self._action.value!r})"
@@ -82,11 +94,79 @@ class Permission:
         if idx <= 0 or idx >= len(raw) - 1:
             raise ValueError(f"Invalid permission string: {raw!r}")
         try:
-            target = PermissionTarget(raw[:idx])
+            target = PermTarget(raw[:idx])
         except ValueError as e:
             raise ValueError(f"Unknown permission target: {raw[:idx]!r}") from e
         try:
-            action = PermissionAction(raw[idx + 1 :])
+            action = PermAction(raw[idx + 1 :])
         except ValueError as e:
             raise ValueError(f"Unknown permission action: {raw[idx + 1 :]!r}") from e
         return cls(target=target, action=action)
+
+
+class PermStr(StrEnum):
+    """Every known permission in the Kronicle system.
+
+    Usage:
+        require_permission(PermStr.CHANNEL_READ)
+        PermStr.parse("channel:read")   # → PermStr.CHANNEL_READ
+        PermStr.CHANNEL_READ.target     # → PermTarget.CHANNEL
+        PermStr.CHANNEL_READ.action     # → PermAction.READ
+    """
+
+    USER_CREATE = perm(Tgt.USER, Act.CREATE)
+    USER_READ = perm(Tgt.USER, Act.READ)
+    USER_UPDATE = perm(Tgt.USER, Act.UPDATE)
+    USER_DELETE = perm(Tgt.USER, Act.DELETE)
+
+    ROLE_CREATE = perm(Tgt.ROLE, Act.CREATE)
+    ROLE_READ = perm(Tgt.ROLE, Act.READ)
+    ROLE_UPDATE = perm(Tgt.ROLE, Act.UPDATE)
+    ROLE_DELETE = perm(Tgt.ROLE, Act.DELETE)
+    ROLE_ASSIGN = perm(Tgt.ROLE, Act.ASSIGN)
+
+    GROUP_CREATE = perm(Tgt.GROUP, Act.CREATE)
+    GROUP_READ = perm(Tgt.GROUP, Act.READ)
+    GROUP_UPDATE = perm(Tgt.GROUP, Act.UPDATE)
+    GROUP_DELETE = perm(Tgt.GROUP, Act.DELETE)
+    GROUP_ASSIGN = perm(Tgt.GROUP, Act.ASSIGN)
+
+    ZONE_CREATE = perm(Tgt.ZONE, Act.CREATE)
+    ZONE_READ = perm(Tgt.ZONE, Act.READ)
+    ZONE_UPDATE = perm(Tgt.ZONE, Act.UPDATE)
+    ZONE_DELETE = perm(Tgt.ZONE, Act.DELETE)
+
+    CHANNEL_CREATE = perm(Tgt.CHANNEL, Act.CREATE)
+    CHANNEL_READ = perm(Tgt.CHANNEL, Act.READ)
+    CHANNEL_UPDATE = perm(Tgt.CHANNEL, Act.UPDATE)
+    CHANNEL_DELETE = perm(Tgt.CHANNEL, Act.DELETE)
+    CHANNEL_SYNC = perm(Tgt.CHANNEL, Act.SYNC)
+
+    POLICY_CREATE = perm(Tgt.POLICY, Act.CREATE)
+    POLICY_READ = perm(Tgt.POLICY, Act.READ)
+    POLICY_DELETE = perm(Tgt.POLICY, Act.DELETE)
+
+    ROW_READ = perm(Tgt.ROW, Act.READ)
+    ROW_CREATE = perm(Tgt.ROW, Act.CREATE)
+    ROW_DELETE = perm(Tgt.ROW, Act.DELETE)
+
+    RBAC_ACCESS = perm(Tgt.RBAC, Act.ACCESS)
+    DATA_ACCESS = perm(Tgt.DATA, Act.ACCESS)
+    SETUP_ACCESS = perm(Tgt.SETUP, Act.ACCESS)
+
+    @property
+    def target(self) -> PermTarget:
+        target_str, _ = self.value.split(":", 1)
+        return PermTarget(target_str)
+
+    @property
+    def action(self) -> PermAction:
+        _, action_str = self.value.split(":", 1)
+        return PermAction(action_str)
+
+    def to_permission(self) -> Permission:
+        return Permission(self.target, self.action)
+
+    @classmethod
+    def parse(cls, raw: str) -> PermStr:
+        return cls(raw)

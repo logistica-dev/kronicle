@@ -43,6 +43,7 @@ from kronicle.repo.data.channel_repository import ChannelRepository
 from kronicle.services.channel_service import ChannelService
 from kronicle.services.core_service import CoreService
 from kronicle.services.rbac_service import RbacService
+from kronicle.services.seed_service import seed_default_roles
 from kronicle.utils.dev_logs import log_block, log_d, log_e, log_w, request_logger
 
 mod = "main"
@@ -154,6 +155,9 @@ class KronicleApp:
         with log_block(here, "RBAC service"):
             rbac_service = RbacService(self.app.state.rbac_db)
             self.app.state.rbac_service = rbac_service
+
+        with log_block(here, "Seed default roles"):
+            seed_default_roles(self.app.state.rbac_db)
 
         # --- Auth service ---
         with log_block(here, "AuthService"):

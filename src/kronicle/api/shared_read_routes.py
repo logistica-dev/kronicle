@@ -11,7 +11,7 @@ from kronicle.deps.channel_deps import channel_service
 from kronicle.schemas.filters.row_query_filter import RowQueryFilter
 from kronicle.schemas.filters.row_request_filter import RowRequestFilter
 from kronicle.schemas.payload.response_payload import ResponsePayload
-from kronicle.schemas.permissions.permission import Permission, PermissionAction, PermissionTarget
+from kronicle.schemas.permissions.permission import PermStr
 from kronicle.services.channel_service import ChannelService
 from kronicle.utils.dev_logs import log_d
 
@@ -50,7 +50,7 @@ shared_read_router = APIRouter(dependencies=[Depends(require_auth)])
         "Optionally, filter by a name or tag_key/tag_value pair."
     ),
     response_model=list[ResponsePayload] | ResponsePayload,
-    dependencies=[Depends(require_permission(Permission(PermissionTarget.CHANNEL, PermissionAction.READ)))],
+    dependencies=[Depends(require_permission(PermStr.CHANNEL_READ))],
 )
 async def fetch_all_channels_metadata(
     name: str | None = Query(None, description="Optional name to filter by"),
@@ -87,7 +87,7 @@ async def fetch_all_channels_metadata(
         "but does not include the row data itself."
     ),
     response_model=ResponsePayload,
-    dependencies=[Depends(require_permission(Permission(PermissionTarget.CHANNEL, PermissionAction.READ)))],
+    dependencies=[Depends(require_permission(PermStr.CHANNEL_READ))],
 )
 async def fetch_channel(
     channel_id: UUID,
@@ -108,8 +108,8 @@ async def fetch_channel(
     dependencies=[
         Depends(
             require_any_permission(
-                Permission(PermissionTarget.CHANNEL, PermissionAction.READ),
-                Permission(PermissionTarget.ROW, PermissionAction.READ),
+                PermStr.CHANNEL_READ,
+                PermStr.ROW_READ,
             )
         )
     ],
@@ -134,8 +134,8 @@ async def fetch_channel_rows(
     dependencies=[
         Depends(
             require_any_permission(
-                Permission(PermissionTarget.CHANNEL, PermissionAction.READ),
-                Permission(PermissionTarget.ROW, PermissionAction.READ),
+                PermStr.CHANNEL_READ,
+                PermStr.ROW_READ,
             )
         )
     ],

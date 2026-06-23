@@ -1,4 +1,4 @@
-# kronicle/logging/log_event.py
+# kronicle/logging/log_bus/log_event.py
 from typing import Any
 
 from pydantic import BaseModel, Field

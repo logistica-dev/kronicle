@@ -1,4 +1,4 @@
-# tests/iam/test_pwd_generator.py
+# tests/unit/auth/test_pwd_generator.py
 import re
 
 import pytest

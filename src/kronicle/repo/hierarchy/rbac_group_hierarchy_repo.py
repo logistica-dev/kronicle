@@ -1,4 +1,4 @@
-# kronicle/db/rbac/repo/links/rbac_group_roles_repo.py
+# kronicle/repo/hierarchy/rbac_group_hierarchy_repo.py
 
 
 from kronicle.db.rbac.links.group_hierarchy import RbacGroupHierarchy

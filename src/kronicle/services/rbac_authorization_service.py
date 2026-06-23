@@ -1,4 +1,4 @@
-# kronicle/db/rbac/rbac_engine.py
+# kronicle/services/rbac_authorization_service.py
 from __future__ import annotations
 
 from uuid import UUID

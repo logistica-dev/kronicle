@@ -1,4 +1,4 @@
-# kronicle/repo/core/zone_hierarchy_repo.py
+# kronicle/repo/hierarchy/zone_hierarchy_repo.py
 from sqlalchemy.orm import Session
 
 from kronicle.db.core.links.zone_hierarchy import ZoneHierarchy

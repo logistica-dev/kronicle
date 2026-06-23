@@ -1,3 +1,4 @@
+# tests/unit/db/data/models/test_schema_registry.py
 from pytest import mark, raises
 
 from kronicle.db.data.models.schema_registry import SchemaRegistry, SchemaTypeInfo

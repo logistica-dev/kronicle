@@ -1,3 +1,4 @@
+# tests/unit/db/data/models/test_channel_schema.py
 from pytest import raises
 
 from kronicle.db.data.models.channel_schema import ChannelSchema

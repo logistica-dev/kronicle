@@ -1,4 +1,4 @@
-# kronicle/schemas/rbac/user_schemas.py
+# kronicle/schemas/rbac/safe_user_schemas.py
 from __future__ import annotations
 
 from json import dumps

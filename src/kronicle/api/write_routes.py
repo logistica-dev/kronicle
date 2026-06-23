@@ -12,7 +12,7 @@ from kronicle.deps.channel_deps import channel_service
 from kronicle.deps.rbac_deps import core_service
 from kronicle.schemas.payload.input_payload import InputPayload
 from kronicle.schemas.payload.response_payload import ResponsePayload
-from kronicle.schemas.permissions.permission import Permission, PermissionAction, PermissionTarget
+from kronicle.schemas.permissions.permission import PermStr
 from kronicle.services.channel_service import ChannelService
 from kronicle.services.core_service import CoreService
 from kronicle.utils.str_utils import ensure_uuid4
@@ -21,7 +21,7 @@ writer_router = APIRouter(
     tags=["Input data"],
     dependencies=[
         Depends(require_auth),
-        Depends(require_permission(Permission(PermissionTarget.DATA, PermissionAction.ACCESS))),
+        Depends(require_permission(PermStr.DATA_ACCESS)),
     ],
 )
 
@@ -47,8 +47,8 @@ writer_router.include_router(shared_writer_router)
     dependencies=[
         Depends(
             require_permission_set(
-                Permission(PermissionTarget.CHANNEL, PermissionAction.CREATE),
-                Permission(PermissionTarget.ROW, PermissionAction.CREATE),
+                PermStr.CHANNEL_CREATE,
+                PermStr.ROW_CREATE,
             )
         ),
     ],
@@ -72,8 +72,8 @@ async def create_channel_in_zone(
     dependencies=[
         Depends(
             require_permission_set(
-                Permission(PermissionTarget.CHANNEL, PermissionAction.UPDATE),
-                Permission(PermissionTarget.ROW, PermissionAction.CREATE),
+                PermStr.CHANNEL_UPDATE,
+                PermStr.ROW_CREATE,
             )
         )
     ],

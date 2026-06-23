@@ -1,4 +1,4 @@
-# kronicle/db/rbac/repo/links/rbac_group_roles_repo.py
+# kronicle/repo/rbac/links/rbac_group_roles_repo.py
 from uuid import UUID
 
 from sqlalchemy.orm import Session

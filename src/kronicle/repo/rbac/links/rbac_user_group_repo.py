@@ -1,4 +1,4 @@
-# kronicle/db/rbac/repo/links/rbac_user_group_repo.py
+# kronicle/repo/rbac/links/rbac_user_group_repo.py
 from uuid import UUID
 
 from sqlalchemy import select

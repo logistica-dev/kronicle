@@ -1,4 +1,4 @@
-# tests/unit/main/test_kronicle_app_factory_unit.py
+# tests/unit/test_main.py
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest

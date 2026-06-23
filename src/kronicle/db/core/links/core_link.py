@@ -1,4 +1,4 @@
-# kronicle/db/base/kronicle_link.py
+# kronicle/db/core/links/core_link.py
 
 from kronicle.db.base.kronicle_link import KronicleLink
 from kronicle.db.core.models.core_entity import CoreEntity

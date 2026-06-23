@@ -1,3 +1,4 @@
+# kronicle/logging/log_bus/mid_sanitize.py
 """
 Authentication middleware for FastAPI
 """

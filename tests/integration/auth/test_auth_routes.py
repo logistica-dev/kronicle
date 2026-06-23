@@ -1,4 +1,4 @@
-# tests/integration/auth/auth_routes.py
+# tests/integration/auth/test_auth_routes.py
 
 import pytest
 from kronicle_sdk.conf.read_conf import Settings

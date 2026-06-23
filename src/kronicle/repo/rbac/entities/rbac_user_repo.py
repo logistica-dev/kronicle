@@ -1,4 +1,4 @@
-# kronicle/db/rbac/repo/rbac_user_repo.py
+# kronicle/repo/rbac/entities/rbac_user_repo.py
 from collections.abc import Sequence
 from uuid import UUID
 

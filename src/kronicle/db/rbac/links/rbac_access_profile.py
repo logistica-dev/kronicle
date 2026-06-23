@@ -1,4 +1,4 @@
-# kronicle/db/rbac/models/rbac_access_profile.py
+# kronicle/db/rbac/links/rbac_access_profile.py
 from uuid import UUID, uuid4
 
 from sqlalchemy import ForeignKey, String, UniqueConstraint

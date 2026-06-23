@@ -1,4 +1,4 @@
-# kronicle/db/migration/database_catalog.py
+# kronicle/db/migration/db_catalog.py
 from __future__ import annotations
 
 from dataclasses import dataclass
