@@ -7,7 +7,6 @@ bak
 .conf
 backup*
 uv.lock
-opencode.json
 
 # Python
 **/__pycache__

@@ -13,7 +13,7 @@ from kronicle.schemas.permissions.permission import Permission, PermissionAction
 from kronicle.schemas.rbac.input_group_schemas import InputGroup
 from kronicle.schemas.rbac.input_policy_schemas import InputChannelPolicy, InputZonePolicy
 from kronicle.schemas.rbac.input_role_schemas import InputRole
-from kronicle.schemas.rbac.input_user_schemas import InputUser
+from kronicle.schemas.rbac.input_user_schemas import InputUser, InputUserPatch
 from kronicle.schemas.rbac.safe_group_schemas import OutputGroup
 from kronicle.schemas.rbac.safe_role_schemas import OutputRole
 from kronicle.schemas.rbac.safe_user_schemas import OutputUser, ProcessedUser
@@ -88,6 +88,26 @@ def patch_user(
 ):
     user_processed = ProcessedUser.from_input(user_in)
     return rbac.patch_user(user=user_processed)
+
+
+@rbac_router.patch(
+    "/users/{user_id}",
+    response_model=OutputUser,
+    dependencies=[Depends(require_permission(Permission(PermissionTarget.USER, PermissionAction.UPDATE)))],
+)
+def patch_user_by_id(
+    user_id: UUID,
+    user_in: InputUserPatch | None = None,
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    if not user_in:
+        raise BadRequestError("No update data provided")
+    return rbac.patch_user_by_id(
+        user_id,
+        name=user_in.name,
+        full_name=user_in.full_name,
+        orcid=user_in.orcid,
+    )
 
 
 @rbac_router.delete(

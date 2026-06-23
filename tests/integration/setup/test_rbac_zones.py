@@ -9,11 +9,11 @@ from kronicle_sdk.utils.str_utils import tiny_id
 @pytest.fixture(scope="module")
 def test_zone(kronicle_rbac_setup):
     tag = tiny_id()
-    zone = KronicleZone(name=f"test_zone_{tag}")
+    zone = KronicleZone(name=f"test_zone_{tag}", details={"test": True})
     created = kronicle_rbac_setup.create_zone(zone)
     yield created
     try:
-        kronicle_rbac_setup.delete_zone(created.id)
+        kronicle_rbac_setup.delete_zone(zone_id=created.id)
     except Exception:
         pass
 
@@ -21,7 +21,7 @@ def test_zone(kronicle_rbac_setup):
 @pytest.mark.integration
 def test_list_zones(kronicle_rbac_setup, test_zone):
     here = "setup_zones"
-    zones = kronicle_rbac_setup.get_zones()
+    zones = kronicle_rbac_setup.get_all_zones()
     log_d(here, f"Number of zones: {len(zones)}")
     assert isinstance(zones, list)
     assert len(zones) > 0
@@ -31,7 +31,7 @@ def test_list_zones(kronicle_rbac_setup, test_zone):
 @pytest.mark.integration
 def test_get_zone(kronicle_rbac_setup, test_zone):
     zone_id = test_zone.id
-    zone = kronicle_rbac_setup.get_zone(zone_id)
+    zone = kronicle_rbac_setup.get_zone_by_id(zone_id=zone_id)
     assert zone is not None
     assert zone.id == zone_id
     assert zone.name == test_zone.name
@@ -41,21 +41,23 @@ def test_get_zone(kronicle_rbac_setup, test_zone):
 def test_create_zone(kronicle_rbac_setup):
     here = "setup_zones"
     tag = tiny_id()
-    zone = KronicleZone(name=f"zone_{tag}")
+    zone = KronicleZone(name=f"zone_{tag}", details={"test": True})
     created = kronicle_rbac_setup.create_zone(zone)
-    log_d(here, "Created", created)
-    assert created is not None
-    assert isinstance(created, KronicleZone)
-    assert created.name == zone.name
-    kronicle_rbac_setup.delete_zone(created.id)
+    try:
+        log_d(here, "Created", created)
+        assert created is not None
+        assert isinstance(created, KronicleZone)
+        assert created.name == zone.name
+    finally:
+        kronicle_rbac_setup.delete_zone(zone_id=created.id)
 
 
 @pytest.mark.integration
 def test_delete_zone(kronicle_rbac_setup):
     tag = tiny_id()
-    zone = KronicleZone(name=f"del_zone_{tag}")
+    zone = KronicleZone(name=f"del_zone_{tag}", details={"test": True})
     created = kronicle_rbac_setup.create_zone(zone)
-    deleted = kronicle_rbac_setup.delete_zone(created.id)
+    deleted = kronicle_rbac_setup.delete_zone(zone_id=created.id)
     assert deleted is not None
-    zones = kronicle_rbac_setup.get_zones()
+    zones = kronicle_rbac_setup.get_all_zones()
     assert created.id not in {z.id for z in zones}

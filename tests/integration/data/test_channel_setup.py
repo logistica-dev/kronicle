@@ -41,31 +41,33 @@ def test_insert_rows_and_upsert_channel(kronicle_writer, kronicle_setup, kronicl
     now_tag = now_local()
     tag = tiny_id()
 
-    zone = kronicle_rbac_setup.create_zone(KronicleZone(name=f"setup_test_zone_{tag}"))
+    zone = kronicle_rbac_setup.create_zone(KronicleZone(name=f"setup_test_zone_{tag}", details={"test": True}))
 
-    payload = {
-        "channel_id": channel_id,
-        "channel_name": channel_name,
-        "channel_schema": {"time": "datetime", "temperature": "float"},
-        "metadata": {"unit": "°C"},
-        "tags": {"test": now_tag},
-        "rows": [
-            {"time": "2025-01-10T00:00:00Z", "temperature": 12.3},
-            {"time": "2025-01-10T00:01:00Z", "temperature": 12.8},
-        ],
-    }
-    log_d(here, "payload", payload)
+    try:
+        payload = {
+            "channel_id": channel_id,
+            "channel_name": channel_name,
+            "channel_schema": {"time": "datetime", "temperature": "float"},
+            "metadata": {"unit": "°C"},
+            "tags": {"test": now_tag},
+            "rows": [
+                {"time": "2025-01-10T00:00:00Z", "temperature": 12.3},
+                {"time": "2025-01-10T00:01:00Z", "temperature": 12.8},
+            ],
+        }
+        log_d(here, "payload", payload)
 
-    result = kronicle_writer.create_channel(zone_id=zone.id, body=payload)
-    log_d(here, "result", result)
-    log_d(here, "column types", kronicle_setup.column_types)
+        result = kronicle_writer.create_channel(zone_id=zone.id, body=payload)
+        log_d(here, "result", result)
+        log_d(here, "column types", kronicle_setup.column_types)
 
-    assert result is not None
-    assert isinstance(result, KroniclePayload)
-    assert result.channel_id == UUID(channel_id)
+        assert result is not None
+        assert isinstance(result, KroniclePayload)
+        assert result.channel_id == UUID(channel_id)
 
-    kronicle_setup.delete_channel(channel_id)
-    kronicle_rbac_setup.delete_zone(zone.id)
+        kronicle_setup.delete_channel(channel_id)
+    finally:
+        kronicle_rbac_setup.delete_zone(zone_id=zone.id)
 
 
 @pytest.mark.integration

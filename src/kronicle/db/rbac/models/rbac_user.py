@@ -34,6 +34,7 @@ class RbacUser(RbacEntity):
             "id": uuid_to_str(self.id),
             "email": self.email,
             "name": self.name,
+            "details": self.details,
         }
         if self.full_name is not None:
             result["full_name"] = self.full_name

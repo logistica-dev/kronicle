@@ -1,7 +1,7 @@
 # kronicle/schemas/rbac/input_user_schemas.py
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Any
 
 from email_validator import validate_email
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
@@ -85,6 +85,7 @@ class InputUser(BaseModel):
     orcid: str | None = None
     name: str | None = None  # optional for now
     full_name: str | None = None
+    details: dict[str, Any] = Field(default_factory=dict, description="Optional JSONB metadata")
 
     @field_validator("password")
     def validate_password_syntax(cls, v: str) -> str:
@@ -94,6 +95,21 @@ class InputUser(BaseModel):
         except ValueError as e:
             raise BadRequestError(f"Invalid password: {e}") from e
         return v
+
+    @field_validator("name", "full_name")
+    def validate_user_name_syntax(cls, v: str | None) -> str | None:
+        try:
+            return validate_name_syntax(
+                v, extra_chars=_USERNAME_EXTRA_CHARS, min_length=_USERNAME_MIN_LENGTH, max_length=_USERNAME_MAX_LENGTH
+            )
+        except ValueError as e:
+            raise BadRequestError(f"User {e}") from e
+
+
+class InputUserPatch(BaseModel):
+    name: str | None = None
+    full_name: str | None = None
+    orcid: str | None = None
 
     @field_validator("name", "full_name")
     def validate_user_name_syntax(cls, v: str | None) -> str | None:

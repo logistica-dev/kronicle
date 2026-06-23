@@ -22,9 +22,9 @@ def test_get_all_users(kronicle_rbac, test_user):
 @pytest.mark.integration
 def test_get_user_by_email_and_name(kronicle_rbac, test_user):
     """Test getting a user by email and name, including a non-existent user."""
-    by_email = kronicle_rbac.get_user_by(email=test_user.email)
-    by_name = kronicle_rbac.get_user_by(name=test_user.name)
-    by_fake = kronicle_rbac.get_user_by(name=f"{test_user.name}_nonexistent")
+    by_email = kronicle_rbac.get_user_by_email(email=test_user.email)
+    by_name = kronicle_rbac.get_user_by_name(name=test_user.name)
+    by_fake = kronicle_rbac.get_user_by_name(name=f"{test_user.name}_nonexistent")
 
     log_d("get by email", by_email)
     log_d("get by name", by_name)
@@ -46,6 +46,7 @@ def test_crud_user(kronicle_rbac):
         email=f"crud_{tag}@kronicle.app",
         name=f"crud_user_{tag}",
         password="CrudTest_789",
+        details={"test": True},
     )
     res = kronicle_rbac.create_user(usr)
     log_d(here, "Created", res)
@@ -54,16 +55,16 @@ def test_crud_user(kronicle_rbac):
     assert res.email == usr.email
     assert res.name == usr.name
 
-    # Patch user (update fields) — reuse the created user's id to avoid "None" in payload
-    patch = KronicleUser(
-        id=res.id,
-        email=res.email,
-        name=f"{res.name}_patched",
-        full_name="Patched Name",
-    )
-    kronicle_rbac.patch_user(patch)
-
-    # Delete user (cleanup, regardless of patch outcome)
-    usr = kronicle_rbac.deactivate_user(res)
-
-    kronicle_rbac.remove_user_by_id(usr.id)
+    try:
+        # Patch user (update fields) — reuse the created user's id to avoid "None" in payload
+        patch = KronicleUser(
+            id=res.id,
+            email=res.email,
+            name=f"{res.name}_patched",
+            full_name="Patched Name",
+        )
+        kronicle_rbac.patch_user(user_id=res.id, user=patch)
+    finally:
+        # Delete user (cleanup, regardless of patch outcome)
+        usr = kronicle_rbac.deactivate_user(user_id=res.id)
+        kronicle_rbac.delete_user(user_id=usr.id)

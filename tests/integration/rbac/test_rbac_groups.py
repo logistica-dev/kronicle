@@ -19,7 +19,7 @@ def test_list_groups(kronicle_rbac, test_group):
 @pytest.mark.integration
 def test_get_group(kronicle_rbac, test_group):
     group_id = test_group.id
-    group = kronicle_rbac.get_group_by_id(group_id)
+    group = kronicle_rbac.get_group_by_id(group_id=group_id)
     assert group is not None
     assert group.id == group_id
     assert group.name == test_group.name
@@ -29,7 +29,7 @@ def test_get_group(kronicle_rbac, test_group):
 def test_create_group(kronicle_rbac):
     here = "rbac_groups"
     tag = tiny_id()
-    group = KronicleGroup(name=f"crud_group_{tag}")
+    group = KronicleGroup(name=f"crud_group_{tag}", details={"test": True})
     created = kronicle_rbac.create_group(group)
     try:
         log_d(here, "Created", created)
@@ -37,31 +37,31 @@ def test_create_group(kronicle_rbac):
         assert isinstance(created, KronicleGroup)
         assert created.name == group.name
     finally:
-        kronicle_rbac.delete_group(id=created.id)
+        kronicle_rbac.delete_group(group_id=created.id)
 
 
 @pytest.mark.integration
 def test_patch_group(kronicle_rbac):
     here = "rbac_groups"
     tag = tiny_id()
-    group = KronicleGroup(name=f"patch_group_{tag}")
+    group = KronicleGroup(name=f"patch_group_{tag}", details={"test": True})
     created = kronicle_rbac.create_group(group)
     try:
         patched_name = f"{created.name}_patched"
         patch = KronicleGroup(name=patched_name)
-        patched = kronicle_rbac.patch_group(id=created.id, group=patch)
+        patched = kronicle_rbac.patch_group(group_id=created.id, group=patch)
         log_d(here, "Patched", patched)
         assert patched.name == patched_name
     finally:
-        kronicle_rbac.delete_group(id=created.id)
+        kronicle_rbac.delete_group(group_id=created.id)
 
 
 @pytest.mark.integration
 def test_delete_group(kronicle_rbac):
     tag = tiny_id()
-    group = KronicleGroup(name=f"del_group_{tag}")
+    group = KronicleGroup(name=f"del_group_{tag}", details={"test": True})
     created = kronicle_rbac.create_group(group)
-    deleted = kronicle_rbac.delete_group(id=created.id)
+    deleted = kronicle_rbac.delete_group(group_id=created.id)
     assert deleted is not None
     groups = kronicle_rbac.get_all_groups()
     assert created.id not in {g.id for g in groups}

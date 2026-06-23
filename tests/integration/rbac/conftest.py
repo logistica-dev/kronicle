@@ -22,11 +22,12 @@ def test_user(kronicle_rbac) -> Generator[KronicleUser, None, None]:
         email=f"test_{tag}@kronicle.app",
         name=f"test_user_{tag}",
         password="TestPass_123",
+        details={"test": True},
     )
     created = kronicle_rbac.create_user(user)
     yield created
     try:
-        kronicle_rbac.remove_user_by_id(created.id)
+        kronicle_rbac.delete_user(user_id=created.id)
     except Exception:
         pass
 
@@ -34,10 +35,10 @@ def test_user(kronicle_rbac) -> Generator[KronicleUser, None, None]:
 @pytest.fixture(scope="module")
 def test_group(kronicle_rbac) -> Generator[KronicleGroup, None, None]:
     tag = tiny_id()
-    group = KronicleGroup(name=f"test_group_{tag}")
+    group = KronicleGroup(name=f"test_group_{tag}", details={"test": True})
     created = kronicle_rbac.create_group(group)
     yield created
     try:
-        kronicle_rbac.delete_group(created.id)
+        kronicle_rbac.delete_group(group_id=created.id)
     except Exception:
         pass

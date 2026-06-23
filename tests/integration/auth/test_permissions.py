@@ -9,7 +9,7 @@ from kronicle_sdk.connectors.channel.channel_setup import KronicleSetup
 from kronicle_sdk.connectors.rbac.core_setup import KronicleCore
 from kronicle_sdk.connectors.rbac.rbac_setup import KronicleRbac
 from kronicle_sdk.models.rbac.kronicle_zone import KronicleZone
-from kronicle_sdk.utils.str_utils import tiny_id, uuid4_str
+from kronicle_sdk.utils.str_utils import slash_join, tiny_id, uuid4_str
 
 pytestmark = pytest.mark.integration
 
@@ -19,17 +19,19 @@ pytestmark = pytest.mark.integration
 
 
 def _jwt(url, login, password):
-    r = req.post(f"{url}/auth/v1/login", json={"login": login, "password": password}, timeout=10)
+    r = req.post(slash_join(url, "auth/v1/login"), json={"login": login, "password": password}, timeout=10)
     r.raise_for_status()
     return r.json()["access_token"]
 
 
 def _get(url, jwt, route):
-    return req.get(f"{url}{route}", headers={"Authorization": f"Bearer {jwt}"}, timeout=10)
+    return req.get(slash_join(url, route), headers={"Authorization": f"Bearer {jwt}"}, timeout=10)
 
 
 def _post(url, jwt, route, json=None, params=None):
-    return req.post(f"{url}{route}", json=json, params=params, headers={"Authorization": f"Bearer {jwt}"}, timeout=10)
+    return req.post(
+        slash_join(url, route), json=json, params=params, headers={"Authorization": f"Bearer {jwt}"}, timeout=10
+    )
 
 
 # ==============================================================================
@@ -161,6 +163,7 @@ def test_user(
             "email": email,
             "name": f"perm_test_user_{tag}",
             "password": password,
+            "details": {"test": True},
         },
     )
     su_client.post(f"/users/{user['id']}/roles", params={"role_id": role_data_reader["id"]})
@@ -176,10 +179,10 @@ def test_user(
 @pytest.fixture(scope="module")
 def test_zone(su_core_client) -> Generator[str, None, None]:
     tag = tiny_id()
-    zone = su_core_client.create_zone(KronicleZone(name=f"perm_test_zone_{tag}"))
+    zone = su_core_client.create_zone(KronicleZone(name=f"perm_test_zone_{tag}", details={"test": True}))
     yield str(zone.id)
     try:
-        su_core_client.delete_zone(zone.id)
+        su_core_client.delete_zone(zone_id=zone.id)
     except Exception:
         pass
 
@@ -309,6 +312,7 @@ class TestMissingPermissionDenied:
                 "email": f"should_fail_{tag}@kronicle.app",
                 "name": f"fail_{tag}",
                 "password": "ShouldFail_123!",
+                "details": {"test": True},
             },
         )
         assert resp.status_code == 403

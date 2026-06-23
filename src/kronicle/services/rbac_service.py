@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import functools
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import and_, cast, delete, func, select
@@ -184,6 +185,38 @@ class RbacService:
                     log_w(here, "IntegrityError", e)
                     raise UnauthorizedError("Attempting to patch with existing values") from e
 
+            db.refresh(db_user)
+        return OutputUser.from_db_user(db_user)
+
+    def patch_user_by_id(
+        self,
+        user_id: UUID,
+        name: str | None = None,
+        full_name: str | None = None,
+        orcid: str | None = None,
+    ) -> OutputUser:
+        here = "patch_user_by_id"
+        log_i(here, user_id)
+        with self._db.transaction() as db:
+            db_user = self._user_repo.get_by_id(db, id=user_id)
+            if not db_user:
+                raise NotFoundError(f"User '{user_id}' not found")
+            updated = False
+            if name is not None:
+                db_user.name = name
+                updated = True
+            if full_name is not None:
+                db_user.full_name = full_name
+                updated = True
+            if orcid is not None:
+                db_user.external_id = orcid
+                updated = True
+            if updated:
+                try:
+                    db.commit()
+                except IntegrityError as e:
+                    log_w(here, "IntegrityError", e)
+                    raise BadRequestError("Attempting to patch with existing values") from e
             db.refresh(db_user)
         return OutputUser.from_db_user(db_user)
 
@@ -395,25 +428,36 @@ class RbacService:
             if not role:
                 raise NotFoundError(f"Role '{role_id}' not found")
 
-            # Check for dependent assignments before deletion
-            conflicts = []
-            user_count = db.execute(
-                select(func.count(RbacUserRoles.role_id)).where(RbacUserRoles.role_id == role_id)
-            ).scalar()
-            if user_count:
-                conflicts.append(f"assigned to {user_count} user(s)")
+            # Refuse deletion if users or groups are still assigned
+            users_stmt = (
+                select(RbacUser)
+                .join(RbacUserRoles, RbacUser.id == RbacUserRoles.user_id)
+                .where(RbacUserRoles.role_id == role_id)
+            )
+            role_users = db.execute(users_stmt).scalars().all()
 
-            group_count = db.execute(
-                select(func.count(RbacGroupRoles.role_id)).where(RbacGroupRoles.role_id == role_id)
-            ).scalar()
-            if group_count:
-                conflicts.append(f"assigned to {group_count} group(s)")
+            groups_stmt = (
+                select(RbacGroup)
+                .join(RbacGroupRoles, RbacGroup.id == RbacGroupRoles.group_id)
+                .where(RbacGroupRoles.role_id == role_id)
+            )
+            role_groups = db.execute(groups_stmt).scalars().all()
 
-            if conflicts:
+            if role_users or role_groups:
+                details: dict[str, Any] = {"role": f"{role}"}
+                if role_users:
+                    details["users"] = [u.snapshot for u in role_users]
+                if role_groups:
+                    details["groups"] = [g.snapshot for g in role_groups]
                 raise ConflictError(
-                    f"Role '{role.name}' cannot be deleted: {'; '.join(conflicts)}. Remove these assignments first.",
-                    details={"role": f"{role}"},
+                    f"Role '{role.name}' cannot be deleted: {len(role_users)} user(s) and {len(role_groups)} group(s) still assigned.",
+                    details=details,
                 )
+
+            # Clear link rows explicitly — SQLAlchemy's unit of work can't
+            # handle PK-as-FK with ondelete=CASCADE (tries to NULL the PK first).
+            db.execute(delete(RbacUserRoles.__table__).where(RbacUserRoles.role_id == role_id))
+            db.execute(delete(RbacGroupRoles.__table__).where(RbacGroupRoles.role_id == role_id))
 
             db.delete(role)
             db.flush()

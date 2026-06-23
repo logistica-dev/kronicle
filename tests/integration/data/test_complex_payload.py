@@ -136,45 +136,47 @@ def kronicle_rbac_setup():
 
 def test_complex_payload(kronicle_setup, kronicle_writer, kronicle_rbac_setup):
     tag = tiny_id()
-    zone = kronicle_rbac_setup.create_zone(KronicleZone(name=f"complex_test_zone_{tag}"))
+    zone = kronicle_rbac_setup.create_zone(KronicleZone(name=f"complex_test_zone_{tag}", details={"test": True}))
 
-    obs = ObservationPayload.from_json(
-        {
-            "name": f"Test complex payload {tiny_id(8)}",
-            "tags": ["fast radio burst", "test"],
-            "type": "pulsar",
-            "ra_deg": 123.456,
-            "dec_deg": -22.5,
-            "added_by": RimsUser(email="omartine@irisa.fr"),
-            "dataset_id": "MS12345",
-            "instrument_name": "MeerKAT",
-            "RIMS client version": "v1.0.0",
-            "data dimensions": {
-                "time_start_utc": datetime.now(timezone.utc).isoformat(),
-                "time_end_utc": (datetime.now(timezone.utc)).isoformat(),
-                "time_resolution_s": 1.0,
-                "frequency_min_mhz": 100.0,
-                "frequency_max_mhz": 200.0,
-                "frequency_resolution_khz": 10.0,
-                "stokes": ["I", "Q", "U", "V"],
-            },
-            "batch access policy": {"visibility": "public", "embargo_months": 0},
-            "products_uri": ["http://example.com/product1.fits", "http://example.com/product2.fits"],
-            "orcid": "0000-0001-2345-6789",
+    try:
+        obs = ObservationPayload.from_json(
+            {
+                "name": f"Test complex payload {tiny_id(8)}",
+                "tags": ["fast radio burst", "test"],
+                "type": "pulsar",
+                "ra_deg": 123.456,
+                "dec_deg": -22.5,
+                "added_by": RimsUser(email="omartine@irisa.fr"),
+                "dataset_id": "MS12345",
+                "instrument_name": "MeerKAT",
+                "RIMS client version": "v1.0.0",
+                "data dimensions": {
+                    "time_start_utc": datetime.now(timezone.utc).isoformat(),
+                    "time_end_utc": (datetime.now(timezone.utc)).isoformat(),
+                    "time_resolution_s": 1.0,
+                    "frequency_min_mhz": 100.0,
+                    "frequency_max_mhz": 200.0,
+                    "frequency_resolution_khz": 10.0,
+                    "stokes": ["I", "Q", "U", "V"],
+                },
+                "batch access policy": {"visibility": "public", "embargo_months": 0},
+                "products_uri": ["http://example.com/product1.fits", "http://example.com/product2.fits"],
+                "orcid": "0000-0001-2345-6789",
+            }
+        )
+        channel_id = uuid4_str()
+
+        payload = {
+            "channel_id": channel_id,
+            "channel_name": f"Complex test payload {tiny_id(4)}",
+            "channel_schema": obs.channel_schema,
+            "metadata": {"description": ObservationPayload.get_field_descriptions()},
+            "tags": {"test": True},
+            "rows": [obs.to_row()],
         }
-    )
-    channel_id = uuid4_str()
-
-    payload = {
-        "channel_id": channel_id,
-        "channel_name": f"Complex test payload {tiny_id(4)}",
-        "channel_schema": obs.channel_schema,
-        "metadata": {"description": ObservationPayload.get_field_descriptions()},
-        "tags": {"test": True},
-        "rows": [obs.to_row()],
-    }
-    result = kronicle_writer.create_channel(zone_id=zone.id, body=payload)
-    new_channel = kronicle_setup.clone_channel(result.channel_id)
-    kronicle_setup.delete_channel(result.channel_id)
-    kronicle_setup.delete_channel(new_channel.channel_id)
-    kronicle_rbac_setup.delete_zone(zone.id)
+        result = kronicle_writer.create_channel(zone_id=zone.id, body=payload)
+        new_channel = kronicle_setup.clone_channel(result.channel_id)
+        kronicle_setup.delete_channel(result.channel_id)
+        kronicle_setup.delete_channel(new_channel.channel_id)
+    finally:
+        kronicle_rbac_setup.delete_zone(zone_id=zone.id)

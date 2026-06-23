@@ -5,7 +5,6 @@ from json import dumps
 from typing import Any
 from uuid import UUID
 
-from kronicle_sdk.utils.dict_utils import skip_nones
 from kronicle_sdk.utils.str_utils import uuid_to_str
 from pydantic import BaseModel, EmailStr, PrivateAttr, field_validator
 
@@ -56,7 +55,7 @@ class ProcessedUser(BaseModel):
             name=data.name,
             full_name=data.full_name,
             orcid=data.orcid,
-            details={"auth_method": "local"},  # explicitly derived
+            details=data.details,  # explicitly derived
         )
 
     def to_db_user(self) -> RbacUser:
@@ -117,32 +116,28 @@ class OutputUser(BaseModel):
         # log_d(here, "usr.is_superuser", usr.is_su)
         return usr
 
-    def to_json(self) -> dict:
-        return skip_nones(
-            {
-                "id": uuid_to_str(self.id),
-                "email": self.email,
-                "name": self.name,
-                "orcid": self.orcid,
-                "full_name": self.full_name,
-                "is_active": False if not self.is_active else None,
-                "is_su": True if self.is_su else None,
-            }
-        )
-
     # Include is_su in dict/json output
-    def model_dump(self, *args, **kwargs):
-        return self.to_json()
-
-        # d = super().model_dump(*args, **kwargs)
-        # if self._is_su:
-        #     d["is_su"] = True
-        # return d
+    def model_dump(self, *args, **kwargs) -> dict:
+        d = super().model_dump(
+            *args,
+            exclude_none=True,
+            exclude_unset=True,
+            **kwargs,
+        )
+        d["id"] = uuid_to_str(self.id)
+        # if not self.details:
+        #     d.pop("details", None)
+        if self.is_active:
+            d.pop("is_active", None)
+        if self._is_su:
+            d["is_su"] = True
+        else:
+            d.pop("is_su", None)
+        return d
 
     # Include is_su in JSON output
     def model_dump_json(self, *args, **kwargs):
-        return dumps(self.to_json())
-        # return super().model_dump_json(*args, **kwargs, **{"include": {"is_su"} if self._is_su else {}})
+        return dumps(self.model_dump())
 
     def __str__(self) -> str:
-        return f"OutUser {dumps(self.to_json())}"
+        return f"OutUser {self.model_dump_json()}"

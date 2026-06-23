@@ -28,7 +28,7 @@ class OutputRole(BaseModel):
             details=db_role.details or None,
         )
 
-    def model_dump(self, *args, **kwargs):
+    def model_dump(self, *args, **kwargs) -> dict:
         d = super().model_dump(*args, **kwargs)
         if not self.details:
             d.pop("details", None)

@@ -93,7 +93,11 @@ class TestUnauthorized:
         co = Settings().connection
         resp = requests.post(
             f"{base_url}/auth/v1/login",
-            json={"login": co.usr, "password": "wrong_password_xyz"},
+            json={
+                "login": co.usr,
+                "password": "wrong_password_xyz",
+                "details": {"test": True},
+            },
             timeout=5,
         )
         assert resp.status_code == 401
@@ -104,7 +108,11 @@ class TestUnauthorized:
     def test_login_nonexistent_user(self, base_url):
         resp = requests.post(
             f"{base_url}/auth/v1/login",
-            json={"login": "does.not.exist@kronicle.app", "password": "SomePass_123"},
+            json={
+                "login": "does.not.exist@kronicle.app",
+                "password": "SomePass_123",
+                "details": {"test": True},
+            },
             timeout=5,
         )
         assert resp.status_code == 401
@@ -124,13 +132,13 @@ class TestNotFound:
     def test_get_nonexistent_group(self, rbac):
         fake_id = uuid.uuid4()
         with pytest.raises(Exception) as exc_info:
-            rbac.get_group_by_id(fake_id)
+            rbac.get_group_by_id(group_id=fake_id)
         assert "404" in str(exc_info.value) or "Not Found" in str(exc_info.value)
 
     def test_get_nonexistent_zone(self, rbac_setup):
         fake_id = uuid.uuid4()
         with pytest.raises(Exception) as exc_info:
-            rbac_setup.get_zone(fake_id)
+            rbac_setup.get_zone_by_id(zone_id=fake_id)
         assert "404" in str(exc_info.value) or "Not Found" in str(exc_info.value)
 
     def test_get_nonexistent_channel(self, setup_client, base_url):
@@ -178,15 +186,15 @@ class TestBadRequest:
     def test_duplicate_group_name(self, rbac):
         tag = tiny_id()
         name = f"dup_group_{tag}"
-        group = KronicleGroup(name=name)
+        group = KronicleGroup(name=name, details={"test": True})
         created = rbac.create_group(group)
         try:
             assert created is not None
             with pytest.raises(Exception) as exc_info:
-                rbac.create_group(KronicleGroup(name=name))
+                rbac.create_group(KronicleGroup(name=name, details={"test": True}))
             assert "400" in str(exc_info.value) or "Bad Request" in str(exc_info.value)
         finally:
-            rbac.delete_group(id=created.id)
+            rbac.delete_group(group_id=created.id)
 
     def test_group_name_too_short(self, rbac, base_url):
         resp = requests.post(
@@ -202,15 +210,15 @@ class TestBadRequest:
     def test_zone_duplicate_name(self, rbac_setup):
         tag = tiny_id()
         name = f"dup_zone_{tag}"
-        zone = KronicleZone(name=name)
+        zone = KronicleZone(name=name, details={"test": True})
         created = rbac_setup.create_zone(zone)
         try:
             assert created is not None
             with pytest.raises(Exception) as exc_info:
-                rbac_setup.create_zone(KronicleZone(name=name))
+                rbac_setup.create_zone(KronicleZone(name=name, details={"test": True}))
             assert "400" in str(exc_info.value) or "Bad Request" in str(exc_info.value)
         finally:
-            rbac_setup.delete_zone(created.id)
+            rbac_setup.delete_zone(zone_id=created.id)
 
 
 # ---------------------------------------------------------------------------
@@ -225,7 +233,12 @@ class TestValidationError:
         resp = requests.post(
             f"{base_url}/rbac/v1/users",
             headers={"Authorization": f"Bearer {rbac.jwt}"},
-            json={"email": "not-an-email", "name": "ValidUser_42", "password": "ValidPass_123"},
+            json={
+                "email": "not-an-email",
+                "name": "ValidUser_42",
+                "password": "ValidPass_123",
+                "details": {"test": True},
+            },
             timeout=5,
         )
         assert resp.status_code == 422
@@ -236,7 +249,12 @@ class TestValidationError:
         resp = requests.post(
             f"{base_url}/rbac/v1/users",
             headers={"Authorization": f"Bearer {rbac.jwt}"},
-            json={"email": "test@kronicle.app", "orcid": 12345, "password": "ValidPass_123"},
+            json={
+                "email": "test@kronicle.app",
+                "orcid": 12345,
+                "password": "ValidPass_123",
+                "details": {"test": True},
+            },
             timeout=5,
         )
         assert resp.status_code == 422

@@ -33,10 +33,10 @@ def kronicle_setup():
 @pytest.fixture(scope="module")
 def test_zone(kronicle_rbac_setup) -> Generator[str, None, None]:
     tag = tiny_id()
-    zone = kronicle_rbac_setup.create_zone(KronicleZone(name=f"test_zone_{tag}"))
+    zone = kronicle_rbac_setup.create_zone(KronicleZone(name=f"test_zone_{tag}", details={"test": True}))
     yield str(zone.id)
     try:
-        kronicle_rbac_setup.delete_zone(zone.id)
+        kronicle_rbac_setup.delete_zone(zone_id=zone.id)
     except Exception:
         pass
 

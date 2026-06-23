@@ -2383,6 +2383,69 @@
           }
         }
       },
+      "patch": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Patch User By Id",
+        "operationId": "patch_user_by_id_rbac_v1_users__user_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/InputUserPatch"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "User In"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutputUser"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "delete": {
         "tags": [
           "RBAC"
@@ -4069,7 +4132,7 @@
         "title": "InputPayload",
         "description": "User-provided payload for a channel.\nThe 'channel_schema' field is a dict of column_name -> type string.",
         "example": {
-          "channel_id": "239c77a7-e8ec-43cb-b603-2ffea842c3f8",
+          "channel_id": "1ad4e1f9-dc5c-439f-bc40-3e2c5aa456f8",
           "channel_schema": {
             "humidity": "float",
             "temperature": "float",
@@ -4078,7 +4141,7 @@
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-ad00e",
+          "name": "thermo-fe4d7",
           "rows": [
             {
               "humidity": 55.1,
@@ -4208,6 +4271,12 @@
               }
             ],
             "title": "Full Name"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details",
+            "description": "Optional JSONB metadata"
           }
         },
         "type": "object",
@@ -4272,6 +4341,45 @@
           "password"
         ],
         "title": "InputUserLogin"
+      },
+      "InputUserPatch": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "full_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Name"
+          },
+          "orcid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Orcid"
+          }
+        },
+        "type": "object",
+        "title": "InputUserPatch"
       },
       "InputZone": {
         "properties": {
