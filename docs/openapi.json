@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Kronicle",
-    "summary": "FastAPI-powered TimescaleDB microservice for storing time-series measurements",
-    "version": "0.0.1"
+    "title": "TestApp",
+    "summary": "desc",
+    "version": "1.0"
   },
   "paths": {
     "/health/live": {
@@ -4132,7 +4132,7 @@
         "title": "InputPayload",
         "description": "User-provided payload for a channel.\nThe 'channel_schema' field is a dict of column_name -> type string.",
         "example": {
-          "channel_id": "d6d53c8f-2143-44ed-8e1c-1d7d0d976535",
+          "channel_id": "4fa72d3e-f069-4f85-948a-47e19e56d43e",
           "channel_schema": {
             "humidity": "float",
             "temperature": "float",
@@ -4141,7 +4141,7 @@
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-7b615",
+          "name": "thermo-d8cfc",
           "rows": [
             {
               "humidity": 55.1,
