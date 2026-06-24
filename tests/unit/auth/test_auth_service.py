@@ -67,11 +67,11 @@ def make_db_user(**overrides):
 class TestInit:
     def test_raises_without_jwt_service(self, mock_rbac_service):
         with pytest.raises(RuntimeError, match="JwtService not initialized"):
-            AuthService(jwt_service=None, rbac_service=mock_rbac_service)
+            AuthService(jwt_service=None, rbac_service=mock_rbac_service)  # type: ignore[arg-type]
 
     def test_raises_without_rbac_service(self, mock_jwt_service):
         with pytest.raises(RuntimeError, match="RbacService not initialized"):
-            AuthService(jwt_service=mock_jwt_service, rbac_service=None)
+            AuthService(jwt_service=mock_jwt_service, rbac_service=None)  # type: ignore[arg-type]
 
     def test_initializes_successfully(self, mock_jwt_service, mock_rbac_service, mock_pwd_manager):
         with patch("kronicle.auth.auth_service.PasswordManager.get_instance", return_value=mock_pwd_manager):

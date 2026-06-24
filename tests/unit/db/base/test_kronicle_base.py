@@ -132,7 +132,9 @@ class TestValidateTable:
         inspector = MagicMock()
         inspector.get_table_names.return_value = ["test_table"]
 
-        make_col = lambda nullable: {"name": "n", "type": MagicMock(), "nullable": nullable}
+        def make_col(nullable):
+            return {"name": "n", "type": MagicMock(), "nullable": nullable}
+
         inspector.get_columns.return_value = [
             {"name": "id", "type": MagicMock(), "nullable": True},
             {"name": "created_at", "type": MagicMock(), "nullable": False},

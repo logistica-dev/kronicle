@@ -16,6 +16,8 @@ Bellow are behaviors that the rbac system should enable/prevent.
    - They can add, update, delete, add rows to a new channel in ZoneA.
    - They can grant other users the right to add, update, delete, add rows to a new channel in ZoneA
 
-2. UserB has been granted write access to ZoneA.
+2. UserB has been granted "add channel" access to ZoneA.
    - They cannot access ZoneB.
-   - They can read channels in ZoneA
+   - They can read other user's channels in ZoneA.
+   - They can add a new Channel. When they do so, they are granted preemptive rights to this channel:
+     - they can add rows to this Channel, and grant access to another user
