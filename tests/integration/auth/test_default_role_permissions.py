@@ -177,25 +177,47 @@ class TestSuperAdmin:
             base_url,
             jwt,
             "/rbac/v1/users",
-            json={"email": f"su_sub_{tag}@kronicle.app", "name": f"su_sub_{tag}", "password": "SubUser_123!"},
+            json={
+                "email": f"su_sub_{tag}@kronicle.app",
+                "name": f"su_sub_{tag}",
+                "password": "SubUser_123!",
+                "details": {"test": True},
+            },
         )
         assert r.status_code == 200
         su_client.delete(f"/users/{r.json()['id']}?remove=true")
 
-    def test_create_role(self, base_url, jwt):
+    def test_create_role(self, su_client, base_url, jwt):
         tag = tiny_id()
-        r = _post(base_url, jwt, "/rbac/v1/roles", json={"name": f"su_role_{tag}", "permissions": ["channel:read"]})
+        r = _post(
+            base_url,
+            jwt,
+            "/rbac/v1/roles",
+            json={"name": f"su_role_{tag}", "permissions": ["channel:read"], "details": {"test": True}},
+        )
         assert r.status_code == 200
+        try:
+            su_client.delete(f"/roles/{r.json()['id']}")
+        except Exception:
+            pass
 
-    def test_create_group(self, base_url, jwt):
+    def test_create_group(self, su_client, base_url, jwt):
         tag = tiny_id()
-        r = _post(base_url, jwt, "/rbac/v1/groups", json={"name": f"su_group_{tag}"})
+        r = _post(base_url, jwt, "/rbac/v1/groups", json={"name": f"su_group_{tag}", "details": {"test": True}})
         assert r.status_code == 200
+        try:
+            su_client.delete(f"/groups/{r.json()['id']}")
+        except Exception:
+            pass
 
-    def test_create_zone(self, base_url, jwt):
+    def test_create_zone(self, base_url, su_core_client, jwt):
         tag = tiny_id()
-        r = _post(base_url, jwt, "/core/v1/zones", json={"name": f"su_zone_{tag}"})
+        r = _post(base_url, jwt, "/core/v1/zones", json={"name": f"su_zone_{tag}", "details": {"test": True}})
         assert r.status_code == 200
+        try:
+            su_core_client.delete_zone(zone_id=r.json()["id"])
+        except Exception:
+            pass
 
     def test_create_channel(self, base_url, jwt):
         r = _post(
@@ -242,25 +264,47 @@ class TestRbacAdmin:
         return _jwt(base_url, test_user["_email"], test_user["_password"])
 
     # Allowed
-    def test_create_user(self, base_url, jwt):
+    def test_create_user(self, su_client, base_url, jwt):
         tag = tiny_id()
         r = _post(
             base_url,
             jwt,
             "/rbac/v1/users",
-            json={"email": f"rbac_sub_{tag}@kronicle.app", "name": f"rbac_sub_{tag}", "password": "SubUser_123!"},
+            json={
+                "email": f"rbac_sub_{tag}@kronicle.app",
+                "name": f"rbac_sub_{tag}",
+                "password": "SubUser_123!",
+                "details": {"test": True},
+            },
         )
         assert r.status_code == 200
+        try:
+            su_client.delete(f"/users/{r.json()['id']}?remove=true")
+        except Exception:
+            pass
 
-    def test_create_role(self, base_url, jwt):
+    def test_create_role(self, su_client, base_url, jwt):
         tag = tiny_id()
-        r = _post(base_url, jwt, "/rbac/v1/roles", json={"name": f"rbac_role_{tag}", "permissions": ["channel:read"]})
+        r = _post(
+            base_url,
+            jwt,
+            "/rbac/v1/roles",
+            json={"name": f"rbac_role_{tag}", "permissions": ["channel:read"], "details": {"test": True}},
+        )
         assert r.status_code == 200
+        try:
+            su_client.delete(f"/roles/{r.json()['id']}")
+        except Exception:
+            pass
 
-    def test_create_group(self, base_url, jwt):
+    def test_create_group(self, su_client, base_url, jwt):
         tag = tiny_id()
-        r = _post(base_url, jwt, "/rbac/v1/groups", json={"name": f"rbac_group_{tag}"})
+        r = _post(base_url, jwt, "/rbac/v1/groups", json={"name": f"rbac_group_{tag}", "details": {"test": True}})
         assert r.status_code == 200
+        try:
+            su_client.delete(f"/groups/{r.json()['id']}")
+        except Exception:
+            pass
 
     def test_list_roles(self, base_url, jwt):
         r = _get(base_url, jwt, "/rbac/v1/roles")
@@ -525,10 +569,14 @@ class TestZoneAdmin:
         return _jwt(base_url, test_user["_email"], test_user["_password"])
 
     # Allowed
-    def test_create_zone(self, base_url, jwt):
+    def test_create_zone(self, su_core_client, base_url, jwt):
         tag = tiny_id()
-        r = _post(base_url, jwt, "/core/v1/zones", json={"name": f"za_zone_{tag}"})
+        r = _post(base_url, jwt, "/core/v1/zones", json={"name": f"za_zone_{tag}", "details": {"test": True}})
         assert r.status_code == 200
+        try:
+            su_core_client.delete_zone(zone_id=r.json()["id"])
+        except Exception:
+            pass
 
     def test_list_zones(self, base_url, jwt):
         r = _get(base_url, jwt, "/core/v1/zones")

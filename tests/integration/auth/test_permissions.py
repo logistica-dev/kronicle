@@ -84,6 +84,7 @@ def role_data_reader(su_client) -> Generator[dict, None, None]:
             "name": f"test_data_reader_{tag}",
             "description": "Can read channel data",
             "permissions": ["channel:read", "rbac:access", "setup:access"],
+            "details": {"test": True},
         },
     )
     yield role
@@ -102,6 +103,7 @@ def role_data_writer(su_client) -> Generator[dict, None, None]:
             "name": f"test_data_writer_{tag}",
             "description": "Can write channel data",
             "permissions": ["row:create", "data:access"],
+            "details": {"test": True},
         },
     )
     yield role
@@ -120,6 +122,7 @@ def role_channel_admin(su_client) -> Generator[dict, None, None]:
             "name": f"test_channel_admin_{tag}",
             "description": "Can create/update/delete channels",
             "permissions": ["channel:create", "channel:update", "channel:delete"],
+            "details": {"test": True},
         },
     )
     yield role

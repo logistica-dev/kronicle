@@ -161,8 +161,10 @@ class TestPermissionAllStrings:
             ("policy:delete", PermTarget.POLICY, PermAction.DELETE),
             ("row:read", PermTarget.ROW, PermAction.READ),
             ("row:create", PermTarget.ROW, PermAction.CREATE),
+            ("row:update", PermTarget.ROW, PermAction.UPDATE),
             ("row:delete", PermTarget.ROW, PermAction.DELETE),
             ("rbac:access", PermTarget.RBAC, PermAction.ACCESS),
+            ("rbac:delegate", PermTarget.RBAC, PermAction.DELEGATE),
             ("data:access", PermTarget.DATA, PermAction.ACCESS),
             ("setup:access", PermTarget.SETUP, PermAction.ACCESS),
         ]
