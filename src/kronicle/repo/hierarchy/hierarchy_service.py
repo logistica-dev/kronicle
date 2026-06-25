@@ -21,7 +21,7 @@ class HierarchyService(Generic[T]):
         engine: HierarchyEngine[T],
         add_edge: Callable[[Session, T, T], None],
         remove_edge: Callable[[Session, T, T], None],
-        max_parents: int = 1,
+        max_parents: int | None = 1,
     ):
         self.engine = engine
         self.add_edge = add_edge

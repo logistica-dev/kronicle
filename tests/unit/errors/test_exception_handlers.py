@@ -1,3 +1,4 @@
+# tests/unit/errors/test_exception_handlers.py
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 

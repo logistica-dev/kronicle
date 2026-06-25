@@ -1,3 +1,4 @@
+# tests/unit/repo/test_kronicle_repo.py
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
@@ -8,7 +9,7 @@ from kronicle.db.base.kronicle_entity import KronicleEntity
 from kronicle.repo.kronicle_repo import KronicleRepository
 
 
-class TestEntity(KronicleEntity):
+class RepoTestEntity(KronicleEntity):
     __tablename__ = "test_repo_entities"
     __table_args__ = {"extend_existing": True}
 
@@ -17,8 +18,8 @@ class TestEntity(KronicleEntity):
         return "test_schema"
 
 
-class TestRepo(KronicleRepository[TestEntity]):
-    model = TestEntity
+class TestRepo(KronicleRepository[RepoTestEntity]):
+    model = RepoTestEntity
 
 
 @pytest.fixture
@@ -32,7 +33,7 @@ def mock_db():
 
 
 def make_entity(id=None):
-    e = TestEntity()
+    e = RepoTestEntity()
     e.id = id or uuid4()
     e.name = "test"
     return e

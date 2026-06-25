@@ -3,23 +3,25 @@ import os
 
 import pytest
 
-pytestmark = pytest.mark.integration
-
 
 def pytest_collection_modifyitems(config, items):
+    run_mode = config.getoption("-m", default="")
+    run_all = config.getoption("--run-all")
+
     for item in items:
         if "tests/integration" in str(item.fspath):
             item.add_marker("integration")
-        # skip integration tests unless explicitly running with -m integration
-        if "integration" in item.keywords and config.getoption("-m") != "integration":
-            item.add_marker(pytest.mark.skip(reason="Integration tests require -m integration"))
 
-    # skip integration tests if KRONICLE_URL not set
+        should_skip = run_mode != "integration" and not run_all
+
+        if "integration" in item.keywords and should_skip:
+            item.add_marker(pytest.mark.skip(reason="Integration tests require `-m integration` or `--run-all`"))
+
     if not (os.environ.get("KRONICLE_USR_NAME") and os.environ.get("KRONICLE_USR_PASS")):
         print("W [conftest] !!! Kronicle env variables not found, skipping integration tests.")
-        skip_integration = pytest.mark.skip(reason="Integration tests require server env")
+        skip_missing_env = pytest.mark.skip(reason="Integration tests require server env")
         for item in items:
             if "integration" in item.keywords:
-                item.add_marker(skip_integration)
+                item.add_marker(skip_missing_env)
     else:
         print("I [conftest] Kronicle env variables were found, running integration")
