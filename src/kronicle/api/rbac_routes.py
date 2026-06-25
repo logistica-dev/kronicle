@@ -6,7 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 from pydantic import EmailStr
 
-from kronicle.auth.auth_middleware import require_auth, require_permission
+from kronicle.auth.auth_middleware import require_any_permission, require_auth, require_permission
 from kronicle.deps.rbac_deps import rbac_service
 from kronicle.errors.error_types import BadRequestError, NotFoundError
 from kronicle.schemas.permissions.permission import PermStr
@@ -23,7 +23,7 @@ rbac_router = APIRouter(
     tags=["RBAC"],
     dependencies=[
         Depends(require_auth),
-        Depends(require_permission(PermStr.RBAC_ACCESS)),
+        Depends(require_any_permission(PermStr.RBAC_ACCESS, PermStr.RBAC_READ)),
     ],
 )
 
@@ -146,8 +146,8 @@ def delete_user_by_id(
 # --------------------------------------------------------------------------------------------------
 
 
-@rbac_router.post(
-    "/users/{user_id}/roles",
+@rbac_router.put(
+    "/users/{user_id}/roles/{role_id}",
     summary="Assign a role to a user",
     description="Grants a role directly to a user.",
     response_model=dict,
@@ -155,7 +155,7 @@ def delete_user_by_id(
 )
 def assign_role_to_user(
     user_id: UUID,
-    role_id: UUID = Query(..., description="UUID of the role to assign"),  # noqa: B008
+    role_id: UUID,
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
 ):
     rbac.assign_role_to_user(user_id=user_id, role_id=role_id)
@@ -317,8 +317,8 @@ def remove_user_from_group(
 # --------------------------------------------------------------------------------------------------
 
 
-@rbac_router.post(
-    "/groups/{group_id}/roles",
+@rbac_router.put(
+    "/groups/{group_id}/roles/{role_id}",
     summary="Assign a role to a group",
     description="Grants a role to all members of a group.",
     response_model=dict,
@@ -326,7 +326,7 @@ def remove_user_from_group(
 )
 def assign_role_to_group(
     group_id: UUID,
-    role_id: UUID = Query(..., description="UUID of the role to assign"),  # noqa: B008
+    role_id: UUID,
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
 ):
     rbac.assign_role_to_group(group_id=group_id, role_id=role_id)

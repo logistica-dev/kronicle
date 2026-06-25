@@ -34,6 +34,12 @@ def _post(url, jwt, route, json=None, params=None):
     )
 
 
+def _put(url, jwt, route, json=None, params=None):
+    return req.put(
+        slash_join(url, route), json=json, params=params, headers={"Authorization": f"Bearer {jwt}"}, timeout=10
+    )
+
+
 # ==============================================================================
 # Session-level fixtures
 # ==============================================================================
@@ -142,7 +148,7 @@ def test_group(su_client, role_channel_admin) -> Generator[dict, None, None]:
             "details": {"test": "permissions"},
         },
     )
-    su_client.post(f"/groups/{group['id']}/roles", params={"role_id": role_channel_admin["id"]})
+    su_client.put(f"/groups/{group['id']}/roles/{role_channel_admin['id']}")
     yield group
     try:
         su_client.delete(f"/groups/{group['id']}")
@@ -169,8 +175,8 @@ def test_user(
             "details": {"test": True},
         },
     )
-    su_client.post(f"/users/{user['id']}/roles", params={"role_id": role_data_reader["id"]})
-    su_client.post(f"/users/{user['id']}/roles", params={"role_id": role_data_writer["id"]})
+    su_client.put(f"/users/{user['id']}/roles/{role_data_reader['id']}")
+    su_client.put(f"/users/{user['id']}/roles/{role_data_writer['id']}")
     su_client.post(f"/groups/{test_group['id']}/users", params={"user_id": user["id"]})
     yield {**user, "_password": password, "_email": email}
     try:
@@ -331,10 +337,9 @@ class TestMissingPermissionDenied:
         assert resp.status_code == 403
 
     def test_cannot_assign_role(self, base_url, user_jwt, role_data_reader):
-        resp = _post(
+        resp = _put(
             base_url,
             user_jwt,
-            "/rbac/v1/users/00000000-0000-0000-0000-000000000000/roles",
-            params={"role_id": role_data_reader["id"]},
+            f"/rbac/v1/users/00000000-0000-0000-0000-000000000000/roles/{role_data_reader['id']}",
         )
         assert resp.status_code == 403

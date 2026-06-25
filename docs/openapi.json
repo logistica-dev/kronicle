@@ -2512,14 +2512,14 @@
         }
       }
     },
-    "/rbac/v1/users/{user_id}/roles": {
-      "post": {
+    "/rbac/v1/users/{user_id}/roles/{role_id}": {
+      "put": {
         "tags": [
           "RBAC"
         ],
         "summary": "Assign a role to a user",
         "description": "Grants a role directly to a user.",
-        "operationId": "assign_role_to_user_rbac_v1_users__user_id__roles_post",
+        "operationId": "assign_role_to_user_rbac_v1_users__user_id__roles__role_id__put",
         "security": [
           {
             "HTTPBearer": []
@@ -2538,15 +2538,13 @@
           },
           {
             "name": "role_id",
-            "in": "query",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "description": "UUID of the role to assign",
               "title": "Role Id"
-            },
-            "description": "UUID of the role to assign"
+            }
           }
         ],
         "responses": {
@@ -2557,7 +2555,7 @@
                 "schema": {
                   "type": "object",
                   "additionalProperties": true,
-                  "title": "Response Assign Role To User Rbac V1 Users  User Id  Roles Post"
+                  "title": "Response Assign Role To User Rbac V1 Users  User Id  Roles  Role Id  Put"
                 }
               }
             }
@@ -2573,9 +2571,7 @@
             }
           }
         }
-      }
-    },
-    "/rbac/v1/users/{user_id}/roles/{role_id}": {
+      },
       "delete": {
         "tags": [
           "RBAC"
@@ -3077,14 +3073,14 @@
         }
       }
     },
-    "/rbac/v1/groups/{group_id}/roles": {
-      "post": {
+    "/rbac/v1/groups/{group_id}/roles/{role_id}": {
+      "put": {
         "tags": [
           "RBAC"
         ],
         "summary": "Assign a role to a group",
         "description": "Grants a role to all members of a group.",
-        "operationId": "assign_role_to_group_rbac_v1_groups__group_id__roles_post",
+        "operationId": "assign_role_to_group_rbac_v1_groups__group_id__roles__role_id__put",
         "security": [
           {
             "HTTPBearer": []
@@ -3103,15 +3099,13 @@
           },
           {
             "name": "role_id",
-            "in": "query",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "description": "UUID of the role to assign",
               "title": "Role Id"
-            },
-            "description": "UUID of the role to assign"
+            }
           }
         ],
         "responses": {
@@ -3122,7 +3116,7 @@
                 "schema": {
                   "type": "object",
                   "additionalProperties": true,
-                  "title": "Response Assign Role To Group Rbac V1 Groups  Group Id  Roles Post"
+                  "title": "Response Assign Role To Group Rbac V1 Groups  Group Id  Roles  Role Id  Put"
                 }
               }
             }
@@ -3138,9 +3132,7 @@
             }
           }
         }
-      }
-    },
-    "/rbac/v1/groups/{group_id}/roles/{role_id}": {
+      },
       "delete": {
         "tags": [
           "RBAC"
@@ -4132,7 +4124,7 @@
         "title": "InputPayload",
         "description": "User-provided payload for a channel.\nThe 'channel_schema' field is a dict of column_name -> type string.",
         "example": {
-          "channel_id": "63e4d606-efa1-4fb5-b171-a7b822c77aa0",
+          "channel_id": "3c53da1c-ba93-49b2-a6f8-f8a437ff6860",
           "channel_schema": {
             "humidity": "float",
             "temperature": "float",
@@ -4141,7 +4133,7 @@
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-2fa6f",
+          "name": "thermo-c0d46",
           "rows": [
             {
               "humidity": 55.1,

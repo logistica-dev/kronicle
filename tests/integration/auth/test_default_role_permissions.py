@@ -75,7 +75,7 @@ def _role_user_fixture(su_client: KronicleRbac, role_name: str, tag: str) -> Gen
     password = "RoleTest_123!"
     user = _create_user(su_client, email, password, f"{role_name}_user_{tag}")
     role_id = _resolve_role_id(su_client, role_name)
-    su_client.post(f"/users/{user['id']}/roles", params={"role_id": role_id})
+    su_client.put(f"/users/{user['id']}/roles/{role_id}")
     yield {**user, "_password": password, "_email": email}
     _cleanup_user(su_client, user["id"])
 
