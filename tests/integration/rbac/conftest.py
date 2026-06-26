@@ -40,6 +40,6 @@ def test_group(kronicle_rbac) -> Generator[KronicleGroup, None, None]:
     created = kronicle_rbac.create_group(group)
     yield created
     try:
-        kronicle_rbac.delete_group(group_id=created.id)
+        kronicle_rbac.delete_group(group_id=created.id, force=True)
     except Exception:
         pass
