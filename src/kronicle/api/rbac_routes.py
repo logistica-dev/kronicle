@@ -256,9 +256,10 @@ def patch_group(
 )
 def delete_group(
     group_id: UUID,
+    force: bool | None = Query(False, description="Force deletion even if users are assigned"),
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
 ):
-    group = rbac.delete_group(group_id)
+    group = rbac.delete_group(group_id, force=force or False)
     if not group:
         raise NotFoundError(f"Group '{group_id}' not found")
     return group
@@ -440,9 +441,10 @@ def patch_role(
 )
 def delete_role(
     role_id: UUID,
+    force: bool | None = Query(False, description="Force deletion even if users/groups are assigned"),
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
 ):
-    role = rbac.delete_role(role_id)
+    role = rbac.delete_role(role_id, force=force or False)
     if not role:
         raise NotFoundError(f"Role '{role_id}' not found")
     return role

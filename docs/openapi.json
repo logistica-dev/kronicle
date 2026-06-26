@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Kronicle",
-    "summary": "FastAPI-powered TimescaleDB microservice for storing time-series measurements",
-    "version": "0.0.1"
+    "title": "TestApp",
+    "summary": "desc",
+    "version": "1.0"
   },
   "paths": {
     "/health/live": {
@@ -2939,6 +2939,25 @@
               "format": "uuid",
               "title": "Group Id"
             }
+          },
+          {
+            "name": "force",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Force deletion even if users are assigned",
+              "default": false,
+              "title": "Force"
+            },
+            "description": "Force deletion even if users are assigned"
           }
         ],
         "responses": {
@@ -3537,6 +3556,25 @@
               "format": "uuid",
               "title": "Role Id"
             }
+          },
+          {
+            "name": "force",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Force deletion even if users/groups are assigned",
+              "default": false,
+              "title": "Force"
+            },
+            "description": "Force deletion even if users/groups are assigned"
           }
         ],
         "responses": {
@@ -4386,7 +4424,7 @@
         "title": "InputPayload",
         "description": "User-provided payload for a channel.\nThe 'channel_schema' field is a dict of column_name -> type string.",
         "example": {
-          "channel_id": "80d071f0-afe9-454f-9d6c-48024b80f032",
+          "channel_id": "35d23436-2aad-4ae8-acb1-46cf04e820ab",
           "channel_schema": {
             "humidity": "float",
             "temperature": "float",
@@ -4395,7 +4433,7 @@
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-2b1b5",
+          "name": "thermo-824cc",
           "rows": [
             {
               "humidity": 55.1,

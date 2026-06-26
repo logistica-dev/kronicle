@@ -241,8 +241,8 @@ class TestGroupRoutes:
     def test_delete_group(self, mock_rbac, any_uuid):
         expected = {"id": any_uuid, "name": "deleted-group"}
         mock_rbac.delete_group.return_value = expected
-        result = delete_group(group_id=any_uuid, rbac=mock_rbac)
-        mock_rbac.delete_group.assert_called_once_with(any_uuid)
+        result = delete_group(group_id=any_uuid, force=False, rbac=mock_rbac)
+        mock_rbac.delete_group.assert_called_once_with(any_uuid, force=False)
         assert result == expected
 
     def test_delete_group_not_found(self, mock_rbac, any_uuid):
@@ -354,8 +354,8 @@ class TestRoleRoutes:
     def test_delete_role(self, mock_rbac, any_uuid):
         expected = {"id": any_uuid, "name": "deleted-role"}
         mock_rbac.delete_role.return_value = expected
-        result = delete_role(role_id=any_uuid, rbac=mock_rbac)
-        mock_rbac.delete_role.assert_called_once_with(any_uuid)
+        result = delete_role(role_id=any_uuid, force=False, rbac=mock_rbac)
+        mock_rbac.delete_role.assert_called_once_with(any_uuid, force=False)
         assert result == expected
 
     def test_delete_role_not_found(self, mock_rbac, any_uuid):

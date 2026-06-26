@@ -83,10 +83,7 @@ def test_get_users_for_role_direct(kronicle_rbac, test_user):
         users = kronicle_rbac.get_users_for_role(role_id=role.id)
         assert str(test_user.id) in users
     finally:
-        try:
-            kronicle_rbac.delete_role(role_id=role.id)
-        except Exception:
-            pass
+        kronicle_rbac.delete_role(role_id=role.id, force=True)
 
 
 @pytest.mark.integration
@@ -108,10 +105,7 @@ def test_get_users_for_role_indirect(kronicle_rbac, test_user, test_group):
             kronicle_rbac.remove_user_from_group(group_id=test_group.id, user_id=test_user.id)
         except Exception:
             pass
-        try:
-            kronicle_rbac.delete_role(role_id=role.id)
-        except Exception:
-            pass
+        kronicle_rbac.delete_role(role_id=role.id, force=True)
 
 
 @pytest.mark.integration
@@ -126,10 +120,7 @@ def test_get_groups_for_role_direct(kronicle_rbac, test_group):
         groups = kronicle_rbac.get_groups_for_role(role_id=role.id)
         assert str(test_group.id) in groups
     finally:
-        try:
-            kronicle_rbac.delete_role(role_id=role.id)
-        except Exception:
-            pass
+        kronicle_rbac.delete_role(role_id=role.id, force=True)
 
 
 @pytest.mark.integration
@@ -145,7 +136,4 @@ def test_get_users_for_role_empty(kronicle_rbac):
         groups = kronicle_rbac.get_groups_for_role(role_id=role.id)
         assert groups == []
     finally:
-        try:
-            kronicle_rbac.delete_role(role_id=role.id)
-        except Exception:
-            pass
+        kronicle_rbac.delete_role(role_id=role.id)
