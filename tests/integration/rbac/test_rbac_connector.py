@@ -1,6 +1,7 @@
 # tests/integration/rbac/test_rbac_connector.py
 
 import pytest
+from kronicle_sdk.models.rbac.kronicle_role import KronicleRole
 from kronicle_sdk.models.rbac.kronicle_user import KronicleUser
 from kronicle_sdk.utils.log import log_d
 from kronicle_sdk.utils.str_utils import tiny_id
@@ -68,3 +69,83 @@ def test_crud_user(kronicle_rbac):
         # Delete user (cleanup, regardless of patch outcome)
         usr = kronicle_rbac.deactivate_user(user_id=res.id)
         kronicle_rbac.delete_user(user_id=usr.id)
+
+
+@pytest.mark.integration
+def test_get_users_for_role_direct(kronicle_rbac, test_user):
+    """get_users_for_role returns users directly assigned to a role."""
+    tag = tiny_id()
+    role = kronicle_rbac.create_role(
+        KronicleRole(name=f"test_usr_role_{tag}", permissions=["channel:read"], details={"test": True})
+    )
+    try:
+        kronicle_rbac.assign_role_to_user(role_id=role.id, user_id=test_user.id)
+        users = kronicle_rbac.get_users_for_role(role_id=role.id)
+        assert str(test_user.id) in users
+    finally:
+        try:
+            kronicle_rbac.delete_role(role_id=role.id)
+        except Exception:
+            pass
+
+
+@pytest.mark.integration
+def test_get_users_for_role_indirect(kronicle_rbac, test_user, test_group):
+    """get_users_for_role with indirect=True includes users via group membership."""
+    tag = tiny_id()
+    role = kronicle_rbac.create_role(
+        KronicleRole(name=f"test_usr_role_ind_{tag}", permissions=["channel:read"], details={"test": True})
+    )
+    try:
+        kronicle_rbac.add_user_to_group(group_id=test_group.id, user_id=test_user.id)
+        kronicle_rbac.assign_role_to_group(role_id=role.id, group_id=test_group.id)
+        direct_users = kronicle_rbac.get_users_for_role(role_id=role.id, indirect=False)
+        assert str(test_user.id) not in direct_users
+        all_users = kronicle_rbac.get_users_for_role(role_id=role.id, indirect=True)
+        assert str(test_user.id) in all_users
+    finally:
+        try:
+            kronicle_rbac.remove_user_from_group(group_id=test_group.id, user_id=test_user.id)
+        except Exception:
+            pass
+        try:
+            kronicle_rbac.delete_role(role_id=role.id)
+        except Exception:
+            pass
+
+
+@pytest.mark.integration
+def test_get_groups_for_role_direct(kronicle_rbac, test_group):
+    """get_groups_for_role returns groups directly assigned to a role."""
+    tag = tiny_id()
+    role = kronicle_rbac.create_role(
+        KronicleRole(name=f"test_grp_role_{tag}", permissions=["channel:read"], details={"test": True})
+    )
+    try:
+        kronicle_rbac.assign_role_to_group(role_id=role.id, group_id=test_group.id)
+        groups = kronicle_rbac.get_groups_for_role(role_id=role.id)
+        assert str(test_group.id) in groups
+    finally:
+        try:
+            kronicle_rbac.delete_role(role_id=role.id)
+        except Exception:
+            pass
+
+
+@pytest.mark.integration
+def test_get_users_for_role_empty(kronicle_rbac):
+    """get_users_for_role returns empty list when no users are assigned."""
+    tag = tiny_id()
+    role = kronicle_rbac.create_role(
+        KronicleRole(name=f"test_empty_role_{tag}", permissions=["channel:read"], details={"test": True})
+    )
+    try:
+        users = kronicle_rbac.get_users_for_role(role_id=role.id)
+        assert users == []
+        groups = kronicle_rbac.get_groups_for_role(role_id=role.id)
+        assert groups == []
+    finally:
+        try:
+            kronicle_rbac.delete_role(role_id=role.id)
+        except Exception:
+            pass

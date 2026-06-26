@@ -449,6 +449,70 @@ def delete_role(
 
 
 # --------------------------------------------------------------------------------------------------
+# Relationship check endpoints
+# --------------------------------------------------------------------------------------------------
+
+
+@rbac_router.get(
+    "/users/{user_id}/roles/{role_id}",
+    summary="Check if a role is assigned to a user",
+    description="Returns whether a role is assigned to a user (directly or via group membership).",
+    dependencies=[Depends(require_permission(PermStr.USER_READ))],
+)
+def check_user_role(
+    user_id: UUID,
+    role_id: UUID,
+    indirect: bool = Query(False, description="Include indirect assignments via group membership"),
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.check_user_has_role(user_id=user_id, role_id=role_id, indirect=indirect)
+
+
+@rbac_router.get(
+    "/groups/{group_id}/roles/{role_id}",
+    summary="Check if a role is assigned to a group",
+    description="Returns whether a role is assigned to a group (directly or via parent groups).",
+    dependencies=[Depends(require_permission(PermStr.GROUP_READ))],
+)
+def check_group_role(
+    group_id: UUID,
+    role_id: UUID,
+    indirect: bool = Query(False, description="Include indirect assignments via parent groups"),
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.check_group_has_role(group_id=group_id, role_id=role_id, indirect=indirect)
+
+
+@rbac_router.get(
+    "/roles/{role_id}/subjects",
+    summary="List subjects assigned to a role",
+    description="Returns users and groups assigned to a role (direct or indirect).",
+    dependencies=[Depends(require_permission(PermStr.ROLE_READ))],
+)
+def list_role_subjects(
+    role_id: UUID,
+    indirect: bool = Query(False, description="Include indirect subjects via group hierarchy"),
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.list_role_subjects(role_id=role_id, indirect=indirect)
+
+
+@rbac_router.get(
+    "/users/{user_id}/groups/{group_id}",
+    summary="Check if a user belongs to a group",
+    description="Returns whether a user is a member of a group (directly or via sub-groups).",
+    dependencies=[Depends(require_permission(PermStr.GROUP_READ))],
+)
+def check_user_group(
+    user_id: UUID,
+    group_id: UUID,
+    indirect: bool = Query(False, description="Include indirect membership via sub-groups"),
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.check_user_in_group(user_id=user_id, group_id=group_id, indirect=indirect)
+
+
+# --------------------------------------------------------------------------------------------------
 # Zone Policy endpoints
 # --------------------------------------------------------------------------------------------------
 

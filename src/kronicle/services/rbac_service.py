@@ -797,3 +797,116 @@ class RbacService:
             if not group:
                 raise NotFoundError(f"Group '{group_id}' not found")
             self._user_groups_repo.remove_user_from_group(db, user=user, group=group)
+
+    # ----------------------------------------------------------------------------------------------
+    # Hierarchy helpers
+    # ----------------------------------------------------------------------------------------------
+
+    def _get_group_ancestor_ids(self, db: Session, group_id: UUID) -> set[UUID]:
+        """Walk up the group hierarchy to find all ancestor group IDs."""
+        ancestors: set[UUID] = set()
+        stack = [group_id]
+        while stack:
+            current = stack.pop()
+            rows = db.query(RbacGroupHierarchy.parent_id).filter(RbacGroupHierarchy.child_id == current).all()
+            for (parent_id,) in rows:
+                if parent_id not in ancestors:
+                    ancestors.add(parent_id)
+                    stack.append(parent_id)
+        return ancestors
+
+    def _get_group_descendant_ids(self, db: Session, group_id: UUID) -> set[UUID]:
+        """Walk down the group hierarchy to find all descendant group IDs."""
+        descendants: set[UUID] = set()
+        stack = [group_id]
+        while stack:
+            current = stack.pop()
+            rows = db.query(RbacGroupHierarchy.child_id).filter(RbacGroupHierarchy.parent_id == current).all()
+            for (child_id,) in rows:
+                if child_id not in descendants:
+                    descendants.add(child_id)
+                    stack.append(child_id)
+        return descendants
+
+    # ----------------------------------------------------------------------------------------------
+    # Relationship checks
+    # ----------------------------------------------------------------------------------------------
+
+    def check_user_has_role(self, user_id: UUID, role_id: UUID, indirect: bool = False) -> dict:
+        with self._db.get_db() as db:
+            direct = db.query(RbacUserRoles.__table__).filter_by(user_id=user_id, role_id=role_id).first() is not None
+            if direct:
+                return {"has_role": True, "direct": True}
+            if not indirect:
+                return {"has_role": False, "direct": False}
+            user_group_ids = self._user_groups_repo.get_group_ids_for_user(db, user_id=user_id)
+            all_group_ids = set(user_group_ids)
+            for gid in user_group_ids:
+                all_group_ids.update(self._get_group_ancestor_ids(db, gid))
+            has_via_group = (
+                db.query(RbacGroupRoles.__table__)
+                .filter(RbacGroupRoles.group_id.in_(all_group_ids), RbacGroupRoles.role_id == role_id)
+                .first()
+                is not None
+            )
+            return {"has_role": has_via_group, "direct": False}
+
+    def check_group_has_role(self, group_id: UUID, role_id: UUID, indirect: bool = False) -> dict:
+        with self._db.get_db() as db:
+            direct = (
+                db.query(RbacGroupRoles.__table__).filter_by(group_id=group_id, role_id=role_id).first() is not None
+            )
+            if direct:
+                return {"has_role": True, "direct": True}
+            if not indirect:
+                return {"has_role": False, "direct": False}
+            ancestor_ids = self._get_group_ancestor_ids(db, group_id)
+            has_via_ancestor = (
+                db.query(RbacGroupRoles.__table__)
+                .filter(RbacGroupRoles.group_id.in_(ancestor_ids), RbacGroupRoles.role_id == role_id)
+                .first()
+                is not None
+            )
+            return {"has_role": has_via_ancestor, "direct": False}
+
+    def list_role_subjects(self, role_id: UUID, indirect: bool = False) -> dict:
+        with self._db.get_db() as db:
+            user_ids = list(db.query(RbacUserRoles.user_id).filter(RbacUserRoles.role_id == role_id).all())
+            user_ids = [str(u[0]) for u in user_ids]
+
+            group_ids = list(db.query(RbacGroupRoles.group_id).filter(RbacGroupRoles.role_id == role_id).all())
+            group_ids = [str(g[0]) for g in group_ids]
+
+            if not indirect:
+                return {"users": user_ids, "groups": group_ids}
+
+            indirect_user_ids: set[str] = set()
+            for (gid,) in db.query(RbacGroupRoles.group_id).filter(RbacGroupRoles.role_id == role_id).all():
+                descendant_ids = self._get_group_descendant_ids(db, gid)
+                for desc_id in descendant_ids:
+                    members = self._user_groups_repo.get_user_ids_for_group(db, group_id=desc_id)
+                    indirect_user_ids.update(str(m) for m in members)
+
+            direct_user_set = set(user_ids)
+            indirect_only = sorted(indirect_user_ids - direct_user_set)
+            return {
+                "users": sorted(user_ids),
+                "groups": sorted(group_ids),
+                "indirect_users": indirect_only,
+            }
+
+    def check_user_in_group(self, user_id: UUID, group_id: UUID, indirect: bool = False) -> dict:
+        with self._db.get_db() as db:
+            direct = (
+                db.query(RbacUserGroups.__table__).filter_by(user_id=user_id, group_id=group_id).first() is not None
+            )
+            if direct:
+                return {"is_member": True, "direct": True}
+            if not indirect:
+                return {"is_member": False, "direct": False}
+            descendant_ids = self._get_group_descendant_ids(db, group_id)
+            for desc_id in descendant_ids:
+                members = self._user_groups_repo.get_user_ids_for_group(db, group_id=desc_id)
+                if user_id in members:
+                    return {"is_member": True, "direct": False}
+            return {"is_member": False, "direct": False}

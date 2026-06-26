@@ -351,6 +351,12 @@ def validate_name_syntax(
     return v
 
 
+def param_dict_to_str(params: dict | None = None) -> str:
+    if not params:
+        return ""
+    return "?" + ("&".join([f"{k}={v}" for k, v in params.items()]))
+
+
 if __name__ == "__main__":  # pragma: no cover
     here = "str_utils"
     print(here, "strip_quotes 'testsing':", strip_quotes("'testsing'"))

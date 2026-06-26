@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "TestApp",
-    "summary": "desc",
-    "version": "1.0"
+    "title": "Kronicle",
+    "summary": "FastAPI-powered TimescaleDB microservice for storing time-series measurements",
+    "version": "0.0.1"
   },
   "paths": {
     "/health/live": {
@@ -2630,6 +2630,73 @@
             }
           }
         }
+      },
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Check if a role is assigned to a user",
+        "description": "Returns whether a role is assigned to a user (directly or via group membership).",
+        "operationId": "check_user_role_rbac_v1_users__user_id__roles__role_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "role_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Role Id"
+            }
+          },
+          {
+            "name": "indirect",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include indirect assignments via group membership",
+              "default": false,
+              "title": "Indirect"
+            },
+            "description": "Include indirect assignments via group membership"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/rbac/v1/groups": {
@@ -3191,6 +3258,73 @@
             }
           }
         }
+      },
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Check if a role is assigned to a group",
+        "description": "Returns whether a role is assigned to a group (directly or via parent groups).",
+        "operationId": "check_group_role_rbac_v1_groups__group_id__roles__role_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          },
+          {
+            "name": "role_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Role Id"
+            }
+          },
+          {
+            "name": "indirect",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include indirect assignments via parent groups",
+              "default": false,
+              "title": "Indirect"
+            },
+            "description": "Include indirect assignments via parent groups"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/rbac/v1/roles": {
@@ -3413,6 +3547,134 @@
                 "schema": {
                   "$ref": "#/components/schemas/OutputRole"
                 }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rbac/v1/roles/{role_id}/subjects": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "List subjects assigned to a role",
+        "description": "Returns users and groups assigned to a role (direct or indirect).",
+        "operationId": "list_role_subjects_rbac_v1_roles__role_id__subjects_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "role_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Role Id"
+            }
+          },
+          {
+            "name": "indirect",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include indirect subjects via group hierarchy",
+              "default": false,
+              "title": "Indirect"
+            },
+            "description": "Include indirect subjects via group hierarchy"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rbac/v1/users/{user_id}/groups/{group_id}": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Check if a user belongs to a group",
+        "description": "Returns whether a user is a member of a group (directly or via sub-groups).",
+        "operationId": "check_user_group_rbac_v1_users__user_id__groups__group_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          },
+          {
+            "name": "indirect",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include indirect membership via sub-groups",
+              "default": false,
+              "title": "Indirect"
+            },
+            "description": "Include indirect membership via sub-groups"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -4124,7 +4386,7 @@
         "title": "InputPayload",
         "description": "User-provided payload for a channel.\nThe 'channel_schema' field is a dict of column_name -> type string.",
         "example": {
-          "channel_id": "3c53da1c-ba93-49b2-a6f8-f8a437ff6860",
+          "channel_id": "80d071f0-afe9-454f-9d6c-48024b80f032",
           "channel_schema": {
             "humidity": "float",
             "temperature": "float",
@@ -4133,7 +4395,7 @@
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-c0d46",
+          "name": "thermo-2b1b5",
           "rows": [
             {
               "humidity": 55.1,
