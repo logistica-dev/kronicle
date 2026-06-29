@@ -141,7 +141,7 @@ def test_channel(su_setup_client, test_zone) -> Generator[str, None, None]:
     channel_id = uuid4_str()
     payload = {
         "channel_id": channel_id,
-        "channel_name": f"default_role_chan_{tiny_id()}",
+        "name": f"default_role_chan_{tiny_id()}",
         "channel_schema": {"time": "datetime", "val": "float"},
         "metadata": {"source": "default-role-test"},
         "tags": {"test": "true"},
@@ -226,8 +226,9 @@ class TestSuperAdmin:
             "/setup/v1/channels",
             json={
                 "channel_id": uuid4_str(),
-                "channel_name": f"su_chan_{tiny_id()}",
+                "name": f"su_chan_{tiny_id()}",
                 "channel_schema": {"time": "datetime", "val": "float"},
+                "tags": {"test": True},
                 "metadata": {"test": True},
             },
         )
@@ -241,6 +242,7 @@ class TestSuperAdmin:
             json={
                 "channel_id": test_channel,
                 "channel_schema": {"time": "datetime", "val": "float"},
+                "tags": {"test": True},
                 "rows": [{"time": "2025-06-01T00:00:00Z", "val": 42.0}],
             },
         )
@@ -289,7 +291,11 @@ class TestRbacAdmin:
             base_url,
             jwt,
             "/rbac/v1/roles",
-            json={"name": f"rbac_role_{tag}", "permissions": ["channel:read"], "details": {"test": True}},
+            json={
+                "name": f"rbac_role_{tag}",
+                "permissions": ["channel:read"],
+                "details": {"test": True},
+            },
         )
         assert r.status_code == 200
         try:
@@ -324,7 +330,12 @@ class TestRbacAdmin:
             base_url,
             jwt,
             "/setup/v1/channels",
-            json={"channel_id": uuid4_str(), "channel_name": "should_fail", "channel_schema": {"x": "int"}},
+            json={
+                "channel_id": uuid4_str(),
+                "name": "should_fail",
+                "tags": {"test": True},
+                "channel_schema": {"x": "int"},
+            },
         )
         assert r.status_code == 403
 
@@ -333,7 +344,12 @@ class TestRbacAdmin:
             base_url,
             jwt,
             f"/data/v1/channels/{test_channel}/rows",
-            json={"channel_id": test_channel, "channel_schema": {"x": "int"}, "rows": []},
+            json={
+                "channel_id": test_channel,
+                "channel_schema": {"x": "int"},
+                "tags": {"test": True},
+                "rows": [],
+            },
         )
         assert r.status_code == 403
 
@@ -390,7 +406,12 @@ class TestDataReader:
             base_url,
             jwt,
             f"/data/v1/channels/{test_channel}/rows",
-            json={"channel_id": test_channel, "channel_schema": {"x": "int"}, "rows": []},
+            json={
+                "channel_id": test_channel,
+                "channel_schema": {"x": "int"},
+                "tags": {"test": True},
+                "rows": [],
+            },
         )
         assert r.status_code == 403
 
@@ -399,7 +420,12 @@ class TestDataReader:
             base_url,
             jwt,
             "/setup/v1/channels",
-            json={"channel_id": uuid4_str(), "channel_name": "should_fail", "channel_schema": {"x": "int"}},
+            json={
+                "channel_id": uuid4_str(),
+                "name": "should_fail",
+                "channel_schema": {"x": "int"},
+                "tags": {"test": True},
+            },
         )
         assert r.status_code == 403
 
@@ -437,6 +463,7 @@ class TestDataWriter:
             json={
                 "channel_id": test_channel,
                 "channel_schema": {"time": "datetime", "val": "float"},
+                "tags": {"test": True},
                 "rows": [{"time": "2025-06-01T00:00:00Z", "val": 99.0}],
             },
         )
@@ -448,7 +475,12 @@ class TestDataWriter:
             base_url,
             jwt,
             "/setup/v1/channels",
-            json={"channel_id": uuid4_str(), "channel_name": "should_fail", "channel_schema": {"x": "int"}},
+            json={
+                "channel_id": uuid4_str(),
+                "name": "should_fail",
+                "channel_schema": {"x": "int"},
+                "tags": {"test": True},
+            },
         )
         assert r.status_code == 403
 
@@ -501,8 +533,9 @@ class TestChannelAdmin:
             "/setup/v1/channels",
             json={
                 "channel_id": uuid4_str(),
-                "channel_name": f"ca_chan_{tiny_id()}",
+                "name": f"ca_chan_{tiny_id()}",
                 "channel_schema": {"time": "datetime", "val": "float"},
+                "tags": {"test": True},
                 "metadata": {"test": True},
             },
         )
@@ -516,8 +549,9 @@ class TestChannelAdmin:
             "/setup/v1/channels",
             json={
                 "channel_id": cid,
-                "channel_name": f"ca_del_{tiny_id()}",
+                "name": f"ca_del_{tiny_id()}",
                 "channel_schema": {"time": "datetime", "val": "float"},
+                "tags": {"test": True},
                 "metadata": {"test": True},
             },
         )
@@ -532,7 +566,11 @@ class TestChannelAdmin:
             base_url,
             jwt,
             "/rbac/v1/users",
-            json={"email": f"should_fail_{tag}@kronicle.app", "name": f"fail_{tag}", "password": "Fail_123!"},
+            json={
+                "email": f"should_fail_{tag}@kronicle.app",
+                "name": f"fail_{tag}",
+                "password": "Fail_123!",
+            },
         )
         assert r.status_code == 403
 
@@ -547,7 +585,12 @@ class TestChannelAdmin:
             base_url,
             jwt,
             f"/data/v1/channels/{test_channel}/rows",
-            json={"channel_id": test_channel, "channel_schema": {"x": "int"}, "rows": []},
+            json={
+                "channel_id": test_channel,
+                "channel_schema": {"x": "int"},
+                "tags": {"test": True},
+                "rows": [],
+            },
         )
         assert r.status_code == 403
 
@@ -599,7 +642,7 @@ class TestZoneAdmin:
             base_url,
             jwt,
             "/setup/v1/channels",
-            json={"channel_id": uuid4_str(), "channel_name": "should_fail", "channel_schema": {"x": "int"}},
+            json={"channel_id": uuid4_str(), "name": "should_fail", "channel_schema": {"x": "int"}},
         )
         assert r.status_code == 403
 
@@ -677,7 +720,7 @@ class TestAuditor:
             base_url,
             jwt,
             "/setup/v1/channels",
-            json={"channel_id": uuid4_str(), "channel_name": "should_fail", "channel_schema": {"x": "int"}},
+            json={"channel_id": uuid4_str(), "name": "should_fail", "channel_schema": {"x": "int"}},
         )
         assert r.status_code == 403
 

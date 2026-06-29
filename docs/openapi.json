@@ -596,6 +596,75 @@
             }
           }
         }
+      },
+      "patch": {
+        "tags": [
+          "Input data"
+        ],
+        "summary": "Update channel metadata",
+        "description": "Updates metadata for an existing channel.",
+        "operationId": "update_channel_data_v1_channels__channel_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "channel_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Channel Id"
+            }
+          },
+          {
+            "name": "strict",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "If true, abort on any validation error",
+              "default": false,
+              "title": "Strict"
+            },
+            "description": "If true, abort on any validation error"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InputPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponsePayload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/data/v1/channels/{channel_id}/rows": {
@@ -4424,7 +4493,7 @@
         "title": "InputPayload",
         "description": "User-provided payload for a channel.\nThe 'channel_schema' field is a dict of column_name -> type string.",
         "example": {
-          "channel_id": "873124d5-81d0-4f70-8c39-81218421860a",
+          "channel_id": "60ccdece-86b6-434c-87bc-a2ebbfdd91ad",
           "channel_schema": {
             "humidity": "float",
             "temperature": "float",
@@ -4433,7 +4502,7 @@
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-d04ce",
+          "name": "thermo-8acf7",
           "rows": [
             {
               "humidity": 55.1,

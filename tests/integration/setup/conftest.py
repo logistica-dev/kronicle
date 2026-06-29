@@ -45,10 +45,10 @@ def test_zone(kronicle_rbac_setup) -> Generator[str, None, None]:
 @pytest.fixture(scope="module")
 def test_channel(kronicle_writer, kronicle_setup, test_zone) -> Generator[str, None, None]:
     channel_id = uuid4_str()
-    channel_name = f"sync_chan_{tiny_id()}"
+    name = f"sync_chan_{tiny_id()}"
     payload = {
         "channel_id": channel_id,
-        "channel_name": channel_name,
+        "name": name,
         "channel_schema": {"time": "datetime", "value": "float"},
         "metadata": {"source": "sync-test"},
         "tags": {"test": "true"},

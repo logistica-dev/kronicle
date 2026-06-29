@@ -64,7 +64,7 @@ def test_crud_user(kronicle_rbac):
             name=f"{res.name}_patched",
             full_name="Patched Name",
         )
-        kronicle_rbac.patch_user(user_id=res.id, user=patch)
+        kronicle_rbac.patch_user(user=patch)
     finally:
         # Delete user (cleanup, regardless of patch outcome)
         usr = kronicle_rbac.deactivate_user(user_id=res.id)

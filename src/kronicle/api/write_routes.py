@@ -92,3 +92,26 @@ async def update_channel_and_insert_rows(
         )
     payload.channel_id = channel_id
     return await data_service.upsert_metadata_and_insert_rows(payload, strict=strict)
+
+
+@writer_router.patch(
+    "/channels/{channel_id}",
+    summary="Update channel metadata",
+    description=("Updates metadata for an existing channel."),
+    response_model=ResponsePayload,
+    dependencies=[Depends(require_permission_set(PermStr.CHANNEL_UPDATE))],
+)
+async def update_channel(
+    channel_id: UUID,
+    payload: InputPayload,
+    core: CoreService = Depends(core_service),  # noqa: B008
+    data_service: ChannelService = Depends(channel_service),  # noqa: B008
+    strict: bool = Query(False, description="If true, abort on any validation error"),
+):
+    if not core.get_core_channel(channel_id):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Channel {channel_id} not found in RBAC; sync may be needed",
+        )
+    payload.channel_id = channel_id
+    return await data_service.update_metadata(payload)

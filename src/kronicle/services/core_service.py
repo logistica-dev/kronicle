@@ -173,6 +173,13 @@ class CoreService:
         else:
             self.create_core_channel(channel_id, zone_id)
 
+    def delete_core_channel(self, channel_id: UUID) -> None:
+        with self._db.transaction() as db:
+            channel = self._channel_repo.get_by_id(db, id=channel_id)
+            if channel:
+                db.delete(channel)
+                db.flush()
+
     def patch_core_channel(
         self,
         channel_id: UUID,

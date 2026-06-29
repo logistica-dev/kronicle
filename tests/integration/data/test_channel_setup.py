@@ -37,7 +37,7 @@ def test_insert_rows_and_upsert_channel(kronicle_writer, kronicle_setup, kronicl
     """Insert a new channel in a zone and verify it is added correctly."""
     here = "ksetup"
     channel_id = uuid4_str()
-    channel_name = f"demo_channel_{tiny_id()}"
+    name = f"demo_channel_{tiny_id()}"
     now_tag = now_local()
     tag = tiny_id()
 
@@ -46,7 +46,7 @@ def test_insert_rows_and_upsert_channel(kronicle_writer, kronicle_setup, kronicl
     try:
         payload = {
             "channel_id": channel_id,
-            "channel_name": channel_name,
+            "name": name,
             "channel_schema": {"time": "datetime", "temperature": "float"},
             "metadata": {"unit": "°C"},
             "tags": {"test": now_tag},

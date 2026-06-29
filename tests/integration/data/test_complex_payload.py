@@ -168,7 +168,7 @@ def test_complex_payload(kronicle_setup, kronicle_writer, kronicle_rbac_setup):
 
         payload = {
             "channel_id": channel_id,
-            "channel_name": f"Complex test payload {tiny_id(4)}",
+            "name": f"Complex test payload {tiny_id(4)}",
             "channel_schema": obs.channel_schema,
             "metadata": {"description": ObservationPayload.get_field_descriptions()},
             "tags": {"test": True},

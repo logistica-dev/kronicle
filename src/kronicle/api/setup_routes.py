@@ -11,12 +11,14 @@ from kronicle.api.shared_write_routes import shared_writer_router
 from kronicle.auth.auth_middleware import require_auth, require_permission, require_permission_set
 from kronicle.db.data.models.schema_registry import SchemaRegistry
 from kronicle.deps.channel_deps import channel_service
+from kronicle.deps.rbac_deps import core_service
 from kronicle.schemas.filters.row_query_filter import RowQueryFilter
 from kronicle.schemas.filters.row_request_filter import RowRequestFilter
 from kronicle.schemas.payload.input_payload import InputPayload
 from kronicle.schemas.payload.response_payload import ResponsePayload
 from kronicle.schemas.permissions.permission import PermStr
 from kronicle.services.channel_service import ChannelService
+from kronicle.services.core_service import CoreService
 
 """
 Admin/setup routes:
@@ -89,7 +91,10 @@ async def update_channel(
 async def patch_channel(
     payload: InputPayload,
     data_service: ChannelService = Depends(channel_service),  # noqa: B008
+    core: CoreService = Depends(core_service),  # noqa: B008
 ):
+    if payload.channel_id and payload.name:
+        core.patch_core_channel(payload.channel_id, name=payload.name)
     return await data_service.patch_metadata(payload)
 
 
@@ -132,7 +137,9 @@ async def clone_channel(
 async def delete_channel(
     channel_id: UUID,
     data_service: ChannelService = Depends(channel_service),  # noqa: B008
+    core: CoreService = Depends(core_service),  # noqa: B008
 ):
+    core.delete_core_channel(channel_id)
     return await data_service.delete_channel(channel_id)
 
 
@@ -161,7 +168,10 @@ async def delete_channel_rows(
 async def batch_delete_channels(
     payload: dict = Body(..., examples=[{"channel_ids": ["uuid1", "uuid2"]}]),  # noqa
     data_service: ChannelService = Depends(channel_service),  # noqa: B008
+    core: CoreService = Depends(core_service),  # noqa: B008
 ):
+    for cid in payload["channel_ids"]:
+        core.delete_core_channel(cid)
     return await data_service.delete_channels(payload["channel_ids"])
 
 

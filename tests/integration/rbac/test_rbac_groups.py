@@ -47,11 +47,14 @@ def test_patch_group(kronicle_rbac):
     group = KronicleGroup(name=f"patch_group_{tag}", details={"test": True})
     created = kronicle_rbac.create_group(group)
     try:
-        patched_name = f"{created.name}_patched"
-        patch = KronicleGroup(name=patched_name)
-        patched = kronicle_rbac.patch_group(group_id=created.id, group=patch)
+        patch = KronicleGroup(
+            id=created.id,
+            name=f"{created.name}_patched",
+            details=created.details,
+        )
+        patched = kronicle_rbac.patch_group(group=patch)
         log_d(here, "Patched", patched)
-        assert patched.name == patched_name
+        assert patched.name == patch.name
     finally:
         kronicle_rbac.delete_group(group_id=created.id)
 

@@ -36,7 +36,7 @@ def test_create_and_update_channel(kronicle_setup, kronicle_writer, kronicle_rba
     """Create a channel in a zone, then update and insert rows via writer."""
     here = "KWrite.create"
     channel_id: str = uuid4_str()
-    channel_name: str = f"demo_channel_{tiny_id()}"
+    name: str = f"demo_channel_{tiny_id()}"
     now_tag = now_local()
     tag = tiny_id()
 
@@ -45,7 +45,7 @@ def test_create_and_update_channel(kronicle_setup, kronicle_writer, kronicle_rba
     try:
         payload = {
             "channel_id": channel_id,
-            "channel_name": channel_name,
+            "name": name,
             "channel_schema": {"time": IsoDateTime, "temperature": float},
             "metadata": {"unit": "°C"},
             "tags": {"test": now_tag},
