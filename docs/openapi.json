@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "TestApp",
-    "summary": "desc",
-    "version": "1.0"
+    "title": "Kronicle",
+    "summary": "FastAPI-powered TimescaleDB microservice for storing time-series measurements",
+    "version": "0.0.1"
   },
   "paths": {
     "/health/live": {
@@ -478,6 +478,51 @@
             }
           }
         }
+      },
+      "put": {
+        "tags": [
+          "Input data"
+        ],
+        "summary": "Update or create a channel",
+        "description": "Upsert a channel: if it exists, updates metadata (schema must match if provided); if it does not exist, creates it with the given schema and metadata.",
+        "operationId": "upsert_channel_data_v1_channels_put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InputPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponsePayload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/data/v1/channels/{channel_id}": {
@@ -528,13 +573,13 @@
           }
         }
       },
-      "post": {
+      "patch": {
         "tags": [
           "Input data"
         ],
-        "summary": "Update channel metadata and insert rows",
-        "description": "Updates metadata for an existing channel and inserts data rows.\nThe channel must already exist.",
-        "operationId": "update_channel_and_insert_rows_data_v1_channels__channel_id__post",
+        "summary": "Partially update a channel",
+        "description": "Update only a subset of metadata, tags, or schema for the specified channel.",
+        "operationId": "patch_channel_data_v1_channels__channel_id__patch",
         "security": [
           {
             "HTTPBearer": []
@@ -550,18 +595,6 @@
               "format": "uuid",
               "title": "Channel Id"
             }
-          },
-          {
-            "name": "strict",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "description": "If true, abort on any validation error",
-              "default": false,
-              "title": "Strict"
-            },
-            "description": "If true, abort on any validation error"
           }
         ],
         "requestBody": {
@@ -597,13 +630,13 @@
           }
         }
       },
-      "patch": {
+      "post": {
         "tags": [
           "Input data"
         ],
-        "summary": "Update channel metadata",
-        "description": "Updates metadata for an existing channel.",
-        "operationId": "update_channel_data_v1_channels__channel_id__patch",
+        "summary": "Update channel metadata and insert rows",
+        "description": "Updates metadata for an existing channel and inserts data rows.\nThe channel must already exist.",
+        "operationId": "update_channel_and_insert_rows_data_v1_channels__channel_id__post",
         "security": [
           {
             "HTTPBearer": []
@@ -839,8 +872,8 @@
         "tags": [
           "Input data"
         ],
-        "summary": "Create a channel in a zone with optional rows",
-        "description": "Creates a new channel inside the specified zone and inserts data rows.\nThe channel must not already exist.",
+        "summary": "Create a new channel in a zone",
+        "description": "Create a new channel with metadata and schema inside the specified zone. Does not add rows, and fails if the channel already exists.",
         "operationId": "create_channel_in_zone_data_v1_zones__zone_id__channels_post",
         "security": [
           {
@@ -857,18 +890,6 @@
               "format": "uuid",
               "title": "Zone Id"
             }
-          },
-          {
-            "name": "strict",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "description": "If true, abort on any validation error",
-              "default": false,
-              "title": "Strict"
-            },
-            "description": "If true, abort on any validation error"
           }
         ],
         "requestBody": {
@@ -1000,58 +1021,13 @@
           }
         }
       },
-      "post": {
-        "tags": [
-          "Setup data channels"
-        ],
-        "summary": "Create a new channel",
-        "description": "Create a new channel with metadata and schema. Does not add rows, and fails if the channel already exists.",
-        "operationId": "create_channel_setup_v1_channels_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/InputPayload"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponsePayload"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
       "put": {
         "tags": [
           "Setup data channels"
         ],
         "summary": "Update or create a channel",
         "description": "Upsert a channel: if it exists, updates metadata (schema must match if provided); if it does not exist, creates it with the given schema and metadata.",
-        "operationId": "update_channel_setup_v1_channels_put",
+        "operationId": "upsert_channel_setup_v1_channels_put",
         "security": [
           {
             "HTTPBearer": []
@@ -1149,6 +1125,18 @@
         "security": [
           {
             "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "channel_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Channel Id"
+            }
           }
         ],
         "requestBody": {
@@ -1526,6 +1514,65 @@
         }
       }
     },
+    "/setup/v1/zones/{zone_id}/channels": {
+      "post": {
+        "tags": [
+          "Setup data channels"
+        ],
+        "summary": "Create a new channel in a zone",
+        "description": "Create a new channel with metadata and schema inside the specified zone. Does not add rows, and fails if the channel already exists.",
+        "operationId": "create_channel_in_zone_setup_v1_zones__zone_id__channels_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "zone_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Zone Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InputPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponsePayload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/setup/v1/channels/{channel_id}/clone": {
       "post": {
         "tags": [
@@ -1665,35 +1712,6 @@
       }
     },
     "/core/v1/zones": {
-      "get": {
-        "tags": [
-          "Core"
-        ],
-        "summary": "List all zones",
-        "description": "Returns all zones.",
-        "operationId": "list_zones_core_v1_zones_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/OutputZone"
-                  },
-                  "type": "array",
-                  "title": "Response List Zones Core V1 Zones Get"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      },
       "post": {
         "tags": [
           "Core"
@@ -1701,15 +1719,20 @@
         "summary": "Create a zone",
         "description": "Creates a new zone for resource isolation and RBAC scoping.",
         "operationId": "create_zone_core_v1_zones_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/InputZone"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -1732,12 +1755,76 @@
               }
             }
           }
-        },
+        }
+      },
+      "get": {
+        "tags": [
+          "Core"
+        ],
+        "summary": "List all zones",
+        "description": "Returns all zones.",
+        "operationId": "list_zones_core_v1_zones_get",
         "security": [
           {
             "HTTPBearer": []
           }
-        ]
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional name to filter by",
+              "title": "Name"
+            },
+            "description": "Optional name to filter by"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/OutputZone"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/OutputZone"
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response List Zones Core V1 Zones Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/core/v1/zones/{zone_id}": {
@@ -1954,27 +2041,67 @@
         "summary": "List all core channels",
         "description": "Returns all CoreChannels.",
         "operationId": "list_channels_core_v1_channels_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional name to filter by",
+              "title": "Name"
+            },
+            "description": "Optional name to filter by"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/OutputCoreChannel"
-                  },
-                  "type": "array",
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/OutputCoreChannel"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/OutputCoreChannel"
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
                   "title": "Response List Channels Core V1 Channels Get"
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
           }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
+        }
       }
     },
     "/core/v1/channels/{channel_id}": {
@@ -2059,6 +2186,53 @@
             }
           }
         },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutputCoreChannel"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Core"
+        ],
+        "summary": "Delete a core channel",
+        "description": "Deletes a CoreChannel record. Does not affect the data channel.",
+        "operationId": "delete_core_channel_core_v1_channels__channel_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "channel_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Channel Id"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -3416,35 +3590,6 @@
       }
     },
     "/rbac/v1/roles": {
-      "get": {
-        "tags": [
-          "RBAC"
-        ],
-        "summary": "List all roles",
-        "description": "Returns all RBAC roles.",
-        "operationId": "list_roles_rbac_v1_roles_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/OutputRole"
-                  },
-                  "type": "array",
-                  "title": "Response List Roles Rbac V1 Roles Get"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      },
       "post": {
         "tags": [
           "RBAC"
@@ -3452,15 +3597,20 @@
         "summary": "Create a role",
         "description": "Creates a new RBAC role with permissions and restrictions.",
         "operationId": "create_role_rbac_v1_roles_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/InputRole"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -3483,12 +3633,76 @@
               }
             }
           }
-        },
+        }
+      },
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "List all roles",
+        "description": "Returns all RBAC roles.",
+        "operationId": "list_roles_rbac_v1_roles_get",
         "security": [
           {
             "HTTPBearer": []
           }
-        ]
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional name to filter by",
+              "title": "Name"
+            },
+            "description": "Optional name to filter by"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/OutputRole"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/OutputRole"
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response List Roles Rbac V1 Roles Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/rbac/v1/roles/{role_id}": {
@@ -4328,7 +4542,8 @@
             "anyOf": [
               {
                 "type": "string",
-                "maxLength": 100
+                "maxLength": 32,
+                "minLength": 4
               },
               {
                 "type": "null"
@@ -4493,7 +4708,7 @@
         "title": "InputPayload",
         "description": "User-provided payload for a channel.\nThe 'channel_schema' field is a dict of column_name -> type string.",
         "example": {
-          "channel_id": "60ccdece-86b6-434c-87bc-a2ebbfdd91ad",
+          "channel_id": "f3d68e4d-41af-47df-8a36-7886f45f6aeb",
           "channel_schema": {
             "humidity": "float",
             "temperature": "float",
@@ -4502,7 +4717,7 @@
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-8acf7",
+          "name": "thermo-6769c",
           "rows": [
             {
               "humidity": 55.1,
@@ -4746,8 +4961,8 @@
         "properties": {
           "name": {
             "type": "string",
-            "maxLength": 100,
-            "minLength": 1,
+            "maxLength": 32,
+            "minLength": 4,
             "title": "Name",
             "description": "Unique zone name"
           },
@@ -4770,8 +4985,8 @@
             "anyOf": [
               {
                 "type": "string",
-                "maxLength": 100,
-                "minLength": 1
+                "maxLength": 32,
+                "minLength": 4
               },
               {
                 "type": "null"

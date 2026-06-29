@@ -391,6 +391,11 @@ class RbacService:
             role = self._role_repo.get_by_id(db, id=role_id)
         return OutputRole.from_db_role(role) if role else None
 
+    def get_role_by_name(self, name: str) -> OutputRole | None:
+        with self._db.get_db() as db:
+            role = self._role_repo.get_by_name(db, name=name)
+        return OutputRole.from_db_role(role) if role else None
+
     def patch_role(
         self,
         role_id: UUID,

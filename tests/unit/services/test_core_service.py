@@ -10,6 +10,7 @@ from kronicle.db.rbac.rbac_db_session import RbacDbSession
 from kronicle.errors.error_types import BadRequestError, ConflictError, NotFoundError
 from kronicle.repo.core.core_channel_repo import CoreChannelRepository
 from kronicle.repo.core.core_zone_repo import CoreZoneRepository
+from kronicle.schemas.core.input_core_channel_schemas import InputCoreChannel
 from kronicle.schemas.core.safe_zone_schemas import OutputZone
 from kronicle.services.core_service import CoreService
 
@@ -201,9 +202,9 @@ class TestSyncCoreChannels:
         mock_channel_repo.fetch_all.return_value = [MagicMock(id=eid) for eid in existing_ids]
 
         new_ids = [uuid4(), uuid4()]
-        all_ids = list(existing_ids) + new_ids
+        channels = [InputCoreChannel(id=eid) for eid in existing_ids] + [InputCoreChannel(id=nid) for nid in new_ids]
 
-        result = service.sync_core_channels(all_ids)
+        result = service.sync_core_channels(channels)
 
         assert result == new_ids
         assert mock_db_session.add.call_count == 2
@@ -212,7 +213,8 @@ class TestSyncCoreChannels:
         existing_ids = {uuid4(), uuid4()}
         mock_channel_repo.fetch_all.return_value = [MagicMock(id=eid) for eid in existing_ids]
 
-        result = service.sync_core_channels(list(existing_ids))
+        channels = [InputCoreChannel(id=eid) for eid in existing_ids]
+        result = service.sync_core_channels(channels)
 
         assert result == []
 
@@ -221,7 +223,7 @@ class TestSyncCoreChannels:
         mock_channel_repo.fetch_all.return_value = []
 
         new_id = uuid4()
-        result = service.sync_core_channels([new_id], default_zone_id=zone_id)
+        result = service.sync_core_channels([InputCoreChannel(id=new_id)], default_zone_id=zone_id)
 
         assert result == [new_id]
         mock_db_session.add.assert_called_once()
@@ -301,10 +303,11 @@ class TestCreateCoreChannel:
     def test_creates_channel(self, service, mock_db, mock_db_session):
         channel_id = uuid4()
         zone_id = uuid4()
+        channel = InputCoreChannel(id=channel_id, name="custom-name", zone_id=zone_id, details={"key": "val"})
 
         with patch("kronicle.services.core_service.OutputCoreChannel.from_db_core_channel") as mock_from:
             mock_from.return_value = MagicMock(id=channel_id)
-            result = service.create_core_channel(channel_id, zone_id, name="custom-name")
+            result = service.create_core_channel(channel)
 
         assert result is not None
         mock_db_session.add.assert_called_once()
@@ -312,6 +315,7 @@ class TestCreateCoreChannel:
         assert added.id == channel_id
         assert added.zone_id == zone_id
         assert added.name == "custom-name"
+        assert added.details == {"key": "val"}
 
 
 class TestEnsureChannelInZone:
@@ -326,7 +330,7 @@ class TestEnsureChannelInZone:
             mock_create.return_value = MagicMock()
             service.ensure_channel_in_zone(channel_id, zone.id)
 
-        mock_create.assert_called_once_with(channel_id, zone.id)
+        mock_create.assert_called_once_with(InputCoreChannel(id=channel_id, zone_id=zone.id))
 
     def test_raises_if_channel_in_different_zone(
         self, service, mock_db, mock_db_session, mock_zone_repo, mock_channel_repo

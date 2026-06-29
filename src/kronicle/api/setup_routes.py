@@ -49,56 +49,6 @@ setup_router.include_router(shared_writer_router)
 
 
 @setup_router.post(
-    "/channels",
-    summary="Create a new channel",
-    description=(
-        "Create a new channel with metadata and schema. Does not add rows, and fails if the channel already exists."
-    ),
-    response_model=ResponsePayload,
-    dependencies=[Depends(require_permission(PermStr.CHANNEL_CREATE))],
-)
-async def create_channel(
-    payload: InputPayload,
-    data_service: ChannelService = Depends(channel_service),  # noqa: B008
-):
-    return await data_service.create_channel(payload)
-
-
-@setup_router.put(
-    "/channels",
-    summary="Update or create a channel",
-    description=(
-        "Upsert a channel: if it exists, updates metadata (schema must match if provided); "
-        "if it does not exist, creates it with the given schema and metadata."
-    ),
-    response_model=ResponsePayload,
-    dependencies=[Depends(require_permission(PermStr.CHANNEL_UPDATE))],
-)
-async def update_channel(
-    payload: InputPayload,
-    data_service: ChannelService = Depends(channel_service),  # noqa: B008
-):
-    return await data_service.upsert_metadata(payload)
-
-
-@setup_router.patch(
-    "/channels/{channel_id}",
-    summary="Partially update a channel",
-    description="Update only a subset of metadata, tags, or schema for the specified channel.",
-    response_model=ResponsePayload,
-    dependencies=[Depends(require_permission(PermStr.CHANNEL_UPDATE))],
-)
-async def patch_channel(
-    payload: InputPayload,
-    data_service: ChannelService = Depends(channel_service),  # noqa: B008
-    core: CoreService = Depends(core_service),  # noqa: B008
-):
-    if payload.channel_id and payload.name:
-        core.patch_core_channel(payload.channel_id, name=payload.name)
-    return await data_service.patch_metadata(payload)
-
-
-@setup_router.post(
     "/channels/{channel_id}/clone",
     summary="Clone a channel",
     description="Creates a new channel by cloning an existing channel's schema and optionally metadata. "

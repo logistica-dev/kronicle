@@ -8,19 +8,16 @@ from kronicle.db.core.links.zone_hierarchy import ZoneHierarchy
 from kronicle.db.core.models.core_channel import CoreChannel
 from kronicle.db.core.models.core_zone import CoreZone
 from kronicle.db.rbac.rbac_db_session import RbacDbSession
-from kronicle.errors.error_types import BadRequestError
-from kronicle.errors.error_types import ConflictError
-from kronicle.errors.error_types import NotFoundError
+from kronicle.errors.error_types import BadRequestError, ConflictError, NotFoundError
 from kronicle.repo.core.core_channel_repo import CoreChannelRepository
 from kronicle.repo.core.core_zone_repo import CoreZoneRepository
 from kronicle.repo.hierarchy.hierarchy_engine import HierarchyEngine
 from kronicle.repo.hierarchy.hierarchy_service import HierarchyService
 from kronicle.repo.hierarchy.zone_hierarchy_repo import ZoneHierarchyRepository
+from kronicle.schemas.core.input_core_channel_schemas import InputCoreChannel
 from kronicle.schemas.core.safe_core_channel_schemas import OutputCoreChannel
 from kronicle.schemas.core.safe_zone_schemas import OutputZone
-from kronicle.utils.dev_logs import log_d
-from kronicle.utils.dev_logs import log_i
-from kronicle.utils.dev_logs import log_w
+from kronicle.utils.dev_logs import log_d, log_i, log_w
 
 mod = "core_svc"
 
@@ -69,6 +66,11 @@ class CoreService:
             zone = self._zone_repo.get_by_id(db, id=zone_id)
         return OutputZone.from_db_zone(zone) if zone else None
 
+    def get_zone_by_name(self, name: str) -> OutputZone | None:
+        with self._db.get_db() as db:
+            zone = self._zone_repo.get_by_name(db, name=name)
+        return OutputZone.from_db_zone(zone) if zone else None
+
     def delete_zone(self, zone_id: UUID) -> OutputZone | None:
         here = f"{mod}.delete_zone"
         log_w(here, zone_id)
@@ -104,21 +106,30 @@ class CoreService:
             channels = self._channel_repo.fetch_all(db)
         return {c.id for c in channels}
 
-    def sync_core_channels(self, channel_ids: Sequence[UUID], default_zone_id: UUID | None = None) -> list[UUID]:
+    def sync_core_channels(
+        self,
+        channels: Sequence[InputCoreChannel],
+        default_zone_id: UUID | None = None,
+    ) -> list[UUID]:
         here = f"{mod}.sync_core_channels"
         existing = self.list_core_channel_ids()
-        missing = [cid for cid in channel_ids if cid not in existing]
+        missing = [c for c in channels if c.id not in existing]
         if not missing:
             log_d(here, "All channels already synced")
             return []
 
         created: list[UUID] = []
         with self._db.transaction() as db:
-            for cid in missing:
-                core_channel = CoreChannel(id=cid, name=str(cid), zone_id=default_zone_id)
+            for c in missing:
+                core_channel = CoreChannel(
+                    id=c.id,
+                    name=c.name or str(c.id),
+                    zone_id=c.zone_id or default_zone_id,
+                    details=c.details or {},
+                )
                 db.add(core_channel)
-                created.append(cid)
-                log_d(here, f"Created CoreChannel for {cid}")
+                created.append(c.id)
+                log_d(here, f"Created CoreChannel for {c.id}")
             db.flush()
         log_i(here, f"Created {len(created)} CoreChannels")
         return created
@@ -151,12 +162,18 @@ class CoreService:
             channel = self._channel_repo.get_by_id(db, id=channel_id)
         return OutputCoreChannel.from_db_core_channel(channel) if channel else None
 
-    def create_core_channel(self, channel_id: UUID, zone_id: UUID, name: str | None = None) -> OutputCoreChannel:
+    def get_core_channel_by_name(self, name: str) -> OutputCoreChannel | None:
+        with self._db.get_db() as db:
+            channel = self._channel_repo.get_by_name(db, name=name)
+        return OutputCoreChannel.from_db_core_channel(channel) if channel else None
+
+    def create_core_channel(self, channel: InputCoreChannel) -> OutputCoreChannel:
         with self._db.transaction() as db:
             core_channel = CoreChannel(
-                id=channel_id,
-                name=name or str(channel_id),
-                zone_id=zone_id,
+                id=channel.id,
+                name=channel.name or str(channel.id),
+                zone_id=channel.zone_id,
+                details=channel.details or {},
             )
             db.add(core_channel)
             db.flush()
@@ -171,14 +188,16 @@ class CoreService:
             if existing.zone_id != zone_id:
                 raise ConflictError(f"Channel {channel_id} belongs to zone {existing.zone_id}, not {zone_id}")
         else:
-            self.create_core_channel(channel_id, zone_id)
+            self.create_core_channel(InputCoreChannel(id=channel_id, zone_id=zone_id))
 
-    def delete_core_channel(self, channel_id: UUID) -> None:
+    def delete_core_channel(self, channel_id: UUID) -> OutputCoreChannel | None:
         with self._db.transaction() as db:
-            channel = self._channel_repo.get_by_id(db, id=channel_id)
-            if channel:
-                db.delete(channel)
-                db.flush()
+            channel: CoreChannel = self._channel_repo.get_by_id(db, id=channel_id)
+            if not channel:
+                return None
+            db.delete(channel)
+            db.flush()
+        return OutputCoreChannel.from_db_core_channel(channel)
 
     def patch_core_channel(
         self,

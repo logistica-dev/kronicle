@@ -379,12 +379,15 @@ def create_role(
     "/roles",
     summary="List all roles",
     description="Returns all RBAC roles.",
-    response_model=list[OutputRole],
+    response_model=OutputRole | list[OutputRole] | None,
     dependencies=[Depends(require_permission(PermStr.ROLE_READ))],
 )
 def list_roles(
+    name: str | None = Query(None, description="Optional name to filter by"),
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
 ):
+    if name:
+        return rbac.get_role_by_name(name)
     return rbac.get_roles()
 
 

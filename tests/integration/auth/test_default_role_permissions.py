@@ -219,13 +219,14 @@ class TestSuperAdmin:
         except Exception:
             pass
 
-    def test_create_channel(self, base_url, jwt):
+    def test_create_channel(self, base_url, jwt, su_setup_client):
+        cid = uuid4_str()
         r = _post(
             base_url,
             jwt,
             "/setup/v1/channels",
             json={
-                "channel_id": uuid4_str(),
+                "channel_id": cid,
                 "name": f"su_chan_{tiny_id()}",
                 "channel_schema": {"time": "datetime", "val": "float"},
                 "tags": {"test": True},
@@ -233,6 +234,10 @@ class TestSuperAdmin:
             },
         )
         assert r.status_code == 200, f"Body: {r.text}"
+        try:
+            su_setup_client.delete_channel(cid)
+        except Exception:
+            pass
 
     def test_write_rows(self, base_url, jwt, test_channel):
         r = _post(
@@ -526,13 +531,14 @@ class TestChannelAdmin:
         r = _get(base_url, jwt, "/setup/v1/channels")
         assert r.status_code == 200
 
-    def test_create_channel(self, base_url, jwt):
+    def test_create_channel(self, base_url, jwt, su_setup_client):
+        cid = uuid4_str()
         r = _post(
             base_url,
             jwt,
             "/setup/v1/channels",
             json={
-                "channel_id": uuid4_str(),
+                "channel_id": cid,
                 "name": f"ca_chan_{tiny_id()}",
                 "channel_schema": {"time": "datetime", "val": "float"},
                 "tags": {"test": True},
@@ -540,6 +546,10 @@ class TestChannelAdmin:
             },
         )
         assert r.status_code == 200, f"Body: {r.text}"
+        try:
+            su_setup_client.delete_channel(cid)
+        except Exception:
+            pass
 
     def test_delete_channel(self, base_url, jwt, test_zone, su_client, su_jwt):
         cid = uuid4_str()

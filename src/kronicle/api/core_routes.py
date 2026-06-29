@@ -3,13 +3,13 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from kronicle.auth.auth_middleware import require_auth, require_permission
 from kronicle.deps.channel_deps import channel_service
 from kronicle.deps.rbac_deps import core_service
 from kronicle.errors.error_types import NotFoundError
-from kronicle.schemas.core.input_core_channel_schemas import InputCoreChannelPatch
+from kronicle.schemas.core.input_core_channel_schemas import InputCoreChannel, InputCoreChannelPatch
 from kronicle.schemas.core.input_zone_schemas import InputZone, InputZonePatch
 from kronicle.schemas.core.safe_core_channel_schemas import OutputCoreChannel
 from kronicle.schemas.core.safe_zone_schemas import OutputZone
@@ -44,12 +44,15 @@ def create_zone(
     "/zones",
     summary="List all zones",
     description="Returns all zones.",
-    response_model=list[OutputZone],
+    response_model=OutputZone | list[OutputZone] | None,
     dependencies=[Depends(require_permission(PermStr.ZONE_READ))],
 )
 def list_zones(
+    name: str | None = Query(None, description="Optional name to filter by"),
     core: CoreService = Depends(core_service),  # noqa: B008
 ):
+    if name:
+        return core.get_zone_by_name(name)
     zones = core.get_zones()
     return [OutputZone.from_db_zone(z) for z in zones]
 
@@ -124,12 +127,15 @@ def list_zone_channels(
     "/channels",
     summary="List all core channels",
     description="Returns all CoreChannels.",
-    response_model=list[OutputCoreChannel],
+    response_model=OutputCoreChannel | list[OutputCoreChannel] | None,
     dependencies=[Depends(require_permission(PermStr.CHANNEL_READ))],
 )
 def list_channels(
+    name: str | None = Query(None, description="Optional name to filter by"),
     core: CoreService = Depends(core_service),  # noqa: B008
 ):
+    if name:
+        return core.get_core_channel_by_name(name)
     return core.get_core_channels()
 
 
@@ -170,6 +176,23 @@ def patch_core_channel(
     )
 
 
+@core_router.delete(
+    "/channels/{channel_id}",
+    summary="Delete a core channel",
+    description="Deletes a CoreChannel record. Does not affect the data channel.",
+    response_model=OutputCoreChannel,
+    dependencies=[Depends(require_permission(PermStr.CHANNEL_DELETE))],
+)
+def delete_core_channel(
+    channel_id: UUID,
+    core: CoreService = Depends(core_service),  # noqa: B008
+):
+    deleted = core.delete_core_channel(channel_id)
+    if not deleted:
+        raise NotFoundError(f"CoreChannel '{channel_id}' not found")
+    return deleted
+
+
 # --------------------------------------------------------------------------------------------------
 # Sync: reconcile data channels with core RBAC records
 # --------------------------------------------------------------------------------------------------
@@ -190,14 +213,14 @@ async def sync_core_channels(
     core: CoreService = Depends(core_service),  # noqa: B008
 ):
     data_channels = await data_service.fetch_all_metadata()
-    channel_ids = [c.channel_id for c in data_channels]
+    channels_info = [InputCoreChannel(id=c.channel_id, name=c.name) for c in data_channels]
 
     default_zone = core.ensure_default_zone()
-    created = core.sync_core_channels(channel_ids, default_zone_id=default_zone.id)
+    created = core.sync_core_channels(channels_info, default_zone_id=default_zone.id)
 
     return {
-        "detail": f"Synced {len(channel_ids)} data channels",
-        "total_data_channels": len(channel_ids),
+        "detail": f"Synced {len(channels_info)} data channels",
+        "total_data_channels": len(channels_info),
         "created_core_channels": len(created),
         "default_zone_id": uuid_to_str(default_zone.id),
     }

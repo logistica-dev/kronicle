@@ -15,7 +15,6 @@ from kronicle.schemas.payload.response_payload import ResponsePayload
 from kronicle.schemas.permissions.permission import PermStr
 from kronicle.services.channel_service import ChannelService
 from kronicle.services.core_service import CoreService
-from kronicle.utils.str_utils import ensure_uuid4
 
 writer_router = APIRouter(
     tags=["Input data"],
@@ -35,33 +34,6 @@ writer_router.include_router(shared_read_router)
 # WRITE ENDPOINTS (append-only)
 # --------------------------------------------------------------------------------------------------
 writer_router.include_router(shared_writer_router)
-
-
-@writer_router.post(
-    "/zones/{zone_id}/channels",
-    summary="Create a channel in a zone with optional rows",
-    description=(
-        "Creates a new channel inside the specified zone and inserts data rows.\n" "The channel must not already exist."
-    ),
-    response_model=ResponsePayload,
-    dependencies=[
-        Depends(
-            require_permission_set(
-                PermStr.CHANNEL_CREATE,
-                PermStr.ROW_CREATE,
-            )
-        ),
-    ],
-)
-async def create_channel_in_zone(
-    zone_id: UUID,
-    payload: InputPayload,
-    core: CoreService = Depends(core_service),  # noqa: B008
-    data_service: ChannelService = Depends(channel_service),  # noqa: B008
-    strict: bool = Query(False, description="If true, abort on any validation error"),
-):
-    core.ensure_channel_in_zone(ensure_uuid4(payload.channel_id), zone_id)
-    return await data_service.upsert_metadata_and_insert_rows(payload=payload, strict=strict)
 
 
 @writer_router.post(
@@ -92,26 +64,3 @@ async def update_channel_and_insert_rows(
         )
     payload.channel_id = channel_id
     return await data_service.upsert_metadata_and_insert_rows(payload, strict=strict)
-
-
-@writer_router.patch(
-    "/channels/{channel_id}",
-    summary="Update channel metadata",
-    description=("Updates metadata for an existing channel."),
-    response_model=ResponsePayload,
-    dependencies=[Depends(require_permission_set(PermStr.CHANNEL_UPDATE))],
-)
-async def update_channel(
-    channel_id: UUID,
-    payload: InputPayload,
-    core: CoreService = Depends(core_service),  # noqa: B008
-    data_service: ChannelService = Depends(channel_service),  # noqa: B008
-    strict: bool = Query(False, description="If true, abort on any validation error"),
-):
-    if not core.get_core_channel(channel_id):
-        raise HTTPException(
-            status_code=404,
-            detail=f"Channel {channel_id} not found in RBAC; sync may be needed",
-        )
-    payload.channel_id = channel_id
-    return await data_service.update_metadata(payload)
