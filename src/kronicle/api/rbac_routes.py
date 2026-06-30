@@ -11,10 +11,16 @@ from kronicle.deps.rbac_deps import rbac_service
 from kronicle.errors.error_types import BadRequestError, NotFoundError
 from kronicle.schemas.permissions.permission import PermStr
 from kronicle.schemas.rbac.input_group_schemas import InputGroup
-from kronicle.schemas.rbac.input_policy_schemas import InputChannelPolicy, InputZonePolicy
+from kronicle.schemas.rbac.input_policy_schemas import (
+    InputChannelAccessProfile,
+    InputChannelPolicy,
+    InputZoneAccessProfile,
+    InputZonePolicy,
+)
 from kronicle.schemas.rbac.input_role_schemas import InputRole
 from kronicle.schemas.rbac.input_user_schemas import InputUser, InputUserPatch
 from kronicle.schemas.rbac.safe_group_schemas import OutputGroup
+from kronicle.schemas.rbac.safe_policy_schemas import OutputChannelAccessProfile, OutputZoneAccessProfile
 from kronicle.schemas.rbac.safe_role_schemas import OutputRole
 from kronicle.schemas.rbac.safe_user_schemas import OutputUser, ProcessedUser
 from kronicle.services.rbac_service import RbacService
@@ -515,6 +521,129 @@ def check_user_group(
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
 ):
     return rbac.check_user_in_group(user_id=user_id, group_id=group_id, indirect=indirect)
+
+
+# --------------------------------------------------------------------------------------------------
+# Access Profiles – reusable scoped roles
+# --------------------------------------------------------------------------------------------------
+
+
+@rbac_router.post(
+    "/access-profiles/zones",
+    summary="Create a zone access profile",
+    description="Creates a reusable scoped role (role + zone pair).",
+    response_model=OutputZoneAccessProfile,
+    dependencies=[Depends(require_permission(PermStr.POLICY_CREATE))],
+)
+def create_zone_access_profile(
+    profile_in: InputZoneAccessProfile,
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.create_zone_access_profile(
+        role_id=profile_in.role_id,
+        zone_id=profile_in.zone_id,
+        description=profile_in.description,
+    )
+
+
+@rbac_router.get(
+    "/access-profiles/zones",
+    summary="List all zone access profiles",
+    response_model=list[OutputZoneAccessProfile],
+    dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
+)
+def list_zone_access_profiles(
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.list_zone_access_profiles()
+
+
+@rbac_router.get(
+    "/access-profiles/zones/{profile_id}",
+    summary="Get a zone access profile",
+    response_model=OutputZoneAccessProfile,
+    dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
+)
+def get_zone_access_profile(
+    profile_id: UUID,
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    profile = rbac.get_zone_access_profile(profile_id)
+    if not profile:
+        raise NotFoundError(f"ZoneAccessProfile '{profile_id}' not found")
+    return profile
+
+
+@rbac_router.delete(
+    "/access-profiles/zones/{profile_id}",
+    summary="Delete a zone access profile",
+    dependencies=[Depends(require_permission(PermStr.POLICY_DELETE))],
+)
+def delete_zone_access_profile(
+    profile_id: UUID,
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    rbac.delete_zone_access_profile(profile_id)
+    return {"detail": f"ZoneAccessProfile '{profile_id}' deleted"}
+
+
+@rbac_router.post(
+    "/access-profiles/channels",
+    summary="Create a channel access profile",
+    description="Creates a reusable scoped role (role + channel pair).",
+    response_model=OutputChannelAccessProfile,
+    dependencies=[Depends(require_permission(PermStr.POLICY_CREATE))],
+)
+def create_channel_access_profile(
+    profile_in: InputChannelAccessProfile,
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.create_channel_access_profile(
+        role_id=profile_in.role_id,
+        channel_id=profile_in.channel_id,
+        description=profile_in.description,
+    )
+
+
+@rbac_router.get(
+    "/access-profiles/channels",
+    summary="List all channel access profiles",
+    response_model=list[OutputChannelAccessProfile],
+    dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
+)
+def list_channel_access_profiles(
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.list_channel_access_profiles()
+
+
+@rbac_router.get(
+    "/access-profiles/channels/{profile_id}",
+    summary="Get a channel access profile",
+    response_model=OutputChannelAccessProfile,
+    dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
+)
+def get_channel_access_profile(
+    profile_id: UUID,
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    profile = rbac.get_channel_access_profile(profile_id)
+    if not profile:
+        raise NotFoundError(f"ChannelAccessProfile '{profile_id}' not found")
+    return profile
+
+
+@rbac_router.delete(
+    "/access-profiles/channels/{profile_id}",
+    summary="Delete a channel access profile",
+    dependencies=[Depends(require_permission(PermStr.POLICY_DELETE))],
+)
+def delete_channel_access_profile(
+    profile_id: UUID,
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    rbac.delete_channel_access_profile(profile_id)
+    return {"detail": f"ChannelAccessProfile '{profile_id}' deleted"}
 
 
 # --------------------------------------------------------------------------------------------------

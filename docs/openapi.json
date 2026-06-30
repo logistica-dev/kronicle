@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Kronicle",
-    "summary": "FastAPI-powered TimescaleDB microservice for storing time-series measurements",
-    "version": "0.0.1"
+    "title": "TestApp",
+    "summary": "desc",
+    "version": "1.0"
   },
   "paths": {
     "/health/live": {
@@ -4012,6 +4012,340 @@
         }
       }
     },
+    "/rbac/v1/access-profiles/zones": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "List all zone access profiles",
+        "operationId": "list_zone_access_profiles_rbac_v1_access_profiles_zones_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OutputZoneAccessProfile"
+                  },
+                  "type": "array",
+                  "title": "Response List Zone Access Profiles Rbac V1 Access Profiles Zones Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Create a zone access profile",
+        "description": "Creates a reusable scoped role (role + zone pair).",
+        "operationId": "create_zone_access_profile_rbac_v1_access_profiles_zones_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InputZoneAccessProfile"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutputZoneAccessProfile"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/rbac/v1/access-profiles/zones/{profile_id}": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Get a zone access profile",
+        "operationId": "get_zone_access_profile_rbac_v1_access_profiles_zones__profile_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "profile_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Profile Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutputZoneAccessProfile"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Delete a zone access profile",
+        "operationId": "delete_zone_access_profile_rbac_v1_access_profiles_zones__profile_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "profile_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Profile Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rbac/v1/access-profiles/channels": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "List all channel access profiles",
+        "operationId": "list_channel_access_profiles_rbac_v1_access_profiles_channels_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OutputChannelAccessProfile"
+                  },
+                  "type": "array",
+                  "title": "Response List Channel Access Profiles Rbac V1 Access Profiles Channels Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Create a channel access profile",
+        "description": "Creates a reusable scoped role (role + channel pair).",
+        "operationId": "create_channel_access_profile_rbac_v1_access_profiles_channels_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InputChannelAccessProfile"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutputChannelAccessProfile"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/rbac/v1/access-profiles/channels/{profile_id}": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Get a channel access profile",
+        "operationId": "get_channel_access_profile_rbac_v1_access_profiles_channels__profile_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "profile_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Profile Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutputChannelAccessProfile"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Delete a channel access profile",
+        "operationId": "delete_channel_access_profile_rbac_v1_access_profiles_channels__profile_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "profile_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Profile Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rbac/v1/policies/zones": {
       "post": {
         "tags": [
@@ -4506,6 +4840,41 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "InputChannelAccessProfile": {
+        "properties": {
+          "role_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Role Id",
+            "description": "UUID of the role"
+          },
+          "channel_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Channel Id",
+            "description": "UUID of the channel"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "description": "Optional description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "role_id",
+          "channel_id"
+        ],
+        "title": "InputChannelAccessProfile",
+        "description": "Create a scoped role for a channel."
+      },
       "InputChannelPolicy": {
         "properties": {
           "subject_id": {
@@ -4708,7 +5077,7 @@
         "title": "InputPayload",
         "description": "User-provided payload for a channel.\nThe 'channel_schema' field is a dict of column_name -> type string.",
         "example": {
-          "channel_id": "8f957b41-58d3-4b2e-ab3d-fc2d8e27302f",
+          "channel_id": "6c7ac0fc-501d-4097-996d-6f676679d497",
           "channel_schema": {
             "humidity": "float",
             "temperature": "float",
@@ -4717,7 +5086,7 @@
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-28808",
+          "name": "thermo-00d58",
           "rows": [
             {
               "humidity": 55.1,
@@ -4979,6 +5348,41 @@
         ],
         "title": "InputZone"
       },
+      "InputZoneAccessProfile": {
+        "properties": {
+          "role_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Role Id",
+            "description": "UUID of the role"
+          },
+          "zone_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Zone Id",
+            "description": "UUID of the zone"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "description": "Optional description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "role_id",
+          "zone_id"
+        ],
+        "title": "InputZoneAccessProfile",
+        "description": "Create a scoped role for a zone."
+      },
       "InputZonePatch": {
         "properties": {
           "name": {
@@ -5041,6 +5445,65 @@
         ],
         "title": "InputZonePolicy",
         "description": "Assign a role to a subject (user or group) for a specific zone."
+      },
+      "OutputChannelAccessProfile": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "role_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Role Id"
+          },
+          "role_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role Name"
+          },
+          "channel_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Channel Id"
+          },
+          "channel_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channel Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "role_id",
+          "channel_id"
+        ],
+        "title": "OutputChannelAccessProfile"
       },
       "OutputCoreChannel": {
         "properties": {
@@ -5277,6 +5740,65 @@
           "name"
         ],
         "title": "OutputZone"
+      },
+      "OutputZoneAccessProfile": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "role_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Role Id"
+          },
+          "role_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role Name"
+          },
+          "zone_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Zone Id"
+          },
+          "zone_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "role_id",
+          "zone_id"
+        ],
+        "title": "OutputZoneAccessProfile"
       },
       "ResponsePayload": {
         "properties": {

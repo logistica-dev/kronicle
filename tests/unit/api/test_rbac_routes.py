@@ -306,7 +306,7 @@ class TestRoleRoutes:
     def test_list_roles(self, mock_rbac):
         expected = [{"id": uuid4(), "name": "role1"}, {"id": uuid4(), "name": "role2"}]
         mock_rbac.get_roles.return_value = expected
-        result = list_roles(rbac=mock_rbac)
+        result = list_roles(name=None, rbac=mock_rbac)
         mock_rbac.get_roles.assert_called_once()
         assert result == expected
 

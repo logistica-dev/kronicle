@@ -24,3 +24,21 @@ class OutputChannelPolicy(BaseModel):
     channel_id: UUID
     channel_name: str
     is_delegation: bool = False
+
+
+class OutputZoneAccessProfile(BaseModel):
+    id: UUID
+    role_id: UUID
+    role_name: str | None = None
+    zone_id: UUID
+    zone_name: str | None = None
+    description: str | None = None
+
+
+class OutputChannelAccessProfile(BaseModel):
+    id: UUID
+    role_id: UUID
+    role_name: str | None = None
+    channel_id: UUID
+    channel_name: str | None = None
+    description: str | None = None

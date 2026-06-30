@@ -20,3 +20,19 @@ class InputChannelPolicy(BaseModel):
     subject_id: UUID = Field(..., description="UUID of the user or group")
     role_id: UUID = Field(..., description="UUID of the role to assign")
     channel_id: UUID = Field(..., description="UUID of the channel")
+
+
+class InputZoneAccessProfile(BaseModel):
+    """Create a scoped role for a zone."""
+
+    role_id: UUID = Field(..., description="UUID of the role")
+    zone_id: UUID = Field(..., description="UUID of the zone")
+    description: str | None = Field(default=None, description="Optional description")
+
+
+class InputChannelAccessProfile(BaseModel):
+    """Create a scoped role for a channel."""
+
+    role_id: UUID = Field(..., description="UUID of the role")
+    channel_id: UUID = Field(..., description="UUID of the channel")
+    description: str | None = Field(default=None, description="Optional description")

@@ -280,12 +280,12 @@ class TestDirectRoleWritePermission:
 class TestGroupRolePermission:
     """User inherits channel:create via group membership."""
 
-    def test_create_channel(self, base_url, user_jwt):
+    def test_create_channel(self, base_url, user_jwt, test_zone):
         channel_id = uuid4_str()
         resp = _post(
             base_url,
             user_jwt,
-            "/setup/v1/channels",
+            f"/setup/v1/zones/{test_zone}/channels",
             json={
                 "channel_id": channel_id,
                 "name": f"group_perm_test_{tiny_id()}",

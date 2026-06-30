@@ -219,12 +219,12 @@ class TestSuperAdmin:
         except Exception:
             pass
 
-    def test_create_channel(self, base_url, jwt, su_setup_client):
+    def test_create_channel(self, base_url, jwt, test_zone, su_setup_client):
         cid = uuid4_str()
         r = _post(
             base_url,
             jwt,
-            "/setup/v1/channels",
+            f"/setup/v1/zones/{test_zone}/channels",
             json={
                 "channel_id": cid,
                 "name": f"su_chan_{tiny_id()}",
@@ -331,10 +331,11 @@ class TestRbacAdmin:
         assert r.status_code == 403
 
     def test_cannot_create_channel(self, base_url, jwt):
+        fake_zone = "00000000-0000-0000-0000-000000000000"
         r = _post(
             base_url,
             jwt,
-            "/setup/v1/channels",
+            f"/setup/v1/zones/{fake_zone}/channels",
             json={
                 "channel_id": uuid4_str(),
                 "name": "should_fail",
@@ -421,10 +422,11 @@ class TestDataReader:
         assert r.status_code == 403
 
     def test_cannot_create_channel(self, base_url, jwt):
+        fake_zone = "00000000-0000-0000-0000-000000000000"
         r = _post(
             base_url,
             jwt,
-            "/setup/v1/channels",
+            f"/setup/v1/zones/{fake_zone}/channels",
             json={
                 "channel_id": uuid4_str(),
                 "name": "should_fail",
@@ -476,10 +478,11 @@ class TestDataWriter:
 
     # Denied – no SETUP_ACCESS on setup_router
     def test_cannot_create_channel(self, base_url, jwt):
+        fake_zone = "00000000-0000-0000-0000-000000000000"
         r = _post(
             base_url,
             jwt,
-            "/setup/v1/channels",
+            f"/setup/v1/zones/{fake_zone}/channels",
             json={
                 "channel_id": uuid4_str(),
                 "name": "should_fail",
@@ -531,12 +534,12 @@ class TestChannelAdmin:
         r = _get(base_url, jwt, "/setup/v1/channels")
         assert r.status_code == 200
 
-    def test_create_channel(self, base_url, jwt, su_setup_client):
+    def test_create_channel(self, base_url, jwt, test_zone, su_setup_client):
         cid = uuid4_str()
         r = _post(
             base_url,
             jwt,
-            "/setup/v1/channels",
+            f"/setup/v1/zones/{test_zone}/channels",
             json={
                 "channel_id": cid,
                 "name": f"ca_chan_{tiny_id()}",
@@ -556,7 +559,7 @@ class TestChannelAdmin:
         r_create = _post(
             base_url,
             su_jwt,
-            "/setup/v1/channels",
+            f"/setup/v1/zones/{test_zone}/channels",
             json={
                 "channel_id": cid,
                 "name": f"ca_del_{tiny_id()}",
@@ -648,10 +651,11 @@ class TestZoneAdmin:
 
     # Denied – no SETUP_ACCESS + no CHANNEL_CREATE
     def test_cannot_create_channel(self, base_url, jwt):
+        fake_zone = "00000000-0000-0000-0000-000000000000"
         r = _post(
             base_url,
             jwt,
-            "/setup/v1/channels",
+            f"/setup/v1/zones/{fake_zone}/channels",
             json={"channel_id": uuid4_str(), "name": "should_fail", "channel_schema": {"x": "int"}},
         )
         assert r.status_code == 403
@@ -726,10 +730,11 @@ class TestAuditor:
         assert r.status_code == 403
 
     def test_cannot_create_channel(self, base_url, jwt):
+        fake_zone = "00000000-0000-0000-0000-000000000000"
         r = _post(
             base_url,
             jwt,
-            "/setup/v1/channels",
+            f"/setup/v1/zones/{fake_zone}/channels",
             json={"channel_id": uuid4_str(), "name": "should_fail", "channel_schema": {"x": "int"}},
         )
         assert r.status_code == 403
