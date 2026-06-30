@@ -4,6 +4,8 @@ from __future__ import annotations
 from datetime import datetime, timezone, tzinfo
 from typing import Any, Literal
 
+from pydantic_core import core_schema
+
 # --------------------------------------------------------------------------------------------------
 # System local timezone
 # --------------------------------------------------------------------------------------------------
@@ -152,8 +154,6 @@ class IsoDateTime(datetime):
     # ------------------------------------------------------------------
     @classmethod
     def __get_pydantic_core_schema__(cls, source: Any, handler: Any):
-
-        from pydantic_core import core_schema
 
         validator_schema = core_schema.no_info_after_validator_function(
             schema=core_schema.datetime_schema(),

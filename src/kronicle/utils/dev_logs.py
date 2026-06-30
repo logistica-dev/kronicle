@@ -3,6 +3,7 @@ import logging
 import sys
 import traceback
 from contextlib import contextmanager
+from datetime import datetime
 from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING, Formatter, LogRecord, getLogger
 from logging.handlers import RotatingFileHandler, SysLogHandler
 from os import getenv, makedirs
@@ -170,7 +171,6 @@ def setup_logging():
     # ---------------------
     log_file = "unknown"
     try:
-        from datetime import datetime
 
         log_dir = Path(__file__).resolve().parent.parent.parent.parent / "logs"
         makedirs(str(log_dir), exist_ok=True)

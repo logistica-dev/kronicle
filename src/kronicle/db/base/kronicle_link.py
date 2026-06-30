@@ -1,15 +1,12 @@
 # kronicle/db/base/kronicle_link.py
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
+from sqlalchemy import and_
 from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.orm import Session
 from sqlalchemy.sql import delete
 
 from kronicle.db.base.kronicle_base import KronicleBase
-
-if TYPE_CHECKING:
-    from sqlalchemy.orm import Session
 
 
 class KronicleLink(KronicleBase):
@@ -59,7 +56,6 @@ class KronicleLink(KronicleBase):
 
     @classmethod
     def remove(cls, db: Session, parent, child) -> None:
-        from sqlalchemy import and_
 
         stmt = delete(cls.__table__).where(
             and_(

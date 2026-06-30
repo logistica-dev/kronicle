@@ -12,10 +12,13 @@ from sqlalchemy.orm.session import Session
 
 from kronicle.db.rbac.links.group_hierarchy import RbacGroupHierarchy
 from kronicle.db.rbac.links.group_roles import RbacGroupRoles
+from kronicle.db.rbac.links.rbac_access_profile import ChannelAccessProfile, ZoneAccessProfile
 from kronicle.db.rbac.links.user_groups import RbacUserGroups
 from kronicle.db.rbac.links.user_roles import RbacUserRoles
 from kronicle.db.rbac.models.rbac_group import RbacGroup
+from kronicle.db.rbac.models.rbac_policy import ChannelPolicy, ZonePolicy
 from kronicle.db.rbac.models.rbac_role import RbacRole
+from kronicle.db.rbac.models.rbac_subject import RbacSubject
 from kronicle.db.rbac.models.rbac_user import RbacUser
 from kronicle.db.rbac.rbac_db_session import RbacDbSession
 from kronicle.errors.error_types import BadRequestError, ConflictError, NotFoundError, UnauthorizedError
@@ -364,7 +367,6 @@ class RbacService:
     ) -> OutputRole:
         here = "create_role"
         log_d(here, name)
-        from kronicle.db.rbac.models.rbac_role import RbacRole
 
         role = RbacRole(
             name=name,
@@ -473,7 +475,6 @@ class RbacService:
     # ----------------------------------------------------------------------------------------------
     def _ensure_subject(self, db: Session, subject_id: UUID) -> None:
         """Ensure an RbacSubject entry exists for a user or group ID."""
-        from kronicle.db.rbac.models.rbac_subject import RbacSubject
 
         existing = db.get(RbacSubject, subject_id)
         if existing:
@@ -498,7 +499,6 @@ class RbacService:
 
     def _ensure_zone_access_profile(self, db: Session, role_id: UUID, zone_id: UUID) -> UUID:
         """Find or create a ZoneAccessProfile for the given role and zone. Returns its ID."""
-        from kronicle.db.rbac.links.rbac_access_profile import ZoneAccessProfile
 
         existing = db.query(ZoneAccessProfile).filter_by(role_id=role_id, zone_id=zone_id).first()
         if existing:
@@ -516,7 +516,6 @@ class RbacService:
 
     def _ensure_channel_access_profile(self, db: Session, role_id: UUID, channel_id: UUID) -> UUID:
         """Find or create a ChannelAccessProfile for the given role and channel. Returns its ID."""
-        from kronicle.db.rbac.links.rbac_access_profile import ChannelAccessProfile
 
         existing = db.query(ChannelAccessProfile).filter_by(role_id=role_id, channel_id=channel_id).first()
         if existing:
@@ -536,9 +535,6 @@ class RbacService:
         """Assign a role to a subject (user or group) for a specific zone."""
         here = "create_zone_policy"
         log_d(here, subject_id, role_id, zone_id)
-
-        from kronicle.db.rbac.models.rbac_policy import ZonePolicy
-        from kronicle.db.rbac.models.rbac_role import RbacRole
 
         with self._db.transaction() as db:
             # Verify role exists
@@ -575,9 +571,6 @@ class RbacService:
         here = "create_channel_policy"
         log_d(here, subject_id, role_id, channel_id)
 
-        from kronicle.db.rbac.models.rbac_policy import ChannelPolicy
-        from kronicle.db.rbac.models.rbac_role import RbacRole
-
         with self._db.transaction() as db:
             # Verify role exists
             role = db.get(RbacRole, role_id)
@@ -610,10 +603,6 @@ class RbacService:
 
     def list_zone_policies(self, zone_id: UUID) -> list[dict]:
         """List all policies for a zone."""
-        from kronicle.db.rbac.links.rbac_access_profile import ZoneAccessProfile
-        from kronicle.db.rbac.models.rbac_policy import ZonePolicy
-        from kronicle.db.rbac.models.rbac_role import RbacRole
-
         with self._db.get_db() as db:
             policies = (
                 db.query(ZonePolicy)
@@ -640,9 +629,6 @@ class RbacService:
 
     def list_channel_policies(self, channel_id: UUID) -> list[dict]:
         """List all policies for a channel."""
-        from kronicle.db.rbac.links.rbac_access_profile import ChannelAccessProfile
-        from kronicle.db.rbac.models.rbac_policy import ChannelPolicy
-        from kronicle.db.rbac.models.rbac_role import RbacRole
 
         with self._db.get_db() as db:
             policies = (
@@ -670,7 +656,6 @@ class RbacService:
 
     def delete_zone_policy(self, policy_id: UUID) -> None:
         """Delete a zone policy by ID."""
-        from kronicle.db.rbac.models.rbac_policy import ZonePolicy
 
         with self._db.transaction() as db:
             policy = db.get(ZonePolicy, policy_id)
@@ -681,7 +666,6 @@ class RbacService:
 
     def delete_channel_policy(self, policy_id: UUID) -> None:
         """Delete a channel policy by ID."""
-        from kronicle.db.rbac.models.rbac_policy import ChannelPolicy
 
         with self._db.transaction() as db:
             policy = db.get(ChannelPolicy, policy_id)

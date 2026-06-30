@@ -13,6 +13,7 @@ from alembic.operations import Operations
 from sqlalchemy import select
 
 from kronicle.db.base.kronicle_base import Base
+from kronicle.db.core.models.core_entity import CoreEntity
 from kronicle.db.migration.db_catalog import DatabaseCatalogBuilder
 from kronicle.db.migration.migration_plan import MigrationPlan
 from kronicle.db.migration.migration_proposal import MigrationProposal
@@ -24,6 +25,7 @@ from kronicle.db.migration.persistence.schema_migration_state import (
     CoreSchemaMigrationState,
     RbacSchemaMigrationState,
 )
+from kronicle.db.rbac.models.rbac_entity import RbacEntity
 from kronicle.db.rbac.rbac_db_session import RbacDbSession
 from kronicle.db.registry import get_migration_schemas
 from kronicle.deps.settings import KronicleSettings
@@ -44,8 +46,6 @@ _SCHEMA_HISTORY: dict[str, type] = {}
 def _register_schema_models():
     if _SCHEMA_STATE:
         return
-    from kronicle.db.core.models.core_entity import CoreEntity
-    from kronicle.db.rbac.models.rbac_entity import RbacEntity
 
     _SCHEMA_STATE[CoreEntity.namespace()] = CoreSchemaMigrationState
     _SCHEMA_STATE[RbacEntity.namespace()] = RbacSchemaMigrationState

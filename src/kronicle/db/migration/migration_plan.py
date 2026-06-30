@@ -1,6 +1,7 @@
 # kronicle/db/migration/migration_plan.py
 from __future__ import annotations
 
+import hashlib
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from typing import Iterable
@@ -115,7 +116,6 @@ class MigrationPlan:
     # --------------------------------------------------------------------------
     @property
     def revision(self) -> str:
-        import hashlib
 
         combined = "|".join(op.describe() for op in self.ordered_operations)
         return hashlib.sha256(combined.encode()).hexdigest()[:12]

@@ -1,9 +1,10 @@
 # kronicle/db/migration/schema_diff_engine.py
 from __future__ import annotations
 
+import difflib
 from dataclasses import dataclass, field
 
-from sqlalchemy import UniqueConstraint, inspect
+from sqlalchemy import CheckConstraint, ForeignKeyConstraint, UniqueConstraint, inspect
 from sqlalchemy.engine import Connection
 from sqlalchemy.engine.interfaces import ReflectedColumn
 from sqlalchemy.schema import MetaData, Table
@@ -196,8 +197,6 @@ class SchemaDiffEngine:
 
         Returns list of (old_name, new_name) pairs.
         """
-        import difflib
-
         renames: list[tuple[str, str]] = []
         used_extras: set[str] = set()
 
@@ -235,8 +234,6 @@ class SchemaDiffEngine:
 
         Returns list of (old_name, new_name) pairs.
         """
-        import difflib
-
         renames: list[tuple[str, str]] = []
         used_extras: set[str] = set()
 
@@ -561,7 +558,6 @@ class SchemaDiffEngine:
 
         Returns list of (old_name, new_name) pairs.
         """
-        import difflib
 
         renames: list[tuple[str, str]] = []
         used: set[str] = set()
@@ -582,7 +578,7 @@ class SchemaDiffEngine:
 
         return renames
 
-    def _diff_constraints(
+    def _diff_unique_constraints(
         self,
         result: SchemaDiff,
         schema: str,
@@ -590,11 +586,6 @@ class SchemaDiffEngine:
         db_table: str,
         target_table: str,
     ) -> None:
-        from sqlalchemy import CheckConstraint, ForeignKeyConstraint, UniqueConstraint
-
-        # ------------------------------------------------------------------
-        # Unique constraints
-        # ------------------------------------------------------------------
         db_unique = {
             str(c["name"]): c for c in self.inspector.get_unique_constraints(db_table, schema=schema) if c.get("name")
         }
@@ -628,9 +619,14 @@ class SchemaDiffEngine:
         for name in sorted(db_uniq_names - meta_uniq_names):
             result.add(DropConstraintOp(schema=schema, table=target_table, constraint_name=name))
 
-        # ------------------------------------------------------------------
-        # Check constraints
-        # ------------------------------------------------------------------
+    def _diff_check_constraints(
+        self,
+        result: SchemaDiff,
+        schema: str,
+        table: Table,
+        db_table: str,
+        target_table: str,
+    ) -> None:
         db_check = {
             str(c["name"]): c for c in self.inspector.get_check_constraints(db_table, schema=schema) if c.get("name")
         }
@@ -660,9 +656,14 @@ class SchemaDiffEngine:
         for name in sorted(db_chk_names - meta_chk_names):
             result.add(DropConstraintOp(schema=schema, table=target_table, constraint_name=name))
 
-        # ------------------------------------------------------------------
-        # Foreign key constraints
-        # ------------------------------------------------------------------
+    def _diff_foreign_key_constraints(
+        self,
+        result: SchemaDiff,
+        schema: str,
+        table: Table,
+        db_table: str,
+        target_table: str,
+    ) -> None:
         db_fk = {str(c["name"]): c for c in self.inspector.get_foreign_keys(db_table, schema=schema) if c.get("name")}
         meta_fk = {str(c.name): c for c in table.constraints if isinstance(c, ForeignKeyConstraint) and c.name}
 
@@ -694,3 +695,15 @@ class SchemaDiffEngine:
 
         for name in sorted(db_fk_names - meta_fk_names):
             result.add(DropForeignKeyOp(schema=schema, table=target_table, constraint_name=name))
+
+    def _diff_constraints(
+        self,
+        result: SchemaDiff,
+        schema: str,
+        table: Table,
+        db_table: str,
+        target_table: str,
+    ) -> None:
+        self._diff_unique_constraints(result, schema, table, db_table, target_table)
+        self._diff_check_constraints(result, schema, table, db_table, target_table)
+        self._diff_foreign_key_constraints(result, schema, table, db_table, target_table)

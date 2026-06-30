@@ -179,7 +179,6 @@ def write_json_file(destination_file_path: str, json_dict):  # pragma: no cover
 
 def load_ini_file(ini_path: str) -> ConfigParser:
     """Load and parse INI file into a flat dictionary."""
-    from configparser import ConfigParser
 
     path = expand_file_path(ini_path)
     check_is_file(path, f"Configuration file not found: '{path}'")

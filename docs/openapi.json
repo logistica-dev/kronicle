@@ -4708,7 +4708,7 @@
         "title": "InputPayload",
         "description": "User-provided payload for a channel.\nThe 'channel_schema' field is a dict of column_name -> type string.",
         "example": {
-          "channel_id": "f3d68e4d-41af-47df-8a36-7886f45f6aeb",
+          "channel_id": "8f957b41-58d3-4b2e-ab3d-fc2d8e27302f",
           "channel_schema": {
             "humidity": "float",
             "temperature": "float",
@@ -4717,7 +4717,7 @@
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-6769c",
+          "name": "thermo-28808",
           "rows": [
             {
               "humidity": 55.1,
