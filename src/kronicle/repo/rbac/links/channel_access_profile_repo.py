@@ -15,3 +15,10 @@ class ChannelAccessProfileRepository(KronicleRepository[ChannelAccessProfile]):
     def get_by_role_and_channel(self, db: Session, *, role_id: UUID, channel_id: UUID) -> ChannelAccessProfile | None:
         stmt = select(self.model).where(self.model.role_id == role_id, self.model.channel_id == channel_id)
         return db.execute(stmt).scalar_one_or_none()
+
+    @log_repo_error
+    def create(self, db: Session, *, role_id: UUID, channel_id: UUID) -> ChannelAccessProfile:
+        profile = ChannelAccessProfile(role_id=role_id, channel_id=channel_id)
+        db.add(profile)
+        db.flush()
+        return profile

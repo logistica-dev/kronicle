@@ -1,11 +1,20 @@
 # kronicle/repo/rbac/links/rbac_group_roles_repo.py
 from uuid import UUID
 
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
-from sqlalchemy.sql import delete, select
+from sqlalchemy.sql import and_, delete, select
 
 from kronicle.db.rbac.links.group_roles import RbacGroupRoles
 from kronicle.repo.kronicle_link_repo import KronicleLinkRepository
+
+"""
+This repo should only:
+read edges (Group ↔ Role)
+return either IDs or explicit edge rows
+never perform hierarchy logic
+never load full Group/Role objects unless explicitly asked
+"""
 
 
 class RbacGroupRolesRepository(KronicleLinkRepository[RbacGroupRoles]):
@@ -34,12 +43,27 @@ class RbacGroupRolesRepository(KronicleLinkRepository[RbacGroupRoles]):
     # ----------------------------------------------------------------------------------------------
     # Write methods
     # ----------------------------------------------------------------------------------------------
-    def assign_role_to_group(self, db: Session, group_id: UUID, role_id: UUID):
-        self.ensure_link(db, {self.model.GROUP_ID: group_id, self.model.ROLE_ID: role_id})
+    def assign_role_to_group(self, db: Session, *, group_id: UUID, role_id: UUID) -> None:
+        stmt = (
+            insert(self.model)
+            .values(group_id=group_id, role_id=role_id)
+            .on_conflict_do_nothing(constraint=self.model.uq_constraint())
+        )
+        db.execute(stmt)
 
-    def remove_role_from_group(self, db: Session, group_id: UUID, role_id: UUID):
-        self.remove_link(db, {self.model.GROUP_ID: group_id, self.model.ROLE_ID: role_id})
+    def remove_role_from_group(self, db: Session, *, group_id: UUID, role_id: UUID) -> None:
+        stmt = delete(self.model).where(
+            and_(
+                self.model.group_id == group_id,
+                self.model.role_id == role_id,
+            )
+        )
+        db.execute(stmt)
 
-    def remove_all_roles_from_group(self, db: Session, group_id: UUID):
+    def delete_all_for_group(self, db: Session, *, group_id: UUID) -> None:
         stmt = delete(self.model).where(self.model.group_id == group_id)
+        db.execute(stmt)
+
+    def delete_all_for_role(self, db: Session, *, role_id: UUID) -> None:
+        stmt = delete(self.model).where(self.model.role_id == role_id)
         db.execute(stmt)

@@ -15,3 +15,10 @@ class ZoneAccessProfileRepository(KronicleRepository[ZoneAccessProfile]):
     def get_by_role_and_zone(self, db: Session, *, role_id: UUID, zone_id: UUID) -> ZoneAccessProfile | None:
         stmt = select(self.model).where(self.model.role_id == role_id, self.model.zone_id == zone_id)
         return db.execute(stmt).scalar_one_or_none()
+
+    @log_repo_error
+    def create(self, db: Session, *, role_id: UUID, zone_id: UUID) -> ZoneAccessProfile:
+        profile = ZoneAccessProfile(role_id=role_id, zone_id=zone_id)
+        db.add(profile)
+        db.flush()
+        return profile

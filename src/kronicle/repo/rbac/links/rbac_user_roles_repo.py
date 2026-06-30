@@ -1,11 +1,11 @@
 # kronicle/repo/rbac/links/rbac_user_roles_repo.py
 from uuid import UUID
 
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
-from sqlalchemy.sql import select
+from sqlalchemy.sql import and_, delete, select
 
 from kronicle.db.rbac.links.user_roles import RbacUserRoles
-from kronicle.db.rbac.models.rbac_user import RbacUser
 from kronicle.repo.kronicle_link_repo import KronicleLinkRepository
 
 """
@@ -43,8 +43,27 @@ class RbacUserRolesRepository(KronicleLinkRepository[RbacUserRoles]):
     # ----------------------------------------------------------------------------------------------
     # Write methods
     # ----------------------------------------------------------------------------------------------
-    def assign_role_to_user(self, db: Session, *, user: RbacUser, role: RbacUserRoles):
-        self.ensure_link(db, {self.model.USER_ID: user.id, self.model.ROLE_ID: role.id})
+    def assign_role_to_user(self, db: Session, *, user_id: UUID, role_id: UUID) -> None:
+        stmt = (
+            insert(self.model)
+            .values(user_id=user_id, role_id=role_id)
+            .on_conflict_do_nothing(constraint=self.model.uq_constraint())
+        )
+        db.execute(stmt)
 
-    def remove_role_from_user(self, db: Session, *, user: RbacUser, role: RbacUserRoles):
-        self.remove_link(db, {self.model.USER_ID: user.id, self.model.ROLE_ID: role.id})
+    def remove_role_from_user(self, db: Session, *, user_id: UUID, role_id: UUID) -> None:
+        stmt = delete(self.model).where(
+            and_(
+                self.model.user_id == user_id,
+                self.model.role_id == role_id,
+            )
+        )
+        db.execute(stmt)
+
+    def delete_all_for_user(self, db: Session, *, user_id: UUID) -> None:
+        stmt = delete(self.model).where(self.model.user_id == user_id)
+        db.execute(stmt)
+
+    def delete_all_for_role(self, db: Session, *, role_id: UUID) -> None:
+        stmt = delete(self.model).where(self.model.role_id == role_id)
+        db.execute(stmt)

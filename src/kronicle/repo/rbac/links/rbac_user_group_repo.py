@@ -1,7 +1,7 @@
 # kronicle/repo/rbac/links/rbac_user_group_repo.py
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from kronicle.db.rbac.links.user_groups import RbacUserGroups
@@ -49,3 +49,11 @@ class RbacUserGroupRepository(KronicleLinkRepository[RbacUserGroups]):
 
     def remove_user_from_group(self, db: Session, *, user: RbacUser, group: RbacGroup):
         self.remove_link(db, {self.model.USER_ID: user.id, self.model.GROUP_ID: group.id})
+
+    def delete_all_for_user(self, db: Session, *, user_id: UUID) -> None:
+        stmt = delete(self.model).where(self.model.user_id == user_id)
+        db.execute(stmt)
+
+    def delete_all_for_group(self, db: Session, *, group_id: UUID) -> None:
+        stmt = delete(self.model).where(self.model.group_id == group_id)
+        db.execute(stmt)

@@ -5,8 +5,8 @@ import functools
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import and_, cast, delete, func, select
-from sqlalchemy.dialects.postgresql import JSONB, insert
+from sqlalchemy import cast, func, select
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.session import Session
 
@@ -32,7 +32,9 @@ from kronicle.repo.rbac.entities.rbac_role_repo import RbacRoleRepository
 from kronicle.repo.rbac.entities.rbac_user_repo import RbacUserRepository
 from kronicle.repo.rbac.entities.zone_policy_repo import ZonePolicyRepository
 from kronicle.repo.rbac.links.channel_access_profile_repo import ChannelAccessProfileRepository
+from kronicle.repo.rbac.links.rbac_group_roles_repo import RbacGroupRolesRepository
 from kronicle.repo.rbac.links.rbac_user_group_repo import RbacUserGroupRepository
+from kronicle.repo.rbac.links.rbac_user_roles_repo import RbacUserRolesRepository
 from kronicle.repo.rbac.links.zone_access_profile_repo import ZoneAccessProfileRepository
 from kronicle.schemas.permissions.permission import Permission
 from kronicle.schemas.rbac.input_user_schemas import InputUserLogin
@@ -75,19 +77,26 @@ class RbacService:
         rbac_db_session: RbacDbSession,
     ):
         self._db = rbac_db_session
+
+        # Rbac objects
         self._user_repo = RbacUserRepository()
         self._group_repo = RbacGroupRepository()
         self._role_repo = RbacRoleRepository()
 
-        self._user_groups_repo = RbacUserGroupRepository()
+        # Core objects
+        self._channel_repo = CoreChannelRepository()
+        self._zone_repo = CoreZoneRepository()
 
+        # Rbac links
+        self._user_groups_repo = RbacUserGroupRepository()
+        self._user_roles_repo = RbacUserRolesRepository()
+        self._group_roles_repo = RbacGroupRolesRepository()
+
+        # Rbac <-> core links
         self._zone_access_profile_repo = ZoneAccessProfileRepository()
         self._channel_access_profile_repo = ChannelAccessProfileRepository()
         self._zone_policy_repo = ZonePolicyRepository()
         self._channel_policy_repo = ChannelPolicyRepository()
-
-        self._channel_repo = CoreChannelRepository()
-        self._zone_repo = CoreZoneRepository()
 
         group_engine = HierarchyEngine(
             parents_of=lambda g: g.parent_links,
@@ -262,8 +271,8 @@ class RbacService:
         # Clear role and group assignments explicitly — even with ondelete=CASCADE,
         # SQLAlchemy's unitofwork processor tries to NULL PK columns before
         # the DB-level cascade, causing an AssertionError.
-        db.execute(delete(RbacUserRoles.__table__).where(RbacUserRoles.user_id == db_user.id))
-        db.execute(delete(RbacUserGroups.__table__).where(RbacUserGroups.user_id == db_user.id))
+        self._user_roles_repo.delete_all_for_user(db, user_id=db_user.id)
+        self._user_groups_repo.delete_all_for_user(db, user_id=db_user.id)
 
         deleted_user = self._user_repo.delete_user(db, user=db_user)
         db.commit()
@@ -334,18 +343,11 @@ class RbacService:
 
     def assign_role_to_user(self, user_id: UUID, role_id: UUID) -> None:
         with self._db.transaction() as db:
-            stmt = insert(RbacUserRoles.__table__).values(user_id=user_id, role_id=role_id).on_conflict_do_nothing()
-            db.execute(stmt)
+            self._user_roles_repo.assign_role_to_user(db, user_id=user_id, role_id=role_id)
 
     def remove_role_from_user(self, user_id: UUID, role_id: UUID) -> None:
         with self._db.transaction() as db:
-            stmt = delete(RbacUserRoles.__table__).where(
-                and_(
-                    RbacUserRoles.user_id == user_id,
-                    RbacUserRoles.role_id == role_id,
-                )
-            )
-            db.execute(stmt)
+            self._user_roles_repo.remove_role_from_user(db, user_id=user_id, role_id=role_id)
 
     # ----------------------------------------------------------------------------------------------
     # Group ↔ Role assignment
@@ -353,18 +355,11 @@ class RbacService:
 
     def assign_role_to_group(self, group_id: UUID, role_id: UUID) -> None:
         with self._db.transaction() as db:
-            stmt = insert(RbacGroupRoles.__table__).values(group_id=group_id, role_id=role_id).on_conflict_do_nothing()
-            db.execute(stmt)
+            self._group_roles_repo.assign_role_to_group(db, group_id=group_id, role_id=role_id)
 
     def remove_role_from_group(self, group_id: UUID, role_id: UUID) -> None:
         with self._db.transaction() as db:
-            stmt = delete(RbacGroupRoles.__table__).where(
-                and_(
-                    RbacGroupRoles.group_id == group_id,
-                    RbacGroupRoles.role_id == role_id,
-                )
-            )
-            db.execute(stmt)
+            self._group_roles_repo.remove_role_from_group(db, group_id=group_id, role_id=role_id)
 
     # ----------------------------------------------------------------------------------------------
     # Roles
@@ -475,8 +470,8 @@ class RbacService:
 
             # Clear link rows explicitly — SQLAlchemy's unit of work can't
             # handle PK-as-FK with ondelete=CASCADE (tries to NULL the PK first).
-            db.execute(delete(RbacUserRoles.__table__).where(RbacUserRoles.role_id == role_id))
-            db.execute(delete(RbacGroupRoles.__table__).where(RbacGroupRoles.role_id == role_id))
+            self._user_roles_repo.delete_all_for_role(db, role_id=role_id)
+            self._group_roles_repo.delete_all_for_role(db, role_id=role_id)
 
             db.delete(role)
             db.flush()
@@ -515,15 +510,15 @@ class RbacService:
         if existing:
             return existing
 
-        # Verify zone exists
+        # Verify role and zone exist
+        role = self._role_repo.get_by_id(db, id=role_id)
+        if not role:
+            raise NotFoundError(f"Role '{role_id}' not found")
         zone = self._zone_repo.get_by_id(db, id=zone_id)
         if not zone:
             raise NotFoundError(f"Zone '{zone_id}' not found")
 
-        profile = ZoneAccessProfile(role_id=role_id, zone_id=zone_id)
-        db.add(profile)
-        db.flush()
-        return profile
+        return self._zone_access_profile_repo.create(db, role_id=role_id, zone_id=zone_id)
 
     def _ensure_channel_access_profile(self, db: Session, *, role_id: UUID, channel_id: UUID) -> ChannelAccessProfile:
         """Find or create a ChannelAccessProfile for the given role and channel. Returns its ID."""
@@ -532,43 +527,20 @@ class RbacService:
         if existing:
             return existing
 
-        # Verify channel exists
+        # Verify role and channel exist
+        role = self._role_repo.get_by_id(db, id=role_id)
+        if not role:
+            raise NotFoundError(f"Role '{role_id}' not found")
         channel = self._channel_repo.get_by_id(db, id=channel_id)
         if not channel:
             raise NotFoundError(f"CoreChannel '{channel_id}' not found")
 
-        profile = ChannelAccessProfile(role_id=role_id, channel_id=channel_id)
-        db.add(profile)
-        db.flush()
+        profile = self._channel_access_profile_repo.create(db, role_id=role_id, channel_id=channel_id)
         return profile
 
     # ----------------------------------------------------------------------------------------------
     # Access Profiles
     # ----------------------------------------------------------------------------------------------
-
-    def _build_zone_access_profile(self, db: Session, profile: ZoneAccessProfile) -> OutputZoneAccessProfile:
-        role = self._role_repo.get_by_id(db, id=profile.role_id)
-        zone = self._zone_repo.get_by_id(db, id=profile.zone_id)
-        return OutputZoneAccessProfile(
-            id=profile.id,
-            role_id=profile.role_id,
-            role_name=role.name if role else None,
-            zone_id=profile.zone_id,
-            zone_name=zone.name if zone else None,
-            description=profile.description,
-        )
-
-    def _build_channel_access_profile(self, db: Session, profile: ChannelAccessProfile) -> OutputChannelAccessProfile:
-        role = self._role_repo.get_by_id(db, id=profile.role_id)
-        channel = self._channel_repo.get_by_id(db, id=profile.channel_id)
-        return OutputChannelAccessProfile(
-            id=profile.id,
-            role_id=profile.role_id,
-            role_name=role.name if role else None,
-            channel_id=profile.channel_id,
-            channel_name=channel.name if channel else None,
-            description=profile.description,
-        )
 
     def create_zone_access_profile(
         self, *, role_id: UUID, zone_id: UUID, description: str | None = None
@@ -578,16 +550,16 @@ class RbacService:
             if description is not None:
                 profile.description = description
                 db.flush()
-            return self._build_zone_access_profile(db, profile)
+            return OutputZoneAccessProfile.from_db(profile)
 
     def list_zone_access_profiles(self) -> list[OutputZoneAccessProfile]:
         with self._db.get_db() as db:
-            return [self._build_zone_access_profile(db, p) for p in self._zone_access_profile_repo.fetch_all(db)]
+            return [OutputZoneAccessProfile.from_db(p) for p in self._zone_access_profile_repo.fetch_all(db)]
 
     def get_zone_access_profile(self, profile_id: UUID) -> OutputZoneAccessProfile | None:
         with self._db.get_db() as db:
             p = self._zone_access_profile_repo.get_by_id(db, id=profile_id)
-            return self._build_zone_access_profile(db, p) if p else None
+            return OutputZoneAccessProfile.from_db(p) if p else None
 
     def delete_zone_access_profile(self, profile_id: UUID) -> None:
         with self._db.transaction() as db:
@@ -605,16 +577,16 @@ class RbacService:
             if description is not None:
                 profile.description = description
                 db.flush()
-            return self._build_channel_access_profile(db, profile)
+            return OutputChannelAccessProfile.from_db(profile)
 
     def list_channel_access_profiles(self) -> list[OutputChannelAccessProfile]:
         with self._db.get_db() as db:
-            return [self._build_channel_access_profile(db, p) for p in self._channel_access_profile_repo.fetch_all(db)]
+            return [OutputChannelAccessProfile.from_db(p) for p in self._channel_access_profile_repo.fetch_all(db)]
 
     def get_channel_access_profile(self, profile_id: UUID) -> OutputChannelAccessProfile | None:
         with self._db.get_db() as db:
             p = self._channel_access_profile_repo.get_by_id(db, id=profile_id)
-            return self._build_channel_access_profile(db, p) if p else None
+            return OutputChannelAccessProfile.from_db(p) if p else None
 
     def delete_channel_access_profile(self, profile_id: UUID) -> None:
         with self._db.transaction() as db:
@@ -832,11 +804,11 @@ class RbacService:
                     )
 
             # Remove role assignments (clean up links instead of blocking)
-            db.execute(delete(RbacGroupRoles.__table__).where(RbacGroupRoles.group_id == group_id))
+            self._group_roles_repo.delete_all_for_group(db, group_id=group_id)
 
             # Clear group memberships explicitly — SQLAlchemy's unitofwork can't
             # handle PK-as-FK with ondelete=CASCADE (tries to NULL the PK first).
-            db.execute(delete(RbacUserGroups.__table__).where(RbacUserGroups.group_id == group_id))
+            self._user_groups_repo.delete_all_for_group(db, group_id=group_id)
 
             db.delete(group)
             db.flush()
