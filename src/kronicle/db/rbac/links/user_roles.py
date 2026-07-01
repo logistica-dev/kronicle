@@ -23,8 +23,8 @@ class RbacUserRoles(RbacLink):
         {"schema": RbacLink.namespace(), "extend_existing": True},  # Options dictionary last
     )
 
-    user_id: Mapped[UUID] = mapped_column(ForeignKey(RbacUser.id), primary_key=True)
-    role_id: Mapped[UUID] = mapped_column(ForeignKey(RbacRole.id), primary_key=True)
+    user_id: Mapped[UUID] = mapped_column(ForeignKey(RbacUser.id, ondelete="CASCADE"), primary_key=True)
+    role_id: Mapped[UUID] = mapped_column(ForeignKey(RbacRole.id, ondelete="CASCADE"), primary_key=True)
 
     # Optional ORM helpers
     user: Mapped[RbacUser] = relationship(RbacUser, backref=__tablename__)

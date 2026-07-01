@@ -1,14 +1,12 @@
 # kronicle/schemas/rbac/safe_policy_schemas.py
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 from uuid import UUID
 
 from pydantic import BaseModel
 
-if TYPE_CHECKING:
-    from kronicle.db.rbac.links.rbac_access_profile import ChannelAccessProfile, ZoneAccessProfile
-    from kronicle.db.rbac.models.rbac_policy import ChannelPolicy, ZonePolicy
+from kronicle.db.rbac.links.rbac_access_profile import ChannelAccessProfile, ZoneAccessProfile
+from kronicle.db.rbac.models.rbac_policy import ChannelPolicy, ZonePolicy
 
 
 class OutputPolicy(BaseModel):

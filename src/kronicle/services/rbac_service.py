@@ -487,8 +487,13 @@ class RbacService:
         if existing:
             return
         # Determine if it's a user or group
-        user = self._user_repo.get_by_id(db, id=subject_id, include_inactive=True)
+        user: RbacUser | None = self._user_repo.get_by_id(db, id=subject_id, include_inactive=True)
         if user:
+            if not user.is_active:
+                raise UnauthorizedError(
+                    message=f"User '{user.id}' is inactive and cannot be used as a subject of a policy.",
+                    details={"user_id": user.id, "user_name": user.name},
+                )
             subject = RbacSubject(id=subject_id, type="user")
             db.add(subject)
             db.flush()

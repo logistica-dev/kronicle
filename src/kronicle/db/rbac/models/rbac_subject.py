@@ -1,9 +1,10 @@
 # kronicle/db/rbac/models/rbac_subject.py
 
 from enum import Enum
+from uuid import UUID
 
-from sqlalchemy import CheckConstraint, Index, String
-from sqlalchemy.orm import Mapped, foreign, mapped_column, relationship
+from sqlalchemy import CheckConstraint, ForeignKey, Index, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from kronicle.db.rbac.models.rbac_entity import RbacEntity
 from kronicle.db.rbac.models.rbac_group import RbacGroup
@@ -32,5 +33,12 @@ class RbacSubject(RbacEntity):
     # Type of subject: 'users' or 'groups'
     type: Mapped[SubjectType] = mapped_column(String(16), nullable=False)
 
-    user = relationship(RbacUser, primaryjoin=lambda: foreign(RbacSubject.id) == RbacUser.id, viewonly=True)
-    group = relationship(RbacGroup, primaryjoin=lambda: foreign(RbacSubject.id) == RbacGroup.id, viewonly=True)
+    # Foreign keys to User and Group
+    user_id: Mapped[UUID] = mapped_column(ForeignKey(RbacUser.id, ondelete="CASCADE"), primary_key=True, nullable=True)
+    group_id: Mapped[UUID] = mapped_column(
+        ForeignKey(RbacGroup.id, ondelete="CASCADE"), primary_key=True, nullable=True
+    )
+
+    # ORM convenience relationships
+    user: Mapped[RbacUser] = relationship(RbacUser, backref=__tablename__)
+    group: Mapped[RbacGroup] = relationship(RbacGroup, backref=__tablename__)

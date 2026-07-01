@@ -25,7 +25,7 @@ class ResourceAccessProfile(RbacLink):
 
     @declared_attr
     def role_id(cls) -> Mapped[UUID]:
-        return mapped_column(PgUUID(as_uuid=True), ForeignKey(RbacRole.id), nullable=False)
+        return mapped_column(PgUUID(as_uuid=True), ForeignKey(RbacRole.id, ondelete="CASCADE"), nullable=False)
 
     @declared_attr
     def role(cls) -> Mapped[RbacRole]:
@@ -49,7 +49,7 @@ class ZoneAccessProfile(ResourceAccessProfile):
         {"schema": RbacLink.namespace(), "extend_existing": True},
     )
 
-    zone_id: Mapped[UUID] = mapped_column(ForeignKey(CoreZone.id), nullable=False)
+    zone_id: Mapped[UUID] = mapped_column(ForeignKey(CoreZone.id, ondelete="CASCADE"), nullable=False)
     zone: Mapped[CoreZone] = relationship(CoreZone, backref="access_profiles")
 
 
@@ -62,7 +62,7 @@ class ChannelAccessProfile(ResourceAccessProfile):
         {"schema": RbacLink.namespace(), "extend_existing": True},  # Options dictionary last
     )
 
-    channel_id: Mapped[UUID] = mapped_column(ForeignKey(CoreChannel.id), nullable=False)
+    channel_id: Mapped[UUID] = mapped_column(ForeignKey(CoreChannel.id, ondelete="CASCADE"), nullable=False)
     channel: Mapped[CoreChannel] = relationship(CoreChannel, backref="access_profiles")
 
 
@@ -76,5 +76,5 @@ class RowAccessProfile(ResourceAccessProfile):
     )
 
     # Reminder: row_id is based on ChannelTimeseries.row_id which is a BIGSERIAL int
-    row_id: Mapped[UUID] = mapped_column(ForeignKey(CoreRow.id), nullable=False)
+    row_id: Mapped[UUID] = mapped_column(ForeignKey(CoreRow.id, ondelete="CASCADE"), nullable=False)
     row: Mapped[CoreRow] = relationship(CoreRow, backref="access_profiles")

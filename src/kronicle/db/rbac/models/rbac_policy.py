@@ -49,7 +49,7 @@ class RbacPolicy(RbacLink):
 
     @declared_attr
     def subject_id(cls) -> Mapped[UUID]:
-        return mapped_column(ForeignKey(RbacSubject.id), nullable=False)
+        return mapped_column(ForeignKey(RbacSubject.id, ondelete="CASCADE"), nullable=False)
 
     @declared_attr
     def subject(cls) -> Mapped[RbacSubject]:
@@ -89,7 +89,7 @@ class ZonePolicy(RbacPolicy):
 
     @declared_attr
     def access_profile_id(cls) -> Mapped[UUID]:
-        return mapped_column(ForeignKey(ZoneAccessProfile.id), nullable=False)
+        return mapped_column(ForeignKey(ZoneAccessProfile.id, ondelete="CASCADE"), nullable=False)
 
     @declared_attr
     def access_profile(cls) -> Mapped[ZoneAccessProfile]:  # type: ignore[reportIncompatibleVariableOverride]
@@ -113,7 +113,7 @@ class ChannelPolicy(RbacPolicy):
 
     @declared_attr
     def access_profile_id(cls) -> Mapped[UUID]:
-        return mapped_column(ForeignKey(ChannelAccessProfile.id), nullable=False)
+        return mapped_column(ForeignKey(ChannelAccessProfile.id, ondelete="CASCADE"), nullable=False)
 
     @declared_attr
     def access_profile(cls) -> Mapped[ChannelAccessProfile]:  # type: ignore[reportIncompatibleVariableOverride]
@@ -137,7 +137,7 @@ class RowPolicy(RbacPolicy):
 
     @declared_attr
     def access_profile_id(cls) -> Mapped[UUID]:
-        return mapped_column(ForeignKey(RowAccessProfile.id), nullable=False)
+        return mapped_column(ForeignKey(RowAccessProfile.id, ondelete="CASCADE"), nullable=False)
 
     @declared_attr
     def access_profile(cls) -> Mapped[RowAccessProfile]:  # type: ignore[reportIncompatibleVariableOverride]

@@ -33,7 +33,7 @@ ALL_RBAC_TABLES = [
     ZoneAccessProfile,
     ChannelAccessProfile,
     RowAccessProfile,
-    # Policies
+    # Policies (profile <-> subject)
     ZonePolicy,
     ChannelPolicy,
     RowPolicy,

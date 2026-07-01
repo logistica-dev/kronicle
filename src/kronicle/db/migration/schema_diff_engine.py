@@ -696,6 +696,52 @@ class SchemaDiffEngine:
         for name in sorted(db_fk_names - meta_fk_names):
             result.add(DropForeignKeyOp(schema=schema, table=target_table, constraint_name=name))
 
+        for name in sorted(meta_fk_names & db_fk_names):
+            cons = meta_fk[name]
+            db_def = db_fk[name]
+            elements = list(cons.elements)
+
+            meta_local_cols = tuple(col.name for col in cons.columns)
+            meta_referred_cols = tuple(elem.column.name for elem in elements)
+            meta_referred_table = elements[0].column.table.name
+
+            db_local_cols = tuple(db_def.get("constrained_columns", ()))
+            db_referred_cols = tuple(db_def.get("referred_columns", ()))
+            db_referred_table = db_def.get("referred_table")
+            # SQLAlchemy reflects None as no action; normalize case for comparison
+            db_ondelete = (db_def.get("options") or {}).get("ondelete")
+            db_onupdate = (db_def.get("options") or {}).get("onupdate")
+            meta_ondelete = cons.ondelete.upper() if cons.ondelete else None
+            meta_onupdate = cons.onupdate.upper() if cons.onupdate else None
+            db_ondelete = db_ondelete.upper() if db_ondelete else None
+            db_onupdate = db_onupdate.upper() if db_onupdate else None
+
+            if (
+                meta_local_cols != db_local_cols
+                or meta_referred_cols != db_referred_cols
+                or meta_referred_table != db_referred_table
+                or meta_ondelete != db_ondelete
+                or meta_onupdate != db_onupdate
+            ):
+                log_d(
+                    mod,
+                    f"FK definition changed {schema}.{target_table}.{name}: "
+                    f"ondelete {db_ondelete} -> {meta_ondelete}, onupdate {db_onupdate} -> {meta_onupdate}",
+                )
+                result.add(DropForeignKeyOp(schema=schema, table=target_table, constraint_name=name))
+                result.add(
+                    AddForeignKeyOp(
+                        schema=schema,
+                        table=target_table,
+                        constraint_name=name,
+                        referred_table=meta_referred_table,
+                        local_columns=meta_local_cols,
+                        referred_columns=meta_referred_cols,
+                        ondelete=cons.ondelete,
+                        onupdate=cons.onupdate,
+                    )
+                )
+
     def _diff_constraints(
         self,
         result: SchemaDiff,

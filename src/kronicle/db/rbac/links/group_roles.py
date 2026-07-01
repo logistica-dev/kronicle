@@ -19,8 +19,8 @@ class RbacGroupRoles(RbacLink):
         {"schema": RbacLink.namespace(), "extend_existing": True},  # Options dictionary last
     )
 
-    group_id: Mapped[UUID] = mapped_column(ForeignKey(RbacGroup.id), primary_key=True)
-    role_id: Mapped[UUID] = mapped_column(ForeignKey(RbacRole.id), primary_key=True)
+    group_id: Mapped[UUID] = mapped_column(ForeignKey(RbacGroup.id, ondelete="CASCADE"), primary_key=True)
+    role_id: Mapped[UUID] = mapped_column(ForeignKey(RbacRole.id, ondelete="CASCADE"), primary_key=True)
 
     # Optional ORM helpers
     group: Mapped[RbacGroup] = relationship(RbacGroup, backref=__tablename__)
