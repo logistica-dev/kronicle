@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 
 from sqlalchemy import CheckConstraint, ForeignKeyConstraint, UniqueConstraint, inspect
 from sqlalchemy.engine import Connection
-from sqlalchemy.engine.interfaces import ReflectedColumn
+from sqlalchemy.engine.interfaces import ReflectedColumn, ReflectedForeignKeyConstraint
 from sqlalchemy.schema import MetaData, Table
 
 from kronicle.db.migration.operations import (
@@ -656,30 +656,82 @@ class SchemaDiffEngine:
         for name in sorted(db_chk_names - meta_chk_names):
             result.add(DropConstraintOp(schema=schema, table=target_table, constraint_name=name))
 
-    def _diff_foreign_key_constraints(
+    @staticmethod
+    def _fk_meta_key(constraint: ForeignKeyConstraint) -> tuple:
+        """Build a stable key for a metadata FK constraint, using columns when name is absent."""
+        name = constraint.name
+        if name:
+            return ("name", str(name))
+        cols = tuple(col.name for col in constraint.columns)
+        elements = list(constraint.elements)
+        referred_table = elements[0].column.table.name if elements and elements[0].column is not None else None
+        referred_cols = tuple(elem.column.name for elem in elements)
+        return ("cols", cols, referred_table, referred_cols)
+
+    @staticmethod
+    def _fk_db_key(fk_def: ReflectedForeignKeyConstraint) -> tuple:
+        """Build a stable key for a DB FK definition, using columns when name is absent."""
+        name = fk_def.get("name")
+        if name:
+            return ("name", str(name))
+        cols = tuple(fk_def.get("constrained_columns", ()))
+        referred_table = fk_def.get("referred_table")
+        referred_cols = tuple(fk_def.get("referred_columns", ()))
+        return ("cols", cols, referred_table, referred_cols)
+
+    def _build_fk_dicts(
+        self, schema: str, db_table: str, table: Table
+    ) -> tuple[dict[tuple, ReflectedForeignKeyConstraint], dict[tuple, ForeignKeyConstraint]]:
+        db_fk: dict[tuple, ReflectedForeignKeyConstraint] = {}
+        for c in self.inspector.get_foreign_keys(db_table, schema=schema):
+            db_fk[self._fk_db_key(c)] = c
+
+        meta_fk: dict[tuple, ForeignKeyConstraint] = {}
+        for c in table.constraints:
+            if isinstance(c, ForeignKeyConstraint):
+                meta_fk[self._fk_meta_key(c)] = c
+
+        return db_fk, meta_fk
+
+    def _diff_fk_renames(
         self,
         result: SchemaDiff,
         schema: str,
-        table: Table,
-        db_table: str,
         target_table: str,
+        db_fk: dict[tuple, ReflectedForeignKeyConstraint],
+        meta_fk: dict[tuple, ForeignKeyConstraint],
+        db_fk_keys: set[tuple],
+        meta_fk_keys: set[tuple],
     ) -> None:
-        db_fk = {str(c["name"]): c for c in self.inspector.get_foreign_keys(db_table, schema=schema) if c.get("name")}
-        meta_fk = {str(c.name): c for c in table.constraints if isinstance(c, ForeignKeyConstraint) and c.name}
+        db_fk_named = {k for k in db_fk if k[0] == "name"}
+        meta_fk_named = {k for k in meta_fk if k[0] == "name"}
+        db_named = {k[1] for k in db_fk_named}
+        meta_named = {k[1] for k in meta_fk_named}
 
-        db_fk_names = set(db_fk.keys())
-        meta_fk_names = set(meta_fk.keys())
-
-        matched = self._detect_constraint_renames(meta_fk_names - db_fk_names, db_fk_names - meta_fk_names)
+        matched = self._detect_constraint_renames(meta_named - db_named, db_named - meta_named)
         for old_name, new_name in matched:
             log_w(mod, f"FK constraint rename detected: {schema}.{target_table}.{old_name} -> {new_name}")
+            old_key = ("name", old_name)
+            new_key = ("name", new_name)
             result.add(RenameConstraintOp(schema=schema, table=target_table, old_name=old_name, new_name=new_name))
-            meta_fk_names.discard(new_name)
-            db_fk_names.discard(old_name)
+            meta_fk_keys.discard(new_key)
+            db_fk_keys.discard(old_key)
 
-        for name in sorted(meta_fk_names - db_fk_names):
-            cons = meta_fk[name]
+    def _diff_fk_additions(
+        self,
+        result: SchemaDiff,
+        schema: str,
+        target_table: str,
+        meta_fk: dict[tuple, ForeignKeyConstraint],
+        keys: set[tuple],
+    ) -> None:
+        for key in sorted(keys, key=str):
+            cons = meta_fk[key]
             elements = list(cons.elements)
+            if not elements or elements[0].column is None:
+                continue
+            fk_name: str | None = cons.name if isinstance(cons.name, str) else None
+            name = fk_name or f"{target_table}_{'_'.join(col.name for col in cons.columns)}_fkey"
             result.add(
                 AddForeignKeyOp(
                     schema=schema,
@@ -693,13 +745,35 @@ class SchemaDiffEngine:
                 )
             )
 
-        for name in sorted(db_fk_names - meta_fk_names):
-            result.add(DropForeignKeyOp(schema=schema, table=target_table, constraint_name=name))
+    def _diff_fk_removals(
+        self,
+        result: SchemaDiff,
+        schema: str,
+        target_table: str,
+        db_fk: dict[tuple, ReflectedForeignKeyConstraint],
+        keys: set[tuple],
+    ) -> None:
+        for key in sorted(keys, key=str):
+            fk_def = db_fk[key]
+            name = fk_def.get("name")
+            if name:
+                result.add(DropForeignKeyOp(schema=schema, table=target_table, constraint_name=name))
 
-        for name in sorted(meta_fk_names & db_fk_names):
-            cons = meta_fk[name]
-            db_def = db_fk[name]
+    def _diff_fk_changes(
+        self,
+        result: SchemaDiff,
+        schema: str,
+        target_table: str,
+        db_fk: dict[tuple, ReflectedForeignKeyConstraint],
+        meta_fk: dict[tuple, ForeignKeyConstraint],
+        keys: set[tuple],
+    ) -> None:
+        for key in sorted(keys, key=str):
+            cons = meta_fk[key]
+            db_def = db_fk[key]
             elements = list(cons.elements)
+            if not elements or elements[0].column is None:
+                continue
 
             meta_local_cols = tuple(col.name for col in cons.columns)
             meta_referred_cols = tuple(elem.column.name for elem in elements)
@@ -708,7 +782,6 @@ class SchemaDiffEngine:
             db_local_cols = tuple(db_def.get("constrained_columns", ()))
             db_referred_cols = tuple(db_def.get("referred_columns", ()))
             db_referred_table = db_def.get("referred_table")
-            # SQLAlchemy reflects None as no action; normalize case for comparison
             db_ondelete = (db_def.get("options") or {}).get("ondelete")
             db_onupdate = (db_def.get("options") or {}).get("onupdate")
             meta_ondelete = cons.ondelete.upper() if cons.ondelete else None
@@ -723,17 +796,21 @@ class SchemaDiffEngine:
                 or meta_ondelete != db_ondelete
                 or meta_onupdate != db_onupdate
             ):
+                db_name = db_def.get("name")
+                fk_name: str | None = cons.name if isinstance(cons.name, str) else None
+                cons_name = db_name or fk_name or f"{target_table}_{'_'.join(col.name for col in cons.columns)}_fkey"
                 log_d(
                     mod,
-                    f"FK definition changed {schema}.{target_table}.{name}: "
+                    f"FK definition changed {schema}.{target_table}.{cons_name}: "
                     f"ondelete {db_ondelete} -> {meta_ondelete}, onupdate {db_onupdate} -> {meta_onupdate}",
                 )
-                result.add(DropForeignKeyOp(schema=schema, table=target_table, constraint_name=name))
+                if db_name:
+                    result.add(DropForeignKeyOp(schema=schema, table=target_table, constraint_name=db_name))
                 result.add(
                     AddForeignKeyOp(
                         schema=schema,
                         table=target_table,
-                        constraint_name=name,
+                        constraint_name=cons_name,
                         referred_table=meta_referred_table,
                         local_columns=meta_local_cols,
                         referred_columns=meta_referred_cols,
@@ -741,6 +818,24 @@ class SchemaDiffEngine:
                         onupdate=cons.onupdate,
                     )
                 )
+
+    def _diff_foreign_key_constraints(
+        self,
+        result: SchemaDiff,
+        schema: str,
+        table: Table,
+        db_table: str,
+        target_table: str,
+    ) -> None:
+        db_fk, meta_fk = self._build_fk_dicts(schema, db_table, table)
+
+        db_fk_keys = set(db_fk.keys())
+        meta_fk_keys = set(meta_fk.keys())
+
+        self._diff_fk_renames(result, schema, target_table, db_fk, meta_fk, db_fk_keys, meta_fk_keys)
+        self._diff_fk_additions(result, schema, target_table, meta_fk, meta_fk_keys - db_fk_keys)
+        self._diff_fk_removals(result, schema, target_table, db_fk, db_fk_keys - meta_fk_keys)
+        self._diff_fk_changes(result, schema, target_table, db_fk, meta_fk, meta_fk_keys & db_fk_keys)
 
     def _diff_constraints(
         self,

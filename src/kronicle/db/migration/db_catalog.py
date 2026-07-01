@@ -6,7 +6,7 @@ from hashlib import sha256
 from json import dumps
 
 from sqlalchemy import inspect
-from sqlalchemy.schema import Table
+from sqlalchemy.schema import ForeignKeyConstraint, Table
 
 # ==================================================================================================
 # Column Catalog
@@ -22,7 +22,20 @@ class ColumnCatalog:
     primary_key: bool
 
     def as_tuple(self) -> tuple:
-        return (self.name, self.type, self.nullable)
+        return (self.name, self.type, self.nullable, self.primary_key)
+
+
+@dataclass(frozen=True)
+class ForeignKeyCatalog:
+    name: str | None
+    local_columns: tuple[str, ...]
+    referred_table: str | None
+    referred_columns: tuple[str, ...]
+    ondelete: str | None
+    onupdate: str | None
+
+    def as_tuple(self) -> tuple:
+        return (self.name, self.local_columns, self.referred_table, self.referred_columns, self.ondelete, self.onupdate)
 
 
 # ==================================================================================================
@@ -34,9 +47,10 @@ class ColumnCatalog:
 class TableCatalog:
     name: str
     columns: tuple[ColumnCatalog, ...]
+    foreign_keys: tuple[ForeignKeyCatalog, ...] = ()
 
     def as_tuple(self) -> tuple:
-        return (self.name, tuple(c.as_tuple() for c in self.columns))
+        return (self.name, tuple(c.as_tuple() for c in self.columns), tuple(f.as_tuple() for f in self.foreign_keys))
 
 
 # ==================================================================================================
@@ -82,6 +96,7 @@ class DatabaseCatalogBuilder:
         for table_name in sorted(self.inspector.get_table_names(schema=namespace)):
             columns = self.inspector.get_columns(table_name, schema=namespace)
             pk_cols = set(self.inspector.get_pk_constraint(table_name, schema=namespace).get("constrained_columns", []))
+            fks = self.inspector.get_foreign_keys(table_name, schema=namespace)
 
             col_catalogs = sorted(
                 (
@@ -97,7 +112,24 @@ class DatabaseCatalogBuilder:
                 key=lambda cc: cc.name,
             )
 
-            tables.append(TableCatalog(name=table_name, columns=tuple(col_catalogs)))
+            fk_catalogs = tuple(
+                sorted(
+                    (
+                        ForeignKeyCatalog(
+                            name=fk.get("name"),
+                            local_columns=tuple(fk.get("constrained_columns", ())),
+                            referred_table=fk.get("referred_table"),
+                            referred_columns=tuple(fk.get("referred_columns", ())),
+                            ondelete=(fk.get("options") or {}).get("ondelete"),
+                            onupdate=(fk.get("options") or {}).get("onupdate"),
+                        )
+                        for fk in fks
+                    ),
+                    key=lambda f: (f.local_columns, f.referred_table or "", f.referred_columns),
+                )
+            )
+
+            tables.append(TableCatalog(name=table_name, columns=tuple(col_catalogs), foreign_keys=fk_catalogs))
 
         return DatabaseCatalog(namespace=namespace, tables=tuple(tables))
 
@@ -131,7 +163,32 @@ class DatabaseCatalogBuilder:
                 ),
                 key=lambda cc: cc.name,
             )
-            grouped.setdefault(schema, []).append(TableCatalog(name=table.name, columns=tuple(col_catalogs)))
+
+            fk_catalogs = tuple(
+                sorted(
+                    (
+                        ForeignKeyCatalog(
+                            name=cons.name if isinstance(cons.name, str) else None,
+                            local_columns=tuple(col.name for col in cons.columns),
+                            referred_table=(
+                                elements[0].column.table.name
+                                if (elements := list(cons.elements)) and elements[0].column is not None
+                                else None
+                            ),
+                            referred_columns=tuple(elem.column.name for elem in cons.elements),
+                            ondelete=cons.ondelete,
+                            onupdate=cons.onupdate,
+                        )
+                        for cons in table.constraints
+                        if isinstance(cons, ForeignKeyConstraint)
+                    ),
+                    key=lambda f: (f.local_columns, f.referred_table or "", f.referred_columns),
+                )
+            )
+
+            grouped.setdefault(schema, []).append(
+                TableCatalog(name=table.name, columns=tuple(col_catalogs), foreign_keys=fk_catalogs)
+            )
 
         namespace = next(iter(grouped.keys()))
         tables_in_order = sorted(grouped[namespace], key=lambda t: t.name)
