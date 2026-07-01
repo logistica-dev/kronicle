@@ -40,7 +40,7 @@ APP_PORT = "KRONICLE_PORT"
 
 CHAN_CREDS = "KRONICLE_CHAN_CREDS"  # b64(chan_usr:chan_pwd)
 RBAC_CREDS = "KRONICLE_RBAC_CREDS"  # b64(rbac_usr:rbac_pwd)
-
+DBSU_CREDS = "KRONICLE_DB_SU_CREDS"  # (optional) b64(rbac_usr:rbac_pwd)
 
 KRONICLE_CONF = "KRONICLE_CONF"
 KRONICLE_ENV = "KRONICLE_ENV"
@@ -114,13 +114,18 @@ class EnvUserCreds(UserCreds):
         return cls(username=normalize_pg_identifier(usr), password=pwd)
 
 
-class ChanneDbCreds(EnvUserCreds):
+class ChanDbCreds(EnvUserCreds):
     _env = CHAN_CREDS
     _how = "must be b64(chan_usr:chan_pwd)"
 
 
 class RbacDbCreds(EnvUserCreds):
     _env = RBAC_CREDS
+    _how = "must be b64(rbac_usr:rbac_pwd)"
+
+
+class DbSuCreds(EnvUserCreds):
+    _env = DBSU_CREDS
     _how = "must be b64(rbac_usr:rbac_pwd)"
 
 
@@ -225,17 +230,22 @@ class AppEnv:
 
 @dataclass
 class KronicleEnvConf:
-    chan_creds: ChanneDbCreds
+    chan_creds: ChanDbCreds
     rbac_creds: RbacDbCreds
     db: DbAccess
     server: ConnectionSettings
     env: AppEnv
     conf_file: str | None
+    dbsu_creds: DbSuCreds | None = None
 
     @classmethod
     def from_env(cls) -> KronicleEnvConf:
         rbac_creds = RbacDbCreds.from_env()
-        chan_creds = ChanneDbCreds.from_env()
+        chan_creds = ChanDbCreds.from_env()
+        try:
+            dbsu_creds = DbSuCreds.from_env()
+        except (RuntimeError, ValueError):
+            dbsu_creds = None
 
         db_access = DbAccess.from_env(default_creds=chan_creds)
         app_server = ConnectionSettings.from_env()
@@ -246,6 +256,7 @@ class KronicleEnvConf:
             db=db_access,
             rbac_creds=rbac_creds,
             chan_creds=chan_creds,
+            dbsu_creds=dbsu_creds,
             env=app_env,
             conf_file=conf_file,
         )
@@ -269,6 +280,12 @@ class DBSettings:
 
         self._rbac_usr: str = conf.rbac_creds.username  # already gone through normalize_pg_identifier
         self._rbac_pwd: SecretStr = SecretStr(conf.rbac_creds.password)
+        if conf.dbsu_creds:
+            self._dbsu_usr: str = conf.dbsu_creds.username  # already gone through normalize_pg_identifier
+            self._dbsu_pwd: SecretStr = SecretStr(conf.dbsu_creds.password)
+        else:
+            self._dbsu_usr = ""
+            self._dbsu_pwd = SecretStr("")
 
     def get_connection_url(self, usr: str, pwd: str) -> str:
         return f"postgresql://{usr}:{pwd}@{self._host}:{self._port}/{self._name}"
@@ -280,6 +297,12 @@ class DBSettings:
     @property
     def rbac_connection_url(self) -> str:
         return self.get_connection_url(usr=self._rbac_usr, pwd=self._rbac_pwd.get_secret_value())
+
+    @property
+    def dbsu_connection_url(self) -> str | None:
+        if self._dbsu_usr:
+            return self.get_connection_url(usr=self._dbsu_usr, pwd=self._dbsu_pwd.get_secret_value())
+        return None
 
     @property
     def masked_connection_url(self) -> str | None:

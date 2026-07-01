@@ -357,10 +357,11 @@ class AddForeignKeyOp(DbStructureOperation):
     referred_table: str
     local_columns: tuple[str, ...]
     referred_columns: tuple[str, ...]
+    referred_schema: str | None = None
     ondelete: str | None = None
     onupdate: str | None = None
 
-    priority = 45
+    priority = 47
     safety = WarningPolicy()
 
     def describe(self):
@@ -373,7 +374,8 @@ class AddForeignKeyOp(DbStructureOperation):
             self.referred_table,
             list(self.local_columns),
             list(self.referred_columns),
-            schema=self.schema,
+            source_schema=self.schema,
+            referent_schema=self.referred_schema or self.schema,
             ondelete=self.ondelete,
             onupdate=self.onupdate,
         )
@@ -440,7 +442,9 @@ class DropPrimaryKeyOp(DbStructureOperation):
     table: str
     constraint_name: str
 
-    priority = 79
+    # Must run before AlterColumnNullabilityOp (55) and DropColumnOp (80),
+    # because a PK column cannot be made nullable while still part of the PK.
+    priority = 50
     safety = DestructivePolicy()
 
     def describe(self):
@@ -508,7 +512,7 @@ class DropForeignKeyOp(DbStructureOperation):
     table: str
     constraint_name: str
 
-    priority = 47
+    priority = 45
     safety = DestructivePolicy()
 
     def describe(self):

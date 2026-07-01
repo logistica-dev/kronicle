@@ -3,20 +3,23 @@ from __future__ import annotations
 
 import os
 import subprocess
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from json import dumps
 from pathlib import Path
+from urllib.parse import urlparse
 
 from alembic.config import Config
 from alembic.migration import MigrationContext
 from alembic.operations import Operations
-from sqlalchemy import select
+from sqlalchemy import create_engine, select
 
 from kronicle.db.base.kronicle_base import Base
 from kronicle.db.core.models.core_entity import CoreEntity
 from kronicle.db.migration.db_catalog import DatabaseCatalogBuilder
 from kronicle.db.migration.migration_plan import MigrationPlan
 from kronicle.db.migration.migration_proposal import MigrationProposal
+from kronicle.db.migration.operations import AddColumnOp
 from kronicle.db.migration.persistence.schema_migration_history import (
     CoreSchemaMigrationHistory,
     RbacSchemaMigrationHistory,
@@ -56,6 +59,77 @@ def _register_schema_models():
 _register_schema_models()
 
 
+@dataclass
+class _FkCheck:
+    src_schema: str
+    src_table: str
+    ref_schema: str
+    ref_table: str
+    src_cols: list[str]
+    ref_cols: list[str]
+
+
+def _build_fk_checks(schemas: list[str], plan: MigrationPlan) -> list[_FkCheck]:
+    """Collect FK relationships from metadata, skipping columns the plan will add."""
+
+    adding_columns = {(op.schema, op.table, op.column_name) for op in plan.operations if isinstance(op, AddColumnOp)}
+
+    checks: list[_FkCheck] = []
+    for schema in schemas:
+        tables = {n: t for n, t in Base.metadata.tables.items() if t.schema == schema}
+        for table in tables.values():
+            for fkc in table.foreign_key_constraints:
+                src_cols = [col.name for col in fkc.columns]
+                ref_elem = fkc.elements[0]
+                ref_schema = ref_elem.column.table.schema or schema
+                ref_table = ref_elem.column.table.name
+                ref_cols = [elem.column.name for elem in fkc.elements]
+
+                if any((schema, table.name, c) in adding_columns for c in src_cols):
+                    continue
+
+                checks.append(_FkCheck(schema, table.name, ref_schema, ref_table, src_cols, ref_cols))
+    return checks
+
+
+def _delete_orphans(checks: list[_FkCheck], conn_str: str) -> None:
+    """Delete orphan rows for the given FK checks, converging in up to 10 passes."""
+    for _ in range(10):
+        total = 0
+        for c in checks:
+            sql = _build_orphan_delete_sql(c)
+            result = subprocess.run(
+                ["psql", "-d", conn_str, "-c", sql],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            for line in result.stdout.strip().splitlines():
+                if line.startswith("DELETE "):
+                    try:
+                        total += int(line.split()[1])
+                    except (IndexError, ValueError):
+                        pass
+        if total == 0:
+            break
+        log_i(mod, f"  Deleted {total} orphan row(s)")
+    else:
+        log_w(mod, "  Orphan cleanup did not converge after 10 passes")
+
+
+def _build_orphan_delete_sql(c: _FkCheck) -> str:
+    """Build a DELETE query that removes rows referencing non-existent parent rows."""
+    where_parts = [
+        f"NOT EXISTS (SELECT 1 FROM {c.ref_schema}.{c.ref_table} AS ref WHERE src.{src} = ref.{ref})"
+        for src, ref in zip(c.src_cols, c.ref_cols, strict=True)
+    ]
+    return (
+        f"DELETE FROM {c.src_schema}.{c.src_table} AS src"
+        f" WHERE {' OR '.join(f'src.{col} IS NOT NULL' for col in c.src_cols)}"
+        f" AND ({' AND '.join(where_parts)})"
+    )
+
+
 # ======================================================================================
 # MigrationManager
 # ======================================================================================
@@ -77,6 +151,7 @@ class MigrationManager:
     def __init__(
         self,
         db_url: str,
+        dbsu_url: str | None,
         alembic_cfg_path: str = "alembic.ini",
         *,
         auto_approve: bool = False,
@@ -84,6 +159,7 @@ class MigrationManager:
     ):
         self.cfg = Config(alembic_cfg_path)
         self.db_url = db_url
+        self.dbsu_url = dbsu_url
         self.backup_url = backup_url or db_url
 
         self.schemas = get_migration_schemas()
@@ -98,6 +174,9 @@ class MigrationManager:
     # BACKUP
     # ------------------------------------------------------------------
 
+    def _backup_url(self) -> str:
+        return self.dbsu_url or self.backup_url
+
     def backup(self) -> Path:
         backup_prefix = os.environ.get(KRONICLE_SQLA_BACKUP, "./backup/kronicle")
         backup_prefix_path = Path(backup_prefix)
@@ -106,7 +185,7 @@ class MigrationManager:
         backup_file = backup_prefix_path.parent / f"{backup_prefix_path.name}_{ts}.dump"
         backup_file.parent.mkdir(parents=True, exist_ok=True)
 
-        cmd = ["pg_dump", "-Fc", "-f", str(backup_file), self.backup_url]
+        cmd = ["pg_dump", "-Fc", "-f", str(backup_file), self._backup_url()]
 
         for schema in self.schemas:
             cmd += ["-n", schema]
@@ -210,14 +289,19 @@ class MigrationManager:
     # EXECUTION
     # ------------------------------------------------------------------
 
-    def apply_plan(self, plan: MigrationPlan) -> None:
+    def apply_plan(self, plan: MigrationPlan, connection=None) -> None:
         """Execute migration plan via Alembic Operations context."""
         log_i(mod, f"Executing migration plan: {len(plan.ordered_operations)} ops")
 
-        with self.db._engine.begin() as conn:
-            context = MigrationContext.configure(conn)
+        if connection is not None:
+            context = MigrationContext.configure(connection)
             ops = Operations(context)
             plan.apply(ops)
+        else:
+            with self.db._engine.begin() as conn:
+                context = MigrationContext.configure(conn)
+                ops = Operations(context)
+                plan.apply(ops)
 
     # ------------------------------------------------------------------
     # STATE RECORDING
@@ -273,13 +357,14 @@ class MigrationManager:
                     )
 
                 # --- State entry (one per schema per migration) ---
+                actual_hash = self._compute_db_hash(conn, schema)
                 catalog = DatabaseCatalogBuilder.from_metadata(
                     {n: t for n, t in Base.metadata.tables.items() if t.schema == schema}
                 )
                 conn.execute(
                     state_cls.__table__.insert().values(
                         revision=plan.revision,
-                        schema_hash=metadata_hash,
+                        schema_hash=actual_hash,
                         applied_at=now,
                         applied_by=applied_by,
                         operation_count=len(plan.ordered_operations),
@@ -320,17 +405,12 @@ class MigrationManager:
                 if row.schema_hash == actual_hash:
                     continue
 
-                metadata_hash = self._compute_metadata_hash(schema)
-
-                log_i(
-                    mod,
-                    f"Refreshing state for '{schema}' ({row.schema_hash[:12]}… → {actual_hash[:12]}…)",
-                )
+                log_i(mod, f"Refreshing state for '{schema}' ({row.schema_hash[:12]}… → {actual_hash[:12]}…)")
 
                 conn.execute(
                     state_cls.__table__.insert().values(
                         revision=plan.revision,
-                        schema_hash=metadata_hash,
+                        schema_hash=actual_hash,
                         applied_at=now,
                         applied_by="system",
                         operation_count=0,
@@ -345,13 +425,68 @@ class MigrationManager:
     # RUN
     # ------------------------------------------------------------------
 
-    def run(self, verbose: bool = True):
+    def _ensure_table_ownership(self) -> None:
+        """Transfer ownership of tracked schema objects to the app user so DDL can run."""
+        if not self.dbsu_url:
+            return
+        app_user = urlparse(self.db_url).username
+        if not app_user:
+            return
+        schema_list = ", ".join(f"'{s}'" for s in self.schemas)
+
+        # Grant USAGE on schemas (lost when pg_restore --clean recreates them)
+        for schema in self.schemas:
+            subprocess.run(
+                ["psql", "-d", self.dbsu_url, "-c", f"GRANT USAGE ON SCHEMA {schema} TO {app_user}"],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+
+        # Transfer table/view ownership
+        cmd = [
+            "psql",
+            "-d",
+            self.dbsu_url,
+            "-c",
+            f"""
+            DO $$DECLARE
+              r RECORD;
+            BEGIN
+              FOR r IN SELECT schemaname, tablename FROM pg_tables WHERE schemaname = ANY(ARRAY[{schema_list}])
+              LOOP
+                EXECUTE format('ALTER TABLE %I.%I OWNER TO %I', r.schemaname, r.tablename, '{app_user}');
+              END LOOP;
+              FOR r IN SELECT schemaname, viewname AS tablename FROM pg_views WHERE schemaname = ANY(ARRAY[{schema_list}])
+              LOOP
+                EXECUTE format('ALTER VIEW %I.%I OWNER TO %I', r.schemaname, r.tablename, '{app_user}');
+              END LOOP;
+            END$$;
+            """,
+        ]
+        subprocess.run(cmd, check=True, capture_output=True, text=True)
+
+    def _clean_orphans(self, plan: MigrationPlan) -> None:
+        """Delete rows that would violate FK constraints the plan is about to add."""
+        checks = _build_fk_checks(list(self.schemas), plan)
+        if not checks:
+            return
+        conn_str = self.dbsu_url or self.db_url
+        log_i(mod, f"Cleaning orphan rows for {len(checks)} FK relationships")
+        _delete_orphans(checks, conn_str)
+
+    def run(self, verbose: bool = True):  # noqa: C901
         log_i(mod, "Starting migration pipeline")
 
         plan = None
         backup_file = None
 
         try:
+            # --------------------------------------------------
+            # 0. ENSURE TABLE OWNERSHIP (DDL requires ownership)
+            # --------------------------------------------------
+            self._ensure_table_ownership()
+
             # --------------------------------------------------
             # 1. PRE-CHECK (read stored state, detect drift)
             # --------------------------------------------------
@@ -386,7 +521,20 @@ class MigrationManager:
             # --------------------------------------------------
             backup_file = self.backup()
 
-            self.apply_plan(plan)
+            # Remove orphan rows that would break FK creation
+            self._clean_orphans(plan)
+
+            # Run DDL as dbsu so the app user doesn't need CREATE ON SCHEMA
+            if self.dbsu_url:
+                dbsu_engine = create_engine(self.dbsu_url)
+                with dbsu_engine.begin() as conn:
+                    self.apply_plan(plan, connection=conn)
+            else:
+                self.apply_plan(plan)
+
+            # Transfer ownership back to app user after DDL (postgres created objects)
+            self._ensure_table_ownership()
+
             self.record_migration_state(plan, success=True)
 
         except Exception as e:
@@ -394,10 +542,49 @@ class MigrationManager:
 
             if backup_file:
                 log_i(mod, f"Restoring backup: {backup_file}")
+                restore_url = self.dbsu_url or self.db_url
                 subprocess.run(
-                    ["pg_restore", "--clean", "--if-exists", "--no-owner", "-d", self.db_url, str(backup_file)],
+                    ["pg_restore", "--clean", "--if-exists", "--no-owner", "-d", restore_url, str(backup_file)],
                     check=True,
                 )
+
+                # Restore privileges lost when schemas/tables are dropped/recreated
+                app_user = urlparse(self.db_url).username
+                if app_user:
+                    for schema in self.schemas:
+                        subprocess.run(
+                            ["psql", "-d", restore_url, "-c", f"GRANT USAGE ON SCHEMA {schema} TO {app_user}"],
+                            check=True,
+                            capture_output=True,
+                            text=True,
+                        )
+                        subprocess.run(
+                            [
+                                "psql",
+                                "-d",
+                                restore_url,
+                                "-c",
+                                f"GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA {schema} TO {app_user}",
+                            ],
+                            check=True,
+                            capture_output=True,
+                            text=True,
+                        )
+                        subprocess.run(
+                            [
+                                "psql",
+                                "-d",
+                                restore_url,
+                                "-c",
+                                f"GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA {schema} TO {app_user}",
+                            ],
+                            check=True,
+                            capture_output=True,
+                            text=True,
+                        )
+
+                    # Transfer table ownership so the app user can run DDL (e.g. ADD CONSTRAINT)
+                    self._ensure_table_ownership()
 
             if plan is not None:
                 self.record_migration_state(plan, success=False)
@@ -424,9 +611,11 @@ if __name__ == "__main__":
     settings = KronicleSettings()
     db_url = settings.db.rbac_connection_url
     log_d(here, "db_url", settings.db.masked_rbac_connection_url)
+    dbsu_url = settings.db.dbsu_connection_url
+    assert dbsu_url
 
     # Optional: override backup connection (e.g. superuser) via env var
     backup_url = os.environ.get("KRONICLE_BACKUP_URL") or None
 
-    manager = MigrationManager(db_url=db_url, backup_url=backup_url)
+    manager = MigrationManager(db_url=db_url, dbsu_url=dbsu_url, backup_url=backup_url)
     manager.run()

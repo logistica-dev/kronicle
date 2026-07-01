@@ -29,13 +29,22 @@ class ColumnCatalog:
 class ForeignKeyCatalog:
     name: str | None
     local_columns: tuple[str, ...]
+    referred_schema: str | None
     referred_table: str | None
     referred_columns: tuple[str, ...]
     ondelete: str | None
     onupdate: str | None
 
     def as_tuple(self) -> tuple:
-        return (self.name, self.local_columns, self.referred_table, self.referred_columns, self.ondelete, self.onupdate)
+        return (
+            self.name,
+            self.local_columns,
+            self.referred_schema,
+            self.referred_table,
+            self.referred_columns,
+            self.ondelete,
+            self.onupdate,
+        )
 
 
 # ==================================================================================================
@@ -118,6 +127,7 @@ class DatabaseCatalogBuilder:
                         ForeignKeyCatalog(
                             name=fk.get("name"),
                             local_columns=tuple(fk.get("constrained_columns", ())),
+                            referred_schema=fk.get("referred_schema"),
                             referred_table=fk.get("referred_table"),
                             referred_columns=tuple(fk.get("referred_columns", ())),
                             ondelete=(fk.get("options") or {}).get("ondelete"),
@@ -125,7 +135,12 @@ class DatabaseCatalogBuilder:
                         )
                         for fk in fks
                     ),
-                    key=lambda f: (f.local_columns, f.referred_table or "", f.referred_columns),
+                    key=lambda f: (
+                        f.local_columns,
+                        f.referred_schema or "",
+                        f.referred_table or "",
+                        f.referred_columns,
+                    ),
                 )
             )
 
@@ -170,6 +185,11 @@ class DatabaseCatalogBuilder:
                         ForeignKeyCatalog(
                             name=cons.name if isinstance(cons.name, str) else None,
                             local_columns=tuple(col.name for col in cons.columns),
+                            referred_schema=(
+                                elements[0].column.table.schema
+                                if (elements := list(cons.elements)) and elements[0].column is not None
+                                else None
+                            ),
                             referred_table=(
                                 elements[0].column.table.name
                                 if (elements := list(cons.elements)) and elements[0].column is not None
@@ -182,7 +202,12 @@ class DatabaseCatalogBuilder:
                         for cons in table.constraints
                         if isinstance(cons, ForeignKeyConstraint)
                     ),
-                    key=lambda f: (f.local_columns, f.referred_table or "", f.referred_columns),
+                    key=lambda f: (
+                        f.local_columns,
+                        f.referred_schema or "",
+                        f.referred_table or "",
+                        f.referred_columns,
+                    ),
                 )
             )
 

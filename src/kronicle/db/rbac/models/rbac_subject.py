@@ -3,7 +3,7 @@
 from enum import Enum
 from uuid import UUID
 
-from sqlalchemy import CheckConstraint, ForeignKey, Index, String
+from sqlalchemy import CheckConstraint, ForeignKey, Index, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from kronicle.db.rbac.models.rbac_entity import RbacEntity
@@ -21,11 +21,17 @@ class RbacSubject(RbacEntity):
     Represents a Subject in the RBAC system.
     Can be either a User or a Group.
     Used as the target of Policies.
+
+    Exactly one of user_id or group_id must be set (exclusive arc).
     """
 
     __tablename__ = "subjects"
     __table_args__ = (
         CheckConstraint(f"type IN ('{SubjectType.user.value}', '{SubjectType.group.value}')", name="chk_subject_type"),
+        CheckConstraint("num_nonnulls(user_id, group_id) = 1", name="chk_subject_one_owner"),
+        UniqueConstraint("id", name="uq_subject_id"),
+        UniqueConstraint("user_id", name="uq_subject_user_id"),
+        UniqueConstraint("group_id", name="uq_subject_group_id"),
         Index("ix_subject_type", "type"),
         {"schema": RbacEntity.namespace(), "extend_existing": True},
     )
@@ -33,11 +39,9 @@ class RbacSubject(RbacEntity):
     # Type of subject: 'users' or 'groups'
     type: Mapped[SubjectType] = mapped_column(String(16), nullable=False)
 
-    # Foreign keys to User and Group
-    user_id: Mapped[UUID] = mapped_column(ForeignKey(RbacUser.id, ondelete="CASCADE"), primary_key=True, nullable=True)
-    group_id: Mapped[UUID] = mapped_column(
-        ForeignKey(RbacGroup.id, ondelete="CASCADE"), primary_key=True, nullable=True
-    )
+    # Exclusive-arc FK columns — exactly one must be non-null (enforced by chk_subject_one_owner)
+    user_id: Mapped[UUID | None] = mapped_column(ForeignKey(RbacUser.id, ondelete="CASCADE"), nullable=True)
+    group_id: Mapped[UUID | None] = mapped_column(ForeignKey(RbacGroup.id, ondelete="CASCADE"), nullable=True)
 
     # ORM convenience relationships
     user: Mapped[RbacUser] = relationship(RbacUser, backref=__tablename__)

@@ -6,7 +6,7 @@ import pytest
 from kronicle.deps import settings as ks
 from kronicle.deps.settings_env import (
     AppEnv,
-    ChanneDbCreds,
+    ChanDbCreds,
     ConnectionSettings,
     DbAccess,
     KronicleEnvConf,
@@ -16,7 +16,7 @@ from kronicle.deps.settings_env import (
 
 @pytest.fixture
 def real_env_conf():
-    chan_creds = ChanneDbCreds(username="chan_user", password="chan_pass")
+    chan_creds = ChanDbCreds(username="chan_user", password="chan_pass")
     rbac_creds = RbacDbCreds(username="rbac_user", password="rbac_pass")
     db_access = DbAccess(host="127.0.0.1", port=5432, name="kronicle", usr=chan_creds.username, pwd=chan_creds.password)
     server = ConnectionSettings(host="127.0.0.1", port=8080)

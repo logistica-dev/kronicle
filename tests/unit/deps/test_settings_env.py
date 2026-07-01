@@ -38,18 +38,18 @@ def test_user_creds_from_env(monkeypatch):
 def test_env_user_creds(monkeypatch):
     val = base64.urlsafe_b64encode(b"chan:pass").decode()
     monkeypatch.setenv(se.CHAN_CREDS, val)
-    creds = se.ChanneDbCreds.from_env()
+    creds = se.ChanDbCreds.from_env()
     assert creds.username == "chan"
     assert creds.password == "pass"
 
     # Invalid b64
     monkeypatch.setenv(se.CHAN_CREDS, "invalid")
     with pytest.raises(RuntimeError):
-        se.ChanneDbCreds.from_env()
+        se.ChanDbCreds.from_env()
 
     monkeypatch.delenv(se.CHAN_CREDS, raising=False)
     with pytest.raises(RuntimeError):
-        se.ChanneDbCreds.from_env()
+        se.ChanDbCreds.from_env()
 
 
 def test_connection_settings(monkeypatch):
@@ -105,12 +105,14 @@ def test_db_settings(monkeypatch):
     val = base64.urlsafe_b64encode(b"chan:pass").decode()
     monkeypatch.setenv(se.CHAN_CREDS, val)
     monkeypatch.setenv(se.RBAC_CREDS, val)
-    chan = se.ChanneDbCreds.from_env()
+    chan = se.ChanDbCreds.from_env()
     rbac = se.RbacDbCreds.from_env()
+    dbsu = se.DbSuCreds.from_env()
     db = se.DbAccess.from_env(chan)
     conf = se.KronicleEnvConf(
         chan_creds=chan,
         rbac_creds=rbac,
+        dbsu_creds=dbsu,
         db=db,
         server=se.ConnectionSettings.from_env(),
         env=se.AppEnv.from_env(),

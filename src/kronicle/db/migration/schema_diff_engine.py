@@ -670,10 +670,7 @@ class SchemaDiffEngine:
 
     @staticmethod
     def _fk_db_key(fk_def: ReflectedForeignKeyConstraint) -> tuple:
-        """Build a stable key for a DB FK definition, using columns when name is absent."""
-        name = fk_def.get("name")
-        if name:
-            return ("name", str(name))
+        """Build a stable key for a DB FK definition, always based on columns + referred table."""
         cols = tuple(fk_def.get("constrained_columns", ()))
         referred_table = fk_def.get("referred_table")
         referred_cols = tuple(fk_def.get("referred_columns", ()))
@@ -738,6 +735,7 @@ class SchemaDiffEngine:
                     table=target_table,
                     constraint_name=name,
                     referred_table=elements[0].column.table.name,
+                    referred_schema=elements[0].column.table.schema,
                     local_columns=tuple(col.name for col in cons.columns),
                     referred_columns=tuple(elem.column.name for elem in elements),
                     ondelete=cons.ondelete,
@@ -812,6 +810,9 @@ class SchemaDiffEngine:
                         table=target_table,
                         constraint_name=cons_name,
                         referred_table=meta_referred_table,
+                        referred_schema=(
+                            elements[0].column.table.schema if elements and elements[0].column is not None else None
+                        ),
                         local_columns=meta_local_cols,
                         referred_columns=meta_referred_cols,
                         ondelete=cons.ondelete,
