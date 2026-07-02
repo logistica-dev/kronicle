@@ -12,8 +12,8 @@ from sqlalchemy.orm.session import Session
 
 from kronicle.db.rbac.links.group_hierarchy import RbacGroupHierarchy
 from kronicle.db.rbac.links.group_roles import RbacGroupRoles
-from kronicle.db.rbac.links.rbac_access_profile import ChannelAccessProfile, ZoneAccessProfile
-from kronicle.db.rbac.links.rbac_policy import ChannelPolicy, ZonePolicy
+from kronicle.db.rbac.links.rbac_access_profile import ChannelAccessProfile, RowAccessProfile, ZoneAccessProfile
+from kronicle.db.rbac.links.rbac_policy import ChannelPolicy, RowPolicy, ZonePolicy
 from kronicle.db.rbac.links.user_groups import RbacUserGroups
 from kronicle.db.rbac.links.user_roles import RbacUserRoles
 from kronicle.db.rbac.models.rbac_group import RbacGroup
@@ -23,6 +23,7 @@ from kronicle.db.rbac.models.rbac_user import RbacUser
 from kronicle.db.rbac.rbac_db_session import RbacDbSession
 from kronicle.errors.error_types import BadRequestError, ConflictError, NotFoundError, UnauthorizedError
 from kronicle.repo.core.core_channel_repo import CoreChannelRepository
+from kronicle.repo.core.core_row_repo import CoreRowRepository
 from kronicle.repo.core.core_zone_repo import CoreZoneRepository
 from kronicle.repo.hierarchy.hierarchy_engine import HierarchyEngine
 from kronicle.repo.hierarchy.hierarchy_service import HierarchyService
@@ -30,16 +31,25 @@ from kronicle.repo.rbac.entities.channel_policy_repo import ChannelPolicyReposit
 from kronicle.repo.rbac.entities.rbac_group_repo import RbacGroupRepository
 from kronicle.repo.rbac.entities.rbac_role_repo import RbacRoleRepository
 from kronicle.repo.rbac.entities.rbac_user_repo import RbacUserRepository
+from kronicle.repo.rbac.entities.row_policy_repo import RowPolicyRepository
 from kronicle.repo.rbac.entities.zone_policy_repo import ZonePolicyRepository
 from kronicle.repo.rbac.links.channel_access_profile_repo import ChannelAccessProfileRepository
 from kronicle.repo.rbac.links.rbac_group_roles_repo import RbacGroupRolesRepository
 from kronicle.repo.rbac.links.rbac_user_group_repo import RbacUserGroupRepository
 from kronicle.repo.rbac.links.rbac_user_roles_repo import RbacUserRolesRepository
+from kronicle.repo.rbac.links.row_access_profile_repo import RowAccessProfileRepository
 from kronicle.repo.rbac.links.zone_access_profile_repo import ZoneAccessProfileRepository
 from kronicle.schemas.permissions.permission import Permission
 from kronicle.schemas.rbac.input_user_schemas import InputUserLogin
 from kronicle.schemas.rbac.safe_group_schemas import OutputGroup
-from kronicle.schemas.rbac.safe_policy_schemas import OutputChannelAccessProfile, OutputZoneAccessProfile
+from kronicle.schemas.rbac.safe_policy_schemas import (
+    OutputChannelAccessProfile,
+    OutputChannelPolicy,
+    OutputRowAccessProfile,
+    OutputRowPolicy,
+    OutputZoneAccessProfile,
+    OutputZonePolicy,
+)
 from kronicle.schemas.rbac.safe_role_schemas import OutputRole
 from kronicle.schemas.rbac.safe_user_schemas import OutputUser, ProcessedUser
 from kronicle.utils.dev_logs import log_d, log_i, log_w
@@ -86,6 +96,7 @@ class RbacService:
         # Core objects
         self._channel_repo = CoreChannelRepository()
         self._zone_repo = CoreZoneRepository()
+        self._row_repo = CoreRowRepository()
 
         # Rbac links
         self._user_groups_repo = RbacUserGroupRepository()
@@ -95,8 +106,10 @@ class RbacService:
         # Rbac <-> core links
         self._zone_access_profile_repo = ZoneAccessProfileRepository()
         self._channel_access_profile_repo = ChannelAccessProfileRepository()
+        self._row_access_profile_repo = RowAccessProfileRepository()
         self._zone_policy_repo = ZonePolicyRepository()
         self._channel_policy_repo = ChannelPolicyRepository()
+        self._row_policy_repo = RowPolicyRepository()
 
         group_engine = HierarchyEngine(
             parents_of=lambda g: g.parent_links,
@@ -543,6 +556,22 @@ class RbacService:
         profile = self._channel_access_profile_repo.create(db, role_id=role_id, channel_id=channel_id)
         return profile
 
+    def _ensure_row_access_profile(self, db: Session, *, role_id: UUID, row_id: UUID) -> RowAccessProfile:
+        """Find or create a RowAccessProfile for the given role and row."""
+
+        existing = self._row_access_profile_repo.get_by_role_and_row(db, role_id=role_id, row_id=row_id)
+        if existing:
+            return existing
+
+        role = self._role_repo.get_by_id(db, id=role_id)
+        if not role:
+            raise NotFoundError(f"Role '{role_id}' not found")
+        row = self._row_repo.get_by_id(db, id=row_id)
+        if not row:
+            raise NotFoundError(f"CoreRow '{row_id}' not found")
+
+        return self._row_access_profile_repo.create(db, role_id=role_id, row_id=row_id)
+
     # ----------------------------------------------------------------------------------------------
     # Access Profiles
     # ----------------------------------------------------------------------------------------------
@@ -598,6 +627,33 @@ class RbacService:
             p = self._channel_access_profile_repo.get_by_id(db, id=profile_id)
             if not p:
                 raise NotFoundError(f"ChannelAccessProfile '{profile_id}' not found")
+            db.delete(p)
+            db.flush()
+
+    def create_row_access_profile(
+        self, *, role_id: UUID, row_id: UUID, description: str | None = None
+    ) -> OutputRowAccessProfile:
+        with self._db.transaction() as db:
+            profile = self._ensure_row_access_profile(db, role_id=role_id, row_id=row_id)
+            if description is not None:
+                profile.description = description
+                db.flush()
+            return OutputRowAccessProfile.from_db(profile)
+
+    def list_row_access_profiles(self) -> list[OutputRowAccessProfile]:
+        with self._db.get_db() as db:
+            return [OutputRowAccessProfile.from_db(p) for p in self._row_access_profile_repo.fetch_all(db)]
+
+    def get_row_access_profile(self, profile_id: UUID) -> OutputRowAccessProfile | None:
+        with self._db.get_db() as db:
+            p = self._row_access_profile_repo.get_by_id(db, id=profile_id)
+            return OutputRowAccessProfile.from_db(p) if p else None
+
+    def delete_row_access_profile(self, profile_id: UUID) -> None:
+        with self._db.transaction() as db:
+            p = self._row_access_profile_repo.get_by_id(db, id=profile_id)
+            if not p:
+                raise NotFoundError(f"RowAccessProfile '{profile_id}' not found")
             db.delete(p)
             db.flush()
 
@@ -729,6 +785,96 @@ class RbacService:
                 raise NotFoundError(f"ChannelPolicy '{policy_id}' not found")
             db.delete(policy)
             db.flush()
+
+    # ----------------------------------------------------------------------------------------------
+    # Row Policies
+    # ----------------------------------------------------------------------------------------------
+
+    def create_row_policy(self, subject_id: UUID, role_id: UUID, row_id: UUID) -> dict:
+        """Assign a role to a subject (user or group) for a specific row."""
+        # here = "create_row_policy"
+
+        with self._db.transaction() as db:
+            role = self._role_repo.get_by_id(db, id=role_id)
+            if not role:
+                raise NotFoundError(f"Role '{role_id}' not found")
+
+            self._ensure_subject(db, subject_id)
+
+            access_profile = self._ensure_row_access_profile(db, role_id=role_id, row_id=row_id)
+
+            policy = RowPolicy(
+                subject_id=subject_id,
+                access_profile_id=access_profile.id,
+            )
+            db.add(policy)
+            db.flush()
+            db.refresh(policy)
+
+        return {
+            "id": uuid_to_str(policy.id),
+            "subject_id": uuid_to_str(subject_id),
+            "role_id": uuid_to_str(role_id),
+            "role_name": role.name,
+            "row_id": uuid_to_str(row_id),
+            "is_delegation": policy.is_delegation,
+        }
+
+    def list_row_policies(self, row_id: UUID) -> list[dict]:
+        """List all policies for a row."""
+        with self._db.get_db() as db:
+            policies = self._row_policy_repo.get_policies_for_row(db, row_id=row_id)
+            results = []
+            for p in policies:
+                profile = self._row_access_profile_repo.get_by_id(db, id=p.access_profile_id)
+                role = self._role_repo.get_by_id(db, id=profile.role_id) if profile else None
+                results.append(
+                    {
+                        "id": uuid_to_str(p.id),
+                        "subject_id": uuid_to_str(p.subject_id),
+                        "role_id": uuid_to_str(profile.role_id) if profile else None,
+                        "role_name": role.name if role else None,
+                        "row_id": uuid_to_str(row_id),
+                        "is_delegation": p.is_delegation,
+                    }
+                )
+            return results
+
+    def delete_row_policy(self, policy_id: UUID) -> None:
+        """Delete a row policy by ID."""
+        with self._db.transaction() as db:
+            policy = self._row_policy_repo.get_by_id(db, id=policy_id)
+            if not policy:
+                raise NotFoundError(f"RowPolicy '{policy_id}' not found")
+            db.delete(policy)
+            db.flush()
+
+    # ----------------------------------------------------------------------------------------------
+    # List all policies (by type)
+    # ----------------------------------------------------------------------------------------------
+
+    def list_all_zone_policies(self) -> list[OutputZonePolicy]:
+        """List all zone policies regardless of zone."""
+        with self._db.get_db() as db:
+            return [OutputZonePolicy.from_db(p) for p in self._zone_policy_repo.fetch_all(db)]
+
+    def list_all_channel_policies(self) -> list[OutputChannelPolicy]:
+        """List all channel policies regardless of channel."""
+        with self._db.get_db() as db:
+            return [OutputChannelPolicy.from_db(p) for p in self._channel_policy_repo.fetch_all(db)]
+
+    def list_all_row_policies(self) -> list[OutputRowPolicy]:
+        """List all row policies regardless of row."""
+        with self._db.get_db() as db:
+            return [OutputRowPolicy.from_db(p) for p in self._row_policy_repo.fetch_all(db)]
+
+    def list_all_policies(self) -> dict:
+        """Return all policies across all resource types as a dict."""
+        return {
+            "zone": self.list_all_zone_policies(),
+            "channel": self.list_all_channel_policies(),
+            "row": self.list_all_row_policies(),
+        }
 
     # ----------------------------------------------------------------------------------------------
     # Groups

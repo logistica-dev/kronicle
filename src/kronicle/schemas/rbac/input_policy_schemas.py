@@ -36,3 +36,19 @@ class InputChannelAccessProfile(BaseModel):
     role_id: UUID = Field(..., description="UUID of the role")
     channel_id: UUID = Field(..., description="UUID of the channel")
     description: str | None = Field(default=None, description="Optional description")
+
+
+class InputRowPolicy(BaseModel):
+    """Assign a role to a subject (user or group) for a specific row."""
+
+    subject_id: UUID = Field(..., description="UUID of the user or group")
+    role_id: UUID = Field(..., description="UUID of the role to assign")
+    row_id: UUID = Field(..., description="UUID of the row")
+
+
+class InputRowAccessProfile(BaseModel):
+    """Create a scoped role for a row."""
+
+    role_id: UUID = Field(..., description="UUID of the role")
+    row_id: UUID = Field(..., description="UUID of the row")
+    description: str | None = Field(default=None, description="Optional description")

@@ -7,7 +7,7 @@ co = Settings().connection_su
 assert co
 kronicle_rbac = KronicleRbac.from_connection_info(co)
 
-usr_list = kronicle_rbac.get_all_users(include_inactive=True)
+usr_list = kronicle_rbac.list_users(include_inactive=True)
 count = 0
 for u in usr_list:
     if u.email.startswith("perm_test_") and u.email.endswith("@kronicle.app"):

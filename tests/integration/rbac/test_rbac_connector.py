@@ -8,10 +8,10 @@ from kronicle_sdk.utils.str_utils import tiny_id
 
 
 @pytest.mark.integration
-def test_get_all_users(kronicle_rbac, test_user):
+def test_list_users(kronicle_rbac, test_user):
     """Retrieve all users and inspect the test user."""
     here = "rbac_connector"
-    usr_list = kronicle_rbac.get_all_users()
+    usr_list = kronicle_rbac.list_users()
     log_d(here, f"Number of users: {len(usr_list)}")
 
     assert isinstance(usr_list, list)

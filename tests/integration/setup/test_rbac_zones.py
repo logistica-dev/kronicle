@@ -21,7 +21,7 @@ def test_zone(kronicle_rbac_setup):
 @pytest.mark.integration
 def test_list_zones(kronicle_rbac_setup, test_zone):
     here = "setup_zones"
-    zones = kronicle_rbac_setup.get_all_zones()
+    zones = kronicle_rbac_setup.list_zones()
     log_d(here, f"Number of zones: {len(zones)}")
     assert isinstance(zones, list)
     assert len(zones) > 0
@@ -59,5 +59,5 @@ def test_delete_zone(kronicle_rbac_setup):
     created = kronicle_rbac_setup.create_zone(zone)
     deleted = kronicle_rbac_setup.delete_zone(zone_id=created.id)
     assert deleted is not None
-    zones = kronicle_rbac_setup.get_all_zones()
+    zones = kronicle_rbac_setup.list_zones()
     assert created.id not in {z.id for z in zones}

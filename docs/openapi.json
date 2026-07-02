@@ -4347,6 +4347,35 @@
       }
     },
     "/rbac/v1/policies/zones": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "List all zone policies",
+        "description": "Returns all zone policies regardless of zone.",
+        "operationId": "list_all_zone_policies_rbac_v1_policies_zones_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OutputZonePolicy"
+                  },
+                  "type": "array",
+                  "title": "Response List All Zone Policies Rbac V1 Policies Zones Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
       "post": {
         "tags": [
           "RBAC"
@@ -4497,6 +4526,35 @@
       }
     },
     "/rbac/v1/policies/channels": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "List all channel policies",
+        "description": "Returns all channel policies regardless of channel.",
+        "operationId": "list_all_channel_policies_rbac_v1_policies_channels_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OutputChannelPolicy"
+                  },
+                  "type": "array",
+                  "title": "Response List All Channel Policies Rbac V1 Policies Channels Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
       "post": {
         "tags": [
           "RBAC"
@@ -4607,6 +4665,377 @@
         "summary": "Delete a channel policy",
         "description": "Removes a channel policy by its ID.",
         "operationId": "delete_channel_policy_rbac_v1_policies_channels__policy_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "policy_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Policy Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rbac/v1/access-profiles/rows": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "List all row access profiles",
+        "operationId": "list_row_access_profiles_rbac_v1_access_profiles_rows_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OutputRowAccessProfile"
+                  },
+                  "type": "array",
+                  "title": "Response List Row Access Profiles Rbac V1 Access Profiles Rows Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Create a row access profile",
+        "description": "Creates a reusable scoped role (role + row pair).",
+        "operationId": "create_row_access_profile_rbac_v1_access_profiles_rows_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InputRowAccessProfile"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutputRowAccessProfile"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/rbac/v1/access-profiles/rows/{profile_id}": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Get a row access profile",
+        "operationId": "get_row_access_profile_rbac_v1_access_profiles_rows__profile_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "profile_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Profile Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutputRowAccessProfile"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Delete a row access profile",
+        "operationId": "delete_row_access_profile_rbac_v1_access_profiles_rows__profile_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "profile_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Profile Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rbac/v1/policies/rows": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "List all row policies",
+        "description": "Returns all row policies regardless of row.",
+        "operationId": "list_all_row_policies_rbac_v1_policies_rows_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OutputRowPolicy"
+                  },
+                  "type": "array",
+                  "title": "Response List All Row Policies Rbac V1 Policies Rows Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Assign a role to a subject for a row",
+        "description": "Creates a policy that grants a role to a user or group for a specific row.",
+        "operationId": "create_row_policy_rbac_v1_policies_rows_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InputRowPolicy"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Create Row Policy Rbac V1 Policies Rows Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/rbac/v1/policies": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "List all policies across all resource types",
+        "description": "Returns a dict with 'zone', 'channel', and 'row' keys containing all policies.",
+        "operationId": "list_all_policies_rbac_v1_policies_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/rbac/v1/policies/rows/{row_id}": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "List policies for a row",
+        "description": "Returns all policies assigned for a specific row.",
+        "operationId": "list_row_policies_rbac_v1_policies_rows__row_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "row_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Row Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "title": "Response List Row Policies Rbac V1 Policies Rows  Row Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rbac/v1/policies/rows/{policy_id}": {
+      "delete": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Delete a row policy",
+        "description": "Removes a row policy by its ID.",
+        "operationId": "delete_row_policy_rbac_v1_policies_rows__policy_id__delete",
         "security": [
           {
             "HTTPBearer": []
@@ -5077,7 +5506,7 @@
         "title": "InputPayload",
         "description": "User-provided payload for a channel.\nThe 'channel_schema' field is a dict of column_name -> type string.",
         "example": {
-          "channel_id": "e0e3391a-96c7-44f0-89eb-6c23c4532905",
+          "channel_id": "1fa48361-3006-4d1c-89c7-e521e86373ca",
           "channel_schema": {
             "humidity": "float",
             "temperature": "float",
@@ -5086,7 +5515,7 @@
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-61865",
+          "name": "thermo-42b6e",
           "rows": [
             {
               "humidity": 55.1,
@@ -5165,6 +5594,71 @@
         ],
         "title": "InputRole",
         "description": "Schema for creating or updating a role."
+      },
+      "InputRowAccessProfile": {
+        "properties": {
+          "role_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Role Id",
+            "description": "UUID of the role"
+          },
+          "row_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Row Id",
+            "description": "UUID of the row"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "description": "Optional description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "role_id",
+          "row_id"
+        ],
+        "title": "InputRowAccessProfile",
+        "description": "Create a scoped role for a row."
+      },
+      "InputRowPolicy": {
+        "properties": {
+          "subject_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Subject Id",
+            "description": "UUID of the user or group"
+          },
+          "role_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Role Id",
+            "description": "UUID of the role to assign"
+          },
+          "row_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Row Id",
+            "description": "UUID of the row"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subject_id",
+          "role_id",
+          "row_id"
+        ],
+        "title": "InputRowPolicy",
+        "description": "Assign a role to a subject (user or group) for a specific row."
       },
       "InputUser": {
         "properties": {
@@ -5505,6 +5999,65 @@
         ],
         "title": "OutputChannelAccessProfile"
       },
+      "OutputChannelPolicy": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Subject Id"
+          },
+          "role_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Role Id"
+          },
+          "role_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role Name"
+          },
+          "is_delegation": {
+            "type": "boolean",
+            "title": "Is Delegation",
+            "default": false
+          },
+          "channel_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Channel Id"
+          },
+          "channel_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channel Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "subject_id",
+          "role_id",
+          "channel_id"
+        ],
+        "title": "OutputChannelPolicy"
+      },
       "OutputCoreChannel": {
         "properties": {
           "id": {
@@ -5636,6 +6189,124 @@
           "name"
         ],
         "title": "OutputRole"
+      },
+      "OutputRowAccessProfile": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "role_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Role Id"
+          },
+          "role_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "row_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Row Id"
+          },
+          "row_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Row Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "role_id",
+          "row_id"
+        ],
+        "title": "OutputRowAccessProfile"
+      },
+      "OutputRowPolicy": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Subject Id"
+          },
+          "role_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Role Id"
+          },
+          "role_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role Name"
+          },
+          "is_delegation": {
+            "type": "boolean",
+            "title": "Is Delegation",
+            "default": false
+          },
+          "row_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Row Id"
+          },
+          "row_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Row Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "subject_id",
+          "role_id",
+          "row_id"
+        ],
+        "title": "OutputRowPolicy"
       },
       "OutputUser": {
         "properties": {
@@ -5799,6 +6470,65 @@
           "zone_id"
         ],
         "title": "OutputZoneAccessProfile"
+      },
+      "OutputZonePolicy": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Subject Id"
+          },
+          "role_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Role Id"
+          },
+          "role_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role Name"
+          },
+          "is_delegation": {
+            "type": "boolean",
+            "title": "Is Delegation",
+            "default": false
+          },
+          "zone_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Zone Id"
+          },
+          "zone_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "subject_id",
+          "role_id",
+          "zone_id"
+        ],
+        "title": "OutputZonePolicy"
       },
       "ResponsePayload": {
         "properties": {

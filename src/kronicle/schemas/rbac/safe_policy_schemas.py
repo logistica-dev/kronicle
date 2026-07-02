@@ -5,8 +5,8 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from kronicle.db.rbac.links.rbac_access_profile import ChannelAccessProfile, ZoneAccessProfile
-from kronicle.db.rbac.links.rbac_policy import ChannelPolicy, ZonePolicy
+from kronicle.db.rbac.links.rbac_access_profile import ChannelAccessProfile, RowAccessProfile, ZoneAccessProfile
+from kronicle.db.rbac.links.rbac_policy import ChannelPolicy, RowPolicy, ZonePolicy
 
 
 class OutputPolicy(BaseModel):
@@ -88,5 +88,39 @@ class OutputChannelAccessProfile(OutputAccessProfile):
             role_name=profile.role.name if profile.role else None,
             channel_id=profile.channel_id,
             channel_name=profile.channel.name if profile.channel else None,
+            description=profile.description,
+        )
+
+
+class OutputRowPolicy(OutputPolicy):
+    row_id: UUID
+    row_name: str | None = None
+
+    @classmethod
+    def from_db(cls, policy: RowPolicy):
+        profile = policy.access_profile
+        return cls(
+            id=policy.id,
+            subject_id=policy.subject_id,
+            role_id=profile.role_id,
+            role_name=profile.role.name if profile.role else None,
+            row_id=profile.row_id,
+            row_name=profile.row.name if profile.row else None,
+            is_delegation=policy.is_delegation,
+        )
+
+
+class OutputRowAccessProfile(OutputAccessProfile):
+    row_id: UUID
+    row_name: str | None = None
+
+    @classmethod
+    def from_db(cls, profile: RowAccessProfile):
+        return cls(
+            id=profile.id,
+            role_id=profile.role_id,
+            role_name=profile.role.name if profile.role else None,
+            row_id=profile.row_id,
+            row_name=profile.row.name if profile.row else None,
             description=profile.description,
         )

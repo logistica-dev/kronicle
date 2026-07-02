@@ -9,7 +9,7 @@ from kronicle_sdk.utils.str_utils import tiny_id
 @pytest.mark.integration
 def test_list_groups(kronicle_rbac, test_group):
     here = "rbac_groups"
-    groups = kronicle_rbac.get_all_groups()
+    groups = kronicle_rbac.list_groups()
     log_d(here, f"Number of groups: {len(groups)}")
     assert isinstance(groups, list)
     assert len(groups) > 0
@@ -66,7 +66,7 @@ def test_delete_group(kronicle_rbac):
     created = kronicle_rbac.create_group(group)
     deleted = kronicle_rbac.delete_group(group_id=created.id)
     assert deleted is not None
-    groups = kronicle_rbac.get_all_groups()
+    groups = kronicle_rbac.list_groups()
     assert created.id not in {g.id for g in groups}
 
 

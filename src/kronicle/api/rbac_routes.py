@@ -14,13 +14,22 @@ from kronicle.schemas.rbac.input_group_schemas import InputGroup
 from kronicle.schemas.rbac.input_policy_schemas import (
     InputChannelAccessProfile,
     InputChannelPolicy,
+    InputRowAccessProfile,
+    InputRowPolicy,
     InputZoneAccessProfile,
     InputZonePolicy,
 )
 from kronicle.schemas.rbac.input_role_schemas import InputRole
 from kronicle.schemas.rbac.input_user_schemas import InputUser, InputUserPatch
 from kronicle.schemas.rbac.safe_group_schemas import OutputGroup
-from kronicle.schemas.rbac.safe_policy_schemas import OutputChannelAccessProfile, OutputZoneAccessProfile
+from kronicle.schemas.rbac.safe_policy_schemas import (
+    OutputChannelAccessProfile,
+    OutputChannelPolicy,
+    OutputRowAccessProfile,
+    OutputRowPolicy,
+    OutputZoneAccessProfile,
+    OutputZonePolicy,
+)
 from kronicle.schemas.rbac.safe_role_schemas import OutputRole
 from kronicle.schemas.rbac.safe_user_schemas import OutputUser, ProcessedUser
 from kronicle.services.rbac_service import RbacService
@@ -746,3 +755,174 @@ def delete_channel_policy(
 ):
     rbac.delete_channel_policy(policy_id)
     return {"detail": f"ChannelPolicy '{policy_id}' deleted"}
+
+
+# --------------------------------------------------------------------------------------------------
+# Row Access Profiles
+# --------------------------------------------------------------------------------------------------
+
+
+@rbac_router.post(
+    "/access-profiles/rows",
+    summary="Create a row access profile",
+    description="Creates a reusable scoped role (role + row pair).",
+    response_model=OutputRowAccessProfile,
+    dependencies=[Depends(require_permission(PermStr.POLICY_CREATE))],
+)
+def create_row_access_profile(
+    profile_in: InputRowAccessProfile,
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.create_row_access_profile(
+        role_id=profile_in.role_id,
+        row_id=profile_in.row_id,
+        description=profile_in.description,
+    )
+
+
+@rbac_router.get(
+    "/access-profiles/rows",
+    summary="List all row access profiles",
+    response_model=list[OutputRowAccessProfile],
+    dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
+)
+def list_row_access_profiles(
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.list_row_access_profiles()
+
+
+@rbac_router.get(
+    "/access-profiles/rows/{profile_id}",
+    summary="Get a row access profile",
+    response_model=OutputRowAccessProfile,
+    dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
+)
+def get_row_access_profile(
+    profile_id: UUID,
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    profile = rbac.get_row_access_profile(profile_id)
+    if not profile:
+        raise NotFoundError(f"RowAccessProfile '{profile_id}' not found")
+    return profile
+
+
+@rbac_router.delete(
+    "/access-profiles/rows/{profile_id}",
+    summary="Delete a row access profile",
+    dependencies=[Depends(require_permission(PermStr.POLICY_DELETE))],
+)
+def delete_row_access_profile(
+    profile_id: UUID,
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    rbac.delete_row_access_profile(profile_id)
+    return {"detail": f"RowAccessProfile '{profile_id}' deleted"}
+
+
+# --------------------------------------------------------------------------------------------------
+# List all policies (by resource type + global)
+# --------------------------------------------------------------------------------------------------
+
+
+@rbac_router.get(
+    "/policies/zones",
+    summary="List all zone policies",
+    description="Returns all zone policies regardless of zone.",
+    response_model=list[OutputZonePolicy],
+    dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
+)
+def list_all_zone_policies(
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.list_all_zone_policies()
+
+
+@rbac_router.get(
+    "/policies/channels",
+    summary="List all channel policies",
+    description="Returns all channel policies regardless of channel.",
+    response_model=list[OutputChannelPolicy],
+    dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
+)
+def list_all_channel_policies(
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.list_all_channel_policies()
+
+
+@rbac_router.get(
+    "/policies/rows",
+    summary="List all row policies",
+    description="Returns all row policies regardless of row.",
+    response_model=list[OutputRowPolicy],
+    dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
+)
+def list_all_row_policies(
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.list_all_row_policies()
+
+
+@rbac_router.get(
+    "/policies",
+    summary="List all policies across all resource types",
+    description="Returns a dict with 'zone', 'channel', and 'row' keys containing all policies.",
+    dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
+)
+def list_all_policies(
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.list_all_policies()
+
+
+# --------------------------------------------------------------------------------------------------
+# Row Policy endpoints
+# --------------------------------------------------------------------------------------------------
+
+
+@rbac_router.post(
+    "/policies/rows",
+    summary="Assign a role to a subject for a row",
+    description="Creates a policy that grants a role to a user or group for a specific row.",
+    response_model=dict,
+    dependencies=[Depends(require_permission(PermStr.POLICY_CREATE))],
+)
+def create_row_policy(
+    policy_in: InputRowPolicy,
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.create_row_policy(
+        subject_id=policy_in.subject_id,
+        role_id=policy_in.role_id,
+        row_id=policy_in.row_id,
+    )
+
+
+@rbac_router.get(
+    "/policies/rows/{row_id}",
+    summary="List policies for a row",
+    description="Returns all policies assigned for a specific row.",
+    response_model=list[dict],
+    dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
+)
+def list_row_policies(
+    row_id: UUID,
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.list_row_policies(row_id)
+
+
+@rbac_router.delete(
+    "/policies/rows/{policy_id}",
+    summary="Delete a row policy",
+    description="Removes a row policy by its ID.",
+    dependencies=[Depends(require_permission(PermStr.POLICY_DELETE))],
+)
+def delete_row_policy(
+    policy_id: UUID,
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    rbac.delete_row_policy(policy_id)
+    return {"detail": f"RowPolicy '{policy_id}' deleted"}
