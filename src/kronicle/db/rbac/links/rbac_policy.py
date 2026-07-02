@@ -1,4 +1,4 @@
-# kronicle/db/rbac/models/rbac_policy.py
+# kronicle/db/rbac/links/rbac_policy.py
 from __future__ import annotations
 
 from datetime import datetime

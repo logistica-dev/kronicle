@@ -6,7 +6,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from kronicle.db.core.models.core_zone import CoreZone
-from kronicle.db.rbac.models.rbac_policy import ZonePolicy
+from kronicle.db.rbac.links.rbac_policy import ZonePolicy
 from kronicle.db.rbac.models.rbac_role import RbacRole
 
 

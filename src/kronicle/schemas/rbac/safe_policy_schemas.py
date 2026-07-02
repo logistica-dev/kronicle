@@ -6,7 +6,7 @@ from uuid import UUID
 from pydantic import BaseModel
 
 from kronicle.db.rbac.links.rbac_access_profile import ChannelAccessProfile, ZoneAccessProfile
-from kronicle.db.rbac.models.rbac_policy import ChannelPolicy, ZonePolicy
+from kronicle.db.rbac.links.rbac_policy import ChannelPolicy, ZonePolicy
 
 
 class OutputPolicy(BaseModel):

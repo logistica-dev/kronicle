@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from kronicle.db.rbac.links.rbac_access_profile import ZoneAccessProfile
-from kronicle.db.rbac.models.rbac_policy import ZonePolicy
+from kronicle.db.rbac.links.rbac_policy import ZonePolicy
 from kronicle.db.rbac.models.rbac_role import RbacRole
 from kronicle.repo.kronicle_repo import KronicleRepository
 
