@@ -168,16 +168,16 @@ class TestUpdateUser:
 class TestUpdatePasswordHash:
     def test_updates_hash_when_user_found(self, repo, mock_db):
         user = make_user()
-        mock_db.get.return_value = user
+        repo.get_by_id = MagicMock(return_value=user)
         new_hash = "new-hash-value"
 
         repo.update_password_hash(mock_db, user_id=user.id, new_hash=new_hash)
 
         assert user.password_hash == new_hash
-        mock_db.get.assert_called_once_with(RbacUser, user.id)
+        repo.get_by_id.assert_called_once_with(mock_db, id=user.id)
 
     def test_raises_not_found_when_user_missing(self, repo, mock_db):
-        mock_db.get.return_value = None
+        repo.get_by_id = MagicMock(return_value=None)
 
         with pytest.raises(NotFoundError, match="User not found"):
             repo.update_password_hash(mock_db, user_id=uuid4(), new_hash="hash")

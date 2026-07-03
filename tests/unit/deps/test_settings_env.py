@@ -105,6 +105,7 @@ def test_db_settings(monkeypatch):
     val = base64.urlsafe_b64encode(b"chan:pass").decode()
     monkeypatch.setenv(se.CHAN_CREDS, val)
     monkeypatch.setenv(se.RBAC_CREDS, val)
+    monkeypatch.setenv(se.DBSU_CREDS, val)
     chan = se.ChanDbCreds.from_env()
     rbac = se.RbacDbCreds.from_env()
     dbsu = se.DbSuCreds.from_env()

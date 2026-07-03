@@ -30,6 +30,7 @@ from kronicle.repo.hierarchy.hierarchy_service import HierarchyService
 from kronicle.repo.rbac.entities.channel_policy_repo import ChannelPolicyRepository
 from kronicle.repo.rbac.entities.rbac_group_repo import RbacGroupRepository
 from kronicle.repo.rbac.entities.rbac_role_repo import RbacRoleRepository
+from kronicle.repo.rbac.entities.rbac_subject_repo import RbacSubjectRepository
 from kronicle.repo.rbac.entities.rbac_user_repo import RbacUserRepository
 from kronicle.repo.rbac.entities.row_policy_repo import RowPolicyRepository
 from kronicle.repo.rbac.entities.zone_policy_repo import ZonePolicyRepository
@@ -53,7 +54,6 @@ from kronicle.schemas.rbac.safe_policy_schemas import (
 from kronicle.schemas.rbac.safe_role_schemas import OutputRole
 from kronicle.schemas.rbac.safe_user_schemas import OutputUser, ProcessedUser
 from kronicle.utils.dev_logs import log_d, log_i, log_w
-from kronicle.utils.str_utils import uuid_to_str
 
 
 def log_service_error(method):
@@ -92,6 +92,7 @@ class RbacService:
         self._user_repo = RbacUserRepository()
         self._group_repo = RbacGroupRepository()
         self._role_repo = RbacRoleRepository()
+        self._subject_repo = RbacSubjectRepository()
 
         # Core objects
         self._channel_repo = CoreChannelRepository()
@@ -493,13 +494,13 @@ class RbacService:
     # ----------------------------------------------------------------------------------------------
     # Policies
     # ----------------------------------------------------------------------------------------------
-    def _ensure_subject(self, db: Session, subject_id: UUID) -> None:
+    def _ensure_subject(self, db: Session, subject_id: UUID) -> RbacSubject:
         """Ensure an RbacSubject entry exists for a user or group ID."""
 
-        existing = db.get(RbacSubject, subject_id)
+        existing: RbacSubject | None = self._subject_repo.get_by_id(db, id=subject_id)
         if existing:
-            return
-        # Determine if it's a user or group
+            return existing
+
         user: RbacUser | None = self._user_repo.get_by_id(db, id=subject_id, include_inactive=True)
         if user:
             if not user.is_active:
@@ -507,17 +508,11 @@ class RbacService:
                     message=f"User '{user.id}' is inactive and cannot be used as a subject of a policy.",
                     details={"user_id": user.id, "user_name": user.name},
                 )
-            subject = RbacSubject(id=subject_id, type="user")
-            db.add(subject)
-            db.flush()
-            return
+            return self._subject_repo.ensure_from_user(db, user=user)
 
         group = self._group_repo.get_by_id(db, id=subject_id)
         if group:
-            subject = RbacSubject(id=subject_id, type="group")
-            db.add(subject)
-            db.flush()
-            return
+            return self._subject_repo.ensure_from_group(db, group=group)
 
         raise NotFoundError(f"Subject '{subject_id}' not found as user or group")
 
@@ -536,7 +531,9 @@ class RbacService:
         if not zone:
             raise NotFoundError(f"Zone '{zone_id}' not found")
 
-        return self._zone_access_profile_repo.create(db, role_id=role_id, zone_id=zone_id)
+        return self._zone_access_profile_repo.create(
+            db, role_id=role_id, zone_id=zone_id, name=f"Zone {zone.name} {role.name} access"
+        )
 
     def _ensure_channel_access_profile(self, db: Session, *, role_id: UUID, channel_id: UUID) -> ChannelAccessProfile:
         """Find or create a ChannelAccessProfile for the given role and channel. Returns its ID."""
@@ -553,7 +550,9 @@ class RbacService:
         if not channel:
             raise NotFoundError(f"CoreChannel '{channel_id}' not found")
 
-        profile = self._channel_access_profile_repo.create(db, role_id=role_id, channel_id=channel_id)
+        profile = self._channel_access_profile_repo.create(
+            db, role_id=role_id, channel_id=channel_id, name=f"Channel {channel.name} {role.name} access"
+        )
         return profile
 
     def _ensure_row_access_profile(self, db: Session, *, role_id: UUID, row_id: UUID) -> RowAccessProfile:
@@ -570,7 +569,9 @@ class RbacService:
         if not row:
             raise NotFoundError(f"CoreRow '{row_id}' not found")
 
-        return self._row_access_profile_repo.create(db, role_id=role_id, row_id=row_id)
+        return self._row_access_profile_repo.create(
+            db, role_id=role_id, row_id=row_id, name=f"Row {row.id} {role.name} access"
+        )
 
     # ----------------------------------------------------------------------------------------------
     # Access Profiles
@@ -595,13 +596,14 @@ class RbacService:
             p = self._zone_access_profile_repo.get_by_id(db, id=profile_id)
             return OutputZoneAccessProfile.from_db(p) if p else None
 
-    def delete_zone_access_profile(self, profile_id: UUID) -> None:
+    def delete_zone_access_profile(self, profile_id: UUID) -> OutputZoneAccessProfile:
         with self._db.transaction() as db:
-            p = self._zone_access_profile_repo.get_by_id(db, id=profile_id)
-            if not p:
+            profile = self._zone_access_profile_repo.get_by_id(db, id=profile_id)
+            if not profile:
                 raise NotFoundError(f"ZoneAccessProfile '{profile_id}' not found")
-            db.delete(p)
+            db.delete(profile)
             db.flush()
+            return OutputZoneAccessProfile.from_db(profile)
 
     def create_channel_access_profile(
         self, *, role_id: UUID, channel_id: UUID, description: str | None = None
@@ -619,16 +621,17 @@ class RbacService:
 
     def get_channel_access_profile(self, profile_id: UUID) -> OutputChannelAccessProfile | None:
         with self._db.get_db() as db:
-            p = self._channel_access_profile_repo.get_by_id(db, id=profile_id)
-            return OutputChannelAccessProfile.from_db(p) if p else None
+            profile = self._channel_access_profile_repo.get_by_id(db, id=profile_id)
+            return OutputChannelAccessProfile.from_db(profile) if profile else None
 
-    def delete_channel_access_profile(self, profile_id: UUID) -> None:
+    def delete_channel_access_profile(self, profile_id: UUID) -> OutputChannelAccessProfile:
         with self._db.transaction() as db:
-            p = self._channel_access_profile_repo.get_by_id(db, id=profile_id)
-            if not p:
+            profile = self._channel_access_profile_repo.get_by_id(db, id=profile_id)
+            if not profile:
                 raise NotFoundError(f"ChannelAccessProfile '{profile_id}' not found")
-            db.delete(p)
+            db.delete(profile)
             db.flush()
+            return OutputChannelAccessProfile.from_db(profile)
 
     def create_row_access_profile(
         self, *, role_id: UUID, row_id: UUID, description: str | None = None
@@ -646,18 +649,23 @@ class RbacService:
 
     def get_row_access_profile(self, profile_id: UUID) -> OutputRowAccessProfile | None:
         with self._db.get_db() as db:
-            p = self._row_access_profile_repo.get_by_id(db, id=profile_id)
-            return OutputRowAccessProfile.from_db(p) if p else None
+            profile = self._row_access_profile_repo.get_by_id(db, id=profile_id)
+            return OutputRowAccessProfile.from_db(profile) if profile else None
 
-    def delete_row_access_profile(self, profile_id: UUID) -> None:
+    def delete_row_access_profile(self, profile_id: UUID) -> OutputRowAccessProfile:
         with self._db.transaction() as db:
-            p = self._row_access_profile_repo.get_by_id(db, id=profile_id)
-            if not p:
+            profile = self._row_access_profile_repo.get_by_id(db, id=profile_id)
+            if not profile:
                 raise NotFoundError(f"RowAccessProfile '{profile_id}' not found")
-            db.delete(p)
+            db.delete(profile)
             db.flush()
+            return OutputRowAccessProfile.from_db(profile)
 
-    def create_zone_policy(self, subject_id: UUID, role_id: UUID, zone_id: UUID) -> dict:
+    # ----------------------------------------------------------------------------------------------
+    # Policies: Zone level
+    # ----------------------------------------------------------------------------------------------
+
+    def create_zone_policy(self, subject_id: UUID, role_id: UUID, zone_id: UUID) -> OutputZonePolicy:
         """Assign a role to a subject (user or group) for a specific zone."""
         here = "create_zone_policy"
         log_d(here, subject_id, role_id, zone_id)
@@ -669,28 +677,45 @@ class RbacService:
                 raise NotFoundError(f"Role '{role_id}' not found")
 
             # Ensure subject exists in rbac.subjects
-            self._ensure_subject(db, subject_id)
+            subject = self._ensure_subject(db, subject_id)
 
             # Find or create the ZoneAccessProfile
-            access_profile_id = self._ensure_zone_access_profile(db, role_id=role_id, zone_id=zone_id)
+            access_profile: ZoneAccessProfile = self._ensure_zone_access_profile(db, role_id=role_id, zone_id=zone_id)
 
             # Create the policy
-            policy = ZonePolicy(subject_id=subject_id, access_profile_id=access_profile_id)
+            policy = ZonePolicy(
+                subject_id=subject_id,
+                access_profile_id=access_profile.id,
+                name=f"{access_profile.name} for {subject.name}",
+            )
 
             db.add(policy)
             db.flush()
             db.refresh(policy)
+            return OutputZonePolicy.from_db(policy)
 
-        return {
-            "id": uuid_to_str(policy.id),
-            "subject_id": uuid_to_str(subject_id),
-            "role_id": uuid_to_str(role_id),
-            "role_name": role.name,
-            "zone_id": uuid_to_str(zone_id),
-            "is_delegation": policy.is_delegation,
-        }
+    def list_zone_policies(self, zone_id: UUID) -> list[OutputZonePolicy]:
+        """List all policies for a zone."""
+        with self._db.get_db() as db:
+            policies = self._zone_policy_repo.get_policies_for_zone(db, zone_id=zone_id)
+            return [OutputZonePolicy.from_db(p) for p in policies]
 
-    def create_channel_policy(self, subject_id: UUID, role_id: UUID, channel_id: UUID) -> dict:
+    def delete_zone_policy(self, policy_id: UUID) -> OutputZonePolicy:
+        """Delete a zone policy by ID."""
+
+        with self._db.transaction() as db:
+            policy = self._zone_policy_repo.get_by_id(db, id=policy_id)
+            if not policy:
+                raise NotFoundError(f"ZonePolicy '{policy_id}' not found")
+            db.delete(policy)
+            db.flush()
+            return OutputZonePolicy.from_db(policy)
+
+    # ----------------------------------------------------------------------------------------------
+    # Policies: Channel level
+    # ----------------------------------------------------------------------------------------------
+
+    def create_channel_policy(self, subject_id: UUID, role_id: UUID, channel_id: UUID) -> OutputChannelPolicy:
         """Assign a role to a subject (user or group) for a specific channel."""
         here = "create_channel_policy"
         log_d(here, subject_id, role_id, channel_id)
@@ -702,7 +727,7 @@ class RbacService:
                 raise NotFoundError(f"Role '{role_id}' not found")
 
             # Ensure subject exists
-            self._ensure_subject(db, subject_id)
+            subject = self._ensure_subject(db, subject_id)
 
             # Find or create the ChannelAccessProfile
             access_profile = self._ensure_channel_access_profile(db, role_id=role_id, channel_id=channel_id)
@@ -711,72 +736,21 @@ class RbacService:
             policy = ChannelPolicy(
                 subject_id=subject_id,
                 access_profile_id=access_profile.id,
+                name=f"{access_profile.name} for {subject.name}",
             )
             db.add(policy)
             db.flush()
             db.refresh(policy)
+            return OutputChannelPolicy.from_db(policy)
 
-        return {
-            "id": uuid_to_str(policy.id),
-            "subject_id": uuid_to_str(subject_id),
-            "role_id": uuid_to_str(role_id),
-            "role_name": role.name,
-            "channel_id": uuid_to_str(channel_id),
-            "is_delegation": policy.is_delegation,
-        }
-
-    def list_zone_policies(self, zone_id: UUID) -> list[dict]:
-        """List all policies for a zone."""
-        with self._db.get_db() as db:
-            policies = self._zone_policy_repo.get_policies_for_zone(db, zone_id=zone_id)
-            results = []
-            for p in policies:
-                profile = self._zone_access_profile_repo.get_by_id(db, id=p.access_profile_id)
-                role = self._role_repo.get_by_id(db, id=profile.role_id) if profile else None
-                results.append(
-                    {
-                        "id": uuid_to_str(p.id),
-                        "subject_id": uuid_to_str(p.subject_id),
-                        "role_id": uuid_to_str(profile.role_id) if profile else None,
-                        "role_name": role.name if role else None,
-                        "zone_id": uuid_to_str(zone_id),
-                        "is_delegation": p.is_delegation,
-                    }
-                )
-            return results
-
-    def list_channel_policies(self, channel_id: UUID) -> list[dict]:
+    def list_channel_policies(self, channel_id: UUID) -> list[OutputChannelPolicy]:
         """List all policies for a channel."""
 
         with self._db.get_db() as db:
             policies = self._channel_policy_repo.get_policies_for_channel(db, channel_id=channel_id)
-            results = []
-            for p in policies:
-                profile = self._channel_access_profile_repo.get_by_id(db, id=p.access_profile_id)
-                role = self._role_repo.get_by_id(db, id=profile.role_id) if profile else None
-                results.append(
-                    {
-                        "id": uuid_to_str(p.id),
-                        "subject_id": uuid_to_str(p.subject_id),
-                        "role_id": uuid_to_str(profile.role_id) if profile else None,
-                        "role_name": role.name if role else None,
-                        "channel_id": uuid_to_str(channel_id),
-                        "is_delegation": p.is_delegation,
-                    }
-                )
-            return results
+            return [OutputChannelPolicy.from_db(p) for p in policies]
 
-    def delete_zone_policy(self, policy_id: UUID) -> None:
-        """Delete a zone policy by ID."""
-
-        with self._db.transaction() as db:
-            policy = self._zone_policy_repo.get_by_id(db, id=policy_id)
-            if not policy:
-                raise NotFoundError(f"ZonePolicy '{policy_id}' not found")
-            db.delete(policy)
-            db.flush()
-
-    def delete_channel_policy(self, policy_id: UUID) -> None:
+    def delete_channel_policy(self, policy_id: UUID) -> OutputChannelPolicy:
         """Delete a channel policy by ID."""
 
         with self._db.transaction() as db:
@@ -785,12 +759,13 @@ class RbacService:
                 raise NotFoundError(f"ChannelPolicy '{policy_id}' not found")
             db.delete(policy)
             db.flush()
+            return OutputChannelPolicy.from_db(policy)
 
     # ----------------------------------------------------------------------------------------------
-    # Row Policies
+    # Policies: Row level
     # ----------------------------------------------------------------------------------------------
 
-    def create_row_policy(self, subject_id: UUID, role_id: UUID, row_id: UUID) -> dict:
+    def create_row_policy(self, subject_id: UUID, role_id: UUID, row_id: UUID) -> OutputRowPolicy:
         """Assign a role to a subject (user or group) for a specific row."""
         # here = "create_row_policy"
 
@@ -810,37 +785,15 @@ class RbacService:
             db.add(policy)
             db.flush()
             db.refresh(policy)
+            return OutputRowPolicy.from_db(policy)
 
-        return {
-            "id": uuid_to_str(policy.id),
-            "subject_id": uuid_to_str(subject_id),
-            "role_id": uuid_to_str(role_id),
-            "role_name": role.name,
-            "row_id": uuid_to_str(row_id),
-            "is_delegation": policy.is_delegation,
-        }
-
-    def list_row_policies(self, row_id: UUID) -> list[dict]:
+    def list_row_policies(self, row_id: UUID) -> list[OutputRowPolicy]:
         """List all policies for a row."""
         with self._db.get_db() as db:
             policies = self._row_policy_repo.get_policies_for_row(db, row_id=row_id)
-            results = []
-            for p in policies:
-                profile = self._row_access_profile_repo.get_by_id(db, id=p.access_profile_id)
-                role = self._role_repo.get_by_id(db, id=profile.role_id) if profile else None
-                results.append(
-                    {
-                        "id": uuid_to_str(p.id),
-                        "subject_id": uuid_to_str(p.subject_id),
-                        "role_id": uuid_to_str(profile.role_id) if profile else None,
-                        "role_name": role.name if role else None,
-                        "row_id": uuid_to_str(row_id),
-                        "is_delegation": p.is_delegation,
-                    }
-                )
-            return results
+            return [OutputRowPolicy.from_db(p) for p in policies]
 
-    def delete_row_policy(self, policy_id: UUID) -> None:
+    def delete_row_policy(self, policy_id: UUID) -> OutputRowPolicy:
         """Delete a row policy by ID."""
         with self._db.transaction() as db:
             policy = self._row_policy_repo.get_by_id(db, id=policy_id)
@@ -848,6 +801,7 @@ class RbacService:
                 raise NotFoundError(f"RowPolicy '{policy_id}' not found")
             db.delete(policy)
             db.flush()
+            return OutputRowPolicy.from_db(policy)
 
     # ----------------------------------------------------------------------------------------------
     # List all policies (by type)
@@ -963,7 +917,7 @@ class RbacService:
 
             db.delete(group)
             db.flush()
-        return OutputGroup.from_db_group(group)
+            return OutputGroup.from_db_group(group)
 
     def add_user_to_group(self, user_id: UUID, group_id: UUID) -> None:
         here = "add_user_to_group"

@@ -17,8 +17,8 @@ class RowAccessProfileRepository(KronicleRepository[RowAccessProfile]):
         return db.execute(stmt).scalar_one_or_none()
 
     @log_repo_error
-    def create(self, db: Session, *, role_id: UUID, row_id: UUID) -> RowAccessProfile:
-        profile = RowAccessProfile(role_id=role_id, row_id=row_id)
+    def create(self, db: Session, *, role_id: UUID, row_id: UUID, name: str | None = None) -> RowAccessProfile:
+        profile = RowAccessProfile(role_id=role_id, row_id=row_id, name=name)
         db.add(profile)
         db.flush()
         return profile

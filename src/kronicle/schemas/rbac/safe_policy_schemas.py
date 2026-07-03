@@ -11,6 +11,7 @@ from kronicle.db.rbac.links.rbac_policy import ChannelPolicy, RowPolicy, ZonePol
 
 class OutputPolicy(BaseModel):
     id: UUID
+    name: str | None = None
     subject_id: UUID
     role_id: UUID
     role_name: str | None = None
@@ -26,11 +27,12 @@ class OutputZonePolicy(OutputPolicy):
         profile = policy.access_profile
         return cls(
             id=policy.id,
+            name=policy.name,
             subject_id=policy.subject_id,
             role_id=profile.role_id,
-            role_name=profile.role.name if profile.role else None,
+            role_name=profile.role.name,
             zone_id=profile.zone_id,
-            zone_name=profile.zone.name if profile.zone else None,
+            zone_name=profile.zone.name,
             is_delegation=policy.is_delegation,
         )
 
@@ -44,17 +46,38 @@ class OutputChannelPolicy(OutputPolicy):
         profile = policy.access_profile
         return cls(
             id=policy.id,
+            name=policy.name,
             subject_id=policy.subject_id,
             role_id=profile.role_id,
-            role_name=profile.role.name if profile.role else None,
+            role_name=profile.role.name,
             channel_id=profile.channel_id,
             channel_name=profile.channel.name if profile.channel else None,
             is_delegation=policy.is_delegation,
         )
 
 
+class OutputRowPolicy(OutputPolicy):
+    row_id: UUID
+    row_name: str | None = None
+
+    @classmethod
+    def from_db(cls, policy: RowPolicy):
+        profile = policy.access_profile
+        return cls(
+            id=policy.id,
+            name=policy.name,
+            subject_id=policy.subject_id,
+            role_id=profile.role_id,
+            role_name=profile.role.name,
+            row_id=profile.row_id,
+            row_name=profile.row.name if profile.row else None,
+            is_delegation=policy.is_delegation,
+        )
+
+
 class OutputAccessProfile(BaseModel):
     id: UUID
+    name: str | None = None
     role_id: UUID
     role_name: str | None = None
     description: str | None = None
@@ -68,10 +91,11 @@ class OutputZoneAccessProfile(OutputAccessProfile):
     def from_db(cls, profile: ZoneAccessProfile):
         return cls(
             id=profile.id,
+            name=profile.name,
             role_id=profile.role_id,
-            role_name=profile.role.name if profile.role else None,
+            role_name=profile.role.name,
             zone_id=profile.zone_id,
-            zone_name=profile.zone.name if profile.zone else None,
+            zone_name=profile.zone.name,
             description=profile.description,
         )
 
@@ -84,29 +108,12 @@ class OutputChannelAccessProfile(OutputAccessProfile):
     def from_db(cls, profile: ChannelAccessProfile):
         return cls(
             id=profile.id,
+            name=profile.name,
             role_id=profile.role_id,
-            role_name=profile.role.name if profile.role else None,
+            role_name=profile.role.name,
             channel_id=profile.channel_id,
-            channel_name=profile.channel.name if profile.channel else None,
+            channel_name=profile.channel.name,
             description=profile.description,
-        )
-
-
-class OutputRowPolicy(OutputPolicy):
-    row_id: UUID
-    row_name: str | None = None
-
-    @classmethod
-    def from_db(cls, policy: RowPolicy):
-        profile = policy.access_profile
-        return cls(
-            id=policy.id,
-            subject_id=policy.subject_id,
-            role_id=profile.role_id,
-            role_name=profile.role.name if profile.role else None,
-            row_id=profile.row_id,
-            row_name=profile.row.name if profile.row else None,
-            is_delegation=policy.is_delegation,
         )
 
 
@@ -118,9 +125,10 @@ class OutputRowAccessProfile(OutputAccessProfile):
     def from_db(cls, profile: RowAccessProfile):
         return cls(
             id=profile.id,
+            name=profile.name,
             role_id=profile.role_id,
-            role_name=profile.role.name if profile.role else None,
+            role_name=profile.role.name,
             row_id=profile.row_id,
-            row_name=profile.row.name if profile.row else None,
+            row_name=profile.row.name,
             description=profile.description,
         )

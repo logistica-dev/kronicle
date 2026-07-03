@@ -17,8 +17,8 @@ class ChannelAccessProfileRepository(KronicleRepository[ChannelAccessProfile]):
         return db.execute(stmt).scalar_one_or_none()
 
     @log_repo_error
-    def create(self, db: Session, *, role_id: UUID, channel_id: UUID) -> ChannelAccessProfile:
-        profile = ChannelAccessProfile(role_id=role_id, channel_id=channel_id)
+    def create(self, db: Session, *, role_id: UUID, channel_id: UUID, name: str | None = None) -> ChannelAccessProfile:
+        profile = ChannelAccessProfile(role_id=role_id, channel_id=channel_id, name=name)
         db.add(profile)
         db.flush()
         return profile

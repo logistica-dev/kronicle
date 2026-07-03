@@ -323,7 +323,10 @@ class SchemaDiffEngine:
         self._diff_primary_key(result, schema, target_table, db_table, table)
 
         for col_name in sorted(missing_columns):
-            col_def = metadata_columns[col_name]
+            col_def = metadata_columns[col_name].copy()
+            # Strip unique=True from the column copy – the constraint is emitted
+            # separately as AddUniqueConstraintOp with the correct explicit name.
+            col_def.unique = False
             op_cls = (
                 AddNonNullableColumnOp
                 if col_def.nullable is False and col_def.server_default is None and col_def.default is None
@@ -334,7 +337,7 @@ class SchemaDiffEngine:
                     schema=schema,
                     table=target_table,
                     column_name=col_name,
-                    column_def=col_def.copy(),
+                    column_def=col_def,
                 )
             )
 

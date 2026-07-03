@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Kronicle",
-    "summary": "FastAPI-powered TimescaleDB microservice for storing time-series measurements",
-    "version": "0.0.1"
+    "title": "TestApp",
+    "summary": "desc",
+    "version": "1.0"
   },
   "paths": {
     "/health/live": {
@@ -5506,7 +5506,7 @@
         "title": "InputPayload",
         "description": "User-provided payload for a channel.\nThe 'channel_schema' field is a dict of column_name -> type string.",
         "example": {
-          "channel_id": "1fa48361-3006-4d1c-89c7-e521e86373ca",
+          "channel_id": "9431a914-358d-4c58-9c30-4ff970a8394d",
           "channel_schema": {
             "humidity": "float",
             "temperature": "float",
@@ -5515,7 +5515,7 @@
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-42b6e",
+          "name": "thermo-1d52c",
           "rows": [
             {
               "humidity": 55.1,
@@ -5947,6 +5947,17 @@
             "format": "uuid",
             "title": "Id"
           },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
           "role_id": {
             "type": "string",
             "format": "uuid",
@@ -6005,6 +6016,17 @@
             "type": "string",
             "format": "uuid",
             "title": "Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
           },
           "subject_id": {
             "type": "string",
@@ -6197,6 +6219,17 @@
             "format": "uuid",
             "title": "Id"
           },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
           "role_id": {
             "type": "string",
             "format": "uuid",
@@ -6255,6 +6288,17 @@
             "type": "string",
             "format": "uuid",
             "title": "Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
           },
           "subject_id": {
             "type": "string",
@@ -6419,6 +6463,17 @@
             "format": "uuid",
             "title": "Id"
           },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
           "role_id": {
             "type": "string",
             "format": "uuid",
@@ -6477,6 +6532,17 @@
             "type": "string",
             "format": "uuid",
             "title": "Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
           },
           "subject_id": {
             "type": "string",

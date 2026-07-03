@@ -9,6 +9,7 @@ from sqlalchemy import DateTime, func, inspect, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, declarative_base, mapped_column
+from sqlalchemy.types import String
 
 from kronicle.utils.dev_logs import log_block, log_e, log_w
 
@@ -50,6 +51,9 @@ class KronicleBase(Base):
         default=uuid4,
         server_default=text("gen_random_uuid()"),
     )
+
+    # Optional name
+    name: Mapped[str] = mapped_column(String(100), unique=True, nullable=True)
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(

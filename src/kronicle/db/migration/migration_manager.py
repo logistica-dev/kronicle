@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 from alembic.config import Config
 from alembic.migration import MigrationContext
 from alembic.operations import Operations
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, inspect, select, text
 
 from kronicle.db.base.kronicle_base import Base
 from kronicle.db.core.models.core_entity import CoreEntity
@@ -151,7 +151,7 @@ class MigrationManager:
     def __init__(
         self,
         db_url: str,
-        dbsu_url: str | None,
+        dbsu_url: str | None = None,
         alembic_cfg_path: str = "alembic.ini",
         *,
         auto_approve: bool = False,
@@ -203,6 +203,23 @@ class MigrationManager:
     # PRE-MIGRATION CHECK
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _sync_tracking_table(conn, model_cls: type) -> None:
+        """Add any columns the model declares but the DB table is missing."""
+        schema_name = model_cls.__table__.schema
+        table_name = model_cls.__tablename__
+        inspector = inspect(conn)
+        actual_cols = {c["name"] for c in inspector.get_columns(table_name, schema=schema_name)}
+        declared_cols = set(model_cls.__table__.columns.keys())
+        missing = declared_cols - actual_cols
+        for col_name in sorted(missing):
+            col = model_cls.__table__.columns[col_name]
+            col_type = col.type.compile(conn.dialect)
+            nullable = "NULL" if col.nullable else "NOT NULL"
+            sql = f'ALTER TABLE {schema_name}.{table_name} ADD COLUMN "{col_name}" {col_type} {nullable}'
+            log_i(mod, f"Syncing tracking table: adding missing column {schema_name}.{table_name}.{col_name}")
+            conn.execute(text(sql))
+
     def _compute_db_hash(self, conn, schema: str) -> str:
         builder = DatabaseCatalogBuilder(conn)
         return builder.from_database(schema).compute_hash()
@@ -222,9 +239,11 @@ class MigrationManager:
             state_cls = _SCHEMA_STATE[schema]
             history_cls = _SCHEMA_HISTORY[schema]
 
-            # Ensure tracking tables exist
+            # Ensure tracking tables exist and match the model
             state_cls.ensure_table(conn)
+            self._sync_tracking_table(conn, state_cls)
             history_cls.ensure_table(conn)
+            self._sync_tracking_table(conn, history_cls)
 
             # Actual DB hash
             actual_hash = self._compute_db_hash(conn, schema)

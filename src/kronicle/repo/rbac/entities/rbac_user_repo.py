@@ -134,7 +134,7 @@ class RbacUserRepository(KronicleRepository[RbacUser]):
         user_id: UUID,
         new_hash: str,
     ) -> None:
-        user = db.get(RbacUser, user_id)
+        user = self.get_by_id(db, id=user_id)
         if not user:
             raise NotFoundError("User not found")
         user.password_hash = new_hash
