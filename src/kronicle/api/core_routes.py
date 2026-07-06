@@ -11,8 +11,7 @@ from kronicle.deps.rbac_deps import core_service
 from kronicle.errors.error_types import NotFoundError
 from kronicle.schemas.core.input_core_channel_schemas import InputCoreChannel, InputCoreChannelPatch
 from kronicle.schemas.core.input_zone_schemas import InputZone, InputZonePatch
-from kronicle.schemas.core.safe_core_channel_schemas import OutputCoreChannel
-from kronicle.schemas.core.safe_zone_schemas import OutputZone
+from kronicle.schemas.core.safe_ressource_schema import OutputCoreChannel, OutputZone
 from kronicle.schemas.permissions.permission import PermStr
 from kronicle.services.channel_service import ChannelService
 from kronicle.services.core_service import CoreService
@@ -54,7 +53,7 @@ def list_zones(
     if name:
         return core.get_zone_by_name(name)
     zones = core.get_zones()
-    return [OutputZone.from_db_zone(z) for z in zones]
+    return zones
 
 
 @core_router.get(

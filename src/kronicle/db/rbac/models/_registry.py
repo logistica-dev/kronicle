@@ -1,4 +1,4 @@
-# kronicle/db/rbac/models/__init__.py
+# kronicle/db/rbac/models/_registry.py
 from kronicle.db.rbac.links.group_hierarchy import RbacGroupHierarchy
 from kronicle.db.rbac.links.group_roles import RbacGroupRoles
 from kronicle.db.rbac.links.rbac_access_profile import ChannelAccessProfile, RowAccessProfile, ZoneAccessProfile

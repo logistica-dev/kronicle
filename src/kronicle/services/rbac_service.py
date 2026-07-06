@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import functools
-from typing import Any
+from typing import Any, Sequence
 from uuid import UUID
 
 from sqlalchemy import cast, func, select
@@ -44,6 +44,7 @@ from kronicle.schemas.permissions.permission import Permission
 from kronicle.schemas.rbac.input_user_schemas import InputUserLogin
 from kronicle.schemas.rbac.safe_group_schemas import OutputGroup
 from kronicle.schemas.rbac.safe_policy_schemas import (
+    OutputAccessProfile,
     OutputChannelAccessProfile,
     OutputChannelPolicy,
     OutputRowAccessProfile,
@@ -151,34 +152,34 @@ class RbacService:
         Should only be called after login.
         """
         db_user = self._fetch_user_by_login(login_input)
-        return OutputUser.from_db_user(db_user)
+        return OutputUser.from_db(db_user)
 
     def fetch_user_by_email(self, email: str) -> OutputUser | None:
         with self._db.get_db() as db:  # read-only
             db_user = self._user_repo.get_by_email(db, email=email)
-        return OutputUser.from_db_user(db_user) if db_user else None
+            return OutputUser.from_db(db_user) if db_user else None
 
     def fetch_user_by_name(self, name: str) -> OutputUser | None:
         with self._db.get_db() as db:  # read-only
             db_user = self._user_repo.get_by_name(db, name=name)
-        return OutputUser.from_db_user(db_user) if db_user else None
+            return OutputUser.from_db(db_user) if db_user else None
 
     def fetch_user_by_id(self, id: UUID) -> OutputUser | None:
         with self._db.get_db() as db:  # read-only
             db_user = self._user_repo.get_by_id(db, id=id)
-        return OutputUser.from_db_user(db_user) if db_user else None
+            return OutputUser.from_db(db_user) if db_user else None
 
     def fetch_user_by_external_id(self, orcid: str) -> OutputUser | None:
         with self._db.get_db() as db:  # read-only
             db_user = self._user_repo.get_by_external_id(db, external_id=orcid)
-        return OutputUser.from_db_user(db_user) if db_user else None
+            return OutputUser.from_db(db_user) if db_user else None
 
     def list_users(self, *, include_inactive: bool = False) -> list[OutputUser]:
         here = mod + ".list_users"
         log_d(here, "include_inactive", include_inactive)
         with self._db.get_db() as db:  # read-only
             users = self._user_repo.fetch_all(db, include_inactive=include_inactive)
-        return [OutputUser.from_db_user(u) for u in users]
+        return [OutputUser.from_db(u) for u in users]
 
     # ----------------------------------------------------------------------------------------------
     # Write: create user
@@ -196,7 +197,7 @@ class RbacService:
                 raise UnauthorizedError("User already exists")
             log_d(here, rbac_user.name)
             db_user = self._user_repo.create_user(db=db, user=rbac_user)
-        out_user = OutputUser.from_db_user(db_user)
+        out_user = OutputUser.from_db(db_user)
         return out_user
 
     def patch_user(self, user: ProcessedUser) -> OutputUser:
@@ -213,8 +214,8 @@ class RbacService:
             if user.full_name is not None:
                 db_user.full_name = user.full_name
                 updated = True
-            if user.orcid is not None:
-                db_user.external_id = user.orcid
+            if user.external_id is not None:
+                db_user.external_id = user.external_id
                 updated = True
             if updated:
                 try:
@@ -224,7 +225,7 @@ class RbacService:
                     raise UnauthorizedError("Attempting to patch with existing values") from e
 
             db.refresh(db_user)
-        return OutputUser.from_db_user(db_user)
+        return OutputUser.from_db(db_user)
 
     def patch_user_by_id(
         self,
@@ -256,7 +257,7 @@ class RbacService:
                     log_w(here, "IntegrityError", e)
                     raise BadRequestError("Attempting to patch with existing values") from e
             db.refresh(db_user)
-        return OutputUser.from_db_user(db_user)
+        return OutputUser.from_db(db_user)
 
     def update_password_hash(self, user_id: UUID, new_hash: str) -> None:
         with self._db.transaction() as db:
@@ -270,17 +271,17 @@ class RbacService:
         here = "_deact_usr"
         if not db_user:
             raise UnauthorizedError("User doesn't exists")
-        log_i(here, db_user.snapshot)
+        log_i(here, db_user.model_dump)
         db_user.is_active = False
         db.commit()
         db.refresh(db_user)
-        return OutputUser.from_db_user(db_user)
+        return OutputUser.from_db(db_user)
 
     def _delete_user(self, db: Session, db_user: RbacUser | None) -> OutputUser:
         here = "_del_usr"
         if not db_user:
             raise UnauthorizedError("User doesn't exists")
-        log_w(here, db_user.snapshot)
+        log_w(here, db_user.model_dump)
 
         # Clear role and group assignments explicitly — even with ondelete=CASCADE,
         # SQLAlchemy's unitofwork processor tries to NULL PK columns before
@@ -290,7 +291,7 @@ class RbacService:
 
         deleted_user = self._user_repo.delete_user(db, user=db_user)
         db.commit()
-        return OutputUser.from_db_user(deleted_user)
+        return OutputUser.from_db(deleted_user)
 
     def deactivate_user(self, user: ProcessedUser) -> OutputUser:
         with self._db.transaction() as db:
@@ -402,22 +403,22 @@ class RbacService:
                 raise BadRequestError(f"Role '{name}' already exists")
             db.add(role)
             db.flush()
-        return OutputRole.from_db_role(role)
+            return OutputRole.from_db(role)
 
     def get_roles(self) -> list[OutputRole]:
         with self._db.get_db() as db:
             roles = self._role_repo.fetch_all(db)
-        return [OutputRole.from_db_role(r) for r in roles]
+            return [OutputRole.from_db(r) for r in roles]
 
     def get_role(self, role_id: UUID) -> OutputRole | None:
         with self._db.get_db() as db:
             role = self._role_repo.get_by_id(db, id=role_id)
-        return OutputRole.from_db_role(role) if role else None
+            return OutputRole.from_db(role) if role else None
 
     def get_role_by_name(self, name: str) -> OutputRole | None:
         with self._db.get_db() as db:
             role = self._role_repo.get_by_name(db, name=name)
-        return OutputRole.from_db_role(role) if role else None
+            return OutputRole.from_db(role) if role else None
 
     def patch_role(
         self,
@@ -446,7 +447,7 @@ class RbacService:
                 role.details = details
             db.flush()
             db.refresh(role)
-        return OutputRole.from_db_role(role)
+            return OutputRole.from_db(role)
 
     def delete_role(self, role_id: UUID, force: bool = False) -> OutputRole | None:
         here = "delete_role"
@@ -489,7 +490,7 @@ class RbacService:
 
             db.delete(role)
             db.flush()
-        return OutputRole.from_db_role(role)
+            return OutputRole.from_db(role)
 
     # ----------------------------------------------------------------------------------------------
     # Policies
@@ -661,18 +662,25 @@ class RbacService:
             db.flush()
             return OutputRowAccessProfile.from_db(profile)
 
+    def list_access_profiles(self) -> dict[str, Sequence[OutputAccessProfile]]:
+        return {
+            "zone": self.list_zone_access_profiles(),
+            "channel": self.list_channel_access_profiles(),
+            "row": self.list_row_access_profiles(),
+        }
+
     # ----------------------------------------------------------------------------------------------
     # Policies: Zone level
     # ----------------------------------------------------------------------------------------------
 
     def create_zone_policy(self, subject_id: UUID, role_id: UUID, zone_id: UUID) -> OutputZonePolicy:
         """Assign a role to a subject (user or group) for a specific zone."""
-        here = "create_zone_policy"
-        log_d(here, subject_id, role_id, zone_id)
+        # here = "create_zone_policy"
+        # log_d(here, subject_id, role_id, zone_id)
 
         with self._db.transaction() as db:
             # Verify role exists
-            role = self._role_repo.get_by_id(db, id=role_id)
+            role: RbacRole | None = self._role_repo.get_by_id(db, id=role_id)
             if not role:
                 raise NotFoundError(f"Role '{role_id}' not found")
 
@@ -843,22 +851,22 @@ class RbacService:
                 raise BadRequestError(f"Group '{name}' already exists")
             db.add(group)
             db.flush()
-        return OutputGroup.from_db_group(group)
+            return OutputGroup.from_db(group)
 
     def get_groups(self) -> list[OutputGroup]:
         with self._db.get_db() as db:
             groups = self._group_repo.fetch_all(db)
-        return [OutputGroup.from_db_group(g) for g in groups]
+            return [OutputGroup.from_db(g) for g in groups]
 
     def get_group_by_id(self, group_id: UUID) -> OutputGroup | None:
         with self._db.get_db() as db:
             group = self._group_repo.get_by_id(db, id=group_id)
-        return OutputGroup.from_db_group(group) if group else None
+            return OutputGroup.from_db(group) if group else None
 
     def get_group_by_name(self, name: str) -> OutputGroup | None:
         with self._db.get_db() as db:
             group = self._group_repo.get_by_name(db, name=name)
-        return OutputGroup.from_db_group(group) if group else None
+            return OutputGroup.from_db(group) if group else None
 
     def get_users_from_group(self, *, group_id: UUID) -> list[OutputUser]:
         list_users = []
@@ -867,7 +875,7 @@ class RbacService:
             for u_id in user_id_list:
                 usr = self._user_repo.get_by_id(db, id=u_id)
                 if usr:
-                    list_users.append(OutputUser.from_db_user(usr))
+                    list_users.append(OutputUser.from_db(usr))
         return list_users
 
     def patch_group(self, group_id: UUID, name: str | None = None, details: dict | None = None) -> OutputGroup:
@@ -883,7 +891,7 @@ class RbacService:
                 group.details = details
             db.flush()
             db.refresh(group)
-        return OutputGroup.from_db_group(group)
+            return OutputGroup.from_db(group)
 
     @log_service_error
     def delete_group(self, group_id: UUID, force: bool = False) -> OutputGroup | None:
@@ -917,7 +925,7 @@ class RbacService:
 
             db.delete(group)
             db.flush()
-            return OutputGroup.from_db_group(group)
+            return OutputGroup.from_db(group)
 
     def add_user_to_group(self, user_id: UUID, group_id: UUID) -> None:
         here = "add_user_to_group"

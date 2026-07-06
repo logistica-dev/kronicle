@@ -26,6 +26,17 @@ def uuid_to_str(u: UUID | None) -> str | None:
     return u.hex if u else None
 
 
+def serialize(v: Any) -> Any:
+    if isinstance(v, UUID):
+        return uuid_to_str(v)
+    if isinstance(v, (list, dict, set)) and not v:
+        return None
+
+    if isinstance(v, dict):
+        return {k: serialize(v) for k, v in v.items()}
+    return v
+
+
 def tiny_id(n: int | None = 8) -> str:
     if not n or n < 1:
         n = 8

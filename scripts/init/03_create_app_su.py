@@ -8,7 +8,7 @@ Create the Kronicle admin user in the main DB.
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from kronicle.db.rbac.models import RbacUser
+from kronicle.db.rbac.models.rbac_user import RbacUser
 from kronicle.repo.rbac.entities.rbac_user_repo import RbacUserRepository
 from scripts.utils.logger import log_d  # type: ignore
 from scripts.utils.read_conf import KronicleConf  # type: ignore

@@ -15,8 +15,7 @@ from kronicle.repo.hierarchy.hierarchy_engine import HierarchyEngine
 from kronicle.repo.hierarchy.hierarchy_service import HierarchyService
 from kronicle.repo.hierarchy.zone_hierarchy_repo import ZoneHierarchyRepository
 from kronicle.schemas.core.input_core_channel_schemas import InputCoreChannel
-from kronicle.schemas.core.safe_core_channel_schemas import OutputCoreChannel
-from kronicle.schemas.core.safe_zone_schemas import OutputZone
+from kronicle.schemas.core.safe_ressource_schema import OutputCoreChannel, OutputZone
 from kronicle.utils.dev_logs import log_d, log_i, log_w
 
 mod = "core_svc"
@@ -59,17 +58,17 @@ class CoreService:
                 raise BadRequestError(f"Zone '{name}' already exists")
             db.add(zone)
             db.flush()
-        return OutputZone.from_db_zone(zone)
+            return OutputZone.from_db(zone)
 
     def get_zone(self, zone_id: UUID) -> OutputZone | None:
         with self._db.get_db() as db:
             zone = self._zone_repo.get_by_id(db, id=zone_id)
-        return OutputZone.from_db_zone(zone) if zone else None
+            return OutputZone.from_db(zone) if zone else None
 
     def get_zone_by_name(self, name: str) -> OutputZone | None:
         with self._db.get_db() as db:
             zone = self._zone_repo.get_by_name(db, name=name)
-        return OutputZone.from_db_zone(zone) if zone else None
+            return OutputZone.from_db(zone) if zone else None
 
     def delete_zone(self, zone_id: UUID) -> OutputZone | None:
         here = f"{mod}.delete_zone"
@@ -80,7 +79,7 @@ class CoreService:
                 raise NotFoundError(f"Zone '{zone_id}' not found")
             db.delete(zone)
             db.flush()
-        return OutputZone.from_db_zone(zone)
+            return OutputZone.from_db(zone)
 
     def patch_zone(self, zone_id: UUID, name: str | None = None, details: dict | None = None) -> OutputZone:
         here = f"{mod}.patch_zone"
@@ -95,7 +94,7 @@ class CoreService:
                 zone.details = details
             db.flush()
             db.refresh(zone)
-        return OutputZone.from_db_zone(zone)
+            return OutputZone.from_db(zone)
 
     # ----------------------------------------------------------------------------------------------
     # Core Channels
@@ -155,17 +154,17 @@ class CoreService:
                 channels = self._channel_repo.get_by_zone(db, zone_id=zone_id)
             else:
                 channels = self._channel_repo.fetch_all(db)
-        return [OutputCoreChannel.from_db_core_channel(c) for c in channels]
+        return [OutputCoreChannel.from_db(c) for c in channels]
 
     def get_core_channel(self, channel_id: UUID) -> OutputCoreChannel | None:
         with self._db.get_db() as db:
             channel = self._channel_repo.get_by_id(db, id=channel_id)
-        return OutputCoreChannel.from_db_core_channel(channel) if channel else None
+            return OutputCoreChannel.from_db(channel) if channel else None
 
     def get_core_channel_by_name(self, name: str) -> OutputCoreChannel | None:
         with self._db.get_db() as db:
             channel = self._channel_repo.get_by_name(db, name=name)
-        return OutputCoreChannel.from_db_core_channel(channel) if channel else None
+            return OutputCoreChannel.from_db(channel) if channel else None
 
     def create_core_channel(self, channel: InputCoreChannel) -> OutputCoreChannel:
         with self._db.transaction() as db:
@@ -177,7 +176,7 @@ class CoreService:
             )
             db.add(core_channel)
             db.flush()
-        return OutputCoreChannel.from_db_core_channel(core_channel)
+            return OutputCoreChannel.from_db(core_channel)
 
     def ensure_channel_in_zone(self, channel_id: UUID, zone_id: UUID) -> None:
         zone = self.get_zone(zone_id)
@@ -197,7 +196,7 @@ class CoreService:
                 return None
             db.delete(channel)
             db.flush()
-        return OutputCoreChannel.from_db_core_channel(channel)
+            return OutputCoreChannel.from_db(channel)
 
     def patch_core_channel(
         self,
@@ -223,4 +222,4 @@ class CoreService:
                 channel.zone_id = zone_id
             db.flush()
             db.refresh(channel)
-        return OutputCoreChannel.from_db_core_channel(channel)
+            return OutputCoreChannel.from_db(channel)

@@ -12,6 +12,7 @@ from sqlalchemy.orm import Mapped, declarative_base, mapped_column
 from sqlalchemy.types import String
 
 from kronicle.utils.dev_logs import log_block, log_e, log_w
+from kronicle.utils.str_utils import serialize
 
 mod = "kron_table"
 
@@ -75,6 +76,21 @@ class KronicleBase(Base):
         default=dict,  # Python-side default
         server_default=text("'{}'::jsonb"),  # PostgreSQL default
     )
+
+    def model_dump(self, *args, exclude_none=True, **kwargs) -> dict:
+        d = super().model_dump(*args, exclude_none=exclude_none, **kwargs)
+        return {k: serialize(v) if isinstance(v, UUID) else v for k, v in d.items()}
+
+    @property
+    def snapshot(self) -> dict[str, Any]:
+        return self.model_dump()
+
+    def model_dump_json(self, *args, exclude_none=True, **kwargs) -> str:
+        d = super().model_dump(*args, exclude_none=exclude_none, **kwargs)
+        return serialize(d)
+
+    def __str__(self) -> str:
+        return super().model_dump_json(exclude_none=True)
 
     @classmethod
     def ensure_table(cls, conn):

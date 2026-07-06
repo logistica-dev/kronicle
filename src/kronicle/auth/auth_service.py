@@ -63,7 +63,7 @@ class AuthService:
             new_hash = self._pwd_manager.rehash_password(db_user.password_hash, login_input.password)
             self._rbac_service.update_password_hash(db_user.id, new_hash)
 
-        out_user = OutputUser.from_db_user(db_user=db_user)
+        out_user = OutputUser.from_db(db_user=db_user)
         # Return JWT
         return self._jwt_service.create_access_token(out_user)
 
@@ -96,5 +96,5 @@ class AuthService:
         self._rbac_service.update_password_hash(db_user.id, new_hash)
 
         # Return JWT
-        out_user = OutputUser.from_db_user(db_user=db_user)
+        out_user = OutputUser.from_db(db_user=db_user)
         return self._jwt_service.create_access_token(out_user)

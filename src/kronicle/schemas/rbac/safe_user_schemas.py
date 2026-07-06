@@ -31,7 +31,7 @@ class ProcessedUser(BaseModel):
     email: EmailStr
     password_hash: str | None = None  # Hashed password (never store raw passwords!)
     name: str | None = None
-    orcid: str | None = None
+    external_id: str | None = None
     full_name: str | None = None
     details: dict[str, Any] = {"auth_method": "local"}  # Default metadata
     group_name: str | None = None
@@ -54,7 +54,7 @@ class ProcessedUser(BaseModel):
             password_hash=hashed,
             name=data.name,
             full_name=data.full_name,
-            orcid=data.orcid,
+            external_id=data.orcid,
             details=data.details,  # explicitly derived
         )
 
@@ -64,7 +64,7 @@ class ProcessedUser(BaseModel):
             email=self.email,
             name=self.name,
             password_hash=self.password_hash,
-            external_id=self.orcid,
+            external_id=self.external_id,
             full_name=self.full_name,
             is_active=True,
             is_superuser=False,
@@ -97,7 +97,7 @@ class OutputUser(BaseModel):
         self._is_su = True
 
     @classmethod
-    def from_db_user(cls, db_user: RbacUser) -> OutputUser:
+    def from_db(cls, db_user: RbacUser) -> OutputUser:
         """Convert this processed user data into a RbacUser for persistence."""
         # here = "from_db_user"
         # log_d(here, "db_user", db_user)

@@ -3,52 +3,58 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import Field
+
+from kronicle.schemas.input_schema import InputSchema
 
 
-class InputZonePolicy(BaseModel):
+# --------------------------------------------------------------------------------------------------
+# Input Policies
+# --------------------------------------------------------------------------------------------------
+class InputPolicy(InputSchema):
+    subject_id: UUID = Field(..., description="UUID of the user or group")
+    role_id: UUID = Field(..., description="UUID of the role to assign")
+
+
+class InputZonePolicy(InputPolicy):
     """Assign a role to a subject (user or group) for a specific zone."""
 
-    subject_id: UUID = Field(..., description="UUID of the user or group")
-    role_id: UUID = Field(..., description="UUID of the role to assign")
     zone_id: UUID = Field(..., description="UUID of the zone")
 
 
-class InputChannelPolicy(BaseModel):
+class InputChannelPolicy(InputPolicy):
     """Assign a role to a subject (user or group) for a specific channel."""
 
-    subject_id: UUID = Field(..., description="UUID of the user or group")
-    role_id: UUID = Field(..., description="UUID of the role to assign")
     channel_id: UUID = Field(..., description="UUID of the channel")
 
 
-class InputZoneAccessProfile(BaseModel):
-    """Create a scoped role for a zone."""
-
-    role_id: UUID = Field(..., description="UUID of the role")
-    zone_id: UUID = Field(..., description="UUID of the zone")
-    description: str | None = Field(default=None, description="Optional description")
-
-
-class InputChannelAccessProfile(BaseModel):
-    """Create a scoped role for a channel."""
-
-    role_id: UUID = Field(..., description="UUID of the role")
-    channel_id: UUID = Field(..., description="UUID of the channel")
-    description: str | None = Field(default=None, description="Optional description")
-
-
-class InputRowPolicy(BaseModel):
+class InputRowPolicy(InputPolicy):
     """Assign a role to a subject (user or group) for a specific row."""
 
-    subject_id: UUID = Field(..., description="UUID of the user or group")
-    role_id: UUID = Field(..., description="UUID of the role to assign")
     row_id: UUID = Field(..., description="UUID of the row")
 
 
-class InputRowAccessProfile(BaseModel):
+# --------------------------------------------------------------------------------------------------
+# Input Access Profiles
+# --------------------------------------------------------------------------------------------------
+class InputAccessProfile(InputSchema):
+    role_id: UUID = Field(..., description="UUID of the role")
+    description: str | None = Field(default=None, description="Optional description")
+
+
+class InputZoneAccessProfile(InputAccessProfile):
+    """Create a scoped role for a zone."""
+
+    zone_id: UUID = Field(..., description="UUID of the zone")
+
+
+class InputChannelAccessProfile(InputAccessProfile):
+    """Create a scoped role for a channel."""
+
+    channel_id: UUID = Field(..., description="UUID of the channel")
+
+
+class InputRowAccessProfile(InputAccessProfile):
     """Create a scoped role for a row."""
 
-    role_id: UUID = Field(..., description="UUID of the role")
     row_id: UUID = Field(..., description="UUID of the row")
-    description: str | None = Field(default=None, description="Optional description")

@@ -82,8 +82,10 @@ class TestUserRoutes:
 
     def test_list_users_include_inactive(self, mock_rbac):
         mock_rbac.list_users.return_value = []
+        expected = []
         result = list_users(email=None, name=None, orcid=None, include_inactive=True, rbac=mock_rbac)
         mock_rbac.list_users.assert_called_once_with(include_inactive=True)
+        assert result == expected
 
     def test_get_user_by_id(self, mock_rbac, any_uuid):
         expected = {"id": any_uuid, "email": "test@test.com"}

@@ -11,9 +11,9 @@ Idempotent DB bootstrap:
 
 from asyncio import run
 
-from kronicle.db.core.models import CORE_NAMESPACE
-from kronicle.db.data.models import DATA_NAMESPACE
-from kronicle.db.rbac.models import RBAC_NAMESPACE
+from kronicle.db.core.models._registry import CORE_NAMESPACE
+from kronicle.db.data.models._registry import DATA_NAMESPACE
+from kronicle.db.rbac.models._registry import RBAC_NAMESPACE
 from kronicle.utils.str_utils import normalize_pg_identifier
 from scripts.utils.logger import log_d, log_w  # type: ignore
 from scripts.utils.read_conf import KronicleConf, UserCreds  # type: ignore

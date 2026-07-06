@@ -5,7 +5,7 @@ from typing import Any, Callable, Generator
 from sqlalchemy import create_engine, literal, select
 from sqlalchemy.orm import Session, sessionmaker
 
-from kronicle.db.rbac.models import ALL_RBAC_TABLES
+from kronicle.db.rbac.models._registry import ALL_RBAC_TABLES
 from kronicle.utils.dev_logs import log_e
 
 mod = "rbac_db"

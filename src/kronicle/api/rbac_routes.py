@@ -537,6 +537,18 @@ def check_user_group(
 # --------------------------------------------------------------------------------------------------
 
 
+@rbac_router.get(
+    "/access-profiles",
+    summary="List all zone access profiles",
+    response_model=list[OutputZoneAccessProfile],
+    dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
+)
+def list_access_profiles(
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.list_access_profiles()
+
+
 @rbac_router.post(
     "/access-profiles/zones",
     summary="Create a zone access profile",

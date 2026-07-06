@@ -1,13 +1,14 @@
 # kronicle/schemas/rbac/input_user_schemas.py
 from __future__ import annotations
 
-from typing import Annotated, Any
+from typing import Annotated
 
 from email_validator import validate_email
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 from kronicle.auth.pwd.pwd_manager import PasswordManager
 from kronicle.errors.error_types import BadRequestError
+from kronicle.schemas.input_schema import InputSchema
 from kronicle.utils.str_utils import validate_name_syntax
 
 # Username: allowed characters after the first letter
@@ -73,7 +74,7 @@ class InputUserChangePwd(InputUserLogin):
         return self
 
 
-class InputUser(BaseModel):
+class InputUser(InputSchema):
     """
     Represents raw input data for user creation.
     Validates and sanitizes user-provided data before processing.
@@ -83,9 +84,7 @@ class InputUser(BaseModel):
     email: EmailStr  # Validates email format
     password: str | None = None  # Raw password (will be hashed later)
     orcid: str | None = None
-    name: str | None = None  # optional for now
     full_name: str | None = None
-    details: dict[str, Any] = Field(default_factory=dict, description="Optional JSONB metadata")
 
     @field_validator("password")
     def validate_password_syntax(cls, v: str) -> str:

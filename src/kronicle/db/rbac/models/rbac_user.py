@@ -7,7 +7,6 @@ from sqlalchemy import Boolean, Index, String, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from kronicle.db.rbac.models.rbac_entity import RbacEntity
-from kronicle.utils.str_utils import uuid_to_str
 
 
 class RbacUser(RbacEntity):
@@ -28,21 +27,13 @@ class RbacUser(RbacEntity):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"), nullable=False)
     is_superuser: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
 
-    @property
-    def snapshot(self) -> dict[str, Any]:
-        result: dict[str, Any] = {
-            "id": uuid_to_str(self.id),
-            "email": self.email,
-            "name": self.name,
-            "details": self.details,
-        }
-        if self.full_name is not None:
-            result["full_name"] = self.full_name
-        if not self.is_active:
-            result["is_active"] = False
-        if self.is_superuser:
-            result["is_superuser"] = True
-        return result
+    def model_dump(self, *args, exclude_none=True, **kwargs) -> dict[str, Any]:
+        d = super().model_dump(*args, exclude_none=exclude_none, **kwargs)
+        if self.is_active:
+            d.pop("is_active")
+        if not self.is_superuser:
+            d.pop("is_superuser")
+        return d
 
     def __repr__(self) -> str:
         return f"<User {self.email}>"

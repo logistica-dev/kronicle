@@ -12,9 +12,9 @@ import asyncio
 
 from sqlalchemy import create_engine, text
 
-from kronicle.db.core.models import ALL_CORE_TABLES, CORE_NAMESPACE
-from kronicle.db.data.models import ALL_DATA_TABLES, DATA_NAMESPACE
-from kronicle.db.rbac.models import ALL_RBAC_TABLES, RBAC_NAMESPACE
+from kronicle.db.core.models._registry import ALL_CORE_TABLES, CORE_NAMESPACE
+from kronicle.db.data.models._registry import ALL_DATA_TABLES, DATA_NAMESPACE
+from kronicle.db.rbac.models._registry import ALL_RBAC_TABLES, RBAC_NAMESPACE
 from kronicle.utils.str_utils import normalize_pg_identifier
 from scripts.utils.logger import log_d, log_e, log_w  # type: ignore
 from scripts.utils.read_conf import KronicleConf, UserCreds  # type: ignore

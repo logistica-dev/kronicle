@@ -47,7 +47,7 @@ def test_output_user_from_db_user_superuser():
         is_superuser=True,
         details={"auth_method": "local"},
     )
-    out_user = OutputUser.from_db_user(db_user)
+    out_user = OutputUser.from_db(db_user)
     assert out_user.is_su is True
     assert out_user.model_dump()["is_su"] is True
 
@@ -64,6 +64,6 @@ def test_output_user_from_db_user_normal():
         is_superuser=False,
         details={"auth_method": "local"},
     )
-    out_user = OutputUser.from_db_user(db_user)
+    out_user = OutputUser.from_db(db_user)
     assert out_user.is_su is False
     assert "is_su" not in out_user.model_dump()

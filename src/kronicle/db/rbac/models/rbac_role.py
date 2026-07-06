@@ -1,11 +1,9 @@
 # kronicle/db/rbac/models/rbac_role.py
-from typing import Any
 
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from kronicle.db.rbac.models.rbac_entity import RbacEntity
-from kronicle.utils.str_utils import uuid_to_str
 
 
 class RbacRole(RbacEntity):
@@ -25,16 +23,6 @@ class RbacRole(RbacEntity):
     description: Mapped[str] = mapped_column(nullable=True)
     permissions: Mapped[list[str]] = mapped_column(JSONB, default=list, nullable=False)
     restrictions: Mapped[list[str]] = mapped_column(JSONB, default=list, nullable=False)
-
-    @property
-    def snapshot(self) -> dict[str, Any]:
-        return {
-            "id": uuid_to_str(self.id),
-            "name": self.name,
-            "permissions": self.permissions,
-            "restrictions": self.restrictions,
-            "is_global": self.is_global,
-        }
 
     def __repr__(self) -> str:
         return f"<Role {self.name}>"

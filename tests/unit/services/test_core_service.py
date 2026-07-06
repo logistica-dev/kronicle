@@ -11,7 +11,7 @@ from kronicle.errors.error_types import BadRequestError, ConflictError, NotFound
 from kronicle.repo.core.core_channel_repo import CoreChannelRepository
 from kronicle.repo.core.core_zone_repo import CoreZoneRepository
 from kronicle.schemas.core.input_core_channel_schemas import InputCoreChannel
-from kronicle.schemas.core.safe_zone_schemas import OutputZone
+from kronicle.schemas.core.safe_ressource_schema import OutputZone
 from kronicle.services.core_service import CoreService
 
 
@@ -83,7 +83,7 @@ class TestGetZones:
         zones = [make_zone(), make_zone()]
         mock_zone_repo.fetch_all.return_value = zones
 
-        with patch("kronicle.services.core_service.OutputZone.from_db_zone") as mock_from:
+        with patch("kronicle.services.core_service.OutputZone.from_db") as mock_from:
             mock_from.side_effect = lambda z: MagicMock(id=z.id, name=z.name)
             result = service.get_zones()
 
@@ -96,7 +96,7 @@ class TestCreateZone:
     def test_creates_zone_successfully(self, service, mock_db, mock_db_session, mock_zone_repo):
         mock_zone_repo.get_by_name.return_value = None
 
-        with patch("kronicle.services.core_service.OutputZone.from_db_zone") as mock_from:
+        with patch("kronicle.services.core_service.OutputZone.from_db") as mock_from:
             mock_from.return_value = MagicMock(spec=OutputZone)
             result = service.create_zone("new-zone", {"key": "val"})
 
@@ -117,7 +117,7 @@ class TestGetZone:
         zone = make_zone()
         mock_zone_repo.get_by_id.return_value = zone
 
-        with patch("kronicle.services.core_service.OutputZone.from_db_zone") as mock_from:
+        with patch("kronicle.services.core_service.OutputZone.from_db") as mock_from:
             mock_from.return_value = MagicMock(spec=OutputZone, id=zone.id)
             result = service.get_zone(zone.id)
 
@@ -135,7 +135,7 @@ class TestDeleteZone:
         zone = make_zone()
         mock_zone_repo.get_by_id.return_value = zone
 
-        with patch("kronicle.services.core_service.OutputZone.from_db_zone") as mock_from:
+        with patch("kronicle.services.core_service.OutputZone.from_db") as mock_from:
             mock_from.return_value = MagicMock(spec=OutputZone, id=zone.id)
             result = service.delete_zone(zone.id)
 
@@ -154,7 +154,7 @@ class TestPatchZone:
         zone = make_zone(name="old-name")
         mock_zone_repo.get_by_id.return_value = zone
 
-        with patch("kronicle.services.core_service.OutputZone.from_db_zone") as mock_from:
+        with patch("kronicle.services.core_service.OutputZone.from_db") as mock_from:
             mock_from.return_value = MagicMock(spec=OutputZone)
             result = service.patch_zone(zone.id, name="new-name")
 
@@ -167,7 +167,7 @@ class TestPatchZone:
         zone = make_zone(details={"old": "val"})
         mock_zone_repo.get_by_id.return_value = zone
 
-        with patch("kronicle.services.core_service.OutputZone.from_db_zone") as mock_from:
+        with patch("kronicle.services.core_service.OutputZone.from_db") as mock_from:
             mock_from.return_value = MagicMock(spec=OutputZone)
             result = service.patch_zone(zone.id, details={"new": "val"})
 
@@ -256,7 +256,7 @@ class TestGetCoreChannels:
         channels = [make_channel(), make_channel()]
         mock_channel_repo.fetch_all.return_value = channels
 
-        with patch("kronicle.services.core_service.OutputCoreChannel.from_db_core_channel") as mock_from:
+        with patch("kronicle.services.core_service.OutputCoreChannel.from_db") as mock_from:
             mock_from.side_effect = lambda c: MagicMock(id=c.id)
             result = service.get_core_channels()
 
@@ -269,7 +269,7 @@ class TestGetCoreChannels:
         channels = [make_channel(zone_id=zone_id)]
         mock_channel_repo.get_by_zone.return_value = channels
 
-        with patch("kronicle.services.core_service.OutputCoreChannel.from_db_core_channel") as mock_from:
+        with patch("kronicle.services.core_service.OutputCoreChannel.from_db") as mock_from:
             mock_from.side_effect = lambda c: MagicMock(id=c.id)
             result = service.get_core_channels(zone_id=zone_id)
 
@@ -287,7 +287,7 @@ class TestGetCoreChannel:
         channel = make_channel()
         mock_channel_repo.get_by_id.return_value = channel
 
-        with patch("kronicle.services.core_service.OutputCoreChannel.from_db_core_channel") as mock_from:
+        with patch("kronicle.services.core_service.OutputCoreChannel.from_db") as mock_from:
             mock_from.return_value = MagicMock(id=channel.id)
             result = service.get_core_channel(channel.id)
 
@@ -305,7 +305,7 @@ class TestCreateCoreChannel:
         zone_id = uuid4()
         channel = InputCoreChannel(id=channel_id, name="custom-name", zone_id=zone_id, details={"key": "val"})
 
-        with patch("kronicle.services.core_service.OutputCoreChannel.from_db_core_channel") as mock_from:
+        with patch("kronicle.services.core_service.OutputCoreChannel.from_db") as mock_from:
             mock_from.return_value = MagicMock(id=channel_id)
             result = service.create_core_channel(channel)
 
@@ -364,7 +364,7 @@ class TestPatchCoreChannel:
         channel = make_channel(name="old-name")
         mock_channel_repo.get_by_id.return_value = channel
 
-        with patch("kronicle.services.core_service.OutputCoreChannel.from_db_core_channel") as mock_from:
+        with patch("kronicle.services.core_service.OutputCoreChannel.from_db") as mock_from:
             mock_from.return_value = MagicMock()
             result = service.patch_core_channel(channel.id, name="new-name")
 
@@ -376,7 +376,7 @@ class TestPatchCoreChannel:
         channel = make_channel()
         mock_channel_repo.get_by_id.return_value = channel
 
-        with patch("kronicle.services.core_service.OutputCoreChannel.from_db_core_channel") as mock_from:
+        with patch("kronicle.services.core_service.OutputCoreChannel.from_db") as mock_from:
             mock_from.return_value = MagicMock()
             result = service.patch_core_channel(channel.id, details={"key": "val"})
 
@@ -389,7 +389,7 @@ class TestPatchCoreChannel:
         mock_channel_repo.get_by_id.return_value = channel
         mock_zone_repo.get_by_id.return_value = make_zone(id=new_zone_id)
 
-        with patch("kronicle.services.core_service.OutputCoreChannel.from_db_core_channel") as mock_from:
+        with patch("kronicle.services.core_service.OutputCoreChannel.from_db") as mock_from:
             mock_from.return_value = MagicMock()
             result = service.patch_core_channel(channel.id, zone_id=new_zone_id)
 

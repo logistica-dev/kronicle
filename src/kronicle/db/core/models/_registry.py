@@ -1,4 +1,4 @@
-# kronicle/db/core/models/__init__.py
+# kronicle/db/core/models/_registry.py
 
 from kronicle.db.core.links.zone_hierarchy import ZoneHierarchy
 from kronicle.db.core.models.core_channel import CoreChannel

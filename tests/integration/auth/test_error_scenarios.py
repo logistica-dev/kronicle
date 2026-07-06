@@ -203,9 +203,9 @@ class TestBadRequest:
             json={"name": "ab"},
             timeout=5,
         )
-        assert resp.status_code == 400
+        assert resp.status_code == 422
         body = resp.json()
-        assert body["error"] == "BadRequest"
+        assert body["error"] == "ValidationError"
 
     def test_zone_duplicate_name(self, rbac_setup):
         tag = tiny_id()

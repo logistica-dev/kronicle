@@ -34,7 +34,7 @@ class KronicleEntity(KronicleBase):
             "name": self.name if self.name else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-            "details": self.details,
+            "details": self.details if self.details else None,
         }
 
     def __str__(self) -> str:

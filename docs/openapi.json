@@ -4012,6 +4012,36 @@
         }
       }
     },
+    "/rbac/v1/access-profiles": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "List all zone access profiles",
+        "operationId": "list_access_profiles_rbac_v1_access_profiles_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OutputZoneAccessProfile"
+                  },
+                  "type": "array",
+                  "title": "Response List Access Profiles Rbac V1 Access Profiles Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/rbac/v1/access-profiles/zones": {
       "get": {
         "tags": [
@@ -5271,17 +5301,42 @@
       },
       "InputChannelAccessProfile": {
         "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32,
+                "minLength": 4
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details",
+            "description": "Optional JSONB metadata"
+          },
           "role_id": {
             "type": "string",
             "format": "uuid",
             "title": "Role Id",
             "description": "UUID of the role"
-          },
-          "channel_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Channel Id",
-            "description": "UUID of the channel"
           },
           "description": {
             "anyOf": [
@@ -5294,6 +5349,12 @@
             ],
             "title": "Description",
             "description": "Optional description"
+          },
+          "channel_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Channel Id",
+            "description": "UUID of the channel"
           }
         },
         "type": "object",
@@ -5306,6 +5367,37 @@
       },
       "InputChannelPolicy": {
         "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32,
+                "minLength": 4
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details",
+            "description": "Optional JSONB metadata"
+          },
           "subject_id": {
             "type": "string",
             "format": "uuid",
@@ -5336,6 +5428,18 @@
       },
       "InputCoreChannelPatch": {
         "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
           "name": {
             "anyOf": [
               {
@@ -5347,8 +5451,13 @@
                 "type": "null"
               }
             ],
-            "title": "Name",
-            "description": "Core channel name"
+            "title": "Name"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details",
+            "description": "Optional JSONB metadata"
           },
           "zone_id": {
             "anyOf": [
@@ -5362,19 +5471,6 @@
             ],
             "title": "Zone Id",
             "description": "Zone UUID to assign"
-          },
-          "details": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Details",
-            "description": "Optional JSONB metadata"
           }
         },
         "type": "object",
@@ -5382,12 +5478,23 @@
       },
       "InputGroup": {
         "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
           "name": {
             "type": "string",
-            "maxLength": 100,
-            "minLength": 1,
-            "title": "Name",
-            "description": "Unique group name"
+            "maxLength": 32,
+            "minLength": 4,
+            "title": "Name"
           },
           "details": {
             "additionalProperties": true,
@@ -5397,9 +5504,6 @@
           }
         },
         "type": "object",
-        "required": [
-          "name"
-        ],
         "title": "InputGroup"
       },
       "InputPayload": {
@@ -5506,7 +5610,7 @@
         "title": "InputPayload",
         "description": "User-provided payload for a channel.\nThe 'channel_schema' field is a dict of column_name -> type string.",
         "example": {
-          "channel_id": "9431a914-358d-4c58-9c30-4ff970a8394d",
+          "channel_id": "99be6d7c-775f-4ab5-ba2e-c3d91816a1d2",
           "channel_schema": {
             "humidity": "float",
             "temperature": "float",
@@ -5515,7 +5619,7 @@
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-1d52c",
+          "name": "thermo-b4e1b",
           "rows": [
             {
               "humidity": 55.1,
@@ -5546,12 +5650,29 @@
       },
       "InputRole": {
         "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
           "name": {
             "type": "string",
-            "maxLength": 100,
-            "minLength": 1,
-            "title": "Name",
-            "description": "Unique role name"
+            "maxLength": 32,
+            "minLength": 4,
+            "title": "Name"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details",
+            "description": "Optional JSONB metadata"
           },
           "description": {
             "anyOf": [
@@ -5580,34 +5701,50 @@
             "type": "array",
             "title": "Restrictions",
             "description": "List of permission strings denied by this role"
+          }
+        },
+        "type": "object",
+        "title": "InputRole",
+        "description": "Schema for creating or updating a role."
+      },
+      "InputRowAccessProfile": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32,
+                "minLength": 4
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
           },
           "details": {
             "additionalProperties": true,
             "type": "object",
             "title": "Details",
             "description": "Optional JSONB metadata"
-          }
-        },
-        "type": "object",
-        "required": [
-          "name"
-        ],
-        "title": "InputRole",
-        "description": "Schema for creating or updating a role."
-      },
-      "InputRowAccessProfile": {
-        "properties": {
+          },
           "role_id": {
             "type": "string",
             "format": "uuid",
             "title": "Role Id",
             "description": "UUID of the role"
-          },
-          "row_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Row Id",
-            "description": "UUID of the row"
           },
           "description": {
             "anyOf": [
@@ -5620,6 +5757,12 @@
             ],
             "title": "Description",
             "description": "Optional description"
+          },
+          "row_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Row Id",
+            "description": "UUID of the row"
           }
         },
         "type": "object",
@@ -5632,6 +5775,37 @@
       },
       "InputRowPolicy": {
         "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32,
+                "minLength": 4
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details",
+            "description": "Optional JSONB metadata"
+          },
           "subject_id": {
             "type": "string",
             "format": "uuid",
@@ -5662,6 +5836,37 @@
       },
       "InputUser": {
         "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32,
+                "minLength": 4
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details",
+            "description": "Optional JSONB metadata"
+          },
           "email": {
             "type": "string",
             "format": "email",
@@ -5689,17 +5894,6 @@
             ],
             "title": "Orcid"
           },
-          "name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Name"
-          },
           "full_name": {
             "anyOf": [
               {
@@ -5710,12 +5904,6 @@
               }
             ],
             "title": "Full Name"
-          },
-          "details": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Details",
-            "description": "Optional JSONB metadata"
           }
         },
         "type": "object",
@@ -5822,12 +6010,23 @@
       },
       "InputZone": {
         "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
           "name": {
             "type": "string",
             "maxLength": 32,
             "minLength": 4,
-            "title": "Name",
-            "description": "Unique zone name"
+            "title": "Name"
           },
           "details": {
             "additionalProperties": true,
@@ -5837,24 +6036,46 @@
           }
         },
         "type": "object",
-        "required": [
-          "name"
-        ],
         "title": "InputZone"
       },
       "InputZoneAccessProfile": {
         "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32,
+                "minLength": 4
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details",
+            "description": "Optional JSONB metadata"
+          },
           "role_id": {
             "type": "string",
             "format": "uuid",
             "title": "Role Id",
             "description": "UUID of the role"
-          },
-          "zone_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Zone Id",
-            "description": "UUID of the zone"
           },
           "description": {
             "anyOf": [
@@ -5867,6 +6088,12 @@
             ],
             "title": "Description",
             "description": "Optional description"
+          },
+          "zone_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Zone Id",
+            "description": "UUID of the zone"
           }
         },
         "type": "object",
@@ -5879,6 +6106,18 @@
       },
       "InputZonePatch": {
         "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
           "name": {
             "anyOf": [
               {
@@ -5890,19 +6129,11 @@
                 "type": "null"
               }
             ],
-            "title": "Name",
-            "description": "Zone name"
+            "title": "Name"
           },
           "details": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "additionalProperties": true,
+            "type": "object",
             "title": "Details",
             "description": "Optional JSONB metadata"
           }
@@ -5912,6 +6143,37 @@
       },
       "InputZonePolicy": {
         "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32,
+                "minLength": 4
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details",
+            "description": "Optional JSONB metadata"
+          },
           "subject_id": {
             "type": "string",
             "format": "uuid",
@@ -5958,21 +6220,20 @@
             ],
             "title": "Name"
           },
-          "role_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Role Id"
-          },
-          "role_name": {
+          "details": {
             "anyOf": [
               {
-                "type": "string"
+                "additionalProperties": true,
+                "type": "object"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Role Name"
+            "title": "Details"
+          },
+          "role": {
+            "$ref": "#/components/schemas/OutputRole"
           },
           "description": {
             "anyOf": [
@@ -5985,28 +6246,15 @@
             ],
             "title": "Description"
           },
-          "channel_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Channel Id"
-          },
-          "channel_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Channel Name"
+          "channel": {
+            "$ref": "#/components/schemas/OutputCoreChannel"
           }
         },
         "type": "object",
         "required": [
           "id",
-          "role_id",
-          "channel_id"
+          "role",
+          "channel"
         ],
         "title": "OutputChannelAccessProfile"
       },
@@ -6028,55 +6276,43 @@
             ],
             "title": "Name"
           },
-          "subject_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Subject Id"
-          },
-          "role_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Role Id"
-          },
-          "role_name": {
+          "details": {
             "anyOf": [
               {
-                "type": "string"
+                "additionalProperties": true,
+                "type": "object"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Role Name"
+            "title": "Details"
+          },
+          "subject": {
+            "$ref": "#/components/schemas/OutputSubject"
+          },
+          "role": {
+            "$ref": "#/components/schemas/OutputRole"
           },
           "is_delegation": {
             "type": "boolean",
             "title": "Is Delegation",
             "default": false
           },
-          "channel_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Channel Id"
+          "profile": {
+            "$ref": "#/components/schemas/OutputChannelAccessProfile"
           },
-          "channel_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Channel Name"
+          "channel": {
+            "$ref": "#/components/schemas/OutputCoreChannel"
           }
         },
         "type": "object",
         "required": [
           "id",
-          "subject_id",
-          "role_id",
-          "channel_id"
+          "subject",
+          "role",
+          "profile",
+          "channel"
         ],
         "title": "OutputChannelPolicy"
       },
@@ -6088,8 +6324,27 @@
             "title": "Id"
           },
           "name": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Name"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
           },
           "zone_id": {
             "anyOf": [
@@ -6102,24 +6357,11 @@
               }
             ],
             "title": "Zone Id"
-          },
-          "details": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Details"
           }
         },
         "type": "object",
         "required": [
-          "id",
-          "name"
+          "id"
         ],
         "title": "OutputCoreChannel"
       },
@@ -6131,7 +6373,14 @@
             "title": "Id"
           },
           "name": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Name"
           },
           "details": {
@@ -6149,8 +6398,7 @@
         },
         "type": "object",
         "required": [
-          "id",
-          "name"
+          "id"
         ],
         "title": "OutputGroup"
       },
@@ -6162,8 +6410,27 @@
             "title": "Id"
           },
           "name": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Name"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
           },
           "description": {
             "anyOf": [
@@ -6191,24 +6458,11 @@
             "type": "array",
             "title": "Restrictions",
             "default": []
-          },
-          "details": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Details"
           }
         },
         "type": "object",
         "required": [
-          "id",
-          "name"
+          "id"
         ],
         "title": "OutputRole"
       },
@@ -6230,21 +6484,20 @@
             ],
             "title": "Name"
           },
-          "role_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Role Id"
-          },
-          "role_name": {
+          "details": {
             "anyOf": [
               {
-                "type": "string"
+                "additionalProperties": true,
+                "type": "object"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Role Name"
+            "title": "Details"
+          },
+          "role": {
+            "$ref": "#/components/schemas/OutputRole"
           },
           "description": {
             "anyOf": [
@@ -6261,23 +6514,12 @@
             "type": "string",
             "format": "uuid",
             "title": "Row Id"
-          },
-          "row_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Row Name"
           }
         },
         "type": "object",
         "required": [
           "id",
-          "role_id",
+          "role",
           "row_id"
         ],
         "title": "OutputRowAccessProfile"
@@ -6300,38 +6542,56 @@
             ],
             "title": "Name"
           },
-          "subject_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Subject Id"
-          },
-          "role_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Role Id"
-          },
-          "role_name": {
+          "details": {
             "anyOf": [
               {
-                "type": "string"
+                "additionalProperties": true,
+                "type": "object"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Role Name"
+            "title": "Details"
+          },
+          "subject": {
+            "$ref": "#/components/schemas/OutputSubject"
+          },
+          "role": {
+            "$ref": "#/components/schemas/OutputRole"
           },
           "is_delegation": {
             "type": "boolean",
             "title": "Is Delegation",
             "default": false
           },
+          "profile": {
+            "$ref": "#/components/schemas/OutputRowAccessProfile"
+          },
           "row_id": {
             "type": "string",
             "format": "uuid",
             "title": "Row Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "subject",
+          "role",
+          "profile",
+          "row_id"
+        ],
+        "title": "OutputRowPolicy"
+      },
+      "OutputSubject": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
           },
-          "row_name": {
+          "name": {
             "anyOf": [
               {
                 "type": "string"
@@ -6340,17 +6600,31 @@
                 "type": "null"
               }
             ],
-            "title": "Row Name"
+            "title": "Name"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
+          },
+          "subject_type": {
+            "type": "string",
+            "title": "Subject Type"
           }
         },
         "type": "object",
         "required": [
           "id",
-          "subject_id",
-          "role_id",
-          "row_id"
+          "subject_type"
         ],
-        "title": "OutputRowPolicy"
+        "title": "OutputSubject"
       },
       "OutputUser": {
         "properties": {
@@ -6433,7 +6707,14 @@
             "title": "Id"
           },
           "name": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Name"
           },
           "details": {
@@ -6451,8 +6732,7 @@
         },
         "type": "object",
         "required": [
-          "id",
-          "name"
+          "id"
         ],
         "title": "OutputZone"
       },
@@ -6474,21 +6754,20 @@
             ],
             "title": "Name"
           },
-          "role_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Role Id"
-          },
-          "role_name": {
+          "details": {
             "anyOf": [
               {
-                "type": "string"
+                "additionalProperties": true,
+                "type": "object"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Role Name"
+            "title": "Details"
+          },
+          "role": {
+            "$ref": "#/components/schemas/OutputRole"
           },
           "description": {
             "anyOf": [
@@ -6501,28 +6780,15 @@
             ],
             "title": "Description"
           },
-          "zone_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Zone Id"
-          },
-          "zone_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Zone Name"
+          "zone": {
+            "$ref": "#/components/schemas/OutputZone"
           }
         },
         "type": "object",
         "required": [
           "id",
-          "role_id",
-          "zone_id"
+          "role",
+          "zone"
         ],
         "title": "OutputZoneAccessProfile"
       },
@@ -6544,55 +6810,43 @@
             ],
             "title": "Name"
           },
-          "subject_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Subject Id"
-          },
-          "role_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Role Id"
-          },
-          "role_name": {
+          "details": {
             "anyOf": [
               {
-                "type": "string"
+                "additionalProperties": true,
+                "type": "object"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Role Name"
+            "title": "Details"
+          },
+          "subject": {
+            "$ref": "#/components/schemas/OutputSubject"
+          },
+          "role": {
+            "$ref": "#/components/schemas/OutputRole"
           },
           "is_delegation": {
             "type": "boolean",
             "title": "Is Delegation",
             "default": false
           },
-          "zone_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Zone Id"
+          "profile": {
+            "$ref": "#/components/schemas/OutputZoneAccessProfile"
           },
-          "zone_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Zone Name"
+          "zone": {
+            "$ref": "#/components/schemas/OutputZone"
           }
         },
         "type": "object",
         "required": [
           "id",
-          "subject_id",
-          "role_id",
-          "zone_id"
+          "subject",
+          "role",
+          "profile",
+          "zone"
         ],
         "title": "OutputZonePolicy"
       },

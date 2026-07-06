@@ -68,20 +68,45 @@ def _fake_group(id=None, name="grp"):
     return g
 
 
+def _fake_zone(id=None, name="zone"):
+    z = MagicMock()
+    z.id = id or uuid4()
+    z.name = name
+    z.details = {}
+    return z
+
+
+def _fake_core_channel(id=None, name="channel", zone_id=None):
+    c = MagicMock()
+    c.id = id or uuid4()
+    c.name = name
+    c.details = {}
+    c.zone_id = zone_id or uuid4()
+    return c
+
+
 def _fake_zone_policy_mock(id=None, name="policy-name", **kwargs):
     """Build a MagicMock that mimics a ZonePolicy with loaded access_profile relationship."""
     policy = MagicMock()
     policy.id = id or uuid4()
     policy.name = name
     policy.subject_id = kwargs.get("subject_id", uuid4())
+    policy.subject = MagicMock()
+    policy.subject.id = policy.subject_id
+    policy.subject.subject_type = kwargs.get("subject_type", "user")
+    policy.subject.name = kwargs.get("subject_name", "subject-name")
+    policy.subject.details = {}
     policy.is_delegation = kwargs.get("is_delegation", False)
+    rid = kwargs.get("role_id", uuid4())
     profile = MagicMock()
-    profile.role_id = kwargs.get("role_id", uuid4())
-    profile.role = MagicMock()
-    profile.role.name = kwargs.get("role_name", "role")
-    profile.zone_id = kwargs.get("zone_id", uuid4())
-    profile.zone = MagicMock()
-    profile.zone.name = kwargs.get("zone_name", "zone")
+    profile.id = uuid4()
+    profile.name = "profile-name"
+    profile.role_id = rid
+    profile.role = _fake_role(id=rid, name=kwargs.get("role_name", "role"))
+    profile.description = None
+    zid = kwargs.get("zone_id", uuid4())
+    profile.zone_id = zid
+    profile.zone = _fake_zone(id=zid, name=kwargs.get("zone_name", "zone"))
     policy.access_profile = profile
     return policy
 
@@ -92,14 +117,22 @@ def _fake_channel_policy_mock(id=None, name="policy-name", **kwargs):
     policy.id = id or uuid4()
     policy.name = name
     policy.subject_id = kwargs.get("subject_id", uuid4())
+    policy.subject = MagicMock()
+    policy.subject.id = policy.subject_id
+    policy.subject.subject_type = kwargs.get("subject_type", "user")
+    policy.subject.name = kwargs.get("subject_name", "subject-name")
+    policy.subject.details = {}
     policy.is_delegation = kwargs.get("is_delegation", False)
+    rid = kwargs.get("role_id", uuid4())
     profile = MagicMock()
-    profile.role_id = kwargs.get("role_id", uuid4())
-    profile.role = MagicMock()
-    profile.role.name = kwargs.get("role_name", "role")
-    profile.channel_id = kwargs.get("channel_id", uuid4())
-    profile.channel = MagicMock()
-    profile.channel.name = kwargs.get("channel_name", "channel")
+    profile.id = uuid4()
+    profile.name = "profile-name"
+    profile.role_id = rid
+    profile.role = _fake_role(id=rid, name=kwargs.get("role_name", "role"))
+    profile.description = None
+    cid = kwargs.get("channel_id", uuid4())
+    profile.channel_id = cid
+    profile.channel = _fake_core_channel(id=cid, name=kwargs.get("channel_name", "channel"))
     policy.access_profile = profile
     return policy
 
@@ -808,34 +841,29 @@ class TestChannelAccessProfile:
 
 
 class TestZoneAccessProfileCRUD:
+    def _profile_mock(self, **kwargs):
+        profile = MagicMock()
+        profile.id = kwargs.get("id", uuid4())
+        profile.name = kwargs.get("name", "zone-profile")
+        profile.description = kwargs.get("description", None)
+        rid = kwargs.get("role_id", uuid4())
+        profile.role_id = rid
+        profile.role = _fake_role(id=rid, name=kwargs.get("role_name", "r"))
+        zid = kwargs.get("zone_id", uuid4())
+        profile.zone_id = zid
+        profile.zone = _fake_zone(id=zid, name=kwargs.get("zone_name", "z"))
+        return profile
+
     def test_create(self, rbac_service):
         rid, zid = uuid4(), uuid4()
-        profile = MagicMock()
-        profile.id = uuid4()
-        profile.name = "zone-profile"
-        profile.role_id = rid
-        profile.zone_id = zid
-        profile.description = "desc"
-        profile.role = MagicMock()
-        profile.role.name = "r"
-        profile.zone = MagicMock()
-        profile.zone.name = "z"
+        profile = self._profile_mock(role_id=rid, zone_id=zid, description="desc")
         rbac_service._ensure_zone_access_profile = MagicMock(return_value=profile)
 
         out = rbac_service.create_zone_access_profile(role_id=rid, zone_id=zid, description="desc")
         assert isinstance(out, OutputZoneAccessProfile)
 
     def test_list(self, rbac_service):
-        profile = MagicMock()
-        profile.id = uuid4()
-        profile.name = "zone-profile"
-        profile.role_id = uuid4()
-        profile.zone_id = uuid4()
-        profile.description = None
-        profile.role = MagicMock()
-        profile.role.name = "r"
-        profile.zone = MagicMock()
-        profile.zone.name = "z"
+        profile = self._profile_mock()
         rbac_service._zone_access_profile_repo.fetch_all = MagicMock(return_value=[profile])
 
         result = rbac_service.list_zone_access_profiles()
@@ -844,16 +872,7 @@ class TestZoneAccessProfileCRUD:
 
     def test_get(self, rbac_service):
         pid = uuid4()
-        profile = MagicMock()
-        profile.id = pid
-        profile.name = "zone-profile"
-        profile.role_id = uuid4()
-        profile.zone_id = uuid4()
-        profile.description = None
-        profile.role = MagicMock()
-        profile.role.name = "r"
-        profile.zone = MagicMock()
-        profile.zone.name = "z"
+        profile = self._profile_mock(id=pid)
         rbac_service._zone_access_profile_repo.get_by_id = MagicMock(return_value=profile)
 
         result = rbac_service.get_zone_access_profile(pid)
@@ -865,16 +884,7 @@ class TestZoneAccessProfileCRUD:
 
     def test_delete(self, rbac_service):
         pid = uuid4()
-        profile = MagicMock()
-        profile.id = pid
-        profile.name = "zone-profile"
-        profile.role_id = uuid4()
-        profile.zone_id = uuid4()
-        profile.description = None
-        profile.role = MagicMock()
-        profile.role.name = "r"
-        profile.zone = MagicMock()
-        profile.zone.name = "z"
+        profile = self._profile_mock(id=pid)
         db = rbac_service._db.transaction.return_value.__enter__.return_value
         rbac_service._zone_access_profile_repo.get_by_id = MagicMock(return_value=profile)
 
@@ -889,34 +899,29 @@ class TestZoneAccessProfileCRUD:
 
 
 class TestChannelAccessProfileCRUD:
+    def _profile_mock(self, **kwargs):
+        profile = MagicMock()
+        profile.id = kwargs.get("id", uuid4())
+        profile.name = kwargs.get("name", "channel-profile")
+        profile.description = kwargs.get("description", None)
+        rid = kwargs.get("role_id", uuid4())
+        profile.role_id = rid
+        profile.role = _fake_role(id=rid, name=kwargs.get("role_name", "r"))
+        cid = kwargs.get("channel_id", uuid4())
+        profile.channel_id = cid
+        profile.channel = _fake_core_channel(id=cid, name=kwargs.get("channel_name", "c"))
+        return profile
+
     def test_create(self, rbac_service):
         rid, cid = uuid4(), uuid4()
-        profile = MagicMock()
-        profile.id = uuid4()
-        profile.name = "channel-profile"
-        profile.role_id = rid
-        profile.channel_id = cid
-        profile.description = "desc"
-        profile.role = MagicMock()
-        profile.role.name = "r"
-        profile.channel = MagicMock()
-        profile.channel.name = "c"
+        profile = self._profile_mock(role_id=rid, channel_id=cid, description="desc")
         rbac_service._ensure_channel_access_profile = MagicMock(return_value=profile)
 
         out = rbac_service.create_channel_access_profile(role_id=rid, channel_id=cid, description="desc")
         assert isinstance(out, OutputChannelAccessProfile)
 
     def test_list(self, rbac_service):
-        profile = MagicMock()
-        profile.id = uuid4()
-        profile.name = "channel-profile"
-        profile.role_id = uuid4()
-        profile.channel_id = uuid4()
-        profile.description = None
-        profile.role = MagicMock()
-        profile.role.name = "r"
-        profile.channel = MagicMock()
-        profile.channel.name = "c"
+        profile = self._profile_mock()
         rbac_service._channel_access_profile_repo.fetch_all = MagicMock(return_value=[profile])
 
         result = rbac_service.list_channel_access_profiles()
@@ -925,16 +930,7 @@ class TestChannelAccessProfileCRUD:
 
     def test_get(self, rbac_service):
         pid = uuid4()
-        profile = MagicMock()
-        profile.id = pid
-        profile.name = "channel-profile"
-        profile.role_id = uuid4()
-        profile.channel_id = uuid4()
-        profile.description = None
-        profile.role = MagicMock()
-        profile.role.name = "r"
-        profile.channel = MagicMock()
-        profile.channel.name = "c"
+        profile = self._profile_mock(id=pid)
         rbac_service._channel_access_profile_repo.get_by_id = MagicMock(return_value=profile)
 
         result = rbac_service.get_channel_access_profile(pid)
@@ -946,16 +942,7 @@ class TestChannelAccessProfileCRUD:
 
     def test_delete(self, rbac_service):
         pid = uuid4()
-        profile = MagicMock()
-        profile.id = pid
-        profile.name = "channel-profile"
-        profile.role_id = uuid4()
-        profile.channel_id = uuid4()
-        profile.description = None
-        profile.role = MagicMock()
-        profile.role.name = "r"
-        profile.channel = MagicMock()
-        profile.channel.name = "c"
+        profile = self._profile_mock(id=pid)
         db = rbac_service._db.transaction.return_value.__enter__.return_value
         rbac_service._channel_access_profile_repo.get_by_id = MagicMock(return_value=profile)
 
@@ -982,18 +969,21 @@ class TestZonePolicy:
 
         with patch.object(OutputZonePolicy, "from_db") as mock_from_db:
             expected = MagicMock(spec=OutputZonePolicy)
-            expected.role_name = "role"
-            expected.subject_id = sid
-            expected.role_id = rid
-            expected.zone_id = zid
+            expected.role = MagicMock()
+            expected.role.name = "role"
+            expected.role.id = rid
+            expected.subject = MagicMock()
+            expected.subject.id = sid
+            expected.zone = MagicMock()
+            expected.zone.id = zid
             mock_from_db.return_value = expected
 
             result = rbac_service.create_zone_policy(sid, rid, zid)
 
-            assert result.role_name == "role"
-            assert result.subject_id == sid
-            assert result.role_id == rid
-            assert result.zone_id == zid
+            assert result.role.name == "role"
+            assert result.subject.id == sid
+            assert result.role.id == rid
+            assert result.zone.id == zid
 
     def test_create_role_not_found(self, rbac_service):
         rbac_service._role_repo.get_by_id = MagicMock(return_value=None)
@@ -1009,7 +999,7 @@ class TestZonePolicy:
         result = rbac_service.list_zone_policies(zid)
         assert len(result) == 1
         assert isinstance(result[0], OutputZonePolicy)
-        assert result[0].zone_id == zid
+        assert result[0].zone.id == zid
 
     def test_delete(self, rbac_service):
         pid = uuid4()
@@ -1035,18 +1025,21 @@ class TestChannelPolicy:
 
         with patch.object(OutputChannelPolicy, "from_db") as mock_from_db:
             expected = MagicMock(spec=OutputChannelPolicy)
-            expected.role_name = "role"
-            expected.subject_id = sid
-            expected.role_id = rid
-            expected.channel_id = cid
+            expected.role = MagicMock()
+            expected.role.name = "role"
+            expected.role.id = rid
+            expected.subject = MagicMock()
+            expected.subject.id = sid
+            expected.channel = MagicMock()
+            expected.channel.id = cid
             mock_from_db.return_value = expected
 
             result = rbac_service.create_channel_policy(sid, rid, cid)
 
-            assert result.role_name == "role"
-            assert result.subject_id == sid
-            assert result.role_id == rid
-            assert result.channel_id == cid
+            assert result.role.name == "role"
+            assert result.subject.id == sid
+            assert result.role.id == rid
+            assert result.channel.id == cid
 
     def test_create_role_not_found(self, rbac_service):
         rbac_service._role_repo.get_by_id = MagicMock(return_value=None)
@@ -1062,7 +1055,7 @@ class TestChannelPolicy:
         result = rbac_service.list_channel_policies(cid)
         assert len(result) == 1
         assert isinstance(result[0], OutputChannelPolicy)
-        assert result[0].channel_id == cid
+        assert result[0].channel.id == cid
 
     def test_delete(self, rbac_service):
         pid = uuid4()

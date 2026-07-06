@@ -43,7 +43,7 @@ def test_row_snapshot_handles_none_dates():
     assert snap["name"] is None
     assert snap["created_at"] is None
     assert snap["updated_at"] is None
-    assert snap["details"] == {}
+    assert snap["details"] is None
 
 
 def test_str_representation():
