@@ -70,11 +70,12 @@ class ChannelRepository:
             metadata_list = await ChannelMetadata.fetch_all(db)
             return await self._list_metadata_to_channels(db, metadata_list)
 
-    async def fetch_metadata_by_name(self, name: str) -> ChannelResource:
+    async def fetch_metadata_by_name(self, name: str) -> ChannelResource | None:
         async with self._db.transaction() as db:
             metadata = await ChannelMetadata.fetch_by_name(db, name=name)
             if not metadata:
-                raise NotFoundError("No channel was found", details={"name": name})
+                # raise NotFoundError("No channel was found", details={"name": name})
+                return None
             return await self._metadata_to_channel(db, metadata)
 
     async def fetch_metadata_by_tags(self, tags: dict[str, str]) -> list[ChannelResource]:

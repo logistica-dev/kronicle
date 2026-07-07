@@ -11,7 +11,7 @@ from kronicle.errors.error_types import NotFoundError, UnauthorizedError
 @pytest.fixture
 def mock_jwt_service():
     svc = MagicMock()
-    svc.create_access_token.return_value = "jwt-token"
+    svc.create_access_profile_token.return_value = "jwt-token"
     return svc
 
 
@@ -99,7 +99,7 @@ class TestLogin:
         assert token == "jwt-token"
         mock_rbac_service.fetch_user_for_auth.assert_called_once_with(mock_login)
         mock_pwd_manager.verify_password.assert_called_once_with(db_user.password_hash, mock_login.password)
-        mock_jwt_service.create_access_token.assert_called_once()
+        mock_jwt_service.create_access_profile_token.assert_called_once()
 
     def test_login_user_not_found_raises_unauthorized(self, service, mock_rbac_service, mock_login):
         mock_rbac_service.fetch_user_for_auth.side_effect = NotFoundError("User not found")
@@ -182,7 +182,7 @@ class TestChangePassword:
 
         assert token == "jwt-token"
         mock_rbac_service.update_password_hash.assert_called_once_with(db_user.id, "new-hash")
-        mock_jwt_service.create_access_token.assert_called_once()
+        mock_jwt_service.create_access_profile_token.assert_called_once()
         mock_pwd_manager.hash_password.assert_called_once_with(mock_change_pwd.new_password)
 
     def test_change_user_not_found_raises_unauthorized(self, service, mock_rbac_service, mock_change_pwd):

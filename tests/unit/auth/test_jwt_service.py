@@ -66,14 +66,14 @@ class TestGetPayloadFromOutUser:
 
 class TestCreateAccessToken:
     def test_returns_encoded_jwt(self, service, mock_user):
-        token = service.create_access_token(mock_user)
+        token = service.create_access_profile_token(mock_user)
         assert isinstance(token, str)
         assert len(token.split(".")) == 3
 
     @patch("kronicle.auth.jwt_service.jwt.encode")
     def test_calls_encode_with_correct_args(self, mock_encode, service, mock_user):
         mock_encode.return_value = "fake-token"
-        token = service.create_access_token(mock_user)
+        token = service.create_access_profile_token(mock_user)
         assert token == "fake-token"
         args, kwargs = mock_encode.call_args
         payload = args[0]
@@ -90,7 +90,7 @@ class TestDecodeToken:
         assert result["sub"] == "123"
 
     def test_decode_with_full_payload(self, service, mock_user):
-        token = service.create_access_token(mock_user)
+        token = service.create_access_profile_token(mock_user)
         result = service.decode_token(token)
         assert result["sub"] == str(mock_user.id)
 

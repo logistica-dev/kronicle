@@ -63,7 +63,7 @@ async def fetch_all_channels_metadata(
         description="Optional tags as comma-separated key:value pairs, e.g., color:red",
     ),
     data_service: ChannelService = Depends(channel_service),  # noqa: B008
-) -> list[ResponsePayload] | ResponsePayload:
+) -> list[ResponsePayload] | ResponsePayload | None:
     here = "fetch_all_channels_metadata"
     # Name filter takes priority
     if name:

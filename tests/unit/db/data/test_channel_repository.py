@@ -90,8 +90,8 @@ async def test_fetch_metadata_by_name_not_found(repo):
         new_callable=AsyncMock,
         return_value=None,
     ):
-        with pytest.raises(NotFoundError):
-            await repo.fetch_metadata_by_name("nonexistent-channel")
+        result = await repo.fetch_metadata_by_name("nonexistent-channel")
+        assert result is None
 
 
 @pytest.mark.asyncio

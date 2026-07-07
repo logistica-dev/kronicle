@@ -18,11 +18,13 @@ from kronicle.deps.settings_env import (
 def real_env_conf():
     chan_creds = ChanDbCreds(username="chan_user", password="chan_pass")
     rbac_creds = RbacDbCreds(username="rbac_user", password="rbac_pass")
-    db_access = DbAccess(host="127.0.0.1", port=5432, name="kronicle", usr=chan_creds.username, pwd=chan_creds.password)
+    db_access_profile = DbAccess(
+        host="127.0.0.1", port=5432, name="kronicle", usr=chan_creds.username, pwd=chan_creds.password
+    )
     server = ConnectionSettings(host="127.0.0.1", port=8080)
     env = AppEnv(_env=AppEnv._ENV_DEV)
     return KronicleEnvConf(
-        chan_creds=chan_creds, rbac_creds=rbac_creds, db=db_access, server=server, env=env, conf_file=None
+        chan_creds=chan_creds, rbac_creds=rbac_creds, db=db_access_profile, server=server, env=env, conf_file=None
     )
 
 

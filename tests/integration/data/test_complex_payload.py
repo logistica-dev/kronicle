@@ -96,7 +96,7 @@ class ObservationPayload(KronicableSample):
         ..., alias="data dimensions", description="Time, frequency and polarization coverage"
     )
     data_format: str = Field(default="FITS")
-    batch_access_policy: BatchAccessPolicy = Field(..., alias="batch access policy")
+    batch_access_profile_policy: BatchAccessPolicy = Field(..., alias="batch access policy")
     products_uri: list[str]
 
     @classmethod
@@ -167,7 +167,7 @@ def test_complex_payload(kronicle_setup, kronicle_writer, kronicle_rbac_setup):
         channel_id = uuid4_str()
 
         payload = {
-            "channel_id": channel_id,
+            "id": channel_id,
             "name": f"Complex test payload {tiny_id(4)}",
             "channel_schema": obs.channel_schema,
             "metadata": {"description": ObservationPayload.get_field_descriptions()},
@@ -175,8 +175,8 @@ def test_complex_payload(kronicle_setup, kronicle_writer, kronicle_rbac_setup):
             "rows": [obs.to_row()],
         }
         result = kronicle_writer.create_channel(zone_id=zone.id, body=payload)
-        new_channel = kronicle_setup.clone_channel(result.channel_id)
-        kronicle_setup.delete_channel(result.channel_id)
-        kronicle_setup.delete_channel(new_channel.channel_id)
+        new_channel = kronicle_setup.clone_channel(result.id)
+        kronicle_setup.delete_channel(result.id)
+        kronicle_setup.delete_channel(new_channel.id)
     finally:
         kronicle_rbac_setup.delete_zone(zone_id=zone.id)

@@ -27,7 +27,7 @@ class JWTService:
             payload["is_superuser"] = True
         return payload
 
-    def create_access_token(self, user: OutputUser) -> str:
+    def create_access_profile_token(self, user: OutputUser) -> str:
         payload = self._get_payload_from_out_user(user)
         return jwt.encode(payload, self._secret, algorithm=self._algo)
 

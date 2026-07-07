@@ -4,7 +4,7 @@ from enum import Enum
 from uuid import UUID
 
 from sqlalchemy import CheckConstraint, ForeignKey, Index, String, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, backref, mapped_column, relationship
 
 from kronicle.db.rbac.models.rbac_entity import RbacEntity
 from kronicle.db.rbac.models.rbac_group import RbacGroup
@@ -44,5 +44,15 @@ class RbacSubject(RbacEntity):
     group_id: Mapped[UUID | None] = mapped_column(ForeignKey(RbacGroup.id, ondelete="CASCADE"), nullable=True)
 
     # ORM convenience relationships
-    user: Mapped[RbacUser] = relationship(RbacUser, backref=__tablename__)
-    group: Mapped[RbacGroup] = relationship(RbacGroup, backref=__tablename__)
+    # passive_deletes=True on BOTH sides — let DB-level ON DELETE CASCADE handle cleanup;
+    # without it SQLAlchemy nulls the FK first, violating chk_subject_one_owner.
+    user: Mapped[RbacUser] = relationship(
+        RbacUser,
+        backref=backref(__tablename__, passive_deletes=True),
+        passive_deletes=True,
+    )
+    group: Mapped[RbacGroup] = relationship(
+        RbacGroup,
+        backref=backref(__tablename__, passive_deletes=True),
+        passive_deletes=True,
+    )

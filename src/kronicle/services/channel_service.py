@@ -91,20 +91,20 @@ class ChannelService:
             raise NotFoundError(f"Channel '{channel_id}' not found")
         return ResponsePayload.from_channel_resource(channel)
 
+    async def fetch_metadata_by_name(self, name: str) -> ResponsePayload | None:
+        """
+        Fetch a metadata by name.
+        """
+        norm_name = normalize_name(name)
+        channel = await self._repo.fetch_metadata_by_name(name=norm_name)
+        return ResponsePayload.from_channel_resource(channel) if channel else None
+
     async def fetch_all_metadata(self) -> list[ResponsePayload]:
         """
         Fetch all metadata entries and row counts.
         """
         all_channels = await self._repo.fetch_all_metadata()
         return [ResponsePayload.from_channel_resource(channel) for channel in all_channels]
-
-    async def fetch_metadata_by_name(self, name: str) -> ResponsePayload:
-        """
-        Fetch all metadata entries and row counts.
-        """
-        norm_name = normalize_name(name)
-        channel = await self._repo.fetch_metadata_by_name(name=norm_name)
-        return ResponsePayload.from_channel_resource(channel)
 
     async def fetch_metadata_by_tags(self, tags: list[str]) -> list[ResponsePayload]:
         """

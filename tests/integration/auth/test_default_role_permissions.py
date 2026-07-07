@@ -260,7 +260,7 @@ class TestSuperAdmin:
 
 
 class TestRbacAdmin:
-    """rbac_admin has RBAC_ACCESS + USER/ROLE/GROUP/POLICY CRUD."""
+    """rbac_admin has RBAC_access_profile + USER/ROLE/GROUP/POLICY CRUD."""
 
     @pytest.fixture(scope="class")
     def test_user(self, su_client) -> Generator[dict, None, None]:
@@ -366,7 +366,7 @@ class TestRbacAdmin:
 
 
 class TestDataReader:
-    """data_reader has CHANNEL_READ + ROW_READ but no SETUP_ACCESS, DATA_ACCESS, or RBAC_ACCESS.
+    """data_reader has CHANNEL_READ + ROW_READ but no SETUP_access_profile, DATA_access_profile, or RBAC_access_profile.
 
     Can only access core endpoints (core_router has no gate beyond require_auth).
     """
@@ -388,7 +388,7 @@ class TestDataReader:
         r = _get(base_url, jwt, f"/core/v1/channels/{test_channel}")
         assert r.status_code == 200
 
-    # Denied – no SETUP_ACCESS on setup_router
+    # Denied – no SETUP_access_profile on setup_router
     def test_cannot_list_setup_channels(self, base_url, jwt):
         r = _get(base_url, jwt, "/setup/v1/channels")
         assert r.status_code == 403
@@ -397,7 +397,7 @@ class TestDataReader:
         r = _get(base_url, jwt, f"/setup/v1/channels/{test_channel}/rows")
         assert r.status_code == 403
 
-    # Denied – no RBAC_ACCESS on rbac_router
+    # Denied – no RBAC_access_profile on rbac_router
     def test_cannot_list_rbac_users(self, base_url, jwt):
         r = _get(base_url, jwt, "/rbac/v1/users")
         assert r.status_code == 403
@@ -443,9 +443,9 @@ class TestDataReader:
 
 
 class TestDataWriter:
-    """data_writer has DATA_ACCESS + CHANNEL_READ + ROW_CREATE.
+    """data_writer has DATA_access_profile + CHANNEL_READ + ROW_CREATE.
 
-    Can access writer_router (requires DATA_ACCESS) and core_router.
+    Can access writer_router (requires DATA_access_profile) and core_router.
     """
 
     @pytest.fixture(scope="class")
@@ -461,7 +461,7 @@ class TestDataWriter:
         r = _get(base_url, jwt, "/core/v1/channels")
         assert r.status_code == 200
 
-    # Allowed – writer_router (DATA_ACCESS) + shared_writer_router (ROW_CREATE)
+    # Allowed – writer_router (DATA_access_profile) + shared_writer_router (ROW_CREATE)
     def test_write_rows(self, base_url, jwt, test_channel):
         r = _post(
             base_url,
@@ -476,7 +476,7 @@ class TestDataWriter:
         )
         assert r.status_code == 200
 
-    # Denied – no SETUP_ACCESS on setup_router
+    # Denied – no SETUP_access_profile on setup_router
     def test_cannot_create_channel(self, base_url, jwt):
         fake_zone = "00000000-0000-0000-0000-000000000000"
         r = _post(
@@ -496,7 +496,7 @@ class TestDataWriter:
         r = _delete(base_url, jwt, f"/setup/v1/channels/{test_channel}")
         assert r.status_code == 403
 
-    # Denied – no RBAC_ACCESS on rbac_router
+    # Denied – no RBAC_access_profile on rbac_router
     def test_cannot_create_user(self, base_url, jwt):
         tag = tiny_id()
         r = _post(
@@ -519,7 +519,7 @@ class TestDataWriter:
 
 
 class TestChannelAdmin:
-    """channel_admin has SETUP_ACCESS + CHANNEL_CRUD + ROW_DELETE."""
+    """channel_admin has SETUP_access_profile + CHANNEL_CRUD + ROW_DELETE."""
 
     @pytest.fixture(scope="class")
     def test_user(self, su_client) -> Generator[dict, None, None]:
@@ -572,7 +572,7 @@ class TestChannelAdmin:
         r = _delete(base_url, jwt, f"/setup/v1/channels/{cid}")
         assert r.status_code == 200
 
-    # Denied – no RBAC_ACCESS
+    # Denied – no RBAC_access_profile
     def test_cannot_create_user(self, base_url, jwt):
         tag = tiny_id()
         r = _post(
@@ -592,7 +592,7 @@ class TestChannelAdmin:
         r = _post(base_url, jwt, "/core/v1/zones", json={"name": "should_fail"})
         assert r.status_code == 403
 
-    # Denied – no DATA_ACCESS + no ROW_CREATE
+    # Denied – no DATA_access_profile + no ROW_CREATE
     def test_cannot_write_rows(self, base_url, jwt, test_channel):
         r = _post(
             base_url,
@@ -638,7 +638,7 @@ class TestZoneAdmin:
         r = _get(base_url, jwt, "/core/v1/zones")
         assert r.status_code == 200
 
-    # Denied – no RBAC_ACCESS
+    # Denied – no RBAC_access_profile
     def test_cannot_create_user(self, base_url, jwt):
         tag = tiny_id()
         r = _post(
@@ -649,7 +649,7 @@ class TestZoneAdmin:
         )
         assert r.status_code == 403
 
-    # Denied – no SETUP_ACCESS + no CHANNEL_CREATE
+    # Denied – no SETUP_access_profile + no CHANNEL_CREATE
     def test_cannot_create_channel(self, base_url, jwt):
         fake_zone = "00000000-0000-0000-0000-000000000000"
         r = _post(
@@ -660,7 +660,7 @@ class TestZoneAdmin:
         )
         assert r.status_code == 403
 
-    # Denied – no DATA_ACCESS, no ROW_CREATE
+    # Denied – no DATA_access_profile, no ROW_CREATE
     def test_cannot_write_rows(self, base_url, jwt, test_channel):
         r = _post(
             base_url,
@@ -672,14 +672,14 @@ class TestZoneAdmin:
 
 
 # ==============================================================================
-# AUDITOR – read-only across all subsystems (via RBAC_ACCESS + read perms)
+# AUDITOR – read-only across all subsystems (via RBAC_access_profile + read perms)
 # ==============================================================================
 
 
 class TestAuditor:
-    """auditor has RBAC_ACCESS + read permissions on all resources.
+    """auditor has RBAC_access_profile + read permissions on all resources.
 
-    Can access rbac_router (RBAC_ACCESS) for read-only RBAC ops,
+    Can access rbac_router (RBAC_access_profile) for read-only RBAC ops,
     and core_router (no gate) for zone/channel reads.
     """
 
@@ -748,7 +748,7 @@ class TestAuditor:
         )
         assert r.status_code == 403
 
-    # Denied – no SETUP_ACCESS / DATA_ACCESS for read endpoints behind gated routers
+    # Denied – no SETUP_access_profile / DATA_access_profile for read endpoints behind gated routers
     def test_cannot_list_setup_channels(self, base_url, jwt):
         r = _get(base_url, jwt, "/setup/v1/channels")
         assert r.status_code == 403

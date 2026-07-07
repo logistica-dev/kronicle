@@ -85,7 +85,7 @@ def test_app_env(monkeypatch):
         se.AppEnv.from_env()
 
 
-def test_db_access_dsn(monkeypatch):
+def test_db_access_profile_dsn(monkeypatch):
     monkeypatch.setenv(se.DB_HOST, "localhost")
     monkeypatch.setenv(se.DB_PORT, "5432")
     monkeypatch.setenv(se.DB_NAME, "mydb")

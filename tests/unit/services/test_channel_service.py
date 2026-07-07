@@ -220,10 +220,10 @@ class TestFetchMetadataByName:
             assert result == fake_response
             mock_repo.fetch_metadata_by_name.assert_awaited_once()
 
-    async def test_not_found_raises(self, service, mock_repo):
+    async def test_not_found_is_none(self, service, mock_repo):
         mock_repo.fetch_metadata_by_name.return_value = None
-        with pytest.raises(AttributeError):
-            await service.fetch_metadata_by_name("some-channel")
+        res = await service.fetch_metadata_by_name("some-channel")
+        assert res is None
 
 
 # ==================================================================================================

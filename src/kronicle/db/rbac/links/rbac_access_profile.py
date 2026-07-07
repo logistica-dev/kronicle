@@ -50,7 +50,7 @@ class ZoneAccessProfile(ResourceAccessProfile):
     )
 
     zone_id: Mapped[UUID] = mapped_column(ForeignKey(CoreZone.id, ondelete="CASCADE"), nullable=False)
-    zone: Mapped[CoreZone] = relationship(CoreZone, backref="access_profiles")
+    zone: Mapped[CoreZone] = relationship(CoreZone, backref="accesss")
 
 
 class ChannelAccessProfile(ResourceAccessProfile):
@@ -63,7 +63,7 @@ class ChannelAccessProfile(ResourceAccessProfile):
     )
 
     channel_id: Mapped[UUID] = mapped_column(ForeignKey(CoreChannel.id, ondelete="CASCADE"), nullable=False)
-    channel: Mapped[CoreChannel] = relationship(CoreChannel, backref="access_profiles")
+    channel: Mapped[CoreChannel] = relationship(CoreChannel, backref="accesss")
 
 
 class RowAccessProfile(ResourceAccessProfile):
@@ -77,4 +77,4 @@ class RowAccessProfile(ResourceAccessProfile):
 
     # Reminder: row_id is based on ChannelTimeseries.row_id which is a BIGSERIAL int
     row_id: Mapped[UUID] = mapped_column(ForeignKey(CoreRow.id, ondelete="CASCADE"), nullable=False)
-    row: Mapped[CoreRow] = relationship(CoreRow, backref="access_profiles")
+    row: Mapped[CoreRow] = relationship(CoreRow, backref="accesss")

@@ -3,6 +3,7 @@ from collections.abc import Generator
 
 import pytest
 from kronicle_sdk.conf.read_conf import Settings
+from kronicle_sdk.connectors.abc_connector import KronicleChannel
 from kronicle_sdk.connectors.channel.channel_setup import KronicleSetup
 from kronicle_sdk.connectors.channel.channel_writer import KronicleWriter
 from kronicle_sdk.connectors.rbac.core_setup import KronicleCore
@@ -46,17 +47,19 @@ def test_zone(kronicle_rbac_setup) -> Generator[str, None, None]:
 def test_channel_id(kronicle_writer, kronicle_setup, test_zone) -> Generator[str, None, None]:
     channel_id = uuid4_str()
     channel_name = f"test_chan_{tiny_id()}"
-    payload = {
-        "channel_id": channel_id,
-        "channel_name": channel_name,
-        "channel_schema": {"time": "datetime", "value": "float"},
-        "metadata": {"source": "integration-test"},
-        "tags": {"test": "true"},
-        "rows": [
-            {"time": "2025-01-10T00:00:00Z", "value": 1.0},
-            {"time": "2025-01-10T00:01:00Z", "value": 2.0},
-        ],
-    }
+    payload = KronicleChannel.from_json(
+        {
+            "id": channel_id,
+            "name": channel_name,
+            "channel_schema": {"time": "datetime", "value": "float"},
+            "metadata": {"source": "integration-test"},
+            "tags": {"test": "true"},
+            "rows": [
+                {"time": "2025-01-10T00:00:00Z", "value": 1.0},
+                {"time": "2025-01-10T00:01:00Z", "value": 2.0},
+            ],
+        }
+    )
     kronicle_writer.create_channel(zone_id=test_zone, body=payload)
     yield channel_id
     try:

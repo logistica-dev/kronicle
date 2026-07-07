@@ -86,7 +86,7 @@ def _fake_core_channel(id=None, name="channel", zone_id=None):
 
 
 def _fake_zone_policy_mock(id=None, name="policy-name", **kwargs):
-    """Build a MagicMock that mimics a ZonePolicy with loaded access_profile relationship."""
+    """Build a MagicMock that mimics a ZonePolicy with loaded access relationship."""
     policy = MagicMock()
     policy.id = id or uuid4()
     policy.name = name
@@ -112,7 +112,7 @@ def _fake_zone_policy_mock(id=None, name="policy-name", **kwargs):
 
 
 def _fake_channel_policy_mock(id=None, name="policy-name", **kwargs):
-    """Build a MagicMock that mimics a ChannelPolicy with loaded access_profile relationship."""
+    """Build a MagicMock that mimics a ChannelPolicy with loaded access relationship."""
     policy = MagicMock()
     policy.id = id or uuid4()
     policy.name = name
@@ -996,10 +996,10 @@ class TestZonePolicy:
 
         rbac_service._zone_policy_repo.get_policies_for_zone = MagicMock(return_value=[policy])
 
-        result = rbac_service.list_zone_policies(zid)
+        result = rbac_service.list_policies_for_zone(zid)
         assert len(result) == 1
         assert isinstance(result[0], OutputZonePolicy)
-        assert result[0].zone.id == zid
+        assert result[0].access_profile.zone.id == zid
 
     def test_delete(self, rbac_service):
         pid = uuid4()
@@ -1024,22 +1024,25 @@ class TestChannelPolicy:
         rbac_service._role_repo.get_by_id = MagicMock(return_value=role)
 
         with patch.object(OutputChannelPolicy, "from_db") as mock_from_db:
-            expected = MagicMock(spec=OutputChannelPolicy)
+            expected = MagicMock()
             expected.role = MagicMock()
             expected.role.name = "role"
             expected.role.id = rid
             expected.subject = MagicMock()
             expected.subject.id = sid
-            expected.channel = MagicMock()
-            expected.channel.id = cid
+            expected.access_profile = MagicMock()
+            expected.access_profile.role = MagicMock()
+            expected.access_profile.role.id = rid
+            expected.access_profile.channel = MagicMock()
+            expected.access_profile.channel.id = cid
             mock_from_db.return_value = expected
 
             result = rbac_service.create_channel_policy(sid, rid, cid)
 
             assert result.role.name == "role"
             assert result.subject.id == sid
-            assert result.role.id == rid
-            assert result.channel.id == cid
+            assert result.access_profile.role.id == rid
+            assert result.access_profile.channel.id == cid
 
     def test_create_role_not_found(self, rbac_service):
         rbac_service._role_repo.get_by_id = MagicMock(return_value=None)
@@ -1052,10 +1055,10 @@ class TestChannelPolicy:
 
         rbac_service._channel_policy_repo.get_policies_for_channel = MagicMock(return_value=[policy])
 
-        result = rbac_service.list_channel_policies(cid)
+        result = rbac_service.list_policies_for_channel(cid)
         assert len(result) == 1
         assert isinstance(result[0], OutputChannelPolicy)
-        assert result[0].channel.id == cid
+        assert result[0].access_profile.channel.id == cid
 
     def test_delete(self, rbac_service):
         pid = uuid4()

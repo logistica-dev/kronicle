@@ -38,7 +38,7 @@ rbac_router = APIRouter(
     tags=["RBAC"],
     dependencies=[
         Depends(require_auth),
-        Depends(require_any_permission(PermStr.RBAC_ACCESS, PermStr.RBAC_READ)),
+        Depends(require_any_permission(PermStr.RBAC_ACCESS_PROFILE, PermStr.RBAC_READ)),
     ],
 )
 
@@ -697,11 +697,11 @@ def create_zone_policy(
     response_model=list[dict],
     dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
 )
-def list_zone_policies(
+def list_policies_for_zone(
     zone_id: UUID,
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
 ):
-    return rbac.list_zone_policies(zone_id)
+    return rbac.list_policies_for_zone(zone_id)
 
 
 @rbac_router.delete(
@@ -748,11 +748,11 @@ def create_channel_policy(
     response_model=list[dict],
     dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
 )
-def list_channel_policies(
+def list_policies_for_channel(
     channel_id: UUID,
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
 ):
-    return rbac.list_channel_policies(channel_id)
+    return rbac.list_policies_for_channel(channel_id)
 
 
 @rbac_router.delete(
@@ -839,16 +839,28 @@ def delete_row_access_profile(
 
 
 @rbac_router.get(
+    "/policies",
+    summary="List all policies across all resource types",
+    description="Returns a dict with 'zone', 'channel', and 'row' keys containing all policies.",
+    dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
+)
+def list_policies(
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.list_policies()
+
+
+@rbac_router.get(
     "/policies/zones",
     summary="List all zone policies",
     description="Returns all zone policies regardless of zone.",
     response_model=list[OutputZonePolicy],
     dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
 )
-def list_all_zone_policies(
+def list_zone_policies(
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
 ):
-    return rbac.list_all_zone_policies()
+    return rbac.list_zone_policies()
 
 
 @rbac_router.get(
@@ -858,10 +870,10 @@ def list_all_zone_policies(
     response_model=list[OutputChannelPolicy],
     dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
 )
-def list_all_channel_policies(
+def list_channel_policies(
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
 ):
-    return rbac.list_all_channel_policies()
+    return rbac.list_channel_policies()
 
 
 @rbac_router.get(
@@ -871,22 +883,10 @@ def list_all_channel_policies(
     response_model=list[OutputRowPolicy],
     dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
 )
-def list_all_row_policies(
+def list_row_policies(
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
 ):
-    return rbac.list_all_row_policies()
-
-
-@rbac_router.get(
-    "/policies",
-    summary="List all policies across all resource types",
-    description="Returns a dict with 'zone', 'channel', and 'row' keys containing all policies.",
-    dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
-)
-def list_all_policies(
-    rbac: RbacService = Depends(rbac_service),  # noqa: B008
-):
-    return rbac.list_all_policies()
+    return rbac.list_row_policies()
 
 
 # --------------------------------------------------------------------------------------------------
@@ -919,11 +919,11 @@ def create_row_policy(
     response_model=list[dict],
     dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
 )
-def list_row_policies(
+def list_policies_for_row(
     row_id: UUID,
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
 ):
-    return rbac.list_row_policies(row_id)
+    return rbac.list_policies_for_row(row_id)
 
 
 @rbac_router.delete(

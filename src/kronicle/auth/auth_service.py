@@ -65,7 +65,7 @@ class AuthService:
 
         out_user = OutputUser.from_db(db_user=db_user)
         # Return JWT
-        return self._jwt_service.create_access_token(out_user)
+        return self._jwt_service.create_access_profile_token(out_user)
 
     def change_password(self, creds: InputUserChangePwd):
         here = "change_password"
@@ -97,4 +97,4 @@ class AuthService:
 
         # Return JWT
         out_user = OutputUser.from_db(db_user=db_user)
-        return self._jwt_service.create_access_token(out_user)
+        return self._jwt_service.create_access_profile_token(out_user)

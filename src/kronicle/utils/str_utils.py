@@ -26,15 +26,22 @@ def uuid_to_str(u: UUID | None) -> str | None:
     return u.hex if u else None
 
 
-def serialize(v: Any) -> Any:
-    if isinstance(v, UUID):
-        return uuid_to_str(v)
-    if isinstance(v, (list, dict, set)) and not v:
+def serialize(x: Any, *, exclude_none: bool | None = True) -> Any:
+    if isinstance(x, (bool, int, float)):
+        return x
+    if isinstance(x, UUID):
+        return x.hex
+    if exclude_none and not x and isinstance(x, (list, dict, set, str)):
         return None
-
-    if isinstance(v, dict):
-        return {k: serialize(v) for k, v in v.items()}
-    return v
+    if isinstance(x, (list, tuple, set)):
+        if (tx := type(x)) is set:
+            tx = list
+        return tx(sv for val in x if not ((sv := serialize(val)) is None and exclude_none))
+    if isinstance(x, dict):
+        return {key: sv for key, val in x.items() if not ((sv := serialize(val)) is None and exclude_none)}
+    if hasattr(x, "model_dump"):
+        return x.model_dump(exclude_none=exclude_none)
+    return x
 
 
 def tiny_id(n: int | None = 8) -> str:

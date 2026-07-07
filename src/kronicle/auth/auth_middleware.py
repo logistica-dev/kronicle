@@ -175,7 +175,7 @@ def require_permission(permission: PermStr | str | Permission):
     Superuser flag in JWT bypasses all permission checks.
 
     Usage:
-        @router.get("/admin", dependencies=[Depends(require_permission(PermStr.RBAC_ACCESS))])
+        @router.get("/admin", dependencies=[Depends(require_permission(PermStr.RBAC_ACCESS_PROFILE))])
         def admin_endpoint(): ...
     """
 

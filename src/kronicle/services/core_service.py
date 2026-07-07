@@ -163,8 +163,11 @@ class CoreService:
 
     def get_core_channel_by_name(self, name: str) -> OutputCoreChannel | None:
         with self._db.get_db() as db:
-            channel = self._channel_repo.get_by_name(db, name=name)
-            return OutputCoreChannel.from_db(channel) if channel else None
+            try:
+                channel = self._channel_repo.get_by_name(db, name=name)
+                return OutputCoreChannel.from_db(channel) if channel else None
+            except NotFoundError:
+                return None
 
     def create_core_channel(self, channel: InputCoreChannel) -> OutputCoreChannel:
         with self._db.transaction() as db:

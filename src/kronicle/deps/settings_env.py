@@ -247,13 +247,13 @@ class KronicleEnvConf:
         except (RuntimeError, ValueError):
             dbsu_creds = None
 
-        db_access = DbAccess.from_env(default_creds=chan_creds)
+        db_access_profile = DbAccess.from_env(default_creds=chan_creds)
         app_server = ConnectionSettings.from_env()
         app_env = AppEnv.from_env()
         conf_file: str | None = getenv(KRONICLE_CONF)
         return cls(
             server=app_server,
-            db=db_access,
+            db=db_access_profile,
             rbac_creds=rbac_creds,
             chan_creds=chan_creds,
             dbsu_creds=dbsu_creds,

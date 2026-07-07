@@ -4,10 +4,10 @@ from __future__ import annotations
 from typing import Any, Self
 from uuid import UUID, uuid4
 
-from kronicle_sdk.utils.str_utils import serialize
 from pydantic import BaseModel
 
 from kronicle.db.base.kronicle_base import KronicleBase
+from kronicle.utils.str_utils import serialize
 
 mod = "input"
 
@@ -19,11 +19,11 @@ class OutputSchema(BaseModel):
 
     def model_dump(self, *args, exclude_none=True, **kwargs) -> dict:
         d = super().model_dump(*args, exclude_none=exclude_none, **kwargs)
-        return serialize(d)
+        return serialize(d, exclude_none=exclude_none)
 
     def model_dump_json(self, *args, exclude_none=True, **kwargs) -> str:
         d = super().model_dump(*args, exclude_none=exclude_none, **kwargs)
-        return serialize(d, exclude_none=exclude_none)
+        return str(serialize(d, exclude_none=exclude_none))
 
     def __str__(self) -> str:
         return super().model_dump_json(exclude_none=True)

@@ -3,7 +3,7 @@
 from uuid import UUID
 
 import pytest
-from kronicle_sdk.connectors.abc_connector import KroniclePayload
+from kronicle_sdk.models.data.kronicle_channel import KronicleChannel
 from kronicle_sdk.models.iso_datetime import IsoDateTime, now_local
 from kronicle_sdk.models.rbac.kronicle_zone import KronicleZone
 from kronicle_sdk.utils.log import log_d
@@ -20,7 +20,7 @@ def test_writer_channels(kronicle_writer, test_channel_id):
     """Check that the writer returns channels and that our test channel is accessible."""
     all_channels = kronicle_writer.all_channels
     for channel in all_channels:
-        assert isinstance(channel, KroniclePayload)
+        assert isinstance(channel, KronicleChannel)
 
     channel = kronicle_writer.get_channel(test_channel_id)
     assert channel is not None
@@ -59,7 +59,7 @@ def test_create_and_update_channel(kronicle_setup, kronicle_writer, kronicle_rba
         # Create channel in zone via writer (zone-aware data path)
         result = kronicle_writer.create_channel(zone_id=zone.id, body=payload)
         assert result is not None
-        assert result.channel_id == UUID(channel_id)
+        assert result.id == UUID(channel_id)
 
         # Update channel metadata + insert more rows via writer
         payload["rows"] = [
@@ -69,8 +69,8 @@ def test_create_and_update_channel(kronicle_setup, kronicle_writer, kronicle_rba
         log_d(here, "result", result)
 
         assert result is not None
-        assert isinstance(result, KroniclePayload)
-        assert result.channel_id == UUID(channel_id)
+        assert isinstance(result, KronicleChannel)
+        assert result.id == UUID(channel_id)
 
         # Insert additional rows directly
         result = kronicle_writer.insert_rows(
@@ -81,8 +81,8 @@ def test_create_and_update_channel(kronicle_setup, kronicle_writer, kronicle_rba
             ],
         )
         assert result is not None
-        assert isinstance(result, KroniclePayload)
-        assert result.channel_id == UUID(channel_id)
+        assert isinstance(result, KronicleChannel)
+        assert result.id == UUID(channel_id)
 
         kronicle_setup.delete_channel(channel_id)
     finally:

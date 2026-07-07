@@ -4,10 +4,10 @@ from collections.abc import Generator
 import pytest
 import requests as req
 from kronicle_sdk.conf.read_conf import ConnectionInformation, Settings
-from kronicle_sdk.connectors.abc_connector import KroniclePayload
 from kronicle_sdk.connectors.channel.channel_setup import KronicleSetup
 from kronicle_sdk.connectors.rbac.core_setup import KronicleCore
 from kronicle_sdk.connectors.rbac.rbac_setup import KronicleRbac
+from kronicle_sdk.models.data.kronicle_channel import KronicleChannel
 from kronicle_sdk.models.rbac.kronicle_zone import KronicleZone
 from kronicle_sdk.utils.str_utils import slash_join, tiny_id, uuid4_str
 
@@ -199,7 +199,7 @@ def test_zone(su_core_client) -> Generator[str, None, None]:
 @pytest.fixture(scope="module")
 def test_channel(su_setup_client, test_zone) -> Generator[str, None, None]:
     channel_id = uuid4_str()
-    payload = KroniclePayload.from_json(
+    payload = KronicleChannel.from_json(
         {
             "channel_id": channel_id,
             "name": f"perm_test_chan_{tiny_id()}",

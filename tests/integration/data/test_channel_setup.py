@@ -3,7 +3,7 @@
 from uuid import UUID
 
 import pytest
-from kronicle_sdk.connectors.abc_connector import KroniclePayload
+from kronicle_sdk.models.data.kronicle_channel import KronicleChannel
 from kronicle_sdk.models.iso_datetime import now_local
 from kronicle_sdk.models.rbac.kronicle_zone import KronicleZone
 from kronicle_sdk.utils.log import log_d, log_w
@@ -16,7 +16,7 @@ def test_list_channels(kronicle_setup, test_channel_id):
     here = "ksetup"
     log_d(here, "Channel list vvv")
     for channel in kronicle_setup.all_channels:
-        assert isinstance(channel, KroniclePayload)
+        assert isinstance(channel, KronicleChannel)
     log_d(here, "Channel list ^^^")
 
     channel = kronicle_setup.get_channel(test_channel_id)
@@ -62,8 +62,8 @@ def test_insert_rows_and_upsert_channel(kronicle_writer, kronicle_setup, kronicl
         log_d(here, "column types", kronicle_setup.column_types)
 
         assert result is not None
-        assert isinstance(result, KroniclePayload)
-        assert result.channel_id == UUID(channel_id)
+        assert isinstance(result, KronicleChannel)
+        assert result.id == UUID(channel_id)
 
         kronicle_setup.delete_channel(channel_id)
     finally:

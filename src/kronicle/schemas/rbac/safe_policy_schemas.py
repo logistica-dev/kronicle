@@ -22,60 +22,47 @@ class OutputSubject(OutputSchema):
 # --------------------------------------------------------------------------------------------------
 class OutputPolicy(OutputSchema):
     subject: OutputSubject
-    role: OutputRole
     is_delegation: bool = False
 
 
 class OutputZonePolicy(OutputPolicy):
-    profile: OutputZoneAccessProfile
-    zone: OutputZone
+    access_profile: OutputZoneAccessProfile
 
     @classmethod
     def from_db(cls, row: ZonePolicy):
-        profile = row.access_profile
         return cls(
             id=row.id,
             name=row.name,
             subject=OutputSubject.from_db(row.subject),
-            role=OutputRole.from_db(profile.role),
-            profile=OutputZoneAccessProfile.from_db(profile),
-            zone=OutputZone.from_db(profile.zone),
+            access_profile=OutputZoneAccessProfile.from_db(row.access_profile),
             is_delegation=row.is_delegation,
         )
 
 
 class OutputChannelPolicy(OutputPolicy):
-    profile: OutputChannelAccessProfile
-    channel: OutputCoreChannel
+    access_profile: OutputChannelAccessProfile
 
     @classmethod
     def from_db(cls, row: ChannelPolicy):
-        profile = row.access_profile
         return cls(
             id=row.id,
             name=row.name,
             subject=OutputSubject.from_db(row.subject),
-            role=OutputRole.from_db(profile.role),
-            profile=OutputChannelAccessProfile.from_db(profile),
-            channel=OutputCoreChannel.from_db(profile.channel),
+            access_profile=OutputChannelAccessProfile.from_db(row.access_profile),
             is_delegation=row.is_delegation,
         )
 
 
 class OutputRowPolicy(OutputPolicy):
-    profile: OutputRowAccessProfile
-    row_id: UUID
+    access_profile: OutputRowAccessProfile
 
     @classmethod
     def from_db(cls, row: RowPolicy):
-        profile = row.access_profile
         return cls(
             id=row.id,
             name=row.name,
             subject=OutputSubject.from_db(row.subject),
-            role=OutputRole.from_db(profile.role),
-            profile=OutputRowAccessProfile.from_db(profile),
-            row_id=profile.row_id,
+            access_profile=OutputRowAccessProfile.from_db(row.access_profile),
             is_delegation=row.is_delegation,
         )
 

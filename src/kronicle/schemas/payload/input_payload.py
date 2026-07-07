@@ -64,6 +64,13 @@ class InputPayload(BaseModel):
         except TypeError as e:
             raise BadRequestError(f"Incorrect value: {e}", details={f"{info.field_name}": d}) from e
 
+    @field_validator("name", mode="before")
+    @classmethod
+    def normalize_and_check_length(cls, v):
+        if not v:
+            return ""
+        return normalize_name(v, prefix="channel_")
+
     # --------------------------------------------------------------------------
     # Populate name from name (safe)
     # --------------------------------------------------------------------------
@@ -74,17 +81,13 @@ class InputPayload(BaseModel):
         if not isinstance(values, dict):
             return values
 
+        if "channel_id" not in values and "id" in values:
+            values["channel_id"] = values["id"]
+
         # Accept user-provided alias
         if "name" not in values and "channel_name" in values:
             values["name"] = values["channel_name"]
         return values
-
-    @field_validator("name", mode="before")
-    @classmethod
-    def normalize_and_check_length(cls, v):
-        if not v:
-            return ""
-        return normalize_name(v, prefix="channel_")
 
     # --------------------------------------------------------------------------
     # Runtime validation helpers

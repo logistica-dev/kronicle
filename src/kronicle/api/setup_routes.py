@@ -31,7 +31,7 @@ setup_router = APIRouter(
     tags=["Setup data channels"],
     dependencies=[
         Depends(require_auth),
-        Depends(require_permission(PermStr.SETUP_ACCESS)),
+        Depends(require_permission(PermStr.SETUP_ACCESS_PROFILE)),
     ],
 )
 

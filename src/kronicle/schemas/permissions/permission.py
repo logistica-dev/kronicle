@@ -151,11 +151,11 @@ class PermStr(StrEnum):
     POLICY_READ = perm(Tgt.POLICY, Act.READ)
     POLICY_DELETE = perm(Tgt.POLICY, Act.DELETE)
 
-    RBAC_ACCESS = perm(Tgt.RBAC, Act.ACCESS)
+    RBAC_ACCESS_PROFILE = perm(Tgt.RBAC, Act.ACCESS)
     RBAC_READ = perm(Tgt.RBAC, Act.READ)
     RBAC_DELEGATE = perm(Tgt.RBAC, Act.DELEGATE)
-    DATA_ACCESS = perm(Tgt.DATA, Act.ACCESS)
-    SETUP_ACCESS = perm(Tgt.SETUP, Act.ACCESS)
+    DATA_ACCESS_PROFILE = perm(Tgt.DATA, Act.ACCESS)
+    SETUP_ACCESS_PROFILE = perm(Tgt.SETUP, Act.ACCESS)
 
     @property
     def target(self) -> PermTarget:

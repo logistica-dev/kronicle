@@ -132,7 +132,7 @@ class RbacService:
         with self._db.get_db() as db:  # read-only
             # TODO: remove this!
             users = self._user_repo.fetch_all(db, include_superusers=True)
-            log_d(mod, "fetch_user_info", "users:", users)
+            log_d(mod, "_fetch_user_by_login", "users:", users)
             if login_input.is_email:
                 email = f"{login_input.login}".lower()
                 db_user = self._user_repo.get_by_email(db, email=email, include_superusers=True)
@@ -688,13 +688,13 @@ class RbacService:
             subject = self._ensure_subject(db, subject_id)
 
             # Find or create the ZoneAccessProfile
-            access_profile: ZoneAccessProfile = self._ensure_zone_access_profile(db, role_id=role_id, zone_id=zone_id)
+            access: ZoneAccessProfile = self._ensure_zone_access_profile(db, role_id=role_id, zone_id=zone_id)
 
             # Create the policy
             policy = ZonePolicy(
                 subject_id=subject_id,
-                access_profile_id=access_profile.id,
-                name=f"{access_profile.name} for {subject.name}",
+                access_profile_id=access.id,
+                name=f"{access.name} for {subject.name}",
             )
 
             db.add(policy)
@@ -702,7 +702,7 @@ class RbacService:
             db.refresh(policy)
             return OutputZonePolicy.from_db(policy)
 
-    def list_zone_policies(self, zone_id: UUID) -> list[OutputZonePolicy]:
+    def list_policies_for_zone(self, zone_id: UUID) -> list[OutputZonePolicy]:
         """List all policies for a zone."""
         with self._db.get_db() as db:
             policies = self._zone_policy_repo.get_policies_for_zone(db, zone_id=zone_id)
@@ -751,7 +751,7 @@ class RbacService:
             db.refresh(policy)
             return OutputChannelPolicy.from_db(policy)
 
-    def list_channel_policies(self, channel_id: UUID) -> list[OutputChannelPolicy]:
+    def list_policies_for_channel(self, channel_id: UUID) -> list[OutputChannelPolicy]:
         """List all policies for a channel."""
 
         with self._db.get_db() as db:
@@ -784,18 +784,18 @@ class RbacService:
 
             self._ensure_subject(db, subject_id)
 
-            access_profile = self._ensure_row_access_profile(db, role_id=role_id, row_id=row_id)
+            access = self._ensure_row_access_profile(db, role_id=role_id, row_id=row_id)
 
             policy = RowPolicy(
                 subject_id=subject_id,
-                access_profile_id=access_profile.id,
+                access_profile_id=access.id,
             )
             db.add(policy)
             db.flush()
             db.refresh(policy)
             return OutputRowPolicy.from_db(policy)
 
-    def list_row_policies(self, row_id: UUID) -> list[OutputRowPolicy]:
+    def list_policies_for_row(self, row_id: UUID) -> list[OutputRowPolicy]:
         """List all policies for a row."""
         with self._db.get_db() as db:
             policies = self._row_policy_repo.get_policies_for_row(db, row_id=row_id)
@@ -815,27 +815,27 @@ class RbacService:
     # List all policies (by type)
     # ----------------------------------------------------------------------------------------------
 
-    def list_all_zone_policies(self) -> list[OutputZonePolicy]:
+    def list_zone_policies(self) -> list[OutputZonePolicy]:
         """List all zone policies regardless of zone."""
         with self._db.get_db() as db:
             return [OutputZonePolicy.from_db(p) for p in self._zone_policy_repo.fetch_all(db)]
 
-    def list_all_channel_policies(self) -> list[OutputChannelPolicy]:
+    def list_channel_policies(self) -> list[OutputChannelPolicy]:
         """List all channel policies regardless of channel."""
         with self._db.get_db() as db:
             return [OutputChannelPolicy.from_db(p) for p in self._channel_policy_repo.fetch_all(db)]
 
-    def list_all_row_policies(self) -> list[OutputRowPolicy]:
+    def list_row_policies(self) -> list[OutputRowPolicy]:
         """List all row policies regardless of row."""
         with self._db.get_db() as db:
             return [OutputRowPolicy.from_db(p) for p in self._row_policy_repo.fetch_all(db)]
 
-    def list_all_policies(self) -> dict:
+    def list_policies(self) -> dict:
         """Return all policies across all resource types as a dict."""
         return {
-            "zone": self.list_all_zone_policies(),
-            "channel": self.list_all_channel_policies(),
-            "row": self.list_all_row_policies(),
+            "zone": self.list_zone_policies(),
+            "channel": self.list_channel_policies(),
+            "row": self.list_row_policies(),
         }
 
     # ----------------------------------------------------------------------------------------------

@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Kronicle",
-    "summary": "FastAPI-powered TimescaleDB microservice for storing time-series measurements",
-    "version": "0.0.1"
+    "title": "TestApp",
+    "summary": "desc",
+    "version": "1.0"
   },
   "paths": {
     "/health/live": {
@@ -463,6 +463,51 @@
                     }
                   ],
                   "title": "Response Fetch All Channels Metadata Data V1 Channels Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Input data"
+        ],
+        "summary": "Update or create a channel",
+        "description": "Upsert a channel: if it exists, updates metadata (schema must match if provided); if it does not exist, creates it with the given schema and metadata.",
+        "operationId": "create_channel_data_v1_channels_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InputPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponsePayload"
                 }
               }
             }
@@ -1005,6 +1050,51 @@
                     }
                   ],
                   "title": "Response Fetch All Channels Metadata Setup V1 Channels Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Setup data channels"
+        ],
+        "summary": "Update or create a channel",
+        "description": "Upsert a channel: if it exists, updates metadata (schema must match if provided); if it does not exist, creates it with the given schema and metadata.",
+        "operationId": "create_channel_setup_v1_channels_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InputPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponsePayload"
                 }
               }
             }
@@ -4383,7 +4473,7 @@
         ],
         "summary": "List all zone policies",
         "description": "Returns all zone policies regardless of zone.",
-        "operationId": "list_all_zone_policies_rbac_v1_policies_zones_get",
+        "operationId": "list_zone_policies_rbac_v1_policies_zones_get",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -4394,7 +4484,7 @@
                     "$ref": "#/components/schemas/OutputZonePolicy"
                   },
                   "type": "array",
-                  "title": "Response List All Zone Policies Rbac V1 Policies Zones Get"
+                  "title": "Response List Zone Policies Rbac V1 Policies Zones Get"
                 }
               }
             }
@@ -4461,7 +4551,7 @@
         ],
         "summary": "List policies for a zone",
         "description": "Returns all policies assigned for a specific zone.",
-        "operationId": "list_zone_policies_rbac_v1_policies_zones__zone_id__get",
+        "operationId": "list_policies_for_zone_rbac_v1_policies_zones__zone_id__get",
         "security": [
           {
             "HTTPBearer": []
@@ -4490,7 +4580,7 @@
                     "type": "object",
                     "additionalProperties": true
                   },
-                  "title": "Response List Zone Policies Rbac V1 Policies Zones  Zone Id  Get"
+                  "title": "Response List Policies For Zone Rbac V1 Policies Zones  Zone Id  Get"
                 }
               }
             }
@@ -4562,7 +4652,7 @@
         ],
         "summary": "List all channel policies",
         "description": "Returns all channel policies regardless of channel.",
-        "operationId": "list_all_channel_policies_rbac_v1_policies_channels_get",
+        "operationId": "list_channel_policies_rbac_v1_policies_channels_get",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -4573,7 +4663,7 @@
                     "$ref": "#/components/schemas/OutputChannelPolicy"
                   },
                   "type": "array",
-                  "title": "Response List All Channel Policies Rbac V1 Policies Channels Get"
+                  "title": "Response List Channel Policies Rbac V1 Policies Channels Get"
                 }
               }
             }
@@ -4640,7 +4730,7 @@
         ],
         "summary": "List policies for a channel",
         "description": "Returns all policies assigned for a specific channel.",
-        "operationId": "list_channel_policies_rbac_v1_policies_channels__channel_id__get",
+        "operationId": "list_policies_for_channel_rbac_v1_policies_channels__channel_id__get",
         "security": [
           {
             "HTTPBearer": []
@@ -4669,7 +4759,7 @@
                     "type": "object",
                     "additionalProperties": true
                   },
-                  "title": "Response List Channel Policies Rbac V1 Policies Channels  Channel Id  Get"
+                  "title": "Response List Policies For Channel Rbac V1 Policies Channels  Channel Id  Get"
                 }
               }
             }
@@ -4901,6 +4991,31 @@
         }
       }
     },
+    "/rbac/v1/policies": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "List all policies across all resource types",
+        "description": "Returns a dict with 'zone', 'channel', and 'row' keys containing all policies.",
+        "operationId": "list_policies_rbac_v1_policies_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/rbac/v1/policies/rows": {
       "get": {
         "tags": [
@@ -4908,7 +5023,7 @@
         ],
         "summary": "List all row policies",
         "description": "Returns all row policies regardless of row.",
-        "operationId": "list_all_row_policies_rbac_v1_policies_rows_get",
+        "operationId": "list_row_policies_rbac_v1_policies_rows_get",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -4919,7 +5034,7 @@
                     "$ref": "#/components/schemas/OutputRowPolicy"
                   },
                   "type": "array",
-                  "title": "Response List All Row Policies Rbac V1 Policies Rows Get"
+                  "title": "Response List Row Policies Rbac V1 Policies Rows Get"
                 }
               }
             }
@@ -4979,31 +5094,6 @@
         ]
       }
     },
-    "/rbac/v1/policies": {
-      "get": {
-        "tags": [
-          "RBAC"
-        ],
-        "summary": "List all policies across all resource types",
-        "description": "Returns a dict with 'zone', 'channel', and 'row' keys containing all policies.",
-        "operationId": "list_all_policies_rbac_v1_policies_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
     "/rbac/v1/policies/rows/{row_id}": {
       "get": {
         "tags": [
@@ -5011,7 +5101,7 @@
         ],
         "summary": "List policies for a row",
         "description": "Returns all policies assigned for a specific row.",
-        "operationId": "list_row_policies_rbac_v1_policies_rows__row_id__get",
+        "operationId": "list_policies_for_row_rbac_v1_policies_rows__row_id__get",
         "security": [
           {
             "HTTPBearer": []
@@ -5040,7 +5130,7 @@
                     "type": "object",
                     "additionalProperties": true
                   },
-                  "title": "Response List Row Policies Rbac V1 Policies Rows  Row Id  Get"
+                  "title": "Response List Policies For Row Rbac V1 Policies Rows  Row Id  Get"
                 }
               }
             }
@@ -5610,7 +5700,7 @@
         "title": "InputPayload",
         "description": "User-provided payload for a channel.\nThe 'channel_schema' field is a dict of column_name -> type string.",
         "example": {
-          "channel_id": "b74213ef-844a-4d21-b7e4-9417ba8c79d0",
+          "channel_id": "4b2bcf5a-5fd2-4125-814b-491df7c1fea7",
           "channel_schema": {
             "humidity": "float",
             "temperature": "float",
@@ -5619,7 +5709,7 @@
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-0e424",
+          "name": "thermo-87953",
           "rows": [
             {
               "humidity": 55.1,
@@ -6291,28 +6381,20 @@
           "subject": {
             "$ref": "#/components/schemas/OutputSubject"
           },
-          "role": {
-            "$ref": "#/components/schemas/OutputRole"
-          },
           "is_delegation": {
             "type": "boolean",
             "title": "Is Delegation",
             "default": false
           },
-          "profile": {
+          "access_profile": {
             "$ref": "#/components/schemas/OutputChannelAccessProfile"
-          },
-          "channel": {
-            "$ref": "#/components/schemas/OutputCoreChannel"
           }
         },
         "type": "object",
         "required": [
           "id",
           "subject",
-          "role",
-          "profile",
-          "channel"
+          "access_profile"
         ],
         "title": "OutputChannelPolicy"
       },
@@ -6557,30 +6639,20 @@
           "subject": {
             "$ref": "#/components/schemas/OutputSubject"
           },
-          "role": {
-            "$ref": "#/components/schemas/OutputRole"
-          },
           "is_delegation": {
             "type": "boolean",
             "title": "Is Delegation",
             "default": false
           },
-          "profile": {
+          "access_profile": {
             "$ref": "#/components/schemas/OutputRowAccessProfile"
-          },
-          "row_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Row Id"
           }
         },
         "type": "object",
         "required": [
           "id",
           "subject",
-          "role",
-          "profile",
-          "row_id"
+          "access_profile"
         ],
         "title": "OutputRowPolicy"
       },
@@ -6825,28 +6897,20 @@
           "subject": {
             "$ref": "#/components/schemas/OutputSubject"
           },
-          "role": {
-            "$ref": "#/components/schemas/OutputRole"
-          },
           "is_delegation": {
             "type": "boolean",
             "title": "Is Delegation",
             "default": false
           },
-          "profile": {
+          "access_profile": {
             "$ref": "#/components/schemas/OutputZoneAccessProfile"
-          },
-          "zone": {
-            "$ref": "#/components/schemas/OutputZone"
           }
         },
         "type": "object",
         "required": [
           "id",
           "subject",
-          "role",
-          "profile",
-          "zone"
+          "access_profile"
         ],
         "title": "OutputZonePolicy"
       },

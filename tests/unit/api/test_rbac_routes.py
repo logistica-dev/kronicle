@@ -22,11 +22,11 @@ from kronicle.api.rbac_routes import (
     get_role,
     get_user_by_id,
     get_users_from_group,
-    list_channel_policies,
     list_groups,
+    list_policies_for_channel,
+    list_policies_for_zone,
     list_roles,
     list_users,
-    list_zone_policies,
     patch_group,
     patch_role,
     patch_user,
@@ -381,9 +381,9 @@ class TestPolicyRoutes:
 
     def test_list_zone_policies(self, mock_rbac, any_uuid):
         expected = [{"id": uuid4(), "zone_id": any_uuid}]
-        mock_rbac.list_zone_policies.return_value = expected
-        result = list_zone_policies(zone_id=any_uuid, rbac=mock_rbac)
-        mock_rbac.list_zone_policies.assert_called_once_with(any_uuid)
+        mock_rbac.list_policies_for_zone.return_value = expected
+        result = list_policies_for_zone(zone_id=any_uuid, rbac=mock_rbac)
+        mock_rbac.list_policies_for_zone.assert_called_once_with(any_uuid)
         assert result == expected
 
     def test_delete_zone_policy(self, mock_rbac, any_uuid):
@@ -406,9 +406,9 @@ class TestPolicyRoutes:
 
     def test_list_channel_policies(self, mock_rbac, any_uuid):
         expected = [{"id": uuid4(), "channel_id": any_uuid}]
-        mock_rbac.list_channel_policies.return_value = expected
-        result = list_channel_policies(channel_id=any_uuid, rbac=mock_rbac)
-        mock_rbac.list_channel_policies.assert_called_once_with(any_uuid)
+        mock_rbac.list_policies_for_channel.return_value = expected
+        result = list_policies_for_channel(channel_id=any_uuid, rbac=mock_rbac)
+        mock_rbac.list_policies_for_channel.assert_called_once_with(any_uuid)
         assert result == expected
 
     def test_delete_channel_policy(self, mock_rbac, any_uuid):

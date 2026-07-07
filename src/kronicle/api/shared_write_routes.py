@@ -48,6 +48,26 @@ async def create_channel_in_zone(
     return await data_service.create_channel(payload)
 
 
+@shared_writer_router.post(
+    "/channels",
+    summary="Update or create a channel",
+    description=(
+        "Upsert a channel: if it exists, updates metadata (schema must match if provided); "
+        "if it does not exist, creates it with the given schema and metadata."
+    ),
+    response_model=ResponsePayload,
+    dependencies=[Depends(require_permission(PermStr.CHANNEL_UPDATE))],
+)
+async def create_channel(
+    payload: InputPayload,
+    data_service: ChannelService = Depends(channel_service),  # noqa: B008
+    core: CoreService = Depends(core_service),  # noqa: B008
+):
+    res = await data_service.create_channel(payload)
+    core.ensure_channel_in_zone(res.channel_id, core.ensure_default_zone().id)
+    return res
+
+
 @shared_writer_router.put(
     "/channels",
     summary="Update or create a channel",
