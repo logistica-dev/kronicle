@@ -36,9 +36,17 @@ from kronicle.api.rbac_routes import (
     remove_user_from_group,
 )
 from kronicle.errors.error_types import BadRequestError, NotFoundError
+from kronicle.schemas.core.input_zone_schemas import InputZonePatch
+from kronicle.schemas.payload.input_payload import InputPayload
 from kronicle.schemas.rbac.input_group_schemas import InputGroup
-from kronicle.schemas.rbac.input_policy_schemas import InputChannelPolicy, InputZonePolicy
+from kronicle.schemas.rbac.input_policy_schemas import (
+    InputChannelAccessProfile,
+    InputChannelPolicy,
+    InputZoneAccessProfile,
+    InputZonePolicy,
+)
 from kronicle.schemas.rbac.input_role_schemas import InputRole
+from kronicle.schemas.rbac.input_subject_schemas import InputSubject
 from kronicle.schemas.rbac.input_user_schemas import InputUserPatch
 
 
@@ -368,14 +376,22 @@ class TestRoleRoutes:
 
 class TestPolicyRoutes:
     def test_create_zone_policy(self, mock_rbac):
-        policy_in = InputZonePolicy(subject_id=uuid4(), role_id=uuid4(), zone_id=uuid4())
+        policy_in = InputZonePolicy(
+            subject=InputSubject(id=uuid4(), type="user"),
+            access_profile=InputZoneAccessProfile(
+                role=InputRole(id=uuid4()),
+                zone=InputZonePatch(id=uuid4()),
+            ),
+        )
         expected = {"id": uuid4()}
         mock_rbac.create_zone_policy.return_value = expected
         result = create_zone_policy(policy_in=policy_in, rbac=mock_rbac)
         mock_rbac.create_zone_policy.assert_called_once_with(
-            subject_id=policy_in.subject_id,
-            role_id=policy_in.role_id,
-            zone_id=policy_in.zone_id,
+            subject=policy_in.subject,
+            access_profile=InputZoneAccessProfile(
+                role=policy_in.access_profile.role,
+                zone=policy_in.access_profile.zone,
+            ),
         )
         assert result == expected
 
@@ -393,14 +409,22 @@ class TestPolicyRoutes:
         assert result == {"detail": f"ZonePolicy '{any_uuid}' deleted"}
 
     def test_create_channel_policy(self, mock_rbac):
-        policy_in = InputChannelPolicy(subject_id=uuid4(), role_id=uuid4(), channel_id=uuid4())
+        policy_in = InputChannelPolicy(
+            subject=InputSubject(id=uuid4(), type="user"),
+            access_profile=InputChannelAccessProfile(
+                role=InputRole(id=uuid4()),
+                channel=InputPayload(id=uuid4()),
+            ),
+        )
         expected = {"id": uuid4()}
         mock_rbac.create_channel_policy.return_value = expected
         result = create_channel_policy(policy_in=policy_in, rbac=mock_rbac)
         mock_rbac.create_channel_policy.assert_called_once_with(
-            subject_id=policy_in.subject_id,
-            role_id=policy_in.role_id,
-            channel_id=policy_in.channel_id,
+            subject=policy_in.subject,
+            access_profile=InputChannelAccessProfile(
+                role=policy_in.access_profile.role,
+                channel=policy_in.access_profile.channel,
+            ),
         )
         assert result == expected
 

@@ -17,12 +17,12 @@ class OutputSchema(BaseModel):
     name: str | None = None
     details: dict[str, Any] | None = None
 
-    def model_dump(self, *args, exclude_none=True, **kwargs) -> dict:
-        d = super().model_dump(*args, exclude_none=exclude_none, **kwargs)
+    def model_dump(self, *args, mode="json", exclude_none=True, **kwargs) -> dict:
+        d = super().model_dump(*args, mode=mode, exclude_none=exclude_none, **kwargs)
         return serialize(d, exclude_none=exclude_none)
 
-    def model_dump_json(self, *args, exclude_none=True, **kwargs) -> str:
-        d = super().model_dump(*args, exclude_none=exclude_none, **kwargs)
+    def model_dump_json(self, *args, mode="json", exclude_none=True, **kwargs) -> str:
+        d = super().model_dump(*args, mode=mode, exclude_none=exclude_none, **kwargs)
         return str(serialize(d, exclude_none=exclude_none))
 
     def __str__(self) -> str:

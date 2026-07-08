@@ -49,7 +49,7 @@ shared_read_router = APIRouter(dependencies=[Depends(require_auth)])
         "No data rows are returned in this endpoint.\n"
         "Optionally, filter by a name or tag_key/tag_value pair."
     ),
-    response_model=list[ResponsePayload] | ResponsePayload,
+    response_model=list[ResponsePayload] | ResponsePayload | None,
     dependencies=[Depends(require_permission(PermStr.CHANNEL_READ))],
 )
 async def fetch_all_channels_metadata(

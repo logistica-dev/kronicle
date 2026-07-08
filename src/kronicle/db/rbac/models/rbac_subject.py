@@ -1,6 +1,5 @@
 # kronicle/db/rbac/models/rbac_subject.py
 
-from enum import Enum
 from uuid import UUID
 
 from sqlalchemy import CheckConstraint, ForeignKey, Index, String, UniqueConstraint
@@ -9,11 +8,7 @@ from sqlalchemy.orm import Mapped, backref, mapped_column, relationship
 from kronicle.db.rbac.models.rbac_entity import RbacEntity
 from kronicle.db.rbac.models.rbac_group import RbacGroup
 from kronicle.db.rbac.models.rbac_user import RbacUser
-
-
-class SubjectType(str, Enum):
-    user = "user"
-    group = "group"
+from kronicle.schemas.rbac.input_subject_schemas import SubjectType
 
 
 class RbacSubject(RbacEntity):

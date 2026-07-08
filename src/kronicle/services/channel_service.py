@@ -63,7 +63,7 @@ class ChannelService:
         Update channel metadata.
         Schema must either be absent or identical to stored one.
         """
-        channel = await self._repo.fetch_metadata(ensure_uuid4(payload.channel_id))
+        channel = await self._repo.fetch_metadata(ensure_uuid4(payload.id))
         processed_payload = ProcessedPayload.from_input(payload, channel_schema=channel.channel_schema)
         updated_channel = await self._repo.update_metadata(processed_payload)
         return ResponsePayload.from_channel_resource(updated_channel)
@@ -74,7 +74,7 @@ class ChannelService:
         - If channel does not exist -> require schema (create new).
         - If channel exists -> schema must either be absent or identical to stored one.
         """
-        channel_id = ensure_uuid4(payload.channel_id)
+        channel_id = ensure_uuid4(payload.id)
         try:
             channel = await self._repo.fetch_metadata(channel_id)
         except Exception:
@@ -252,7 +252,7 @@ class ChannelService:
         - Generates a new channel_id automatically.
         - Schema/metadata/tags from payload override source if provided.
         """
-        src_channel = await self._repo.fetch_metadata(ensure_uuid4(payload.channel_id))
+        src_channel = await self._repo.fetch_metadata(ensure_uuid4(payload.id))
 
         # Generate new channel_id automatically and assign to payload
         new_schema = (
@@ -278,7 +278,7 @@ class ChannelService:
         If no rows were already uploaded, the schema may be updated.
         Only provided fields are updated.
         """
-        channel_id = ensure_uuid4(payload.channel_id)
+        channel_id = ensure_uuid4(payload.id)
         channel = await self._repo.fetch_metadata(channel_id)
         schema = (
             ChannelSchema.from_user_json(payload.channel_schema) if payload.channel_schema else channel.channel_schema

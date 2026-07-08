@@ -3,10 +3,13 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from pydantic import Field
+
 from kronicle.db.rbac.links.rbac_access_profile import ChannelAccessProfile, RowAccessProfile, ZoneAccessProfile
 from kronicle.db.rbac.links.rbac_policy import ChannelPolicy, RowPolicy, ZonePolicy
 from kronicle.schemas.core.safe_ressource_schema import OutputCoreChannel, OutputZone
 from kronicle.schemas.output_schema import OutputSchema
+from kronicle.schemas.rbac.input_subject_schemas import SubjectType
 from kronicle.schemas.rbac.safe_role_schemas import OutputRole
 
 
@@ -14,7 +17,9 @@ from kronicle.schemas.rbac.safe_role_schemas import OutputRole
 # OutputSubject
 # --------------------------------------------------------------------------------------------------
 class OutputSubject(OutputSchema):
-    subject_type: str
+    type: SubjectType
+    user_id: UUID | None = Field(default=None, description="UUID of the user")
+    group_id: UUID | None = Field(default=None, description="UUID of the group")
 
 
 # --------------------------------------------------------------------------------------------------

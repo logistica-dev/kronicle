@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from json import dumps
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -77,17 +78,16 @@ class KronicleBase(Base):
         server_default=text("'{}'::jsonb"),  # PostgreSQL default
     )
 
-    def model_dump(self, *args, exclude_none=True, **kwargs) -> dict:
-        d = super().model_dump(*args, exclude_none=exclude_none, **kwargs)
-        return {k: serialize(v) if isinstance(v, UUID) else v for k, v in d.items()}
+    def model_dump(self, *args, mode="json", exclude_none=True, **kwargs) -> dict:
+        d = super().model_dump(*args, mode=mode, exclude_none=exclude_none, **kwargs)
+        return serialize(d)
 
     @property
     def snapshot(self) -> dict[str, Any]:
         return self.model_dump()
 
-    def model_dump_json(self, *args, exclude_none=True, **kwargs) -> str:
-        d = super().model_dump(*args, exclude_none=exclude_none, **kwargs)
-        return serialize(d)
+    def model_dump_json(self, *args, indent: int | None = None, exclude_none=True, **kwargs) -> str:
+        return dumps(self.model_dump(*args, exclude_none=exclude_none, **kwargs))
 
     def __str__(self) -> str:
         return super().model_dump_json(exclude_none=True)

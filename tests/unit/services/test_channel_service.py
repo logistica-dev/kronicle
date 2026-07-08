@@ -26,14 +26,18 @@ def service(mock_repo):
 
 
 def make_payload(**overrides):
-    data = {
-        "channel_id": uuid4(),
+    channel_id = overrides.get("channel_id", uuid4())
+    channel = {
+        "id": channel_id,
+        "channel_id": channel_id,
         "name": "test-channel",
         "rows": [{"time": IsoDateTime(), "value": 42}],
         "channel_schema": {"time": "int", "value": "int"},
     }
-    data.update(overrides)
-    return InputPayload(**data)
+    channel.update(overrides)
+    if "id" not in overrides:
+        channel["id"] = channel["channel_id"]
+    return InputPayload(**channel)
 
 
 @pytest.fixture

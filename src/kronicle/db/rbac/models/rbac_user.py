@@ -27,8 +27,8 @@ class RbacUser(RbacEntity):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"), nullable=False)
     is_superuser: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
 
-    def model_dump(self, *args, exclude_none=True, **kwargs) -> dict[str, Any]:
-        d = super().model_dump(*args, exclude_none=exclude_none, **kwargs)
+    def model_dump(self, *args, mode="json", exclude_none=True, **kwargs) -> dict[str, Any]:
+        d = super().model_dump(*args, mode=mode, exclude_none=exclude_none, **kwargs)
         if self.is_active:
             d.pop("is_active")
         if not self.is_superuser:

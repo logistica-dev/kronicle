@@ -34,8 +34,6 @@ class ProcessedUser(BaseModel):
     external_id: str | None = None
     full_name: str | None = None
     details: dict[str, Any] = {"auth_method": "local"}  # Default metadata
-    group_name: str | None = None
-    zone_name: str | None = None
 
     @field_validator("name")
     def validate_user_name_syntax(cls, v: str | None) -> str | None:

@@ -44,7 +44,7 @@ async def create_channel_in_zone(
     data_service: ChannelService = Depends(channel_service),  # noqa: B008
     core: CoreService = Depends(core_service),  # noqa: B008
 ):
-    core.ensure_channel_in_zone(ensure_uuid4(payload.channel_id), zone_id)
+    core.ensure_channel_in_zone(ensure_uuid4(payload.id), zone_id)
     return await data_service.create_channel(payload)
 
 
@@ -83,8 +83,8 @@ async def upsert_channel(
     data_service: ChannelService = Depends(channel_service),  # noqa: B008
     core: CoreService = Depends(core_service),  # noqa: B008
 ):
-    if payload.channel_id:
-        core.ensure_channel_in_zone(payload.channel_id, core.ensure_default_zone().id)
+    if payload.id:
+        core.ensure_channel_in_zone(payload.id, core.ensure_default_zone().id)
     return await data_service.upsert_metadata(payload)
 
 
@@ -101,7 +101,7 @@ async def patch_channel(
     data_service: ChannelService = Depends(channel_service),  # noqa: B008
     core: CoreService = Depends(core_service),  # noqa: B008
 ):
-    payload.channel_id = channel_id
+    payload.id = channel_id
     if not core.get_core_channel(channel_id):
         raise HTTPException(
             status_code=404,
@@ -130,5 +130,5 @@ async def insert_rows(
     data_service: ChannelService = Depends(channel_service),  # noqa: B008
     strict: bool = Query(False, description="If true, abort on any validation error"),
 ):
-    payload.channel_id = channel_id  # path param overrides any payload channel_id
+    payload.id = channel_id  # path param overrides any payload channel_id
     return await data_service.insert_channel_rows(payload, strict=strict)

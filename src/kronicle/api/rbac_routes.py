@@ -560,9 +560,10 @@ def create_zone_access_profile(
     profile_in: InputZoneAccessProfile,
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
 ):
+
     return rbac.create_zone_access_profile(
-        role_id=profile_in.role_id,
-        zone_id=profile_in.zone_id,
+        role=profile_in.role,
+        zone=profile_in.zone,
         description=profile_in.description,
     )
 
@@ -620,8 +621,8 @@ def create_channel_access_profile(
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
 ):
     return rbac.create_channel_access_profile(
-        role_id=profile_in.role_id,
-        channel_id=profile_in.channel_id,
+        role=profile_in.role,
+        channel=profile_in.channel,
         description=profile_in.description,
     )
 
@@ -676,7 +677,7 @@ def delete_channel_access_profile(
     "/policies/zones",
     summary="Assign a role to a subject for a zone",
     description="Creates a policy that grants a role to a user or group for a specific zone.",
-    response_model=dict,
+    response_model=OutputZonePolicy,
     dependencies=[Depends(require_permission(PermStr.POLICY_CREATE))],
 )
 def create_zone_policy(
@@ -684,9 +685,8 @@ def create_zone_policy(
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
 ):
     return rbac.create_zone_policy(
-        subject_id=policy_in.subject_id,
-        role_id=policy_in.role_id,
-        zone_id=policy_in.zone_id,
+        subject=policy_in.subject,
+        access_profile=policy_in.access_profile,
     )
 
 
@@ -727,7 +727,7 @@ def delete_zone_policy(
     "/policies/channels",
     summary="Assign a role to a subject for a channel",
     description="Creates a policy that grants a role to a user or group for a specific channel.",
-    response_model=dict,
+    response_model=OutputChannelPolicy,
     dependencies=[Depends(require_permission(PermStr.POLICY_CREATE))],
 )
 def create_channel_policy(
@@ -735,9 +735,8 @@ def create_channel_policy(
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
 ):
     return rbac.create_channel_policy(
-        subject_id=policy_in.subject_id,
-        role_id=policy_in.role_id,
-        channel_id=policy_in.channel_id,
+        subject=policy_in.subject,
+        access_profile=policy_in.access_profile,
     )
 
 
@@ -786,7 +785,7 @@ def create_row_access_profile(
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
 ):
     return rbac.create_row_access_profile(
-        role_id=profile_in.role_id,
+        role=profile_in.role,
         row_id=profile_in.row_id,
         description=profile_in.description,
     )
@@ -898,7 +897,7 @@ def list_row_policies(
     "/policies/rows",
     summary="Assign a role to a subject for a row",
     description="Creates a policy that grants a role to a user or group for a specific row.",
-    response_model=dict,
+    response_model=OutputRowPolicy,
     dependencies=[Depends(require_permission(PermStr.POLICY_CREATE))],
 )
 def create_row_policy(
@@ -906,9 +905,9 @@ def create_row_policy(
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
 ):
     return rbac.create_row_policy(
-        subject_id=policy_in.subject_id,
-        role_id=policy_in.role_id,
-        row_id=policy_in.row_id,
+        subject=policy_in.subject,
+        role=policy_in.access_profile.role,
+        row_id=policy_in.access_profile.row_id,
     )
 
 

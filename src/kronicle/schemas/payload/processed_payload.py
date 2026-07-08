@@ -120,7 +120,7 @@ class ProcessedPayload(BaseModel):
                 - If no valid rows remain after validation.
         """
         processed = cls(
-            channel_id=ensure_uuid4(payload.channel_id),
+            channel_id=ensure_uuid4(payload.id),
             channel_schema=channel_schema if channel_schema else payload.ensure_channel_schema(),
             name=normalize_name(payload.name, prefix="channel_") if payload.name else None,
             metadata=cls.sanitize_metadata(payload.metadata),
@@ -154,7 +154,7 @@ class ProcessedPayload(BaseModel):
         if not self.channel_schema:
             raise BadRequestError(
                 "Cannot validate rows: no schema available.",
-                details={"channel_id": uuid_to_str(self.channel_id)},
+                details={"id": uuid_to_str(self.channel_id)},
             )
         validated_rows: list[dict[str, Any]] = []
 

@@ -18,29 +18,29 @@ def test_input_payload_defaults():
     assert payload.metadata is None
     assert payload.tags is None
     assert payload.strict is False
-    assert payload.channel_id is None
+    assert payload.id is None
     assert payload.rows is None
 
 
 def test_input_payload_with_all_fields():
     schema_dict = {"time": "datetime", "temperature": "float"}
     cid = uuid4()
-    payload = InputPayload(
-        channel_id=cid,
+    channel = InputPayload(
+        id=cid,
         channel_schema=schema_dict,
         name="MyChannel",
         metadata={"unit": "C"},
         tags={"room": 101},
         rows=[{"time": "2025-01-01T00:00:00Z", "temperature": 20.5}],
     )
-    assert payload.channel_id == cid
-    assert payload.channel_schema == schema_dict
-    assert payload.name
-    assert payload.name == "mychannel"
-    assert payload.metadata == {"unit": "C"}
-    assert payload.tags == {"room": 101}
-    assert payload.rows
-    assert len(payload.rows) == 1
+    assert channel.id == cid
+    assert channel.channel_schema == schema_dict
+    assert channel.name
+    assert channel.name == "mychannel"
+    assert channel.metadata == {"unit": "C"}
+    assert channel.tags == {"room": 101}
+    assert channel.rows
+    assert len(channel.rows) == 1
 
 
 # ------------------------------------------------------
@@ -97,7 +97,7 @@ def test_name_too_long_raises():
 # ------------------------------------------------------
 def test_ensure_channel_id_success():
     cid = uuid4()
-    payload = InputPayload(channel_id=cid)
+    payload = InputPayload(id=cid)
     assert payload.ensure_channel_id() == cid
 
 
@@ -176,6 +176,6 @@ def test_model_config_has_example():
     assert isinstance(json_schema_extra, dict)
     assert "example" in json_schema_extra.keys()
     ex = json_schema_extra["example"]
-    assert "channel_id" in ex
+    assert "id" in ex
     assert "channel_schema" in ex
     assert "rows" in ex

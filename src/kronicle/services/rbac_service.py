@@ -40,7 +40,15 @@ from kronicle.repo.rbac.links.rbac_user_group_repo import RbacUserGroupRepositor
 from kronicle.repo.rbac.links.rbac_user_roles_repo import RbacUserRolesRepository
 from kronicle.repo.rbac.links.row_access_profile_repo import RowAccessProfileRepository
 from kronicle.repo.rbac.links.zone_access_profile_repo import ZoneAccessProfileRepository
+from kronicle.schemas.core.input_zone_schemas import InputZonePatch
+from kronicle.schemas.payload.input_payload import InputPayload
 from kronicle.schemas.permissions.permission import Permission
+from kronicle.schemas.rbac.input_policy_schemas import (
+    InputChannelAccessProfile,
+    InputZoneAccessProfile,
+)
+from kronicle.schemas.rbac.input_role_schemas import InputRole
+from kronicle.schemas.rbac.input_subject_schemas import InputSubject
 from kronicle.schemas.rbac.input_user_schemas import InputUserLogin
 from kronicle.schemas.rbac.safe_group_schemas import OutputGroup
 from kronicle.schemas.rbac.safe_policy_schemas import (
@@ -495,15 +503,13 @@ class RbacService:
     # ----------------------------------------------------------------------------------------------
     # Policies
     # ----------------------------------------------------------------------------------------------
-    def _ensure_subject(self, db: Session, subject_id: UUID) -> RbacSubject:
-        """Ensure an RbacSubject entry exists for a user or group ID."""
-
-        existing: RbacSubject | None = self._subject_repo.get_by_id(db, id=subject_id)
-        if existing:
-            return existing
-
-        user: RbacUser | None = self._user_repo.get_by_id(db, id=subject_id, include_inactive=True)
-        if user:
+    def _ensure_subject_by_id(self, db: Session, subject: InputSubject) -> RbacSubject:
+        if subject.type == "user":
+            if not subject.user_id:
+                raise BadRequestError("user_id must be provided for user subject")
+            user = self._user_repo.get_by_id(db, id=subject.user_id, include_inactive=True)
+            if not user:
+                raise NotFoundError(f"User '{subject.user_id}' not found")
             if not user.is_active:
                 raise UnauthorizedError(
                     message=f"User '{user.id}' is inactive and cannot be used as a subject of a policy.",
@@ -511,11 +517,34 @@ class RbacService:
                 )
             return self._subject_repo.ensure_from_user(db, user=user)
 
-        group = self._group_repo.get_by_id(db, id=subject_id)
-        if group:
-            return self._subject_repo.ensure_from_group(db, group=group)
+        if not subject.group_id:
+            raise BadRequestError("group_id must be provided for group subject")
+        group = self._group_repo.get_by_id(db, id=subject.group_id)
+        if not group:
+            raise NotFoundError(f"Group '{subject.group_id}' not found")
+        return self._subject_repo.ensure_from_group(db, group=group)
 
-        raise NotFoundError(f"Subject '{subject_id}' not found as user or group")
+    def _ensure_subject_by_name(self, db: Session, subject_type: str, subject_name: str) -> RbacSubject:
+        if subject_type == "user":
+            user = self._user_repo.get_by_name(db, name=subject_name)
+            if not user:
+                raise NotFoundError(f"User '{subject_name}' not found")
+            return self._subject_repo.ensure_from_user(db, user=user)
+
+        group = self._group_repo.get_by_name(db, name=subject_name)
+        if not group:
+            raise NotFoundError(f"Group '{subject_name}' not found")
+        return self._subject_repo.ensure_from_group(db, group=group)
+
+    def _ensure_subject(self, db: Session, subject: InputSubject) -> RbacSubject:
+        """Resolve an InputSubject ref to an RbacSubject (creating it if needed)."""
+
+        if subject.id:
+            return self._ensure_subject_by_id(db, subject)
+
+        if not subject.name:
+            raise BadRequestError("Either id or name must be provided for subject")
+        return self._ensure_subject_by_name(db, subject_type=subject.type, subject_name=subject.name)
 
     def _ensure_zone_access_profile(self, db: Session, *, role_id: UUID, zone_id: UUID) -> ZoneAccessProfile:
         """Find or create a ZoneAccessProfile for the given role and zone. Returns its ID."""
@@ -575,13 +604,58 @@ class RbacService:
         )
 
     # ----------------------------------------------------------------------------------------------
+    # Reference resolution helpers
+    # ----------------------------------------------------------------------------------------------
+
+    def _resolve_role(self, db: Session, ref: InputRole) -> UUID:
+        if ref.id:
+            role = self._role_repo.get_by_id(db, id=ref.id)
+            if not role:
+                raise NotFoundError(f"Role '{ref.id}' not found")
+            return ref.id
+        if not ref.name:
+            raise BadRequestError("Either id or name must be provided for role")
+        role = self._role_repo.get_by_name(db, name=ref.name)
+        if not role:
+            raise NotFoundError(f"Role '{ref.name}' not found")
+        return role.id
+
+    def _resolve_zone(self, db: Session, ref: InputZonePatch) -> UUID:
+        if ref.id:
+            zone = self._zone_repo.get_by_id(db, id=ref.id)
+            if not zone:
+                raise NotFoundError(f"Zone '{ref.id}' not found")
+            return ref.id
+        if not ref.name:
+            raise BadRequestError("Either id or name must be provided for zone")
+        zone = self._zone_repo.get_by_name(db, name=ref.name)
+        if not zone:
+            raise NotFoundError(f"Zone '{ref.name}' not found")
+        return zone.id
+
+    def _resolve_channel(self, db: Session, ref: InputPayload) -> UUID:
+        if ref.id:
+            channel = self._channel_repo.get_by_id(db, id=ref.id)
+            if not channel:
+                raise NotFoundError(f"Channel '{ref.id}' not found")
+            return ref.id
+        if not ref.name:
+            raise BadRequestError("Either id or name must be provided for channel")
+        channel = self._channel_repo.get_by_name(db, name=ref.name)
+        if not channel:
+            raise NotFoundError(f"Channel '{ref.name}' not found")
+        return channel.id
+
+    # ----------------------------------------------------------------------------------------------
     # Access Profiles
     # ----------------------------------------------------------------------------------------------
 
     def create_zone_access_profile(
-        self, *, role_id: UUID, zone_id: UUID, description: str | None = None
+        self, *, role: InputRole, zone: InputZonePatch, description: str | None = None
     ) -> OutputZoneAccessProfile:
         with self._db.transaction() as db:
+            role_id = self._resolve_role(db, role)
+            zone_id = self._resolve_zone(db, zone)
             profile = self._ensure_zone_access_profile(db, role_id=role_id, zone_id=zone_id)
             if description is not None:
                 profile.description = description
@@ -607,9 +681,11 @@ class RbacService:
             return OutputZoneAccessProfile.from_db(profile)
 
     def create_channel_access_profile(
-        self, *, role_id: UUID, channel_id: UUID, description: str | None = None
+        self, *, role: InputRole, channel: InputPayload, description: str | None = None
     ) -> OutputChannelAccessProfile:
         with self._db.transaction() as db:
+            role_id = self._resolve_role(db, role)
+            channel_id = self._resolve_channel(db, channel)
             profile = self._ensure_channel_access_profile(db, role_id=role_id, channel_id=channel_id)
             if description is not None:
                 profile.description = description
@@ -635,9 +711,10 @@ class RbacService:
             return OutputChannelAccessProfile.from_db(profile)
 
     def create_row_access_profile(
-        self, *, role_id: UUID, row_id: UUID, description: str | None = None
+        self, *, role: InputRole, row_id: UUID, description: str | None = None
     ) -> OutputRowAccessProfile:
         with self._db.transaction() as db:
+            role_id = self._resolve_role(db, role)
             profile = self._ensure_row_access_profile(db, role_id=role_id, row_id=row_id)
             if description is not None:
                 profile.description = description
@@ -673,28 +750,30 @@ class RbacService:
     # Policies: Zone level
     # ----------------------------------------------------------------------------------------------
 
-    def create_zone_policy(self, subject_id: UUID, role_id: UUID, zone_id: UUID) -> OutputZonePolicy:
+    def create_zone_policy(self, subject: InputSubject, access_profile: InputZoneAccessProfile) -> OutputZonePolicy:
         """Assign a role to a subject (user or group) for a specific zone."""
-        # here = "create_zone_policy"
-        # log_d(here, subject_id, role_id, zone_id)
-
         with self._db.transaction() as db:
-            # Verify role exists
-            role: RbacRole | None = self._role_repo.get_by_id(db, id=role_id)
-            if not role:
-                raise NotFoundError(f"Role '{role_id}' not found")
-
-            # Ensure subject exists in rbac.subjects
-            subject = self._ensure_subject(db, subject_id)
+            role_id = self._resolve_role(db, access_profile.role)
+            zone_id = self._resolve_zone(db, access_profile.zone)
 
             # Find or create the ZoneAccessProfile
             access: ZoneAccessProfile = self._ensure_zone_access_profile(db, role_id=role_id, zone_id=zone_id)
 
+            # Find or create the RbacSubject
+            subj = self._ensure_subject(db, subject)
+
+            # Check for existing policy (unique constraint on subject_id, access_profile_id)
+            existing = self._zone_policy_repo.get_by_subject_and_access_profile(
+                db, subject_id=subj.id, access_profile_id=access.id
+            )
+            if existing:
+                return OutputZonePolicy.from_db(existing)
+
             # Create the policy
             policy = ZonePolicy(
-                subject_id=subject_id,
+                subject_id=subj.id,
                 access_profile_id=access.id,
-                name=f"{access.name} for {subject.name}",
+                name=f"{access.name} for {subj.name}",
             )
 
             db.add(policy)
@@ -723,28 +802,27 @@ class RbacService:
     # Policies: Channel level
     # ----------------------------------------------------------------------------------------------
 
-    def create_channel_policy(self, subject_id: UUID, role_id: UUID, channel_id: UUID) -> OutputChannelPolicy:
+    def create_channel_policy(
+        self, subject: InputSubject, access_profile: InputChannelAccessProfile
+    ) -> OutputChannelPolicy:
         """Assign a role to a subject (user or group) for a specific channel."""
         here = "create_channel_policy"
-        log_d(here, subject_id, role_id, channel_id)
-
         with self._db.transaction() as db:
-            # Verify role exists
-            role = self._role_repo.get_by_id(db, id=role_id)
-            if not role:
-                raise NotFoundError(f"Role '{role_id}' not found")
-
-            # Ensure subject exists
-            subject = self._ensure_subject(db, subject_id)
+            role_id = self._resolve_role(db, access_profile.role)
+            channel_id = self._resolve_channel(db, access_profile.channel)
 
             # Find or create the ChannelAccessProfile
             access_profile = self._ensure_channel_access_profile(db, role_id=role_id, channel_id=channel_id)
 
+            # Find or create the RbacSubject
+            subj = self._ensure_subject(db, subject)
+            log_d(here, subj.id, role_id, channel_id)
+
             # Create the policy
             policy = ChannelPolicy(
-                subject_id=subject_id,
+                subject_id=subj.id,
                 access_profile_id=access_profile.id,
-                name=f"{access_profile.name} for {subject.name}",
+                name=f"{access_profile.name} for {subj.name}",
             )
             db.add(policy)
             db.flush()
@@ -773,21 +851,16 @@ class RbacService:
     # Policies: Row level
     # ----------------------------------------------------------------------------------------------
 
-    def create_row_policy(self, subject_id: UUID, role_id: UUID, row_id: UUID) -> OutputRowPolicy:
+    def create_row_policy(self, subject: InputSubject, role: InputRole, row_id: UUID) -> OutputRowPolicy:
         """Assign a role to a subject (user or group) for a specific row."""
-        # here = "create_row_policy"
-
         with self._db.transaction() as db:
-            role = self._role_repo.get_by_id(db, id=role_id)
-            if not role:
-                raise NotFoundError(f"Role '{role_id}' not found")
-
-            self._ensure_subject(db, subject_id)
+            role_id = self._resolve_role(db, role)
 
             access = self._ensure_row_access_profile(db, role_id=role_id, row_id=row_id)
+            subj = self._ensure_subject(db, subject)
 
             policy = RowPolicy(
-                subject_id=subject_id,
+                subject_id=subj.id,
                 access_profile_id=access.id,
             )
             db.add(policy)

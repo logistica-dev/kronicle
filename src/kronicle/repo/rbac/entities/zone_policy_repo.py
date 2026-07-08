@@ -13,6 +13,15 @@ from kronicle.repo.kronicle_repo import KronicleRepository
 class ZonePolicyRepository(KronicleRepository[ZonePolicy]):
     model = ZonePolicy
 
+    def get_by_subject_and_access_profile(
+        self, db: Session, *, subject_id: UUID, access_profile_id: UUID
+    ) -> ZonePolicy | None:
+        stmt = select(self.model).where(
+            self.model.subject_id == subject_id,
+            self.model.access_profile_id == access_profile_id,
+        )
+        return db.execute(stmt).scalar_one_or_none()
+
     def get_policies_for_zone(self, db: Session, *, zone_id: UUID) -> list[ZonePolicy]:
         stmt = (
             select(self.model)

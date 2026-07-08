@@ -43,6 +43,9 @@ class IsoDateTime(datetime):
         # return f"IsoDateTime({self.iso_str()!r})"
         return f"{self.iso_str()!r}"
 
+    def __json__(self) -> str:
+        return self.iso_str()
+
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------

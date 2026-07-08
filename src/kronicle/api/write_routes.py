@@ -62,5 +62,5 @@ async def update_channel_and_insert_rows(
             status_code=404,
             detail=f"Channel {channel_id} not found in RBAC; sync may be needed",
         )
-    payload.channel_id = channel_id
+    payload.id = channel_id
     return await data_service.upsert_metadata_and_insert_rows(payload, strict=strict)

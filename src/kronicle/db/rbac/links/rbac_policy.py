@@ -27,12 +27,12 @@ class RbacPolicy(RbacLink):
     point to the proper AccessProfile subclass (ChannelAccessProfile, ZoneAccessProfile, etc.).
 
     Attributes:
-        subject_type: "user" or "group"
-        subject_id: UUID of the User or Group
-        role_id: UUID of the Role assigned
         is_delegation: Whether this policy is a temporary delegated assignment
         delegation_start: Optional start datetime of delegation
         delegation_end: Optional end datetime of delegation
+        subject.type: "user" or "group"
+        subject.id: UUID of the User or Group
+        role.id: UUID of the Role assigned
     """
 
     __abstract__ = True

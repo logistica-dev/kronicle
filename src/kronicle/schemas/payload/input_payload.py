@@ -18,7 +18,7 @@ def example_payload():
     return ConfigDict(
         json_schema_extra={
             "example": {
-                "channel_id": uuid4_str(),
+                "id": uuid4_str(),
                 "channel_schema": {"time": "datetime", "temperature": "float", "humidity": "float"},
                 "name": f"thermo-{tiny_id(5)}",
                 "metadata": {"unit": "C"},
@@ -43,7 +43,7 @@ class InputPayload(BaseModel):
     The 'channel_schema' field is a dict of column_name -> type string.
     """
 
-    channel_id: UUID | None = None
+    id: UUID | None = None
     channel_schema: dict[str, str] | None = None
     name: str | None = None
     metadata: dict[str, Any] | None = None
@@ -81,8 +81,8 @@ class InputPayload(BaseModel):
         if not isinstance(values, dict):
             return values
 
-        if "channel_id" not in values and "id" in values:
-            values["channel_id"] = values["id"]
+        if "id" not in values and "channel_id" in values:
+            values["id"] = values["channel_id"]
 
         # Accept user-provided alias
         if "name" not in values and "channel_name" in values:
@@ -93,12 +93,12 @@ class InputPayload(BaseModel):
     # Runtime validation helpers
     # --------------------------------------------------------------------------
     def ensure_channel_id(self) -> UUID:
-        if not self.channel_id:
+        if not self.id:
             raise BadRequestError(
                 "Missing required parameter",
-                details={"channel_id": "Provide a valid channel_id UUID in the request payload"},
+                details={"id": "Provide a valid UUID in the request payload"},
             )
-        return ensure_uuid4(self.channel_id)
+        return ensure_uuid4(self.id)
 
     def ensure_channel_rows(self) -> list[dict[str, Any]]:
         if not self.rows:
@@ -155,7 +155,7 @@ if __name__ == "__main__":  # pragma: no cover
 
     # --- create input payload ---
     payload = InputPayload(
-        channel_id=uuid4(),
+        id=uuid4(),
         channel_schema=input_schema,
         metadata={"location": "lab", "unit": "C"},
         tags={"room": 101},
@@ -168,7 +168,7 @@ if __name__ == "__main__":  # pragma: no cover
 
     # --- test sanitization: bad metadata key ---
     try:
-        bad_payload = InputPayload(channel_id=uuid4(), metadata={"": "empty key"})
+        bad_payload = InputPayload(id=uuid4(), metadata={"": "empty key"})
     except ValueError as e:
         log_d(here, "Caught expected sanitization error :", e)
 
@@ -180,7 +180,7 @@ if __name__ == "__main__":  # pragma: no cover
         log_d(here, e)
 
     # --- test validator: empty dicts default ---
-    empty_payload = InputPayload(channel_id=uuid4())
+    empty_payload = InputPayload(id=uuid4())
     log_d(here, "Empty InputPayload (metadata/tags default to dict) :", empty_payload.model_dump())
 
     log_d(here, "=== End of channel_payloads.py test ===")

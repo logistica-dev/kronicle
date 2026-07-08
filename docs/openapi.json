@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "TestApp",
-    "summary": "desc",
-    "version": "1.0"
+    "title": "Kronicle",
+    "summary": "FastAPI-powered TimescaleDB microservice for storing time-series measurements",
+    "version": "0.0.1"
   },
   "paths": {
     "/health/live": {
@@ -217,6 +217,9 @@
                     },
                     {
                       "$ref": "#/components/schemas/ResponsePayload"
+                    },
+                    {
+                      "type": "null"
                     }
                   ],
                   "title": "Response Fetch All Channels Metadata Api V1 Channels Get"
@@ -460,6 +463,9 @@
                     },
                     {
                       "$ref": "#/components/schemas/ResponsePayload"
+                    },
+                    {
+                      "type": "null"
                     }
                   ],
                   "title": "Response Fetch All Channels Metadata Data V1 Channels Get"
@@ -1047,6 +1053,9 @@
                     },
                     {
                       "$ref": "#/components/schemas/ResponsePayload"
+                    },
+                    {
+                      "type": "null"
                     }
                   ],
                   "title": "Response Fetch All Channels Metadata Setup V1 Channels Get"
@@ -4519,9 +4528,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Create Zone Policy Rbac V1 Policies Zones Post"
+                  "$ref": "#/components/schemas/OutputZonePolicy"
                 }
               }
             }
@@ -4698,9 +4705,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Create Channel Policy Rbac V1 Policies Channels Post"
+                  "$ref": "#/components/schemas/OutputChannelPolicy"
                 }
               }
             }
@@ -5069,9 +5074,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Create Row Policy Rbac V1 Policies Rows Post"
+                  "$ref": "#/components/schemas/OutputRowPolicy"
                 }
               }
             }
@@ -5422,12 +5425,6 @@
             "title": "Details",
             "description": "Optional JSONB metadata"
           },
-          "role_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Role Id",
-            "description": "UUID of the role"
-          },
           "description": {
             "anyOf": [
               {
@@ -5440,17 +5437,19 @@
             "title": "Description",
             "description": "Optional description"
           },
-          "channel_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Channel Id",
-            "description": "UUID of the channel"
+          "role": {
+            "$ref": "#/components/schemas/InputRole",
+            "description": "Role for this access profile"
+          },
+          "channel": {
+            "$ref": "#/components/schemas/InputPayload",
+            "description": "Channel targeted by this access profile"
           }
         },
         "type": "object",
         "required": [
-          "role_id",
-          "channel_id"
+          "role",
+          "channel"
         ],
         "title": "InputChannelAccessProfile",
         "description": "Create a scoped role for a channel."
@@ -5488,30 +5487,19 @@
             "title": "Details",
             "description": "Optional JSONB metadata"
           },
-          "subject_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Subject Id",
+          "subject": {
+            "$ref": "#/components/schemas/InputSubject",
             "description": "UUID of the user or group"
           },
-          "role_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Role Id",
-            "description": "UUID of the role to assign"
-          },
-          "channel_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Channel Id",
-            "description": "UUID of the channel"
+          "access_profile": {
+            "$ref": "#/components/schemas/InputChannelAccessProfile",
+            "description": "Access profile for the channel"
           }
         },
         "type": "object",
         "required": [
-          "subject_id",
-          "role_id",
-          "channel_id"
+          "subject",
+          "access_profile"
         ],
         "title": "InputChannelPolicy",
         "description": "Assign a role to a subject (user or group) for a specific channel."
@@ -5598,7 +5586,7 @@
       },
       "InputPayload": {
         "properties": {
-          "channel_id": {
+          "id": {
             "anyOf": [
               {
                 "type": "string",
@@ -5608,7 +5596,7 @@
                 "type": "null"
               }
             ],
-            "title": "Channel Id"
+            "title": "Id"
           },
           "channel_schema": {
             "anyOf": [
@@ -5700,16 +5688,16 @@
         "title": "InputPayload",
         "description": "User-provided payload for a channel.\nThe 'channel_schema' field is a dict of column_name -> type string.",
         "example": {
-          "channel_id": "4b2bcf5a-5fd2-4125-814b-491df7c1fea7",
           "channel_schema": {
             "humidity": "float",
             "temperature": "float",
             "time": "datetime"
           },
+          "id": "b3a4758f-b434-47f1-a0a8-fcb61e0958cf",
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-87953",
+          "name": "thermo-f5766",
           "rows": [
             {
               "humidity": 55.1,
@@ -5830,12 +5818,6 @@
             "title": "Details",
             "description": "Optional JSONB metadata"
           },
-          "role_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Role Id",
-            "description": "UUID of the role"
-          },
           "description": {
             "anyOf": [
               {
@@ -5848,16 +5830,20 @@
             "title": "Description",
             "description": "Optional description"
           },
+          "role": {
+            "$ref": "#/components/schemas/InputRole",
+            "description": "Role for this access profile"
+          },
           "row_id": {
             "type": "string",
             "format": "uuid",
             "title": "Row Id",
-            "description": "UUID of the row"
+            "description": "ID of the row targeted by this access profile"
           }
         },
         "type": "object",
         "required": [
-          "role_id",
+          "role",
           "row_id"
         ],
         "title": "InputRowAccessProfile",
@@ -5896,33 +5882,97 @@
             "title": "Details",
             "description": "Optional JSONB metadata"
           },
-          "subject_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Subject Id",
+          "subject": {
+            "$ref": "#/components/schemas/InputSubject",
             "description": "UUID of the user or group"
           },
-          "role_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Role Id",
-            "description": "UUID of the role to assign"
-          },
-          "row_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Row Id",
-            "description": "UUID of the row"
+          "access_profile": {
+            "$ref": "#/components/schemas/InputRowAccessProfile",
+            "description": "Access profile for the row"
           }
         },
         "type": "object",
         "required": [
-          "subject_id",
-          "role_id",
-          "row_id"
+          "subject",
+          "access_profile"
         ],
         "title": "InputRowPolicy",
         "description": "Assign a role to a subject (user or group) for a specific row."
+      },
+      "InputSubject": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32,
+                "minLength": 4
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details",
+            "description": "Optional JSONB metadata"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "user",
+              "group"
+            ],
+            "title": "Type",
+            "description": "'user' or 'group'"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id",
+            "description": "UUID of the user"
+          },
+          "group_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group Id",
+            "description": "UUID of the group"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "title": "InputSubject"
       },
       "InputUser": {
         "properties": {
@@ -6161,12 +6211,6 @@
             "title": "Details",
             "description": "Optional JSONB metadata"
           },
-          "role_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Role Id",
-            "description": "UUID of the role"
-          },
           "description": {
             "anyOf": [
               {
@@ -6179,17 +6223,19 @@
             "title": "Description",
             "description": "Optional description"
           },
-          "zone_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Zone Id",
-            "description": "UUID of the zone"
+          "role": {
+            "$ref": "#/components/schemas/InputRole",
+            "description": "Role for this access profile"
+          },
+          "zone": {
+            "$ref": "#/components/schemas/InputZonePatch",
+            "description": "Zone targeted by this access profile"
           }
         },
         "type": "object",
         "required": [
-          "role_id",
-          "zone_id"
+          "role",
+          "zone"
         ],
         "title": "InputZoneAccessProfile",
         "description": "Create a scoped role for a zone."
@@ -6264,30 +6310,19 @@
             "title": "Details",
             "description": "Optional JSONB metadata"
           },
-          "subject_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Subject Id",
+          "subject": {
+            "$ref": "#/components/schemas/InputSubject",
             "description": "UUID of the user or group"
           },
-          "role_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Role Id",
-            "description": "UUID of the role to assign"
-          },
-          "zone_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Zone Id",
-            "description": "UUID of the zone"
+          "access_profile": {
+            "$ref": "#/components/schemas/InputZoneAccessProfile",
+            "description": "Access profile for the zone"
           }
         },
         "type": "object",
         "required": [
-          "subject_id",
-          "role_id",
-          "zone_id"
+          "subject",
+          "access_profile"
         ],
         "title": "InputZonePolicy",
         "description": "Assign a role to a subject (user or group) for a specific zone."
@@ -6686,15 +6721,40 @@
             ],
             "title": "Details"
           },
-          "subject_type": {
-            "type": "string",
-            "title": "Subject Type"
+          "type": {
+            "$ref": "#/components/schemas/SubjectType"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id",
+            "description": "UUID of the user"
+          },
+          "group_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group Id",
+            "description": "UUID of the group"
           }
         },
         "type": "object",
         "required": [
           "id",
-          "subject_type"
+          "type"
         ],
         "title": "OutputSubject"
       },
@@ -7036,6 +7096,14 @@
         ],
         "title": "SchemaType",
         "description": "Immutable, hashable type descriptor for channel columns.\n\nResponsibilities:\n- Stores canonical type name and optional flag.\n- Delegates validation and type mapping to SchemaRegistry.\n- Supports optional types via 'optional[...]' notation."
+      },
+      "SubjectType": {
+        "type": "string",
+        "enum": [
+          "user",
+          "group"
+        ],
+        "title": "SubjectType"
       },
       "ValidationError": {
         "properties": {
