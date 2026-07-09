@@ -1233,12 +1233,21 @@ class TestUserHasPermission:
 
         result = rbac_service.user_has_permission(user_id, "zone:read")
         assert result is False
-        db.execute.assert_called_once()
+        assert db.execute.call_count == 4
+
+    def test_zone_policy_role(self, rbac_service):
+        user_id = uuid4()
+        db = rbac_service._db.get_db.return_value.__enter__.return_value
+        db.execute.return_value.first.side_effect = [None, None, (uuid4(),)]
+        rbac_service._user_groups_repo.get_group_ids_for_user = MagicMock(return_value=set())
+
+        result = rbac_service.user_has_permission(user_id, "group:read")
+        assert result is True
 
     def test_empty_groups_no_match(self, rbac_service):
         user_id = uuid4()
         db = rbac_service._db.get_db.return_value.__enter__.return_value
-        db.execute.return_value.first.side_effect = [None, None]
+        db.execute.return_value.first.side_effect = [None, None] + [None] * 12
         rbac_service._user_groups_repo.get_group_ids_for_user = MagicMock(return_value={uuid4()})
 
         result = rbac_service.user_has_permission(user_id, "zone:read")

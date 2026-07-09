@@ -12,6 +12,7 @@ from kronicle.errors.error_types import BadRequestError, NotFoundError
 from kronicle.schemas.permissions.permission import PermStr
 from kronicle.schemas.rbac.input_group_schemas import InputGroup
 from kronicle.schemas.rbac.input_policy_schemas import (
+    InputAccessProfilePatch,
     InputChannelAccessProfile,
     InputChannelPolicy,
     InputPolicyPatch,
@@ -540,8 +541,7 @@ def check_user_group(
 
 @rbac_router.get(
     "/access-profiles",
-    summary="List all zone access profiles",
-    response_model=list[OutputZoneAccessProfile],
+    summary="List all access profiles grouped by resource type",
     dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
 )
 def list_access_profiles(
@@ -591,6 +591,31 @@ def get_zone_access_profile(
     if not profile:
         raise NotFoundError(f"ZoneAccessProfile '{profile_id}' not found")
     return profile
+
+
+@rbac_router.patch(
+    "/access-profiles/zones/{profile_id}",
+    summary="Patch a zone access profile",
+    description="Partially update a zone access profile's name, description, details, or role.",
+    response_model=OutputZoneAccessProfile,
+    dependencies=[Depends(require_permission(PermStr.POLICY_UPDATE))],
+)
+def patch_zone_access_profile(
+    profile_id: UUID,
+    patch_in: InputAccessProfilePatch | None = None,
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    name = patch_in.name if patch_in else None
+    description = patch_in.description if patch_in else None
+    details = patch_in.details if patch_in else None
+    role = patch_in.role if patch_in else None
+    return rbac.patch_zone_access_profile(
+        profile_id,
+        name=name,
+        description=description,
+        details=details,
+        role=role,
+    )
 
 
 @rbac_router.delete(
@@ -646,6 +671,31 @@ def get_channel_access_profile(
     if not profile:
         raise NotFoundError(f"ChannelAccessProfile '{profile_id}' not found")
     return profile
+
+
+@rbac_router.patch(
+    "/access-profiles/channels/{profile_id}",
+    summary="Patch a channel access profile",
+    description="Partially update a channel access profile's name, description, details, or role.",
+    response_model=OutputChannelAccessProfile,
+    dependencies=[Depends(require_permission(PermStr.POLICY_UPDATE))],
+)
+def patch_channel_access_profile(
+    profile_id: UUID,
+    patch_in: InputAccessProfilePatch | None = None,
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    name = patch_in.name if patch_in else None
+    description = patch_in.description if patch_in else None
+    details = patch_in.details if patch_in else None
+    role = patch_in.role if patch_in else None
+    return rbac.patch_channel_access_profile(
+        profile_id,
+        name=name,
+        description=description,
+        details=details,
+        role=role,
+    )
 
 
 @rbac_router.delete(
@@ -842,6 +892,31 @@ def get_row_access_profile(
     if not profile:
         raise NotFoundError(f"RowAccessProfile '{profile_id}' not found")
     return profile
+
+
+@rbac_router.patch(
+    "/access-profiles/rows/{profile_id}",
+    summary="Patch a row access profile",
+    description="Partially update a row access profile's name, description, details, or role.",
+    response_model=OutputRowAccessProfile,
+    dependencies=[Depends(require_permission(PermStr.POLICY_UPDATE))],
+)
+def patch_row_access_profile(
+    profile_id: UUID,
+    patch_in: InputAccessProfilePatch | None = None,
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    name = patch_in.name if patch_in else None
+    description = patch_in.description if patch_in else None
+    details = patch_in.details if patch_in else None
+    role = patch_in.role if patch_in else None
+    return rbac.patch_row_access_profile(
+        profile_id,
+        name=name,
+        description=description,
+        details=details,
+        role=role,
+    )
 
 
 @rbac_router.delete(

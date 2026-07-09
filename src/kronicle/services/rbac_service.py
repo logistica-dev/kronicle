@@ -337,6 +337,52 @@ class RbacService:
     # ----------------------------------------------------------------------------------------------
     # Permissions
     # ----------------------------------------------------------------------------------------------
+    def _user_has_permission_via_policy(
+        self, db: Session, user_id: UUID, group_ids: list[UUID], perm_jsonb: JSONB
+    ) -> bool:
+        """Check if the user has a permission through a policy (zone/channel/row)."""
+
+        # Zone policies
+        if self._check_policy_perm(db, ZonePolicy, ZoneAccessProfile, user_id, group_ids, perm_jsonb):
+            return True
+        # Channel policies
+        if self._check_policy_perm(db, ChannelPolicy, ChannelAccessProfile, user_id, group_ids, perm_jsonb):
+            return True
+        # Row policies
+        if self._check_policy_perm(db, RowPolicy, RowAccessProfile, user_id, group_ids, perm_jsonb):
+            return True
+        return False
+
+    def _check_policy_perm(
+        self, db: Session, policy_cls, profile_cls, user_id: UUID, group_ids: list[UUID], perm_jsonb: JSONB
+    ) -> bool:
+        """Check permission via one policy type (zone, channel, or row)."""
+
+        # Subject = user directly
+        found = db.execute(
+            select(policy_cls.id)
+            .join(RbacSubject, RbacSubject.id == policy_cls.subject_id)
+            .join(profile_cls, profile_cls.id == policy_cls.access_profile_id)
+            .join(RbacRole, RbacRole.id == profile_cls.role_id)
+            .where(RbacSubject.user_id == user_id)
+            .where(RbacRole.permissions.op("@>")(perm_jsonb))
+        ).first()
+        if found:
+            return True
+        # Subject = one of the user's groups
+        if group_ids:
+            found = db.execute(
+                select(policy_cls.id)
+                .join(RbacSubject, RbacSubject.id == policy_cls.subject_id)
+                .join(profile_cls, profile_cls.id == policy_cls.access_profile_id)
+                .join(RbacRole, RbacRole.id == profile_cls.role_id)
+                .where(RbacSubject.group_id.in_(group_ids))
+                .where(RbacRole.permissions.op("@>")(perm_jsonb))
+            ).first()
+            if found:
+                return True
+        return False
+
     def user_has_permission(self, user_id: UUID, permission: str | Permission) -> bool:
         perm_str = str(permission) if isinstance(permission, Permission) else permission
         Permission.parse(perm_str)
@@ -353,15 +399,17 @@ class RbacService:
                 return True
             # Group roles
             group_ids = self._user_groups_repo.get_group_ids_for_user(db, user_id=user_id)
-            if not group_ids:
-                return False
-            has_group = db.execute(
-                select(RbacGroupRoles.role_id)
-                .join(RbacRole, RbacRole.id == RbacGroupRoles.role_id)
-                .where(RbacGroupRoles.group_id.in_(group_ids))
-                .where(RbacRole.permissions.op("@>")(perm_jsonb))
-            ).first()
-            return has_group is not None
+            if group_ids:
+                has_group = db.execute(
+                    select(RbacGroupRoles.role_id)
+                    .join(RbacRole, RbacRole.id == RbacGroupRoles.role_id)
+                    .where(RbacGroupRoles.group_id.in_(group_ids))
+                    .where(RbacRole.permissions.op("@>")(perm_jsonb))
+                ).first()
+                if has_group:
+                    return True
+            # Policies (zone/channel/row)
+            return self._user_has_permission_via_policy(db, user_id, list(group_ids) or [], perm_jsonb)
 
     # ----------------------------------------------------------------------------------------------
     # User ↔ Role assignment
@@ -687,6 +735,31 @@ class RbacService:
             p = self._zone_access_profile_repo.get_by_id(db, id=profile_id)
             return OutputZoneAccessProfile.from_db(p) if p else None
 
+    def patch_zone_access_profile(
+        self,
+        profile_id: UUID,
+        name: str | None = None,
+        description: str | None = None,
+        details: dict | None = None,
+        role: InputRole | None = None,
+    ) -> OutputZoneAccessProfile:
+        with self._db.transaction() as db:
+            profile = self._zone_access_profile_repo.get_by_id(db, id=profile_id)
+            if not profile:
+                raise NotFoundError(f"ZoneAccessProfile '{profile_id}' not found")
+            if name is not None:
+                profile.name = name
+            if description is not None:
+                profile.description = description
+            if details is not None:
+                profile.details = details
+            if role is not None:
+                db_role = self._resolve_role(db, role)
+                profile.role_id = db_role.id
+            db.flush()
+            db.refresh(profile)
+            return OutputZoneAccessProfile.from_db(profile)
+
     def delete_zone_access_profile(self, profile_id: UUID) -> OutputZoneAccessProfile:
         with self._db.transaction() as db:
             profile = self._zone_access_profile_repo.get_by_id(db, id=profile_id)
@@ -710,6 +783,31 @@ class RbacService:
             profile = self._channel_access_profile_repo.get_by_id(db, id=profile_id)
             return OutputChannelAccessProfile.from_db(profile) if profile else None
 
+    def patch_channel_access_profile(
+        self,
+        profile_id: UUID,
+        name: str | None = None,
+        description: str | None = None,
+        details: dict | None = None,
+        role: InputRole | None = None,
+    ) -> OutputChannelAccessProfile:
+        with self._db.transaction() as db:
+            profile = self._channel_access_profile_repo.get_by_id(db, id=profile_id)
+            if not profile:
+                raise NotFoundError(f"ChannelAccessProfile '{profile_id}' not found")
+            if name is not None:
+                profile.name = name
+            if description is not None:
+                profile.description = description
+            if details is not None:
+                profile.details = details
+            if role is not None:
+                db_role = self._resolve_role(db, role)
+                profile.role_id = db_role.id
+            db.flush()
+            db.refresh(profile)
+            return OutputChannelAccessProfile.from_db(profile)
+
     def delete_channel_access_profile(self, profile_id: UUID) -> OutputChannelAccessProfile:
         with self._db.transaction() as db:
             profile = self._channel_access_profile_repo.get_by_id(db, id=profile_id)
@@ -732,6 +830,31 @@ class RbacService:
         with self._db.get_db() as db:
             profile = self._row_access_profile_repo.get_by_id(db, id=profile_id)
             return OutputRowAccessProfile.from_db(profile) if profile else None
+
+    def patch_row_access_profile(
+        self,
+        profile_id: UUID,
+        name: str | None = None,
+        description: str | None = None,
+        details: dict | None = None,
+        role: InputRole | None = None,
+    ) -> OutputRowAccessProfile:
+        with self._db.transaction() as db:
+            profile = self._row_access_profile_repo.get_by_id(db, id=profile_id)
+            if not profile:
+                raise NotFoundError(f"RowAccessProfile '{profile_id}' not found")
+            if name is not None:
+                profile.name = name
+            if description is not None:
+                profile.description = description
+            if details is not None:
+                profile.details = details
+            if role is not None:
+                db_role = self._resolve_role(db, role)
+                profile.role_id = db_role.id
+            db.flush()
+            db.refresh(profile)
+            return OutputRowAccessProfile.from_db(profile)
 
     def delete_row_access_profile(self, profile_id: UUID) -> OutputRowAccessProfile:
         with self._db.transaction() as db:

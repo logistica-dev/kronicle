@@ -16,6 +16,13 @@ class InputPolicyPatch(InputSchema):
     pass
 
 
+class InputAccessProfilePatch(InputSchema):
+    """Fields that can be patched on an access profile."""
+
+    description: str | None = Field(default=None, description="Optional description")
+    role: InputRole | None = Field(default=None, description="Role for this access profile")
+
+
 # --------------------------------------------------------------------------------------------------
 # Input Access Profiles
 # --------------------------------------------------------------------------------------------------

@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Kronicle",
-    "summary": "FastAPI-powered TimescaleDB microservice for storing time-series measurements",
-    "version": "0.0.1"
+    "title": "TestApp",
+    "summary": "desc",
+    "version": "1.0"
   },
   "paths": {
     "/health/live": {
@@ -3936,20 +3936,14 @@
         "tags": [
           "RBAC"
         ],
-        "summary": "List all zone access profiles",
+        "summary": "List all access profiles grouped by resource type",
         "operationId": "list_access_profiles_rbac_v1_access_profiles_get",
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/OutputZoneAccessProfile"
-                  },
-                  "type": "array",
-                  "title": "Response List Access Profiles Rbac V1 Access Profiles Get"
-                }
+                "schema": {}
               }
             }
           }
@@ -4060,6 +4054,70 @@
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutputZoneAccessProfile"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Patch a zone access profile",
+        "description": "Partially update a zone access profile's name, description, details, or role.",
+        "operationId": "patch_zone_access_profile_rbac_v1_access_profiles_zones__profile_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "profile_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Profile Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/InputAccessProfilePatch"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Patch In"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -4227,6 +4285,70 @@
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutputChannelAccessProfile"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Patch a channel access profile",
+        "description": "Partially update a channel access profile's name, description, details, or role.",
+        "operationId": "patch_channel_access_profile_rbac_v1_access_profiles_channels__profile_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "profile_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Profile Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/InputAccessProfilePatch"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Patch In"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -4899,6 +5021,70 @@
           }
         }
       },
+      "patch": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Patch a row access profile",
+        "description": "Partially update a row access profile's name, description, details, or role.",
+        "operationId": "patch_row_access_profile_rbac_v1_access_profiles_rows__profile_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "profile_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Profile Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/InputAccessProfilePatch"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Patch In"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutputRowAccessProfile"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "delete": {
         "tags": [
           "RBAC"
@@ -5404,6 +5590,74 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "InputAccessProfilePatch": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 4
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details",
+            "description": "Optional JSONB metadata"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "description": "Optional description"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InputRole"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Role for this access profile"
+          }
+        },
+        "type": "object",
+        "title": "InputAccessProfilePatch",
+        "description": "Fields that can be patched on an access profile."
+      },
       "InputChannelAccessProfile": {
         "properties": {
           "id": {
@@ -5781,11 +6035,11 @@
             "temperature": "float",
             "time": "datetime"
           },
-          "id": "f27242c6-dc83-4859-b280-42613c4d6e88",
+          "id": "3a40294d-6b75-470c-b992-f09f4d7a3b80",
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-ca3e0",
+          "name": "thermo-0cfc8",
           "rows": [
             {
               "humidity": 55.1,
