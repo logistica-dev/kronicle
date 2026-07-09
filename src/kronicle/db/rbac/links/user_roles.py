@@ -27,5 +27,5 @@ class RbacUserRoles(RbacLink):
     role_id: Mapped[UUID] = mapped_column(ForeignKey(RbacRole.id, ondelete="CASCADE"), primary_key=True)
 
     # Optional ORM helpers
-    user: Mapped[RbacUser] = relationship(RbacUser, backref=__tablename__)
-    role: Mapped[RbacRole] = relationship(RbacRole, backref=__tablename__)
+    user: Mapped[RbacUser] = relationship(RbacUser, backref=__tablename__, passive_deletes=True)
+    role: Mapped[RbacRole] = relationship(RbacRole, backref=__tablename__, passive_deletes=True)

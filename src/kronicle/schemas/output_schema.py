@@ -29,8 +29,8 @@ class OutputSchema(BaseModel):
         return super().model_dump_json(exclude_none=True)
 
     @classmethod
-    def from_db(cls, row: KronicleBase) -> Self:
-        return cls.model_validate(row, from_attributes=True)
+    def from_db(cls, db_obj: KronicleBase) -> Self:
+        return cls.model_validate(db_obj, from_attributes=True)
 
 
 if __name__ == "__main__":  # pragma: no cover

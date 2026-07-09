@@ -14,7 +14,7 @@ from kronicle.repo.core.core_zone_repo import CoreZoneRepository
 from kronicle.repo.hierarchy.hierarchy_engine import HierarchyEngine
 from kronicle.repo.hierarchy.hierarchy_service import HierarchyService
 from kronicle.repo.hierarchy.zone_hierarchy_repo import ZoneHierarchyRepository
-from kronicle.schemas.core.input_core_channel_schemas import InputCoreChannel
+from kronicle.schemas.core.input_ressource_schema import InputCoreChannel
 from kronicle.schemas.core.safe_ressource_schema import OutputCoreChannel, OutputZone
 from kronicle.utils.dev_logs import log_d, log_i, log_w
 

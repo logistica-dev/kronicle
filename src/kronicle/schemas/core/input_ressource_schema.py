@@ -5,7 +5,17 @@ from uuid import UUID
 
 from pydantic import Field
 
-from kronicle.schemas.input_schema import InputSchema
+from kronicle.schemas.input_schema import InputSchema, NamedInputSchema
+
+mod = "in_zone"
+
+
+class InputZone(NamedInputSchema):
+    pass
+
+
+class InputZonePatch(InputSchema):
+    pass
 
 
 class InputCoreChannel(InputSchema):
@@ -15,3 +25,8 @@ class InputCoreChannel(InputSchema):
 
 class InputCoreChannelPatch(InputSchema):
     zone_id: UUID | None = Field(default=None, description="Zone UUID to assign")
+
+
+class InputRow(InputSchema):
+    id: UUID  # type: ignore
+    channel_id: UUID

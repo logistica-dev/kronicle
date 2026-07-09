@@ -93,7 +93,7 @@ class ZonePolicy(RbacPolicy):
 
     @declared_attr
     def access_profile(cls) -> Mapped[ZoneAccessProfile]:  # type: ignore[reportIncompatibleVariableOverride]
-        return relationship(ZoneAccessProfile)
+        return relationship(ZoneAccessProfile, passive_deletes=True)
 
 
 class ChannelPolicy(RbacPolicy):
@@ -117,7 +117,7 @@ class ChannelPolicy(RbacPolicy):
 
     @declared_attr
     def access_profile(cls) -> Mapped[ChannelAccessProfile]:  # type: ignore[reportIncompatibleVariableOverride]
-        return relationship(ChannelAccessProfile)
+        return relationship(ChannelAccessProfile, passive_deletes=True)
 
 
 class RowPolicy(RbacPolicy):
@@ -141,4 +141,4 @@ class RowPolicy(RbacPolicy):
 
     @declared_attr
     def access_profile(cls) -> Mapped[RowAccessProfile]:  # type: ignore[reportIncompatibleVariableOverride]
-        return relationship(RowAccessProfile)
+        return relationship(RowAccessProfile, passive_deletes=True)

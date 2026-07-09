@@ -4650,6 +4650,70 @@
             }
           }
         }
+      },
+      "patch": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Patch a zone policy",
+        "description": "Partially update a zone policy's name or details.",
+        "operationId": "patch_zone_policy_rbac_v1_policies_zones__policy_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "policy_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Policy Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/InputPolicyPatch"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Patch In"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutputZonePolicy"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/rbac/v1/policies/channels": {
@@ -4813,6 +4877,70 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Patch a channel policy",
+        "description": "Partially update a channel policy's name or details.",
+        "operationId": "patch_channel_policy_rbac_v1_policies_channels__policy_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "policy_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Policy Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/InputPolicyPatch"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Patch In"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutputChannelPolicy"
+                }
               }
             }
           },
@@ -5196,6 +5324,70 @@
             }
           }
         }
+      },
+      "patch": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Patch a row policy",
+        "description": "Partially update a row policy's name or details.",
+        "operationId": "patch_row_policy_rbac_v1_policies_rows__policy_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "policy_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Policy Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/InputPolicyPatch"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Patch In"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutputRowPolicy"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     }
   },
@@ -5410,7 +5602,7 @@
             "anyOf": [
               {
                 "type": "string",
-                "maxLength": 32,
+                "maxLength": 64,
                 "minLength": 4
               },
               {
@@ -5420,8 +5612,15 @@
             "title": "Name"
           },
           "details": {
-            "additionalProperties": true,
-            "type": "object",
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Details",
             "description": "Optional JSONB metadata"
           },
@@ -5472,7 +5671,7 @@
             "anyOf": [
               {
                 "type": "string",
-                "maxLength": 32,
+                "maxLength": 64,
                 "minLength": 4
               },
               {
@@ -5482,8 +5681,15 @@
             "title": "Name"
           },
           "details": {
-            "additionalProperties": true,
-            "type": "object",
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Details",
             "description": "Optional JSONB metadata"
           },
@@ -5522,7 +5728,7 @@
             "anyOf": [
               {
                 "type": "string",
-                "maxLength": 32,
+                "maxLength": 64,
                 "minLength": 4
               },
               {
@@ -5532,8 +5738,15 @@
             "title": "Name"
           },
           "details": {
-            "additionalProperties": true,
-            "type": "object",
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Details",
             "description": "Optional JSONB metadata"
           },
@@ -5570,13 +5783,20 @@
           },
           "name": {
             "type": "string",
-            "maxLength": 32,
+            "maxLength": 64,
             "minLength": 4,
             "title": "Name"
           },
           "details": {
-            "additionalProperties": true,
-            "type": "object",
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Details",
             "description": "Optional JSONB metadata"
           }
@@ -5693,11 +5913,11 @@
             "temperature": "float",
             "time": "datetime"
           },
-          "id": "b3a4758f-b434-47f1-a0a8-fcb61e0958cf",
+          "id": "8701258d-3e18-403e-a146-a0fa35e4efb4",
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-f5766",
+          "name": "thermo-e500b",
           "rows": [
             {
               "humidity": 55.1,
@@ -5726,6 +5946,51 @@
           }
         }
       },
+      "InputPolicyPatch": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 4
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details",
+            "description": "Optional JSONB metadata"
+          }
+        },
+        "type": "object",
+        "title": "InputPolicyPatch",
+        "description": "Fields that can be patched on a policy (name, details)."
+      },
       "InputRole": {
         "properties": {
           "id": {
@@ -5742,13 +6007,20 @@
           },
           "name": {
             "type": "string",
-            "maxLength": 32,
+            "maxLength": 64,
             "minLength": 4,
             "title": "Name"
           },
           "details": {
-            "additionalProperties": true,
-            "type": "object",
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Details",
             "description": "Optional JSONB metadata"
           },
@@ -5785,6 +6057,52 @@
         "title": "InputRole",
         "description": "Schema for creating or updating a role."
       },
+      "InputRow": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 4
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details",
+            "description": "Optional JSONB metadata"
+          },
+          "channel_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Channel Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "channel_id"
+        ],
+        "title": "InputRow"
+      },
       "InputRowAccessProfile": {
         "properties": {
           "id": {
@@ -5803,7 +6121,7 @@
             "anyOf": [
               {
                 "type": "string",
-                "maxLength": 32,
+                "maxLength": 64,
                 "minLength": 4
               },
               {
@@ -5813,8 +6131,15 @@
             "title": "Name"
           },
           "details": {
-            "additionalProperties": true,
-            "type": "object",
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Details",
             "description": "Optional JSONB metadata"
           },
@@ -5834,17 +6159,15 @@
             "$ref": "#/components/schemas/InputRole",
             "description": "Role for this access profile"
           },
-          "row_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Row Id",
+          "row": {
+            "$ref": "#/components/schemas/InputRow",
             "description": "ID of the row targeted by this access profile"
           }
         },
         "type": "object",
         "required": [
           "role",
-          "row_id"
+          "row"
         ],
         "title": "InputRowAccessProfile",
         "description": "Create a scoped role for a row."
@@ -5867,7 +6190,7 @@
             "anyOf": [
               {
                 "type": "string",
-                "maxLength": 32,
+                "maxLength": 64,
                 "minLength": 4
               },
               {
@@ -5877,8 +6200,15 @@
             "title": "Name"
           },
           "details": {
-            "additionalProperties": true,
-            "type": "object",
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Details",
             "description": "Optional JSONB metadata"
           },
@@ -5917,7 +6247,7 @@
             "anyOf": [
               {
                 "type": "string",
-                "maxLength": 32,
+                "maxLength": 64,
                 "minLength": 4
               },
               {
@@ -5927,8 +6257,15 @@
             "title": "Name"
           },
           "details": {
-            "additionalProperties": true,
-            "type": "object",
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Details",
             "description": "Optional JSONB metadata"
           },
@@ -5992,7 +6329,7 @@
             "anyOf": [
               {
                 "type": "string",
-                "maxLength": 32,
+                "maxLength": 64,
                 "minLength": 4
               },
               {
@@ -6002,8 +6339,15 @@
             "title": "Name"
           },
           "details": {
-            "additionalProperties": true,
-            "type": "object",
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Details",
             "description": "Optional JSONB metadata"
           },
@@ -6164,13 +6508,20 @@
           },
           "name": {
             "type": "string",
-            "maxLength": 32,
+            "maxLength": 64,
             "minLength": 4,
             "title": "Name"
           },
           "details": {
-            "additionalProperties": true,
-            "type": "object",
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Details",
             "description": "Optional JSONB metadata"
           }
@@ -6196,7 +6547,7 @@
             "anyOf": [
               {
                 "type": "string",
-                "maxLength": 32,
+                "maxLength": 64,
                 "minLength": 4
               },
               {
@@ -6206,8 +6557,15 @@
             "title": "Name"
           },
           "details": {
-            "additionalProperties": true,
-            "type": "object",
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Details",
             "description": "Optional JSONB metadata"
           },
@@ -6258,7 +6616,7 @@
             "anyOf": [
               {
                 "type": "string",
-                "maxLength": 32,
+                "maxLength": 64,
                 "minLength": 4
               },
               {
@@ -6268,8 +6626,15 @@
             "title": "Name"
           },
           "details": {
-            "additionalProperties": true,
-            "type": "object",
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Details",
             "description": "Optional JSONB metadata"
           }
@@ -6295,7 +6660,7 @@
             "anyOf": [
               {
                 "type": "string",
-                "maxLength": 32,
+                "maxLength": 64,
                 "minLength": 4
               },
               {
@@ -6305,8 +6670,15 @@
             "title": "Name"
           },
           "details": {
-            "additionalProperties": true,
-            "type": "object",
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Details",
             "description": "Optional JSONB metadata"
           },
@@ -6482,6 +6854,55 @@
         ],
         "title": "OutputCoreChannel"
       },
+      "OutputCoreRow": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
+          },
+          "channel_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channel Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "OutputCoreRow"
+      },
       "OutputGroup": {
         "properties": {
           "id": {
@@ -6627,17 +7048,15 @@
             ],
             "title": "Description"
           },
-          "row_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Row Id"
+          "row": {
+            "$ref": "#/components/schemas/OutputCoreRow"
           }
         },
         "type": "object",
         "required": [
           "id",
           "role",
-          "row_id"
+          "row"
         ],
         "title": "OutputRowAccessProfile"
       },

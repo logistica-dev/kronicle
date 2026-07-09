@@ -33,7 +33,7 @@ class ProcessedUser(BaseModel):
     name: str | None = None
     external_id: str | None = None
     full_name: str | None = None
-    details: dict[str, Any] = {"auth_method": "local"}  # Default metadata
+    details: dict[str, Any] | None = {"auth_method": "local"}  # Default metadata
 
     @field_validator("name")
     def validate_user_name_syntax(cls, v: str | None) -> str | None:

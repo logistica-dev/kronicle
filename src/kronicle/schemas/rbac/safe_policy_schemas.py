@@ -7,7 +7,7 @@ from pydantic import Field
 
 from kronicle.db.rbac.links.rbac_access_profile import ChannelAccessProfile, RowAccessProfile, ZoneAccessProfile
 from kronicle.db.rbac.links.rbac_policy import ChannelPolicy, RowPolicy, ZonePolicy
-from kronicle.schemas.core.safe_ressource_schema import OutputCoreChannel, OutputZone
+from kronicle.schemas.core.safe_ressource_schema import OutputCoreChannel, OutputCoreRow, OutputZone
 from kronicle.schemas.output_schema import OutputSchema
 from kronicle.schemas.rbac.input_subject_schemas import SubjectType
 from kronicle.schemas.rbac.safe_role_schemas import OutputRole
@@ -34,13 +34,13 @@ class OutputZonePolicy(OutputPolicy):
     access_profile: OutputZoneAccessProfile
 
     @classmethod
-    def from_db(cls, row: ZonePolicy):
+    def from_db(cls, db_obj: ZonePolicy):
         return cls(
-            id=row.id,
-            name=row.name,
-            subject=OutputSubject.from_db(row.subject),
-            access_profile=OutputZoneAccessProfile.from_db(row.access_profile),
-            is_delegation=row.is_delegation,
+            id=db_obj.id,
+            name=db_obj.name,
+            subject=OutputSubject.from_db(db_obj.subject),
+            access_profile=OutputZoneAccessProfile.from_db(db_obj.access_profile),
+            is_delegation=db_obj.is_delegation,
         )
 
 
@@ -48,13 +48,13 @@ class OutputChannelPolicy(OutputPolicy):
     access_profile: OutputChannelAccessProfile
 
     @classmethod
-    def from_db(cls, row: ChannelPolicy):
+    def from_db(cls, db_obj: ChannelPolicy):
         return cls(
-            id=row.id,
-            name=row.name,
-            subject=OutputSubject.from_db(row.subject),
-            access_profile=OutputChannelAccessProfile.from_db(row.access_profile),
-            is_delegation=row.is_delegation,
+            id=db_obj.id,
+            name=db_obj.name,
+            subject=OutputSubject.from_db(db_obj.subject),
+            access_profile=OutputChannelAccessProfile.from_db(db_obj.access_profile),
+            is_delegation=db_obj.is_delegation,
         )
 
 
@@ -62,13 +62,13 @@ class OutputRowPolicy(OutputPolicy):
     access_profile: OutputRowAccessProfile
 
     @classmethod
-    def from_db(cls, row: RowPolicy):
+    def from_db(cls, db_obj: RowPolicy):
         return cls(
-            id=row.id,
-            name=row.name,
-            subject=OutputSubject.from_db(row.subject),
-            access_profile=OutputRowAccessProfile.from_db(row.access_profile),
-            is_delegation=row.is_delegation,
+            id=db_obj.id,
+            name=db_obj.name,
+            subject=OutputSubject.from_db(db_obj.subject),
+            access_profile=OutputRowAccessProfile.from_db(db_obj.access_profile),
+            is_delegation=db_obj.is_delegation,
         )
 
 
@@ -84,13 +84,13 @@ class OutputZoneAccessProfile(OutputAccessProfile):
     zone: OutputZone
 
     @classmethod
-    def from_db(cls, row: ZoneAccessProfile):
+    def from_db(cls, db_obj: ZoneAccessProfile):
         return cls(
-            id=row.id,
-            name=row.name,
-            description=row.description,
-            role=OutputRole.from_db(row.role),
-            zone=OutputZone.from_db(row.zone),
+            id=db_obj.id,
+            name=db_obj.name,
+            description=db_obj.description,
+            role=OutputRole.from_db(db_obj.role),
+            zone=OutputZone.from_db(db_obj.zone),
         )
 
 
@@ -98,25 +98,25 @@ class OutputChannelAccessProfile(OutputAccessProfile):
     channel: OutputCoreChannel
 
     @classmethod
-    def from_db(cls, row: ChannelAccessProfile):
+    def from_db(cls, db_obj: ChannelAccessProfile):
         return cls(
-            id=row.id,
-            name=row.name,
-            description=row.description,
-            role=OutputRole.from_db(row.role),
-            channel=OutputCoreChannel.from_db(row.channel),
+            id=db_obj.id,
+            name=db_obj.name,
+            description=db_obj.description,
+            role=OutputRole.from_db(db_obj.role),
+            channel=OutputCoreChannel.from_db(db_obj.channel),
         )
 
 
 class OutputRowAccessProfile(OutputAccessProfile):
-    row_id: UUID
+    row: OutputCoreRow
 
     @classmethod
-    def from_db(cls, row: RowAccessProfile):
+    def from_db(cls, db_obj: RowAccessProfile):
         return cls(
-            id=row.id,
-            name=row.name,
-            description=row.description,
-            role=OutputRole.from_db(row.role),
-            row_id=row.row_id,
+            id=db_obj.id,
+            name=db_obj.name,
+            description=db_obj.description,
+            role=OutputRole.from_db(db_obj.role),
+            row=OutputCoreRow.from_db(db_obj.row),
         )

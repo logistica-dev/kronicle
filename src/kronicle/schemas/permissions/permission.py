@@ -149,6 +149,7 @@ class PermStr(StrEnum):
 
     POLICY_CREATE = perm(Tgt.POLICY, Act.CREATE)
     POLICY_READ = perm(Tgt.POLICY, Act.READ)
+    POLICY_UPDATE = perm(Tgt.POLICY, Act.UPDATE)
     POLICY_DELETE = perm(Tgt.POLICY, Act.DELETE)
 
     RBAC_ACCESS_PROFILE = perm(Tgt.RBAC, Act.ACCESS)

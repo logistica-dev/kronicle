@@ -10,7 +10,7 @@ from kronicle.db.rbac.rbac_db_session import RbacDbSession
 from kronicle.errors.error_types import BadRequestError, ConflictError, NotFoundError
 from kronicle.repo.core.core_channel_repo import CoreChannelRepository
 from kronicle.repo.core.core_zone_repo import CoreZoneRepository
-from kronicle.schemas.core.input_core_channel_schemas import InputCoreChannel
+from kronicle.schemas.core.input_ressource_schema import InputCoreChannel
 from kronicle.schemas.core.safe_ressource_schema import OutputZone
 from kronicle.services.core_service import CoreService
 

@@ -13,6 +13,15 @@ from kronicle.repo.kronicle_repo import KronicleRepository
 class ChannelPolicyRepository(KronicleRepository[ChannelPolicy]):
     model = ChannelPolicy
 
+    def get_by_subject_and_access_profile(
+        self, db: Session, *, subject_id: UUID, access_profile_id: UUID
+    ) -> ChannelPolicy | None:
+        stmt = select(self.model).where(
+            self.model.subject_id == subject_id,
+            self.model.access_profile_id == access_profile_id,
+        )
+        return db.execute(stmt).scalar_one_or_none()
+
     def get_policies_for_channel(self, db: Session, *, channel_id: UUID) -> list[ChannelPolicy]:
         stmt = (
             select(self.model)

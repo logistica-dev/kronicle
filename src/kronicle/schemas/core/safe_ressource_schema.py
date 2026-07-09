@@ -12,3 +12,7 @@ class OutputZone(OutputSchema):
 
 class OutputCoreChannel(OutputSchema):
     zone_id: UUID | None = None
+
+
+class OutputCoreRow(OutputSchema):
+    channel_id: UUID | None = None

@@ -3,7 +3,7 @@ from uuid import UUID, uuid4
 
 from sqlalchemy import ForeignKey, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
-from sqlalchemy.orm import Mapped, declared_attr, mapped_column, relationship
+from sqlalchemy.orm import Mapped, backref, declared_attr, mapped_column, relationship
 
 from kronicle.db.core.models.core_channel import CoreChannel
 from kronicle.db.core.models.core_row import CoreRow
@@ -29,7 +29,7 @@ class ResourceAccessProfile(RbacLink):
 
     @declared_attr
     def role(cls) -> Mapped[RbacRole]:
-        return relationship(RbacRole)
+        return relationship(RbacRole, passive_deletes=True)
 
     @declared_attr
     def description(cls) -> Mapped[str | None]:
@@ -50,7 +50,9 @@ class ZoneAccessProfile(ResourceAccessProfile):
     )
 
     zone_id: Mapped[UUID] = mapped_column(ForeignKey(CoreZone.id, ondelete="CASCADE"), nullable=False)
-    zone: Mapped[CoreZone] = relationship(CoreZone, backref="accesss")
+    zone: Mapped[CoreZone] = relationship(
+        CoreZone, backref=backref("access_profile", passive_deletes=True), passive_deletes=True
+    )
 
 
 class ChannelAccessProfile(ResourceAccessProfile):
@@ -63,7 +65,9 @@ class ChannelAccessProfile(ResourceAccessProfile):
     )
 
     channel_id: Mapped[UUID] = mapped_column(ForeignKey(CoreChannel.id, ondelete="CASCADE"), nullable=False)
-    channel: Mapped[CoreChannel] = relationship(CoreChannel, backref="accesss")
+    channel: Mapped[CoreChannel] = relationship(
+        CoreChannel, backref=backref("access_profile", passive_deletes=True), passive_deletes=True
+    )
 
 
 class RowAccessProfile(ResourceAccessProfile):
@@ -77,4 +81,6 @@ class RowAccessProfile(ResourceAccessProfile):
 
     # Reminder: row_id is based on ChannelTimeseries.row_id which is a BIGSERIAL int
     row_id: Mapped[UUID] = mapped_column(ForeignKey(CoreRow.id, ondelete="CASCADE"), nullable=False)
-    row: Mapped[CoreRow] = relationship(CoreRow, backref="accesss")
+    row: Mapped[CoreRow] = relationship(
+        CoreRow, backref=backref("access_profile", passive_deletes=True), passive_deletes=True
+    )

@@ -14,6 +14,7 @@ from kronicle.schemas.rbac.input_group_schemas import InputGroup
 from kronicle.schemas.rbac.input_policy_schemas import (
     InputChannelAccessProfile,
     InputChannelPolicy,
+    InputPolicyPatch,
     InputRowAccessProfile,
     InputRowPolicy,
     InputZoneAccessProfile,
@@ -561,11 +562,7 @@ def create_zone_access_profile(
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
 ):
 
-    return rbac.create_zone_access_profile(
-        role=profile_in.role,
-        zone=profile_in.zone,
-        description=profile_in.description,
-    )
+    return rbac.create_zone_access_profile(profile_in=profile_in)
 
 
 @rbac_router.get(
@@ -620,11 +617,7 @@ def create_channel_access_profile(
     profile_in: InputChannelAccessProfile,
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
 ):
-    return rbac.create_channel_access_profile(
-        role=profile_in.role,
-        channel=profile_in.channel,
-        description=profile_in.description,
-    )
+    return rbac.create_channel_access_profile(profile_in=profile_in)
 
 
 @rbac_router.get(
@@ -687,6 +680,8 @@ def create_zone_policy(
     return rbac.create_zone_policy(
         subject=policy_in.subject,
         access_profile=policy_in.access_profile,
+        name=policy_in.name,
+        details=policy_in.details,
     )
 
 
@@ -716,6 +711,23 @@ def delete_zone_policy(
 ):
     rbac.delete_zone_policy(policy_id)
     return {"detail": f"ZonePolicy '{policy_id}' deleted"}
+
+
+@rbac_router.patch(
+    "/policies/zones/{policy_id}",
+    summary="Patch a zone policy",
+    description="Partially update a zone policy's name or details.",
+    response_model=OutputZonePolicy,
+    dependencies=[Depends(require_permission(PermStr.POLICY_UPDATE))],
+)
+def patch_zone_policy(
+    policy_id: UUID,
+    patch_in: InputPolicyPatch | None = None,
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    name = patch_in.name if patch_in else None
+    details = patch_in.details if patch_in else None
+    return rbac.patch_zone_policy(policy_id, name=name, details=details)
 
 
 # --------------------------------------------------------------------------------------------------
@@ -768,6 +780,23 @@ def delete_channel_policy(
     return {"detail": f"ChannelPolicy '{policy_id}' deleted"}
 
 
+@rbac_router.patch(
+    "/policies/channels/{policy_id}",
+    summary="Patch a channel policy",
+    description="Partially update a channel policy's name or details.",
+    response_model=OutputChannelPolicy,
+    dependencies=[Depends(require_permission(PermStr.POLICY_UPDATE))],
+)
+def patch_channel_policy(
+    policy_id: UUID,
+    patch_in: InputPolicyPatch | None = None,
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    name = patch_in.name if patch_in else None
+    details = patch_in.details if patch_in else None
+    return rbac.patch_channel_policy(policy_id, name=name, details=details)
+
+
 # --------------------------------------------------------------------------------------------------
 # Row Access Profiles
 # --------------------------------------------------------------------------------------------------
@@ -784,11 +813,7 @@ def create_row_access_profile(
     profile_in: InputRowAccessProfile,
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
 ):
-    return rbac.create_row_access_profile(
-        role=profile_in.role,
-        row_id=profile_in.row_id,
-        description=profile_in.description,
-    )
+    return rbac.create_row_access_profile(profile_in=profile_in)
 
 
 @rbac_router.get(
@@ -906,8 +931,9 @@ def create_row_policy(
 ):
     return rbac.create_row_policy(
         subject=policy_in.subject,
-        role=policy_in.access_profile.role,
-        row_id=policy_in.access_profile.row_id,
+        access_profile=policy_in.access_profile,
+        name=policy_in.name,
+        details=policy_in.details,
     )
 
 
@@ -937,3 +963,20 @@ def delete_row_policy(
 ):
     rbac.delete_row_policy(policy_id)
     return {"detail": f"RowPolicy '{policy_id}' deleted"}
+
+
+@rbac_router.patch(
+    "/policies/rows/{policy_id}",
+    summary="Patch a row policy",
+    description="Partially update a row policy's name or details.",
+    response_model=OutputRowPolicy,
+    dependencies=[Depends(require_permission(PermStr.POLICY_UPDATE))],
+)
+def patch_row_policy(
+    policy_id: UUID,
+    patch_in: InputPolicyPatch | None = None,
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    name = patch_in.name if patch_in else None
+    details = patch_in.details if patch_in else None
+    return rbac.patch_row_policy(policy_id, name=name, details=details)

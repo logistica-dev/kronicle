@@ -30,5 +30,5 @@ class RbacUserGroups(RbacLink):
     group_id: Mapped[UUID] = mapped_column(ForeignKey(RbacGroup.id, ondelete="CASCADE"), primary_key=True)
 
     # ORM convenience relationships
-    user: Mapped[RbacUser] = relationship(RbacUser, backref=__tablename__)
-    group: Mapped[RbacGroup] = relationship(RbacGroup, backref=__tablename__)
+    user: Mapped[RbacUser] = relationship(RbacUser, backref=__tablename__, passive_deletes=True)
+    group: Mapped[RbacGroup] = relationship(RbacGroup, backref=__tablename__, passive_deletes=True)

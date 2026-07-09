@@ -1,15 +1,19 @@
 # kronicle/schemas/rbac/input_policy_schemas.py
 from __future__ import annotations
 
-from uuid import UUID
-
 from pydantic import Field
 
-from kronicle.schemas.core.input_zone_schemas import InputZonePatch
+from kronicle.schemas.core.input_ressource_schema import InputRow, InputZonePatch
 from kronicle.schemas.input_schema import InputSchema
 from kronicle.schemas.payload.input_payload import InputPayload
 from kronicle.schemas.rbac.input_role_schemas import InputRole
 from kronicle.schemas.rbac.input_subject_schemas import InputSubject
+
+
+class InputPolicyPatch(InputSchema):
+    """Fields that can be patched on a policy (name, details)."""
+
+    pass
 
 
 # --------------------------------------------------------------------------------------------------
@@ -35,7 +39,7 @@ class InputChannelAccessProfile(InputAccessProfile):
 class InputRowAccessProfile(InputAccessProfile):
     """Create a scoped role for a row."""
 
-    row_id: UUID = Field(..., description="ID of the row targeted by this access profile")
+    row: InputRow = Field(..., description="ID of the row targeted by this access profile")
 
 
 # --------------------------------------------------------------------------------------------------

@@ -9,8 +9,12 @@ from kronicle.auth.auth_middleware import require_auth, require_permission
 from kronicle.deps.channel_deps import channel_service
 from kronicle.deps.rbac_deps import core_service
 from kronicle.errors.error_types import NotFoundError
-from kronicle.schemas.core.input_core_channel_schemas import InputCoreChannel, InputCoreChannelPatch
-from kronicle.schemas.core.input_zone_schemas import InputZone, InputZonePatch
+from kronicle.schemas.core.input_ressource_schema import (
+    InputCoreChannel,
+    InputCoreChannelPatch,
+    InputZone,
+    InputZonePatch,
+)
 from kronicle.schemas.core.safe_ressource_schema import OutputCoreChannel, OutputZone
 from kronicle.schemas.permissions.permission import PermStr
 from kronicle.services.channel_service import ChannelService

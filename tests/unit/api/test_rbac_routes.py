@@ -36,7 +36,7 @@ from kronicle.api.rbac_routes import (
     remove_user_from_group,
 )
 from kronicle.errors.error_types import BadRequestError, NotFoundError
-from kronicle.schemas.core.input_zone_schemas import InputZonePatch
+from kronicle.schemas.core.input_ressource_schema import InputZonePatch
 from kronicle.schemas.payload.input_payload import InputPayload
 from kronicle.schemas.rbac.input_group_schemas import InputGroup
 from kronicle.schemas.rbac.input_policy_schemas import (
@@ -204,7 +204,7 @@ class TestGroupRoutes:
         expected = {"id": uuid4(), "name": "test-group"}
         mock_rbac.create_group.return_value = expected
         result = create_group(group_in=group_in, rbac=mock_rbac)
-        mock_rbac.create_group.assert_called_once_with(name="test-group", details={})
+        mock_rbac.create_group.assert_called_once_with(name="test-group", details=None)
         assert result == expected
 
     def test_list_groups(self, mock_rbac):
@@ -309,7 +309,7 @@ class TestRoleRoutes:
             description="desc",
             permissions=["zone:read"],
             restrictions=[],
-            details={},
+            details=None,
         )
         assert result == expected
 
@@ -343,7 +343,7 @@ class TestRoleRoutes:
             description=None,
             permissions=["zone:write"],
             restrictions=[],
-            details={},
+            details=None,
         )
         assert result == expected
 
@@ -392,6 +392,8 @@ class TestPolicyRoutes:
                 role=policy_in.access_profile.role,
                 zone=policy_in.access_profile.zone,
             ),
+            name=None,
+            details=None,
         )
         assert result == expected
 
