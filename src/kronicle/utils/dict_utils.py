@@ -43,7 +43,56 @@ def strip_nulls(obj, recursive: bool = False):
     return obj
 
 
+def remove_alt_field(d: dict, keep: str, alt: str):
+    if alt in d:
+        d.setdefault(keep, d.pop(alt))
+
+
+def sanitize_dict(
+    d: Any,
+    max_depth: int = 5,
+    max_keys: int = 100,
+    max_string_len: int = 1000,
+    current_depth: int = 0,
+) -> Any:
+    """
+    Recursively sanitize a dictionary to prevent DB pollution and DoS attacks.
+    """
+    if current_depth > max_depth:
+        raise ValueError("Max depth exceeded")
+
+    if isinstance(d, dict):
+        if len(d) > max_keys:
+            raise ValueError("Too many keys in dictionary")
+
+        sanitized = {}
+        for k, v in d.items():
+            if not isinstance(k, str):
+                raise TypeError(f"Key must be a string, got {type(k)}")
+            if len(k) > max_string_len:
+                raise ValueError("Key string too long")
+            sanitized[k] = sanitize_dict(v, max_depth, max_keys, max_string_len, current_depth + 1)
+        return sanitized
+
+    elif isinstance(d, list):
+        if len(d) > max_keys:
+            raise ValueError("List too long")
+        return [sanitize_dict(v, max_depth, max_keys, max_string_len, current_depth + 1) for v in d]
+
+    elif isinstance(d, str):
+        if len(d) > max_string_len:
+            raise ValueError("String too long")
+        return d
+
+    elif isinstance(d, (int, float, bool)) or d is None:
+        return d
+
+    else:
+        raise TypeError(f"Unsupported type: {type(d)}")
+
+
 if __name__ == "__main__":  # pragma: no cover
+
     here = "dict_utils.tests"
     print(here, "strip_nulls list:", strip_nulls([3, 0, 5, None]))
     print(

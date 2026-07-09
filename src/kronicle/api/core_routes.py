@@ -175,7 +175,7 @@ def patch_core_channel(
         channel_id,
         name=channel_in.name,
         details=channel_in.details,
-        zone_id=channel_in.zone_id,
+        zone_id=channel_in.zone.id if channel_in.zone else None,
     )
 
 
@@ -216,7 +216,7 @@ async def sync_core_channels(
     core: CoreService = Depends(core_service),  # noqa: B008
 ):
     data_channels = await data_service.fetch_all_metadata()
-    channels_info = [InputCoreChannel(id=c.channel_id, name=c.name) for c in data_channels]
+    channels_info = [InputCoreChannel(id=c.id, name=c.name) for c in data_channels]
 
     default_zone = core.ensure_default_zone()
     created = core.sync_core_channels(channels_info, default_zone_id=default_zone.id)

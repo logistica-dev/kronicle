@@ -122,8 +122,8 @@ class CoreService:
             for c in missing:
                 core_channel = CoreChannel(
                     id=c.id,
-                    name=c.name or str(c.id),
-                    zone_id=c.zone_id or default_zone_id,
+                    name=c.name or f"Channel {c.id.hex}",
+                    zone_id=c.zone.id if c.zone else default_zone_id,
                     details=c.details or {},
                 )
                 db.add(core_channel)
@@ -154,7 +154,7 @@ class CoreService:
                 channels = self._channel_repo.get_by_zone(db, zone_id=zone_id)
             else:
                 channels = self._channel_repo.fetch_all(db)
-        return [OutputCoreChannel.from_db(c) for c in channels]
+            return [OutputCoreChannel.from_db(c) for c in channels]
 
     def get_core_channel(self, channel_id: UUID) -> OutputCoreChannel | None:
         with self._db.get_db() as db:
@@ -169,28 +169,28 @@ class CoreService:
             except NotFoundError:
                 return None
 
-    def create_core_channel(self, channel: InputCoreChannel) -> OutputCoreChannel:
+    def create_core_channel(self, channel: InputCoreChannel, zone_id: UUID) -> OutputCoreChannel:
         with self._db.transaction() as db:
             core_channel = CoreChannel(
                 id=channel.id,
-                name=channel.name or str(channel.id),
-                zone_id=channel.zone_id,
+                name=channel.name or f"Channel {channel.id.hex}",
+                zone_id=zone_id,
                 details=channel.details or {},
             )
             db.add(core_channel)
             db.flush()
             return OutputCoreChannel.from_db(core_channel)
 
-    def ensure_channel_in_zone(self, channel_id: UUID, zone_id: UUID) -> None:
+    def ensure_channel_in_zone(self, channel: InputCoreChannel, zone_id: UUID) -> None:
         zone = self.get_zone(zone_id)
         if not zone:
             raise NotFoundError(f"Zone {zone_id} not found")
-        existing = self.get_core_channel(channel_id)
-        if existing:
-            if existing.zone_id != zone_id:
-                raise ConflictError(f"Channel {channel_id} belongs to zone {existing.zone_id}, not {zone_id}")
+        existing = self.get_core_channel(channel.id)
+        if existing and existing.zone:
+            if existing.zone.id != zone_id:
+                raise ConflictError(f"Channel {channel.id} belongs to zone {existing.zone.id}, not {zone_id}")
         else:
-            self.create_core_channel(InputCoreChannel(id=channel_id, zone_id=zone_id))
+            self.create_core_channel(channel, zone_id=zone.id)
 
     def delete_core_channel(self, channel_id: UUID) -> OutputCoreChannel | None:
         with self._db.transaction() as db:
@@ -218,6 +218,7 @@ class CoreService:
                 channel.name = name
             if details is not None:
                 channel.details = details
+            # Only available to users with setup rights
             if zone_id is not None:
                 zone = self._zone_repo.get_by_id(db, id=zone_id)
                 if not zone:

@@ -12,7 +12,7 @@ from kronicle.types.iso_datetime import IsoDateTime
 def make_channel_schema():
     return ChannelSchema.from_user_json(
         {
-            "channel_id": "uuid",
+            "id": "uuid",
             "name": "str",
             "fields": "dict",
             "tags": "dict",
@@ -64,10 +64,10 @@ class MockChannelResource:
 
 # --- Basic instantiation ---
 def test_basic_instantiation(channel_schema_fixture):
-    payload = ResponsePayload(channel_id=uuid4(), channel_schema=channel_schema_fixture)
-    assert payload.channel_id
+    payload = ResponsePayload(id=uuid4(), channel_schema=channel_schema_fixture)
+    assert payload.id
     assert payload.channel_schema.model_dump(flatten=True) == {
-        "channel_id": "uuid",
+        "id": "uuid",
         "name": "str",
         "fields": "dict",
         "tags": "dict",
@@ -84,7 +84,7 @@ def test_from_channel_resource_basic():
     rows = [{"a": 1}, {"a": 2}]
     resource = MockChannelResource(rows=rows)
     payload = ResponsePayload.from_channel_resource(resource)  # type: ignore
-    assert payload.channel_id == resource.metadata.channel_id
+    assert payload.id == resource.metadata.channel_id
     assert payload.rows == rows
     assert payload.op_details["provided_rows"] == len(rows)
     assert payload.op_details["available_rows"] == resource.row_nb
@@ -103,7 +103,7 @@ def test_from_channel_resource_strict_removes_rows():
 
 # # --- with_op_status ---
 # def test_with_op_status_updates(channel_schema_fixture):
-#     payload = ResponsePayload(channel_id=uuid4(), channel_schema=channel_schema_fixture)
+#     payload = ResponsePayload(id=uuid4(), channel_schema=channel_schema_fixture)
 #     payload.with_op_status(status="failed", details={"error": "something"})
 #     assert payload.op_details.get("error") == "something"
 #     assert getattr(payload, "op_status", None) == "failed"
@@ -111,14 +111,16 @@ def test_from_channel_resource_strict_removes_rows():
 
 # --- row/column conversion ---
 def test_rows_to_columns_empty_rows(channel_schema_fixture):
-    payload = ResponsePayload(channel_id=uuid4(), channel_schema=channel_schema_fixture)
+    payload = ResponsePayload(id=uuid4(), channel_schema=channel_schema_fixture)
     payload.rows_to_columns()
     assert payload.columns is None
 
 
 def test_rows_to_columns_with_rows(channel_schema_fixture):
     payload = ResponsePayload(
-        channel_id=uuid4(), channel_schema=channel_schema_fixture, rows=[{"x": 1, "y": 2}, {"x": 3, "y": 4}]
+        id=uuid4(),
+        channel_schema=channel_schema_fixture,
+        rows=[{"x": 1, "y": 2}, {"x": 3, "y": 4}],
     )
     payload.rows_to_columns()
     assert payload.columns == {"x": [1, 3], "y": [2, 4]}
@@ -131,7 +133,7 @@ def test_rows_to_columns_with_rows(channel_schema_fixture):
 # --- serializers / model_dump ---
 def test_serializers_strip_nulls(channel_schema_fixture):
     payload = ResponsePayload(
-        channel_id=uuid4(),
+        id=uuid4(),
         channel_schema=channel_schema_fixture,
         name=None,
         metadata=None,

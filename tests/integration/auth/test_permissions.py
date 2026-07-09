@@ -201,7 +201,7 @@ def test_channel(su_setup_client, test_zone) -> Generator[str, None, None]:
     channel_id = uuid4_str()
     payload = KronicleChannel.from_json(
         {
-            "channel_id": channel_id,
+            "id": channel_id,
             "name": f"perm_test_chan_{tiny_id()}",
             "channel_schema": {"time": "datetime", "temp": "float"},
             "metadata": {"source": "perm-test"},
@@ -264,7 +264,7 @@ class TestDirectRoleWritePermission:
             user_jwt,
             f"/data/v1/channels/{test_channel}/rows",
             json={
-                "channel_id": test_channel,
+                "id": test_channel,
                 "channel_schema": {"time": "datetime", "temp": "float"},
                 "rows": [{"time": "2025-06-01T00:00:00Z", "temp": 18.5}],
             },
@@ -287,7 +287,7 @@ class TestGroupRolePermission:
             user_jwt,
             f"/setup/v1/zones/{test_zone}/channels",
             json={
-                "channel_id": channel_id,
+                "id": channel_id,
                 "name": f"group_perm_test_{tiny_id()}",
                 "channel_schema": {"time": "datetime", "val": "float"},
                 "metadata": {"test": True},

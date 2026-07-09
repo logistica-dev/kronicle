@@ -566,7 +566,7 @@ class RbacService:
             return existing
         name = access_profile.name or None
         if not name:
-            name = f"Zone {db_zone.name} {db_role.name} access"
+            name = f"Zone {db_zone.name[:15]} {db_role.name[:15]} access"
         profile = self._zone_access_profile_repo.create(db, role_id=db_role.id, zone_id=db_zone.id, name=name)
         if access_profile.description is not None:
             profile.description = access_profile.description
@@ -591,7 +591,10 @@ class RbacService:
         db_channel = self._resolve_channel(db, access_profile.channel)
         name = access_profile.name or None
         if not name:
-            name = f"Channel {db_channel.name} {db_role.name} access"
+            channel_name = str(db_channel.name)
+            if channel_name.startswith("channel_"):
+                channel_name = channel_name[8:]
+            name = f"Channel {channel_name[:15]} {db_role.name[:15]} access"
         profile = self._channel_access_profile_repo.create(db, role_id=db_role.id, channel_id=db_channel.id, name=name)
         if access_profile.description is not None:
             profile.description = access_profile.description
@@ -613,7 +616,8 @@ class RbacService:
         db_role = self._resolve_role(db, access_profile.role)
         name = access_profile.name or None
         if not name:
-            name = f"Row {access_profile.row.id} {db_role.name} access"
+            row_id = access_profile.row.id.hex
+            name = f"Row {row_id[:15]} {db_role.name[:15]} access"
         profile = self._row_access_profile_repo.create(db, role_id=db_role.id, row_id=access_profile.row.id, name=name)
         if access_profile.description is not None:
             profile.description = access_profile.description
@@ -766,7 +770,7 @@ class RbacService:
             return output_cls.from_db(existing)
 
         if not name:
-            name = f"{db_access.name} for {subj.name}"
+            name = f"{db_access.name[:44]} for {subj.name[:15]}"
 
         policy = policy_cls(
             subject_id=subj.id,

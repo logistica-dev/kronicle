@@ -10,7 +10,7 @@ from kronicle.db.data.models.channel_schema import ChannelSchema
 from kronicle.errors.error_types import BadRequestError
 from kronicle.types.iso_datetime import IsoDateTime
 from kronicle.types.tag_type import TagType
-from kronicle.utils.dict_utils import ensure_dict_or_none
+from kronicle.utils.dict_utils import ensure_dict_or_none, remove_alt_field
 from kronicle.utils.str_utils import ensure_uuid4, normalize_name, tiny_id, uuid4_str
 
 
@@ -19,16 +19,16 @@ def example_payload():
         json_schema_extra={
             "example": {
                 "id": uuid4_str(),
-                "channel_schema": {"time": "datetime", "temperature": "float", "humidity": "float"},
                 "name": f"thermo-{tiny_id(5)}",
-                "metadata": {"unit": "C"},
-                "tags": {"location": "lab", "floor": 3},
+                "channel_schema": {"time": "datetime", "temperature": "float", "humidity": "float"},
                 "rows": [
                     {"time": "2025-01-01T00:00:00Z", "temperature": 20.5, "humidity": 55.1},
                     {"time": "2025-01-02T00:00:00Z", "temperature": 20.0, "humidity": 54.1},
                     {"time": "2025-01-03T00:00:00Z", "temperature": 20.5, "humidity": 53.1},
                     {"time": "2025-01-04T00:00:00Z", "temperature": 29.5, "humidity": 52.1},
                 ],
+                "metadata": {"unit": "C"},
+                "tags": {"location": "lab", "floor": 3},
             }
         }
     )
@@ -81,12 +81,8 @@ class InputPayload(BaseModel):
         if not isinstance(values, dict):
             return values
 
-        if "id" not in values and "channel_id" in values:
-            values["id"] = values["channel_id"]
-
-        # Accept user-provided alias
-        if "name" not in values and "channel_name" in values:
-            values["name"] = values["channel_name"]
+        remove_alt_field(values, keep="id", alt="channel_id")
+        remove_alt_field(values, keep="name", alt="channel_name")
         return values
 
     # --------------------------------------------------------------------------

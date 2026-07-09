@@ -55,7 +55,7 @@ class KronicleBase(Base):
     )
 
     # Optional name
-    name: Mapped[str] = mapped_column(String(100), unique=True, nullable=True)
+    name: Mapped[str] = mapped_column(String(64), unique=True, nullable=True)
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(

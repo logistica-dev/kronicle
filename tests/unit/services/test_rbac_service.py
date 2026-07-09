@@ -87,6 +87,11 @@ def _fake_core_channel(id=None, name="channel", zone_id=None):
     c.name = name
     c.details = {}
     c.zone_id = zone_id or uuid4()
+    zone = MagicMock()
+    zone.id = c.zone_id
+    zone.name = "zone"
+    zone.details = {}
+    c.zone = zone
     return c
 
 

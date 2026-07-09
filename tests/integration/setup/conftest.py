@@ -47,7 +47,7 @@ def test_channel(kronicle_writer, kronicle_setup, test_zone) -> Generator[str, N
     channel_id = uuid4_str()
     name = f"sync_chan_{tiny_id()}"
     payload = {
-        "channel_id": channel_id,
+        "id": channel_id,
         "name": name,
         "channel_schema": {"time": "datetime", "value": "float"},
         "metadata": {"source": "sync-test"},

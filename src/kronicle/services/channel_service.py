@@ -144,7 +144,7 @@ class ChannelService:
         rows = payload.rows
         if not rows:
             raise BadRequestError(
-                "No rows found in input payload", details={"channel_id": uuid_to_str(channel_id), "rows": rows}
+                "No rows found in input payload", details={"id": uuid_to_str(channel_id), "rows": rows}
             )
 
         if payload.channel_schema:

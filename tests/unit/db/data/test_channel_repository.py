@@ -19,7 +19,7 @@ pytestmark = pytest.mark.asyncio
 def make_channel_schema():
     return ChannelSchema.from_user_json(
         {
-            "channel_id": "uuid",
+            "id": "uuid",
             "name": "str",
             "fields": "dict",
             "tags": "dict",
@@ -370,7 +370,7 @@ async def test_patch_metadata_no_metadata_no_tags(repo, channel_schema_fixture):
 async def test_patch_metadata_schema_update(repo):
     old_schema = ChannelSchema.from_user_json(
         {
-            "channel_id": "uuid",
+            "id": "uuid",
             "name": "str",
             "fields": "dict",
             "tags": "dict",
@@ -379,7 +379,7 @@ async def test_patch_metadata_schema_update(repo):
     )
     new_schema = ChannelSchema.from_user_json(
         {
-            "channel_id": "uuid",
+            "id": "uuid",
             "name": "str",
             "fields": "dict",
             "tags": "dict",

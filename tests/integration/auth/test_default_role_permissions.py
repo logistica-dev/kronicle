@@ -140,7 +140,7 @@ def test_zone(su_core_client) -> Generator[str, None, None]:
 def test_channel(su_setup_client, test_zone) -> Generator[str, None, None]:
     channel_id = uuid4_str()
     payload = {
-        "channel_id": channel_id,
+        "id": channel_id,
         "name": f"default_role_chan_{tiny_id()}",
         "channel_schema": {"time": "datetime", "val": "float"},
         "metadata": {"source": "default-role-test"},
@@ -226,7 +226,7 @@ class TestSuperAdmin:
             jwt,
             f"/setup/v1/zones/{test_zone}/channels",
             json={
-                "channel_id": cid,
+                "id": cid,
                 "name": f"su_chan_{tiny_id()}",
                 "channel_schema": {"time": "datetime", "val": "float"},
                 "tags": {"test": True},
@@ -245,7 +245,7 @@ class TestSuperAdmin:
             jwt,
             f"/data/v1/channels/{test_channel}/rows",
             json={
-                "channel_id": test_channel,
+                "id": test_channel,
                 "channel_schema": {"time": "datetime", "val": "float"},
                 "tags": {"test": True},
                 "rows": [{"time": "2025-06-01T00:00:00Z", "val": 42.0}],
@@ -337,7 +337,7 @@ class TestRbacAdmin:
             jwt,
             f"/setup/v1/zones/{fake_zone}/channels",
             json={
-                "channel_id": uuid4_str(),
+                "id": uuid4_str(),
                 "name": "should_fail",
                 "tags": {"test": True},
                 "channel_schema": {"x": "int"},
@@ -351,7 +351,7 @@ class TestRbacAdmin:
             jwt,
             f"/data/v1/channels/{test_channel}/rows",
             json={
-                "channel_id": test_channel,
+                "id": test_channel,
                 "channel_schema": {"x": "int"},
                 "tags": {"test": True},
                 "rows": [],
@@ -413,7 +413,7 @@ class TestDataReader:
             jwt,
             f"/data/v1/channels/{test_channel}/rows",
             json={
-                "channel_id": test_channel,
+                "id": test_channel,
                 "channel_schema": {"x": "int"},
                 "tags": {"test": True},
                 "rows": [],
@@ -428,7 +428,7 @@ class TestDataReader:
             jwt,
             f"/setup/v1/zones/{fake_zone}/channels",
             json={
-                "channel_id": uuid4_str(),
+                "id": uuid4_str(),
                 "name": "should_fail",
                 "channel_schema": {"x": "int"},
                 "tags": {"test": True},
@@ -468,7 +468,7 @@ class TestDataWriter:
             jwt,
             f"/data/v1/channels/{test_channel}/rows",
             json={
-                "channel_id": test_channel,
+                "id": test_channel,
                 "channel_schema": {"time": "datetime", "val": "float"},
                 "tags": {"test": True},
                 "rows": [{"time": "2025-06-01T00:00:00Z", "val": 99.0}],
@@ -484,7 +484,7 @@ class TestDataWriter:
             jwt,
             f"/setup/v1/zones/{fake_zone}/channels",
             json={
-                "channel_id": uuid4_str(),
+                "id": uuid4_str(),
                 "name": "should_fail",
                 "channel_schema": {"x": "int"},
                 "tags": {"test": True},
@@ -541,7 +541,7 @@ class TestChannelAdmin:
             jwt,
             f"/setup/v1/zones/{test_zone}/channels",
             json={
-                "channel_id": cid,
+                "id": cid,
                 "name": f"ca_chan_{tiny_id()}",
                 "channel_schema": {"time": "datetime", "val": "float"},
                 "tags": {"test": True},
@@ -561,7 +561,7 @@ class TestChannelAdmin:
             su_jwt,
             f"/setup/v1/zones/{test_zone}/channels",
             json={
-                "channel_id": cid,
+                "id": cid,
                 "name": f"ca_del_{tiny_id()}",
                 "channel_schema": {"time": "datetime", "val": "float"},
                 "tags": {"test": True},
@@ -599,7 +599,7 @@ class TestChannelAdmin:
             jwt,
             f"/data/v1/channels/{test_channel}/rows",
             json={
-                "channel_id": test_channel,
+                "id": test_channel,
                 "channel_schema": {"x": "int"},
                 "tags": {"test": True},
                 "rows": [],
@@ -656,7 +656,7 @@ class TestZoneAdmin:
             base_url,
             jwt,
             f"/setup/v1/zones/{fake_zone}/channels",
-            json={"channel_id": uuid4_str(), "name": "should_fail", "channel_schema": {"x": "int"}},
+            json={"id": uuid4_str(), "name": "should_fail", "channel_schema": {"x": "int"}},
         )
         assert r.status_code == 403
 
@@ -666,7 +666,7 @@ class TestZoneAdmin:
             base_url,
             jwt,
             f"/data/v1/channels/{test_channel}/rows",
-            json={"channel_id": test_channel, "channel_schema": {"x": "int"}, "rows": []},
+            json={"id": test_channel, "channel_schema": {"x": "int"}, "rows": []},
         )
         assert r.status_code == 403
 
@@ -735,7 +735,7 @@ class TestAuditor:
             base_url,
             jwt,
             f"/setup/v1/zones/{fake_zone}/channels",
-            json={"channel_id": uuid4_str(), "name": "should_fail", "channel_schema": {"x": "int"}},
+            json={"id": uuid4_str(), "name": "should_fail", "channel_schema": {"x": "int"}},
         )
         assert r.status_code == 403
 
@@ -744,7 +744,7 @@ class TestAuditor:
             base_url,
             jwt,
             f"/data/v1/channels/{test_channel}/rows",
-            json={"channel_id": test_channel, "channel_schema": {"x": "int"}, "rows": []},
+            json={"id": test_channel, "channel_schema": {"x": "int"}, "rows": []},
         )
         assert r.status_code == 403
 

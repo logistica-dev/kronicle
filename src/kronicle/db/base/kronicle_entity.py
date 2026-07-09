@@ -21,7 +21,7 @@ class KronicleEntity(KronicleBase):
 
     __abstract__ = True  # Do not create a table for this class itself
 
-    name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
 
     @property
     def row_snapshot(self) -> dict[str, Any]:

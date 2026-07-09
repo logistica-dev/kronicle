@@ -484,96 +484,6 @@
             }
           }
         }
-      },
-      "post": {
-        "tags": [
-          "Input data"
-        ],
-        "summary": "Update or create a channel",
-        "description": "Upsert a channel: if it exists, updates metadata (schema must match if provided); if it does not exist, creates it with the given schema and metadata.",
-        "operationId": "create_channel_data_v1_channels_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/InputPayload"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponsePayload"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "Input data"
-        ],
-        "summary": "Update or create a channel",
-        "description": "Upsert a channel: if it exists, updates metadata (schema must match if provided); if it does not exist, creates it with the given schema and metadata.",
-        "operationId": "upsert_channel_data_v1_channels_put",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/InputPayload"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponsePayload"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
       }
     },
     "/data/v1/channels/{channel_id}": {
@@ -1059,96 +969,6 @@
                     }
                   ],
                   "title": "Response Fetch All Channels Metadata Setup V1 Channels Get"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "Setup data channels"
-        ],
-        "summary": "Update or create a channel",
-        "description": "Upsert a channel: if it exists, updates metadata (schema must match if provided); if it does not exist, creates it with the given schema and metadata.",
-        "operationId": "create_channel_setup_v1_channels_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/InputPayload"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponsePayload"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "Setup data channels"
-        ],
-        "summary": "Update or create a channel",
-        "description": "Upsert a channel: if it exists, updates metadata (schema must match if provided); if it does not exist, creates it with the given schema and metadata.",
-        "operationId": "upsert_channel_setup_v1_channels_put",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/InputPayload"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponsePayload"
                 }
               }
             }
@@ -5710,6 +5530,56 @@
         "title": "InputChannelPolicy",
         "description": "Assign a role to a subject (user or group) for a specific channel."
       },
+      "InputCoreChannel": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 4
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details",
+            "description": "Optional JSONB metadata"
+          },
+          "zone": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InputZone"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "InputCoreChannel"
+      },
       "InputCoreChannelPatch": {
         "properties": {
           "id": {
@@ -5750,17 +5620,15 @@
             "title": "Details",
             "description": "Optional JSONB metadata"
           },
-          "zone_id": {
+          "zone": {
             "anyOf": [
               {
-                "type": "string",
-                "format": "uuid"
+                "$ref": "#/components/schemas/InputZone"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Zone Id",
             "description": "Zone UUID to assign"
           }
         },
@@ -5913,11 +5781,11 @@
             "temperature": "float",
             "time": "datetime"
           },
-          "id": "8701258d-3e18-403e-a146-a0fa35e4efb4",
+          "id": "f27242c6-dc83-4859-b280-42613c4d6e88",
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-e500b",
+          "name": "thermo-ca3e0",
           "rows": [
             {
               "humidity": 55.1,
@@ -6090,16 +5958,14 @@
             "title": "Details",
             "description": "Optional JSONB metadata"
           },
-          "channel_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Channel Id"
+          "channel": {
+            "$ref": "#/components/schemas/InputCoreChannel"
           }
         },
         "type": "object",
         "required": [
           "id",
-          "channel_id"
+          "channel"
         ],
         "title": "InputRow"
       },
@@ -6835,17 +6701,15 @@
             ],
             "title": "Details"
           },
-          "zone_id": {
+          "zone": {
             "anyOf": [
               {
-                "type": "string",
-                "format": "uuid"
+                "$ref": "#/components/schemas/OutputZone"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Zone Id"
+            ]
           }
         },
         "type": "object",
@@ -6884,17 +6748,15 @@
             ],
             "title": "Details"
           },
-          "channel_id": {
+          "channel": {
             "anyOf": [
               {
-                "type": "string",
-                "format": "uuid"
+                "$ref": "#/components/schemas/OutputCoreChannel"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Channel Id"
+            ]
           }
         },
         "type": "object",
@@ -7395,10 +7257,10 @@
       },
       "ResponsePayload": {
         "properties": {
-          "channel_id": {
+          "id": {
             "type": "string",
             "format": "uuid",
-            "title": "Channel Id"
+            "title": "Id"
           },
           "channel_schema": {
             "$ref": "#/components/schemas/ChannelSchema"
@@ -7491,7 +7353,7 @@
         },
         "type": "object",
         "required": [
-          "channel_id",
+          "id",
           "channel_schema"
         ],
         "title": "ResponsePayload",

@@ -8,12 +8,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from kronicle.auth.auth_middleware import require_auth, require_permission
 from kronicle.deps.channel_deps import channel_service
 from kronicle.deps.rbac_deps import core_service
+from kronicle.schemas.core.input_ressource_schema import InputCoreChannel
 from kronicle.schemas.payload.input_payload import InputPayload
 from kronicle.schemas.payload.response_payload import ResponsePayload
 from kronicle.schemas.permissions.permission import PermStr
 from kronicle.services.channel_service import ChannelService
 from kronicle.services.core_service import CoreService
-from kronicle.utils.str_utils import ensure_uuid4
 
 """
 Routes available to users with write permissions.
@@ -44,48 +44,8 @@ async def create_channel_in_zone(
     data_service: ChannelService = Depends(channel_service),  # noqa: B008
     core: CoreService = Depends(core_service),  # noqa: B008
 ):
-    core.ensure_channel_in_zone(ensure_uuid4(payload.id), zone_id)
+    core.ensure_channel_in_zone(InputCoreChannel.from_payload(payload), zone_id)
     return await data_service.create_channel(payload)
-
-
-@shared_writer_router.post(
-    "/channels",
-    summary="Update or create a channel",
-    description=(
-        "Upsert a channel: if it exists, updates metadata (schema must match if provided); "
-        "if it does not exist, creates it with the given schema and metadata."
-    ),
-    response_model=ResponsePayload,
-    dependencies=[Depends(require_permission(PermStr.CHANNEL_UPDATE))],
-)
-async def create_channel(
-    payload: InputPayload,
-    data_service: ChannelService = Depends(channel_service),  # noqa: B008
-    core: CoreService = Depends(core_service),  # noqa: B008
-):
-    res = await data_service.create_channel(payload)
-    core.ensure_channel_in_zone(res.channel_id, core.ensure_default_zone().id)
-    return res
-
-
-@shared_writer_router.put(
-    "/channels",
-    summary="Update or create a channel",
-    description=(
-        "Upsert a channel: if it exists, updates metadata (schema must match if provided); "
-        "if it does not exist, creates it with the given schema and metadata."
-    ),
-    response_model=ResponsePayload,
-    dependencies=[Depends(require_permission(PermStr.CHANNEL_UPDATE))],
-)
-async def upsert_channel(
-    payload: InputPayload,
-    data_service: ChannelService = Depends(channel_service),  # noqa: B008
-    core: CoreService = Depends(core_service),  # noqa: B008
-):
-    if payload.id:
-        core.ensure_channel_in_zone(payload.id, core.ensure_default_zone().id)
-    return await data_service.upsert_metadata(payload)
 
 
 @shared_writer_router.patch(

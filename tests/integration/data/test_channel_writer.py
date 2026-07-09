@@ -44,7 +44,7 @@ def test_create_and_update_channel(kronicle_setup, kronicle_writer, kronicle_rba
 
     try:
         payload = {
-            "channel_id": channel_id,
+            "id": channel_id,
             "name": name,
             "channel_schema": {"time": IsoDateTime, "temperature": float},
             "metadata": {"unit": "°C"},

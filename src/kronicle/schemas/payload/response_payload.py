@@ -22,7 +22,7 @@ class ResponsePayload(BaseModel):
     - available_rows: number of rows stored for this channel (None if unknown)
     """
 
-    channel_id: UUID
+    id: UUID
     channel_schema: ChannelSchema
     name: str | None = None
 
@@ -83,7 +83,7 @@ class ResponsePayload(BaseModel):
         rows = channel_timeseries.to_user_rows(skip_received=skip_received)
         provided_rows = len(rows)
         payload = cls(
-            channel_id=channel_metadata.channel_id,
+            id=channel_metadata.channel_id,
             channel_schema=channel_metadata.channel_schema,
             name=channel_metadata.name,
             metadata=channel_metadata.user_metadata,
