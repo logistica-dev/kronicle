@@ -5,7 +5,6 @@ from json import dumps
 from typing import Any
 from uuid import UUID
 
-from kronicle_sdk.utils.str_utils import uuid_to_str
 from pydantic import BaseModel, EmailStr, PrivateAttr, field_validator
 
 from kronicle.auth.pwd.pwd_manager import PasswordManager
@@ -17,7 +16,7 @@ from kronicle.schemas.rbac.input_user_schemas import (
     _USERNAME_MIN_LENGTH,
     InputUser,
 )
-from kronicle.utils.str_utils import validate_name_syntax
+from kronicle.utils.str_utils import uuid_to_str, validate_name_syntax
 
 mod = "outusr"
 
