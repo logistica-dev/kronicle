@@ -43,6 +43,17 @@ KNOWN_DEV_PACKAGES = {
     "wheel",
 }
 
+# Python package extras implied by certain from-imports
+# e.g. `from sqlalchemy.dialects.postgresql import ...` → sqlalchemy[postgresql]
+EXTRAS_MAP: dict[str, dict[str, str | None]] = {
+    "sqlalchemy": {
+        "postgresql": "postgresql",
+        "mysql": "mysql",
+        "mssql": "mssql",
+        "oracle": "oracle",
+    },
+}
+
 
 def get_stdlib_modules() -> set[str]:
     if hasattr(sys, "stdlib_module_names"):
@@ -67,6 +78,30 @@ def scan_imports(directory: Path) -> set[str]:
                 if node.module:
                     imports.add(node.module.split(".")[0])
     return imports
+
+
+def scan_extra_imports(directory: Path) -> dict[str, set[str]]:
+    """Scan for from-imports that imply package extras.
+
+    Returns {package_name: {extra, ...}}.
+    """
+    extras: dict[str, set[str]] = {}
+    if not directory.exists():
+        return extras
+    for path in sorted(directory.rglob("*.py")):
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except SyntaxError:
+            continue
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom) and node.module:
+                parts = node.module.split(".")
+                if len(parts) >= 3 and parts[1] == "dialects":
+                    pkg = parts[0]
+                    dialect = parts[2]
+                    if pkg in EXTRAS_MAP and dialect in EXTRAS_MAP[pkg]:
+                        extras.setdefault(pkg, set()).add(dialect)
+    return extras
 
 
 def get_import_to_package_map() -> dict[str, str]:
@@ -163,6 +198,20 @@ def main() -> None:  # noqa: C901
     print(f"  Mapped {len(src_packages)} src imports to packages", flush=True)
     print(f"  Mapped {len(test_only_packages)} test-only imports to packages", flush=True)
 
+    print("\n=== Scanning for implied extras (e.g. sqlalchemy[postgresql]) ===", flush=True)
+    src_extras = scan_extra_imports(SRC_DIR)
+    test_extras = scan_extra_imports(TESTS_DIR)
+    all_extras: dict[str, set[str]] = {}
+    for pkg, dials in src_extras.items():
+        all_extras.setdefault(pkg, set()).update(dials)
+    for pkg, dials in test_extras.items():
+        all_extras.setdefault(pkg, set()).update(dials)
+    if all_extras:
+        for pkg, dials in sorted(all_extras.items()):
+            print(f"  {pkg}[{','.join(sorted(dials))}]", flush=True)
+    else:
+        print("  (none found)", flush=True)
+
     print("\n=== Getting installed packages & latest versions ===", flush=True)
     installed = run_uv_list()
     version_map: dict[str, str] = {p["name"]: p["version"] for p in installed}
@@ -257,7 +306,12 @@ def main() -> None:  # noqa: C901
     print(f"\n=== Writing {PROD_REQ.name} ===", flush=True)
     with open(PROD_REQ, "w") as f:
         for pkg, ver in prod_packages.items():
-            f.write(f"{pkg}=={ver}\n")
+            extras = all_extras.get(pkg)
+            if extras:
+                extra_str = f"[{','.join(sorted(extras))}]"
+                f.write(f"{pkg}{extra_str}=={ver}\n")
+            else:
+                f.write(f"{pkg}=={ver}\n")
     print(f"  Wrote {len(prod_packages)} packages", flush=True)
 
     print(f"\n=== Writing {DEV_REQ.name} ===", flush=True)
