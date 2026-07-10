@@ -1,0 +1,3 @@
+# requirements-run.txt — manually maintained CLI runtime deps
+# (not detected by import scanner; add packages needed to run the app)
+uvicorn==0.51.0

@@ -1,24 +1,12 @@
-black>=25.9.0
-commitizen>=4.16.3
-flake8>=7.3.0
-kronicle-sdk>=0.2.3
-nbstripout>=0.8.1
-pip-upgrade-outdated>=1.5
-pre-commit>=4.5.1
-pytest-asyncio>=1.3.0
-pytest-cov>=7.0.0
-ruff>=0.14.1
-# aiohttp; extra == "d" # Installed as dependency for black
-# click # Installed as dependency for black
-# colorama; extra == "colorama" # Installed as dependency for black
-# ipython; extra == "jupyter" # Installed as dependency for black
-# mypy_extensions # Installed as dependency for black
-# nbformat # Installed as dependency for nbstripout
-# packaging==25.0 # Installed as dependency for black
-# pathspec # Installed as dependency for black
-# platformdirs # Installed as dependency for black
-# pytokens # Installed as dependency for black
-# tokenize_rt; extra == "jupyter" # Installed as dependency for black
-# tomli==2.3.0; python_version < "3.11" # Installed as dependency for black
-# typing_extensions; python_version < "3.11" # Installed as dependency for black
-# uvloop; extra == "uvloop" # Installed as dependency for black
+black==26.5.1
+commitizen==4.16.4
+flake8==7.3.0
+nbstripout==0.9.1
+pip==26.1.2
+pip-upgrade-outdated==1.5
+pre-commit==4.6.0
+pytest==9.1.1
+pytest-asyncio==1.4.0
+pytest-cov==7.1.0
+requests==2.34.2
+ruff==0.15.21
