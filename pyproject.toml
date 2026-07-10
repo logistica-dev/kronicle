@@ -1,6 +1,6 @@
 [project]
 name = "kronicle"
-version = "0.4.2"
+version = "1.0.0"
 authors = [{ name = "Olivier Martineau", email = "olivier.martineau@irisa.fr" }]
 maintainers = [
     { name = "Olivier Martineau", email = "olivier.martineau@irisa.fr" },
