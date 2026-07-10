@@ -24,7 +24,7 @@ def main():
 
     table_name = RbacUser.table()
 
-    log_d(here, su_name, su_pwd, su_email, table_name, rbac_db_url)
+    log_d(here, su_name, su_email)
 
     engine = create_engine(rbac_db_url, future=True)
     log_d(here, "Connected to Kronicle DB")

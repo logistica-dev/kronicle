@@ -31,10 +31,14 @@ These informations are also required by the init phase. They will need to be pro
 You can for instance set all these variables in a `.env` file
 
 ```sh
+# Only for init phase and migration
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
+
+# Optional, defaulted to 'kronicle'
 KRONICLE_DB_NAME=kronicle_db
 
+# These are the super admin base64url-encoded usr:mail:pwd triplet, as described above (see line 14)
 KRONICLE_SU_INFO=S3JvbmljbGVBZG1pbjphZG1pbkBrcm9uaWNsZS5hcHA6JGFyZ29uMmlkJHY9MTkkbT02NTUzNix0PTMscD00JGVkSE56VDc2YjRXUitiMEowTDRObFEkbkZRNVJqclkreG56QkMzbnZma2Z2OEI0N1YvY2lwbGF5Y1VGUUtzS2pZaw
 
 KRONICLE_CHAN_CREDS=Y2hhbl91c3JfbmFtZTpjaGFuX3Vzcl9wYXNz
@@ -44,6 +48,10 @@ KRONICLE_PORT=8765
 KRONICLE_HOST=localhost
 KRONICLE_ENV=test
 KRONICLE_LOG_LEVEL=3 # 3=debug, 2=info, 1=warn, 0=error
+
+# Optional INI file to overwrite some of the variables defined at `./conf/default-conf.ini`
+KRONICLE_CONF='path/to/usr_conf_file.ini'
+
 ```
 
 Then launch docker-compose (or alternatively podman-compose, whichever you have installed already)

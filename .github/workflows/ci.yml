@@ -64,18 +64,6 @@ jobs:
           docker compose -f docker-compose.ci.test.yml logs app
           exit 1
 
-      - name: Debug env vars
-        env:
-          KRONICLE_SU_NAME: ${{ secrets.KRONICLE_SU_NAME }}
-          KRONICLE_SU_PASS: ${{ secrets.KRONICLE_SU_PASS }}
-          KRONICLE_USR_NAME: ${{ secrets.KRONICLE_USR_NAME }}
-          KRONICLE_USR_PASS: ${{ secrets.KRONICLE_USR_PASS }}
-        run: |
-          echo "KRONICLE_SU_NAME set: $([ -n \"$KRONICLE_SU_NAME\" ] && echo YES || echo NO)"
-          echo "KRONICLE_SU_PASS set: $([ -n \"$KRONICLE_SU_PASS\" ] && echo YES || echo NO)"
-          echo "KRONICLE_USR_NAME set: $([ -n \"$KRONICLE_USR_NAME\" ] && echo YES || echo NO)"
-          echo "KRONICLE_USR_PASS set: $([ -n \"$KRONICLE_USR_PASS\" ] && echo YES || echo NO)"
-
       - name: Run integration tests
         env:
           KRONICLE_HOST: localhost

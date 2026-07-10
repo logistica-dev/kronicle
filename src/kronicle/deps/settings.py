@@ -51,9 +51,21 @@ class KronicleSettings(BaseSettings):
     def load_env_ini(cls, values):
         """Fully initialize Settings with environment and INI."""
         env_conf = KronicleEnvConf.from_env()
-        parser = load_ini_file(
-            env_conf.conf_file or DEFAULT_CONF_FILE_PATH if is_file(DEFAULT_CONF_FILE_PATH) else ALT_CONF_FILE_PATH
-        )
+        conf_file_path = ""
+        for f in [env_conf.conf_file, DEFAULT_CONF_FILE_PATH, ALT_CONF_FILE_PATH]:
+            if f and is_file(f):
+                conf_file_path = f
+                print("Conf file found at", conf_file_path)
+                break
+            else:
+                print("Not a file:", f)
+        if not conf_file_path:
+            raise RuntimeError("No conf file path found.")
+        try:
+            parser = load_ini_file(conf_file_path)
+        except Exception as e:
+            raise RuntimeError("Conf file incorrect") from e
+
         values["server"] = env_conf.server
         values["db"] = DBSettings(env_conf)
 
