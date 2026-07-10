@@ -42,15 +42,13 @@ async def ensure_user_exists(db, username: str, password: str) -> str:
     username = normalize_pg_identifier(username)
     exists = await db.fetchval("SELECT 1 FROM pg_catalog.pg_user WHERE usename=$1", username)
     if not exists:
-        await db.execute(
-            f"""
+        await db.execute(f"""
             DO $$
             BEGIN
                 EXECUTE format('CREATE USER %I WITH PASSWORD %L', '{username}', '{password}');
             END
             $$;
-            """
-        )
+            """)
         log_d(mod, f"Created user '{username}'")
     else:
         log_d(mod, f"User '{username}' already exists")

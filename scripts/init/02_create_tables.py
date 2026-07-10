@@ -81,15 +81,13 @@ async def create_namespaces_if_missing(
 
 def table_exists(db, namespace, table_name):
     return db.execute(
-        text(
-            """
+        text("""
             SELECT EXISTS (
                 SELECT 1
                 FROM information_schema.tables
                 WHERE table_schema = :schema AND table_name = :table
             )
-            """
-        ),
+            """),
         {"schema": namespace, "table": table_name},
     ).scalar()
 
