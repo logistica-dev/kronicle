@@ -1,0 +1,59 @@
+# ./docker-compose.ci.test.yml
+version: "3.9"
+
+services:
+  # --------------------------
+  # TimescaleDB / PostgreSQL
+  # --------------------------
+  db:
+    image: timescale/timescaledb:latest-pg16
+    container_name: kronicle-ci-test-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      KRONICLE_DB_NAME: ${KRONICLE_DB_NAME:-kronicle_db}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 2s
+      retries: 15
+      timeout: 2s
+
+  # --------------------------
+  # Kronicle App container
+  # --------------------------
+  app:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+    container_name: kronicle-ci-test-app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      KRONICLE_DB_HOST: db
+      KRONICLE_DB_PORT: 5432
+      KRONICLE_DB_NAME: ${KRONICLE_DB_NAME:-kronicle_db}
+
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+      KRONICLE_CHAN_CREDS: ${KRONICLE_CHAN_CREDS}
+      KRONICLE_RBAC_CREDS: ${KRONICLE_RBAC_CREDS}
+
+      KRONICLE_SU_INFO: ${KRONICLE_SU_INFO}
+
+      KRONICLE_PORT: 8000
+      KRONICLE_HOST: 0.0.0.0
+      KRONICLE_ENV: test
+      KRONICLE_LOG_LEVEL: 3
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'python -c "import urllib.request; urllib.request.urlopen(''http://localhost:8000/health/ready'')"',
+        ]
+      interval: 5s
+      retries: 30
+      timeout: 5s

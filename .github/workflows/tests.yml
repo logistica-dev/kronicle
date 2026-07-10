@@ -21,3 +21,51 @@ jobs:
 
       - name: Run unit tests
         run: pytest
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    env:
+      POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      KRONICLE_DB_NAME: ${{ secrets.KRONICLE_DB_NAME }}
+      KRONICLE_SU_INFO: ${{ secrets.KRONICLE_SU_INFO }}
+      KRONICLE_CHAN_CREDS: ${{ secrets.KRONICLE_CHAN_CREDS }}
+      KRONICLE_RBAC_CREDS: ${{ secrets.KRONICLE_RBAC_CREDS }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Start DB + App
+        run: docker compose -f docker-compose.ci.test.yml up -d --build
+
+      - name: Wait for app to be healthy
+        run: |
+          echo "Waiting for Kronicle app..."
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:8000/docs > /dev/null 2>&1; then
+              echo "App is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "App did not start within 120s"
+          docker compose -f docker-compose.ci.test.yml logs app
+          exit 1
+
+      - name: Run integration tests
+        env:
+          KRONICLE_HOST: localhost
+          KRONICLE_PORT: 8000
+          KRONICLE_USR_NAME: ${{ secrets.KRONICLE_USR_NAME }}
+          KRONICLE_USR_PASS: ${{ secrets.KRONICLE_USR_PASS }}
+        run: |
+          pip install -r requirements.txt -r requirements-dev.txt
+          pytest -m integration
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker-compose.ci.test.yml down -v

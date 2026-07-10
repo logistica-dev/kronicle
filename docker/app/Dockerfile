@@ -25,7 +25,7 @@ WORKDIR /opt/kronicle
 # -----------------------------
 # Copy requirements first (cache layer)
 # -----------------------------
-COPY requirements.txt .
+COPY requirements.txt requirements-run.txt ./
 
 # -----------------------------
 # Create venv and install dependencies
@@ -35,7 +35,7 @@ ENV PYTHONPATH="/opt/kronicle/src:/opt/kronicle"
 ENV PATH="/opt/kronicle/.venv/bin:$PATH"
 RUN . .venv/bin/activate \
     && pip install --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt
+    && pip install --no-cache-dir -r requirements.txt -r requirements-run.txt
 
 
 # ------------------------------------------------------------------------------
