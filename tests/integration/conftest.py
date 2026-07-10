@@ -17,7 +17,12 @@ def pytest_collection_modifyitems(config, items):
         if "integration" in item.keywords and should_skip:
             item.add_marker(pytest.mark.skip(reason="Integration tests require `-m integration` or `--run-all`"))
 
-    if not (os.environ.get("KRONICLE_USR_NAME") and os.environ.get("KRONICLE_USR_PASS")):
+    if not (
+        os.environ.get("KRONICLE_USR_NAME")
+        and os.environ.get("KRONICLE_USR_PASS")
+        and os.environ.get("KRONICLE_SU_NAME")
+        and os.environ.get("KRONICLE_SU_PASS")
+    ):
         print("W [conftest] !!! Kronicle env variables not found, skipping integration tests.")
         skip_missing_env = pytest.mark.skip(reason="Integration tests require server env")
         for item in items:
