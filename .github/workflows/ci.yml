@@ -19,7 +19,7 @@ jobs:
 
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: '3.12'
 
       - name: Install dependencies
         run: pip install -r requirements.txt -r requirements-dev.txt
@@ -45,7 +45,7 @@ jobs:
 
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: '3.12'
 
       - name: Start DB + App
         run: docker compose -f docker-compose.ci.test.yml up -d --build
@@ -68,6 +68,7 @@ jobs:
         env:
           KRONICLE_HOST: localhost
           KRONICLE_PORT: 8000
+          KRONICLE_SU_INFO: ${{ secrets.KRONICLE_SU_INFO }}
           KRONICLE_USR_NAME: ${{ secrets.KRONICLE_USR_NAME }}
           KRONICLE_USR_PASS: ${{ secrets.KRONICLE_USR_PASS }}
         run: |
