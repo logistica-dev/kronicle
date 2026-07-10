@@ -117,7 +117,7 @@ def normalize_name_keep_dots(s: str, *, prefix: str | None = "") -> str:
     return normalize_name(s, keep_dots=True)
 
 
-def normalize_name(s: str, *, keep_dots=False, prefix: str | None = "") -> str:
+def normalize_name(s: str, *, keep_dots=False, prefix: str = "") -> str:
     # print("[normalize_name]", s)
     if not isinstance(s, str):
         raise TypeError("Name should be a string")
@@ -148,6 +148,10 @@ def normalize_name(s: str, *, keep_dots=False, prefix: str | None = "") -> str:
         return s[:SQL_COL_MAX_LEN]
     except Exception as e:
         raise ValueError("Name is invalid...") from e
+
+
+def generate_name(length: int = 8, prefix: str = ""):
+    return (prefix or "") + "".join(choices(ascii_lowercase + digits, k=length))
 
 
 def normalize_name_accept_subs(s: str) -> str | None:

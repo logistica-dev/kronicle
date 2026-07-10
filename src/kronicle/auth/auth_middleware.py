@@ -84,8 +84,14 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
 
             # Extract Authorization header
             auth_header = request.headers.get("Authorization")
+
             if not auth_header:
-                raise UnauthorizedError(message="Authorization header missing")
+                allow = getattr(request.app.state, "allow_anonymous", False)
+                if not allow:
+                    raise UnauthorizedError(message="Authorization header missing")
+                request.state.user = {"sub": None, "is_anonymous": True, "is_superuser": False}
+                request.state.authenticated = False
+                return await call_next(request)
 
             # Validate Bearer token format
             if not auth_header.startswith("Bearer "):
@@ -117,10 +123,13 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
 
 
 def get_current_user_from_request(request: Request) -> dict:
-    """Get current user from request state (for use in route handlers)"""
+    """Get current user from request state (for use in route handlers).
+
+    Returns an anonymous user context when no authenticated user is found.
+    """
     if hasattr(request.state, "user") and request.state.user:
         return request.state.user
-    raise UnauthorizedError(message="User not authenticated")
+    return {"sub": None, "is_anonymous": True, "is_superuser": False}
 
 
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -152,7 +161,10 @@ def require_superuser(
 
 
 def _check_permission(request: Request, user: dict, perm_obj: Permission) -> bool | None:
-    """Check a single permission with caching. Returns True/False/None (superuser)."""
+    """Check a single permission with caching. Returns True/False/None (superuser).
+
+    Anonymous users (user['sub'] is None) are checked against the 'anonymous' group.
+    """
     if user.get("is_superuser"):
         return None
 
@@ -162,7 +174,11 @@ def _check_permission(request: Request, user: dict, perm_obj: Permission) -> boo
         return cache[perm_str]
 
     rbac = request.app.state.rbac_service
-    has_perm = rbac.user_has_permission(UUID(user["sub"]), perm_obj)
+    sub = user.get("sub")
+    if sub is None:
+        has_perm = rbac.user_has_permission(None, perm_obj)
+    else:
+        has_perm = rbac.user_has_permission(UUID(sub), perm_obj)
     cache[perm_str] = has_perm
     return has_perm
 

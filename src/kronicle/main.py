@@ -153,8 +153,12 @@ class KronicleApp:
             self.app.state.core_service = CoreService(self.app.state.rbac_db)
 
         with log_block(here, "RBAC service"):
-            rbac_service = RbacService(self.app.state.rbac_db)
+            rbac_service = RbacService(
+                self.app.state.rbac_db,
+                reserved_names=self.conf.rbac.reserved_names,
+            )
             self.app.state.rbac_service = rbac_service
+            self.app.state.allow_anonymous = self.conf.rbac.allow_anonymous
 
         with log_block(here, "Seed default roles"):
             seed_default_roles(self.app.state.rbac_db)

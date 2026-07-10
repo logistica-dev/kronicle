@@ -175,7 +175,11 @@ class ChannelService:
             processed=processed,
             strict=strict,
         )
-        return ResponsePayload.from_channel_resource(updated_resource)
+        response = ResponsePayload.from_channel_resource(updated_resource)
+        inserted_ids = updated_resource.timeseries.inserted_row_ids
+        if inserted_ids:
+            response.op_details["inserted_row_ids"] = inserted_ids
+        return response
 
     async def upsert_metadata_and_insert_rows(self, payload: InputPayload, *, strict: bool = False) -> ResponsePayload:
         """
@@ -190,7 +194,11 @@ class ChannelService:
         updated_resource = await self._repo.upsert_metadata_and_insert_rows(processed=processed, strict=strict)
         log_d(here, "updated resource", updated_resource.channel_id)
 
-        return ResponsePayload.from_channel_resource(updated_resource)
+        response = ResponsePayload.from_channel_resource(updated_resource)
+        inserted_ids = updated_resource.timeseries.inserted_row_ids
+        if inserted_ids:
+            response.op_details["inserted_row_ids"] = inserted_ids
+        return response
 
     async def fetch_rows(
         self,

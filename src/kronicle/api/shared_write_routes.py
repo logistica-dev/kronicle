@@ -7,13 +7,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from kronicle.auth.auth_middleware import require_auth, require_permission
 from kronicle.deps.channel_deps import channel_service
-from kronicle.deps.rbac_deps import core_service
+from kronicle.deps.rbac_deps import core_service, rbac_service
 from kronicle.schemas.core.input_ressource_schema import InputCoreChannel
 from kronicle.schemas.payload.input_payload import InputPayload
 from kronicle.schemas.payload.response_payload import ResponsePayload
 from kronicle.schemas.permissions.permission import PermStr
 from kronicle.services.channel_service import ChannelService
 from kronicle.services.core_service import CoreService
+from kronicle.services.rbac_service import RbacService
 
 """
 Routes available to users with write permissions.
@@ -79,7 +80,7 @@ async def patch_channel(
 
 @shared_writer_router.post(
     "/channels/{channel_id}/rows",
-    summary="Insert rows for a  channel",
+    summary="Insert rows for a channel",
     description="Append-only operation: insert new rows for an existing channel. Does not modify metadata or schema.",
     response_model=ResponsePayload,
     dependencies=[Depends(require_permission(PermStr.ROW_CREATE))],
@@ -88,7 +89,18 @@ async def insert_rows(
     channel_id: UUID,
     payload: InputPayload,
     data_service: ChannelService = Depends(channel_service),  # noqa: B008
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
     strict: bool = Query(False, description="If true, abort on any validation error"),
 ):
     payload.id = channel_id  # path param overrides any payload channel_id
-    return await data_service.insert_channel_rows(payload, strict=strict)
+    response = await data_service.insert_channel_rows(payload, strict=strict)
+    inserted_row_ids: list[int] = response.op_details.get("inserted_row_ids", [])  # type: ignore
+    if inserted_row_ids and (payload.read_users or payload.read_groups):
+        rbac.add_row_read_policies(
+            channel_id=channel_id,
+            timeseries_row_ids=inserted_row_ids,
+            read_users=payload.read_users,
+            read_groups=payload.read_groups,
+        )
+        response.op_details.pop("inserted_row_ids", None)
+    return response

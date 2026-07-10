@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import functools
-from typing import Any, Sequence
+from typing import Any, Final, Sequence
 from uuid import UUID
 
 from sqlalchemy import cast, func, select
@@ -11,6 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.session import Session
 
 from kronicle.db.core.models.core_channel import CoreChannel
+from kronicle.db.core.models.core_row import CoreRow
 from kronicle.db.core.models.core_zone import CoreZone
 from kronicle.db.rbac.links.group_hierarchy import RbacGroupHierarchy
 from kronicle.db.rbac.links.group_roles import RbacGroupRoles
@@ -67,6 +68,11 @@ from kronicle.schemas.rbac.safe_role_schemas import OutputRole
 from kronicle.schemas.rbac.safe_user_schemas import OutputUser, ProcessedUser
 from kronicle.utils.dev_logs import log_d, log_i, log_w
 
+mod = "rbacs"
+
+ANONYMOUS_NAME: Final[str] = "anonymous"
+RESERVED_NAMES = ["superuser", "admin", ANONYMOUS_NAME]
+
 
 def log_service_error(method):
     """Log the exception with the method name and re-raise."""
@@ -90,14 +96,14 @@ RbacEngine orchestrates multi-table actions using the session.
 Table classes perform simple CRUD and return results.
 """
 
-mod = "rbacs"
-
 
 class RbacService:
     def __init__(
         self,
         rbac_db_session: RbacDbSession,
+        reserved_names: list[str] | None = None,
     ):
+        self._reserved_names = [n.lower() for n in (reserved_names or RESERVED_NAMES)]
         self._db = rbac_db_session
 
         # Rbac objects
@@ -135,6 +141,19 @@ class RbacService:
             remove_edge=RbacGroupHierarchy.remove,
             max_parents=5,
         )
+
+        self._ensure_anonymous_group()
+
+    def _ensure_anonymous_group(self) -> None:
+        """Create the 'Anonymous' group if it doesn't exist."""
+        with self._db.transaction() as db:
+            existing = self._group_repo.get_by_name(db, name=ANONYMOUS_NAME)
+            if existing:
+                return
+            group = RbacGroup(name=ANONYMOUS_NAME)
+            db.add(group)
+            db.flush()
+            self._subject_repo.ensure_from_group(db, group=group)
 
     # ----------------------------------------------------------------------------------------------
     # Read-only: fetch user info
@@ -195,6 +214,22 @@ class RbacService:
     # ----------------------------------------------------------------------------------------------
     # Write: create user
     # ----------------------------------------------------------------------------------------------
+    def _assert_name_not_reserved(self, name: str) -> None:
+        if name.lower() in self._reserved_names:
+            raise BadRequestError(f"The name '{name}' is reserved and cannot be used.")
+
+    def _assert_user_name_available(self, db: Session, name: str) -> None:
+        self._assert_name_not_reserved(name)
+        existing = self._group_repo.get_by_name(db, name=name)
+        if existing:
+            raise BadRequestError(f"A group named '{name}' already exists. User and group names must be unique.")
+
+    def _assert_group_name_available(self, db: Session, name: str) -> None:
+        self._assert_name_not_reserved(name)
+        existing = self._user_repo.get_by_name(db, name=name)
+        if existing:
+            raise BadRequestError(f"A user named '{name}' already exists. Group and user names must be unique.")
+
     def create_user(self, user: ProcessedUser) -> OutputUser:
         here = "create_usr"
         log_d(here, user.email)
@@ -203,6 +238,7 @@ class RbacService:
         rbac_user = user.to_db_user()
 
         with self._db.transaction() as db:
+            self._assert_user_name_available(db, rbac_user.name)
             existing = self._user_repo.get_by_email(db=db, email=rbac_user.email)
             if existing:
                 raise UnauthorizedError(f"Email already in use: {rbac_user.email}")
@@ -219,7 +255,8 @@ class RbacService:
             if not db_user:
                 raise UnauthorizedError("User doesn't exists")
             updated = False
-            if user.name is not None:
+            if user.name is not None and user.name != db_user.name:
+                self._assert_user_name_available(db, user.name)
                 db_user.name = user.name
                 updated = True
             if user.full_name is not None:
@@ -252,7 +289,8 @@ class RbacService:
             if not db_user:
                 raise NotFoundError(f"User '{user_id}' not found")
             updated = False
-            if name is not None:
+            if name is not None and name != db_user.name:
+                self._assert_user_name_available(db, name)
                 db_user.name = name
                 updated = True
             if full_name is not None:
@@ -338,7 +376,7 @@ class RbacService:
     # Permissions
     # ----------------------------------------------------------------------------------------------
     def _user_has_permission_via_policy(
-        self, db: Session, user_id: UUID, group_ids: list[UUID], perm_jsonb: JSONB
+        self, db: Session, user_id: UUID | None, group_ids: list[UUID], perm_jsonb: Any
     ) -> bool:
         """Check if the user has a permission through a policy (zone/channel/row)."""
 
@@ -354,7 +392,7 @@ class RbacService:
         return False
 
     def _check_policy_perm(
-        self, db: Session, policy_cls, profile_cls, user_id: UUID, group_ids: list[UUID], perm_jsonb: JSONB
+        self, db: Session, policy_cls, profile_cls, user_id: UUID | None, group_ids: list[UUID], perm_jsonb: Any
     ) -> bool:
         """Check permission via one policy type (zone, channel, or row)."""
 
@@ -383,11 +421,19 @@ class RbacService:
                 return True
         return False
 
-    def user_has_permission(self, user_id: UUID, permission: str | Permission) -> bool:
+    def user_has_permission(self, user_id: UUID | None, permission: str | Permission) -> bool:
         perm_str = str(permission) if isinstance(permission, Permission) else permission
         Permission.parse(perm_str)
         with self._db.get_db() as db:
             perm_jsonb = cast(func.json_build_array(perm_str), JSONB)
+
+            # Anonymous user — only check the "anonymous" group via policies
+            if user_id is None:
+                anonymous = self._group_repo.get_by_name(db, name=ANONYMOUS_NAME)
+                if not anonymous:
+                    return False
+                return self._user_has_permission_via_policy(db, None, [anonymous.id], perm_jsonb)
+
             # Direct user roles
             has_direct = db.execute(
                 select(RbacUserRoles.role_id)
@@ -1025,6 +1071,75 @@ class RbacService:
     # Policies: Row level
     # ----------------------------------------------------------------------------------------------
 
+    def add_row_read_policies(
+        self,
+        channel_id: UUID,
+        timeseries_row_ids: list[int],
+        read_users: list[str] | None = None,
+        read_groups: list[str] | None = None,
+    ) -> None:
+        """Create row-level read policies for inserted rows.
+
+        For each row, creates a CoreRow record, a RowAccessProfile with the
+        "Reader" role, and RowPolicy entries for each named user / group.
+        Silently skips subjects that don't exist yet.
+        """
+        users = read_users or []
+        groups = read_groups or []
+        if not users and not groups:
+            return
+
+        reader_role = InputRole(name="Reader")
+
+        with self._db.transaction() as db:
+            db_role = self._resolve_role(db, reader_role)
+
+            for ts_row_id in timeseries_row_ids:
+                core_row = self._row_repo.save(
+                    db,
+                    entity=CoreRow(
+                        timeseries_row_id=ts_row_id,
+                        channel_id=channel_id,
+                        name=f"row_{ts_row_id}",
+                    ),
+                )
+                row_ap = self._row_access_profile_repo.create(
+                    db,
+                    role_id=db_role.id,
+                    row_id=core_row.id,
+                    name=f"Row {ts_row_id} {db_role.name} access",
+                )
+
+                for uname in users:
+                    try:
+                        subj = self._ensure_subject_by_name(db, "user", uname)
+                        self._create_policy(
+                            db,
+                            subj=subj,
+                            db_access=row_ap,
+                            policy_repo=self._row_policy_repo,
+                            policy_cls=RowPolicy,
+                            output_cls=OutputRowPolicy,
+                            name=f"{row_ap.name[:44]} for {subj.name[:15]}",
+                        )
+                    except NotFoundError:
+                        continue
+
+                for gname in groups:
+                    try:
+                        subj = self._ensure_subject_by_name(db, "group", gname)
+                        self._create_policy(
+                            db,
+                            subj=subj,
+                            db_access=row_ap,
+                            policy_repo=self._row_policy_repo,
+                            policy_cls=RowPolicy,
+                            output_cls=OutputRowPolicy,
+                            name=f"{row_ap.name[:44]} for {subj.name[:15]}",
+                        )
+                    except NotFoundError:
+                        continue
+
     def create_row_policy(
         self,
         subject: InputSubject,
@@ -1114,6 +1229,7 @@ class RbacService:
         log_d(here, name)
         group = RbacGroup(name=name, details=details or {})
         with self._db.transaction() as db:
+            self._assert_group_name_available(db, name)
             existing = self._group_repo.get_by_name(db, name=name)
             if existing:
                 raise BadRequestError(f"Group '{name}' already exists")

@@ -47,6 +47,7 @@ def ts(fake_schema):
 def mock_conn():
     conn = AsyncMock()
     conn.fetch = AsyncMock()
+    conn.fetchrow = AsyncMock()
     conn.execute = AsyncMock()
     return conn
 
@@ -292,11 +293,14 @@ async def test_insert_success(ts, mock_conn):
         }
     ]
 
+    mock_conn.fetchrow.return_value = {"row_id": 1}
+
     with patch.object(ts, "ensure_table", new=AsyncMock()):
         result = await ts.insert(mock_conn)
 
-    mock_conn.execute.assert_called_once()
+    mock_conn.fetchrow.assert_called_once()
     assert result is ts
+    assert result.inserted_row_ids == [1]
 
 
 @pytest.mark.asyncio
@@ -310,7 +314,7 @@ async def test_insert_strict_failure(ts, mock_conn):
         }
     ]
 
-    mock_conn.execute.side_effect = Exception("DB error")
+    mock_conn.fetchrow.side_effect = Exception("DB error")
 
     with patch.object(ts, "ensure_table", new=AsyncMock()):
         with raises(BadRequestError):

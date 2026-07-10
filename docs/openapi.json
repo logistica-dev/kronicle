@@ -713,7 +713,7 @@
         "tags": [
           "Input data"
         ],
-        "summary": "Insert rows for a  channel",
+        "summary": "Insert rows for a channel",
         "description": "Append-only operation: insert new rows for an existing channel. Does not modify metadata or schema.",
         "operationId": "insert_rows_data_v1_channels__channel_id__rows_post",
         "security": [
@@ -1191,7 +1191,7 @@
         "tags": [
           "Setup data channels"
         ],
-        "summary": "Insert rows for a  channel",
+        "summary": "Insert rows for a channel",
         "description": "Append-only operation: insert new rows for an existing channel. Does not modify metadata or schema.",
         "operationId": "insert_rows_setup_v1_channels__channel_id__rows_post",
         "security": [
@@ -6024,6 +6024,36 @@
             "title": "Strict",
             "description": "If true, any validation error aborts the entire request.",
             "default": false
+          },
+          "read_groups": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read Groups",
+            "description": "Group names that can read the rows being inserted"
+          },
+          "read_users": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read Users",
+            "description": "User names that can read the rows being inserted"
           }
         },
         "type": "object",
@@ -6035,11 +6065,18 @@
             "temperature": "float",
             "time": "datetime"
           },
-          "id": "3a40294d-6b75-470c-b992-f09f4d7a3b80",
+          "id": "f4ddf09c-d77f-437b-b3b7-ad6b2c009581",
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-0cfc8",
+          "name": "thermo-38c63",
+          "read_groups": [
+            "analysts"
+          ],
+          "read_users": [
+            "alice",
+            "bob"
+          ],
           "rows": [
             {
               "humidity": 55.1,

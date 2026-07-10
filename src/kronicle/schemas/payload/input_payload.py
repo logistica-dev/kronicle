@@ -29,6 +29,8 @@ def example_payload():
                 ],
                 "metadata": {"unit": "C"},
                 "tags": {"location": "lab", "floor": 3},
+                "read_users": ["alice", "bob"],
+                "read_groups": ["analysts"],
             }
         }
     )
@@ -50,6 +52,14 @@ class InputPayload(BaseModel):
     tags: dict[str, TagType] | None = None
     rows: list[dict[str, Any]] | None = None
     strict: bool = Field(default=False, description="If true, any validation error aborts the entire request.")
+    read_groups: list[str] | None = Field(
+        default=None,
+        description="Group names that can read the rows being inserted",
+    )
+    read_users: list[str] | None = Field(
+        default=None,
+        description="User names that can read the rows being inserted",
+    )
 
     model_config = example_payload()
 

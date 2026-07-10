@@ -269,6 +269,7 @@ class TestUserWrite:
         db_user = _fake_user(id=uuid4(), name="New", email="new@k.app")
         rbac_service._user_repo.get_by_email = MagicMock(return_value=None)
         rbac_service._user_repo.create_user = MagicMock(return_value=db_user)
+        rbac_service._group_repo.get_by_name = MagicMock(return_value=None)
 
         out = rbac_service.create_user(user)
         assert isinstance(out, OutputUser)
@@ -277,12 +278,14 @@ class TestUserWrite:
     def test_create_user_already_exists(self, rbac_service):
         user = ProcessedUser(email="dup@k.app", name="DupUser", password_hash="h")
         rbac_service._user_repo.get_by_email = MagicMock(return_value=_fake_user())
+        rbac_service._group_repo.get_by_name = MagicMock(return_value=None)
         with pytest.raises(UnauthorizedError, match="Email already in use"):
             rbac_service.create_user(user)
 
     def test_patch_user(self, rbac_service):
         db_user = _fake_user(email="old@k.app", name="old")
         rbac_service._user_repo.get_by_email = MagicMock(return_value=db_user)
+        rbac_service._group_repo.get_by_name = MagicMock(return_value=None)
         user = ProcessedUser(email="old@k.app", name="newname", password_hash="h")
 
         out = rbac_service.patch_user(user)
@@ -302,6 +305,7 @@ class TestUserWrite:
         db_user.full_name = None
         db_user.external_id = None
         rbac_service._user_repo.get_by_email = MagicMock(return_value=db_user)
+        rbac_service._group_repo.get_by_name = MagicMock(return_value=None)
         db = rbac_service._db.transaction.return_value.__enter__.return_value
         db.commit.side_effect = IntegrityError("stmt", {}, BaseException())
 
@@ -314,6 +318,7 @@ class TestUserWrite:
         db_user.full_name = None
         db_user.external_id = None
         rbac_service._user_repo.get_by_email = MagicMock(return_value=db_user)
+        rbac_service._group_repo.get_by_name = MagicMock(return_value=None)
         user = ProcessedUser(email="u@k.app", name="uname", password_hash="h")
 
         out = rbac_service.patch_user(user)
@@ -323,6 +328,7 @@ class TestUserWrite:
         uid = uuid4()
         db_user = _fake_user(id=uid, name="old")
         rbac_service._user_repo.get_by_id = MagicMock(return_value=db_user)
+        rbac_service._group_repo.get_by_name = MagicMock(return_value=None)
 
         out = rbac_service.patch_user_by_id(uid, name="newname", full_name="Full", orcid="ext-1")
         assert out.name == "newname"
@@ -341,6 +347,7 @@ class TestUserWrite:
         uid = uuid4()
         db_user = _fake_user(id=uid, name="old")
         rbac_service._user_repo.get_by_id = MagicMock(return_value=db_user)
+        rbac_service._group_repo.get_by_name = MagicMock(return_value=None)
         db = rbac_service._db.transaction.return_value.__enter__.return_value
         db.commit.side_effect = IntegrityError("stmt", {}, BaseException())
 
@@ -429,12 +436,14 @@ class TestGroups:
         mock_group.name = "test-group"
         mock_group.details = {"k": "v"}
         mock_rbac_group.return_value = mock_group
+        rbac_service._user_repo.get_by_name = MagicMock(return_value=None)
         rbac_service._group_repo.get_by_name = MagicMock(return_value=None)
         out = rbac_service.create_group("test-group", details={"k": "v"})
         assert isinstance(out, OutputGroup)
         assert out.name == "test-group"
 
     def test_create_group_duplicate(self, rbac_service):
+        rbac_service._user_repo.get_by_name = MagicMock(return_value=None)
         rbac_service._group_repo.get_by_name = MagicMock(return_value=_fake_group(name="dup"))
         with pytest.raises(BadRequestError, match="already exists"):
             rbac_service.create_group("dup")

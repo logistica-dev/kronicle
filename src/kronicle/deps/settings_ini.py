@@ -113,6 +113,20 @@ class JWTSettings(IniSection):
         return v
 
 
+class RbacSettings(IniSection):
+    section = "rbac"
+
+    reserved_names: list[str] = Field(default=["superuser", "admin"])
+    allow_anonymous: bool = False
+
+    @field_validator("reserved_names", mode="before")
+    @classmethod
+    def parse_csv_list(cls, v: str | list[str]) -> list[str]:
+        if isinstance(v, str):
+            return [name.strip() for name in v.split(",") if name.strip()]
+        return v
+
+
 if __name__ == "__main__":  # pragma: no cover
     app_conf = AppSettings()
     log_d("conf_ini", "app_conf", app_conf)

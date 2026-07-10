@@ -63,6 +63,7 @@ class ChannelTimeseries:
         self.channel_schema = channel_schema
         self._rows: list[dict[str, Any]] = []
         self.op_feedback: OpFeedback = op_feedback or OpFeedback()
+        self._inserted_row_ids: list[int] = []
 
     # ----------------------------------------------------------------------------------------------
     # Serialization
@@ -112,6 +113,11 @@ class ChannelTimeseries:
     @property
     def rows(self):
         return self._rows
+
+    @property
+    def inserted_row_ids(self) -> list[int]:
+        """BIGSERIAL row_id values returned after the last insert."""
+        return list(self._inserted_row_ids)
 
     def add_rows(self, rows: list[dict[str, Any]], *, strict: bool = False) -> ChannelTimeseries:
         """
@@ -347,14 +353,17 @@ class ChannelTimeseries:
 
         sql = f"""
         INSERT INTO {self.table} ({", ".join(cols)})
-        VALUES ({", ".join(placeholders)});
+        VALUES ({", ".join(placeholders)})
+        RETURNING row_id;
         """
 
         await self.ensure_table(db)
 
+        self._inserted_row_ids.clear()
         for idx, row_tuple in enumerate(tuples):
             try:
-                await db.execute(sql, *row_tuple)
+                result = await db.fetchrow(sql, *row_tuple)
+                self._inserted_row_ids.append(result["row_id"])
             except Exception as e:
                 row_label = f"row_{str(idx).zfill(pad_width)}"
                 self.op_feedback.add_detail(message=str(e), field="rows", subfield=row_label)

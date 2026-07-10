@@ -97,6 +97,8 @@ class InputUser(InputSchema):
 
     @field_validator("name", "full_name")
     def validate_user_name_syntax(cls, v: str | None) -> str | None:
+        if not v:
+            return None
         try:
             return validate_name_syntax(
                 v, extra_chars=_USERNAME_EXTRA_CHARS, min_length=_USERNAME_MIN_LENGTH, max_length=_USERNAME_MAX_LENGTH
@@ -112,6 +114,8 @@ class InputUserPatch(BaseModel):
 
     @field_validator("name", "full_name")
     def validate_user_name_syntax(cls, v: str | None) -> str | None:
+        if not v:
+            return None
         try:
             return validate_name_syntax(
                 v, extra_chars=_USERNAME_EXTRA_CHARS, min_length=_USERNAME_MIN_LENGTH, max_length=_USERNAME_MAX_LENGTH

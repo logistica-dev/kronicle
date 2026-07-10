@@ -105,3 +105,101 @@ def test_strip_nulls_scalar_values():
 def test_strip_nulls_empty_structures():
     assert dict_utils.strip_nulls({}) == {}
     assert dict_utils.strip_nulls([]) == []
+
+
+# --------------------------------------------------------------------------------------
+# remove_alt_field
+# --------------------------------------------------------------------------------------
+
+
+def test_remove_alt_field_sets_keep_from_alt():
+    d = {"alt_name": "alternate"}
+    dict_utils.remove_alt_field(d, keep="name", alt="alt_name")
+    assert d == {"name": "alternate"}
+
+
+def test_remove_alt_field_noop_when_alt_missing():
+    d = {"name": "original"}
+    dict_utils.remove_alt_field(d, keep="name", alt="alt_name")
+    assert d == {"name": "original"}
+
+
+def test_remove_alt_field_keep_present_does_not_overwrite():
+    d = {"name": "original", "alt_name": "alternate"}
+    dict_utils.remove_alt_field(d, keep="name", alt="alt_name")
+    assert d == {"name": "original"}
+
+
+# --------------------------------------------------------------------------------------
+# sanitize_dict
+# --------------------------------------------------------------------------------------
+
+
+def test_sanitize_dict_basic():
+    d = {"a": 1, "b": "hello", "c": None, "d": True, "e": 3.14}
+    assert dict_utils.sanitize_dict(d) == d
+
+
+def test_sanitize_dict_nested():
+    d = {"a": {"b": {"c": 1}}}
+    assert dict_utils.sanitize_dict(d) == d
+
+
+def test_sanitize_dict_list():
+    d = {"items": [1, "two", {"three": 3}]}
+    assert dict_utils.sanitize_dict(d) == d
+
+
+def test_sanitize_dict_max_depth_exceeded():
+    d = {"a": {"b": {"c": {"d": {"e": {"f": 1}}}}}}
+    with pytest.raises(ValueError, match="Max depth exceeded"):
+        dict_utils.sanitize_dict(d, max_depth=3)
+
+
+def test_sanitize_dict_too_many_keys():
+    d = {str(i): i for i in range(150)}
+    with pytest.raises(ValueError, match="Too many keys in dictionary"):
+        dict_utils.sanitize_dict(d, max_keys=100)
+
+
+def test_sanitize_dict_list_too_long():
+    d = {"x": list(range(150))}
+    with pytest.raises(ValueError, match="List too long"):
+        dict_utils.sanitize_dict(d, max_keys=100)
+
+
+def test_sanitize_dict_key_not_string():
+    d = {1: "value"}
+    with pytest.raises(TypeError, match="Key must be a string"):
+        dict_utils.sanitize_dict(d)
+
+
+def test_sanitize_dict_key_string_too_long():
+    d = {"x" * 2000: "value"}
+    with pytest.raises(ValueError, match="Key string too long"):
+        dict_utils.sanitize_dict(d, max_string_len=1000)
+
+
+def test_sanitize_dict_string_value_too_long():
+    d = {"a": "x" * 2000}
+    with pytest.raises(ValueError, match="String too long"):
+        dict_utils.sanitize_dict(d, max_string_len=1000)
+
+
+def test_sanitize_dict_unsupported_type():
+    d = {"a": b"bytes"}
+    with pytest.raises(TypeError, match="Unsupported type"):
+        dict_utils.sanitize_dict(d)
+
+
+def test_sanitize_dict_scalar_values():
+    assert dict_utils.sanitize_dict(42) == 42
+    assert dict_utils.sanitize_dict("hello") == "hello"
+    assert dict_utils.sanitize_dict(None) is None
+    assert dict_utils.sanitize_dict(True) is True
+    assert dict_utils.sanitize_dict(3.14) == 3.14
+
+
+def test_sanitize_dict_empty():
+    assert dict_utils.sanitize_dict({}) == {}
+    assert dict_utils.sanitize_dict([]) == []

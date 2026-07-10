@@ -17,17 +17,24 @@ from kronicle.utils.str_utils import (
     is_uuid4,
     normalize_name,
     normalize_name_accept_subs,
+    normalize_name_keep_dots,
     normalize_pg_identifier,
+    normalize_sort_name,
     normalize_to_snake_case,
+    obfuscate_pwd_in_connection_url,
     pad_b64_str,
+    param_dict_to_str,
     q_ident,
     replace_non_words,
     sanitize_dict,
+    serialize,
     split_strip,
     split_strip_norm_one,
     strip_quotes,
     tiny_id,
+    uuid_to_str,
     uuid4_str,
+    validate_name_syntax,
 )
 
 # --------------------------------------------------------------------------------------
@@ -422,3 +429,236 @@ def test_split_strip_norm_one():
     result = split_strip_norm_one(" a , b , c ")
     assert result[0] == "a"
     assert result[1:] == ["b", "c"]
+
+
+def test_split_strip_norm_one_empty():
+    assert split_strip_norm_one("") == []
+
+
+# --------------------------------------------------------------------------------------
+# serialize
+# --------------------------------------------------------------------------------------
+
+
+def test_serialize_primitives():
+    assert serialize(True) is True
+    assert serialize(42) == 42
+    assert serialize(3.14) == 3.14
+
+
+def test_serialize_uuid():
+    uid = uuid4()
+    result = serialize(uid)
+    assert result == uid.hex
+    assert isinstance(result, str)
+
+
+def test_serialize_empty_containers():
+    assert serialize([]) is None
+    assert serialize({}) is None
+    assert serialize("") is None
+    assert serialize(set()) is None
+
+
+def test_serialize_empty_containers_exclude_none_false():
+    assert serialize([], exclude_none=False) == []
+    assert serialize({}, exclude_none=False) == {}
+    assert serialize("", exclude_none=False) == ""
+
+
+def test_serialize_string():
+    assert serialize("hello") == "hello"
+
+
+def test_serialize_list():
+    result = serialize([1, None, 2])
+    assert result == [1, 2]
+
+
+def test_serialize_tuple():
+    result = serialize((1, None, 2))
+    assert result == (1, 2)
+
+
+def test_serialize_set():
+    result = serialize({1, None, 2})
+    assert isinstance(result, list)
+    assert set(result) == {1, 2}
+
+
+def test_serialize_dict():
+    result = serialize({"a": 1, "b": None, "c": 3})
+    assert result == {"a": 1, "c": 3}
+
+
+def test_serialize_dict_exclude_none_false():
+    result = serialize({"a": 1, "b": None}, exclude_none=False)
+    assert result == {"a": 1, "b": None}
+
+
+def test_serialize_model_dump(monkeypatch):
+    class FakeModel:
+        def model_dump(self, exclude_none=True):
+            return {"name": "test"}
+
+    result = serialize(FakeModel())
+    assert result == {"name": "test"}
+
+
+# --------------------------------------------------------------------------------------
+# normalize_sort_name
+# --------------------------------------------------------------------------------------
+
+
+def test_normalize_sort_name():
+    assert normalize_sort_name("  Hello World  ") == "hello_world"
+
+
+def test_normalize_sort_name_empty_after_strip():
+    assert normalize_sort_name("  ") == ""
+
+
+def test_normalize_sort_name_negative_prefix():
+    assert normalize_sort_name("-Hello World") == "-hello_world"
+
+
+# --------------------------------------------------------------------------------------
+# sanitize_dict (additional coverage)
+# --------------------------------------------------------------------------------------
+
+
+def test_sanitize_dict_cast_values():
+    d = {"a": 1, "b": None}
+    result = sanitize_dict(d, cast_values=True)
+    assert result["a"] == 1  # int is a TagType, not cast to str
+    assert result["b"] == "None"  # None is not TagType, cast to str
+
+
+def test_sanitize_dict_cast_values_list():
+    d = {"items": [1, 2, 3]}
+    result = sanitize_dict(d, cast_values=True)
+    # Lists are not TagType, so they get cast to str representation
+    assert result["items"] == "[1, 2, 3]"
+
+
+def test_sanitize_dict_invalid_normalized_key():
+    """A key that normalizes to an empty string should raise ValueError."""
+    with raises(ValueError):
+        sanitize_dict({"___": "bad"})
+
+
+# --------------------------------------------------------------------------------------
+# is_base64_url (additional coverage)
+# --------------------------------------------------------------------------------------
+
+
+def test_is_base64_url_bytes():
+    encoded = encode_b64url("hello")
+    assert is_base64_url(encoded.encode("utf-8"))
+
+
+def test_is_base64_url_invalid_type():
+    assert is_base64_url(42) is False
+
+
+# --------------------------------------------------------------------------------------
+# obfuscate_pwd_in_connection_url
+# --------------------------------------------------------------------------------------
+
+
+def test_obfuscate_pwd():
+    url = "postgresql://user:secret@host:5432/db"
+    result = obfuscate_pwd_in_connection_url(url)
+    assert "secret" not in result
+    assert result == "postgresql://user:******@host:5432/db"
+
+
+def test_obfuscate_pwd_no_at_sign():
+    url = "simple_string"
+    assert obfuscate_pwd_in_connection_url(url) == url
+
+
+def test_obfuscate_pwd_no_password():
+    url = "postgresql://user@host:5432/db"
+    result = obfuscate_pwd_in_connection_url(url)
+    assert result == url
+
+
+def test_obfuscate_pwd_no_user_pass():
+    url = "postgresql://host:5432/db"
+    result = obfuscate_pwd_in_connection_url(url)
+    assert result == url
+
+
+# --------------------------------------------------------------------------------------
+# validate_name_syntax
+# --------------------------------------------------------------------------------------
+
+
+def test_validate_name_syntax_valid():
+    result = validate_name_syntax("valid_name_123")
+    assert result == "valid_name_123"
+
+
+def test_validate_name_syntax_none():
+    assert validate_name_syntax(None) is None
+
+
+def test_validate_name_syntax_invalid_with_extra_chars():
+    with raises(ValueError, match="must start with a letter"):
+        validate_name_syntax("ab")
+
+
+def test_validate_name_syntax_invalid_without_extra_chars():
+    with raises(ValueError, match="must start with a letter"):
+        validate_name_syntax("ab!", extra_chars="")
+
+
+# --------------------------------------------------------------------------------------
+# param_dict_to_str
+# --------------------------------------------------------------------------------------
+
+
+def test_param_dict_to_str_empty():
+    assert param_dict_to_str(None) == ""
+    assert param_dict_to_str({}) == ""
+
+
+def test_param_dict_to_str():
+    result = param_dict_to_str({"a": 1, "b": 2})
+    assert result == "?a=1&b=2"
+
+
+# --------------------------------------------------------------------------------------
+# uuid_to_str
+# --------------------------------------------------------------------------------------
+
+
+def test_uuid_to_str():
+    uid = uuid4()
+    result = uuid_to_str(uid)
+    assert result == uid.hex
+
+
+def test_uuid_to_str_none():
+    assert uuid_to_str(None) is None
+
+
+# --------------------------------------------------------------------------------------
+# normalize_name_keep_dots
+# --------------------------------------------------------------------------------------
+
+
+def test_normalize_name_keep_dots():
+    result = normalize_name_keep_dots("Hello.World")
+    assert result == "hello.world"
+
+
+# --------------------------------------------------------------------------------------
+# normalize_name — keep_dots branch
+# --------------------------------------------------------------------------------------
+
+
+def test_normalize_name_keep_dots_collapses():
+    result = normalize_name("Hello.World", keep_dots=True)
+    assert result == "hello.world"
