@@ -37,9 +37,10 @@ jobs:
       POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
       POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
       KRONICLE_DB_NAME: ${{ secrets.KRONICLE_DB_NAME }}
-      KRONICLE_SU_INFO: ${{ secrets.KRONICLE_SU_INFO }}
       KRONICLE_CHAN_CREDS: ${{ secrets.KRONICLE_CHAN_CREDS }}
       KRONICLE_RBAC_CREDS: ${{ secrets.KRONICLE_RBAC_CREDS }}
+      KRONICLE_SU_NAME: ${{ secrets.KRONICLE_SU_NAME }}
+      KRONICLE_SU_PASS: ${{ secrets.KRONICLE_SU_PASS }}
     steps:
       - uses: actions/checkout@v6
 
@@ -68,7 +69,8 @@ jobs:
         env:
           KRONICLE_HOST: localhost
           KRONICLE_PORT: 8000
-          KRONICLE_SU_INFO: ${{ secrets.KRONICLE_SU_INFO }}
+          KRONICLE_SU_NAME: ${{ secrets.KRONICLE_SU_NAME }}
+          KRONICLE_SU_PASS: ${{ secrets.KRONICLE_SU_PASS }}
           KRONICLE_USR_NAME: ${{ secrets.KRONICLE_USR_NAME }}
           KRONICLE_USR_PASS: ${{ secrets.KRONICLE_USR_PASS }}
         run: |
