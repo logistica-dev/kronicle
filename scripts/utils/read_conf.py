@@ -23,7 +23,7 @@ Expected environment variables:
     KRONICLE_CHAN_CREDS   : Base64 encoded "chan_usr:chan_pwd"
     KRONICLE_RBAC_CREDS   : Base64 encoded "rbac_usr:rbac_pwd"
 
-    KRONICLE_SU_INFO      : Base64 encoded "adminuser:admin@example.com:encryptedpwd"
+    KRONICLE_SU_INFO      : Base64 encoded "admin_user:admin_mail@kronicle.org:encrypted_pwd"
 """
 
 
@@ -31,7 +31,7 @@ DB_SU_CREDS = "KRONICLE_DB_SU_CREDS"  # b64(db_su_usr:db_su_pwd)
 DB_SU_NAME = "POSTGRES_USER"
 DB_SU_PASS = "POSTGRES_PASSWORD"
 
-APP_SU_INFO = "KRONICLE_SU_INFO"  # b64(adminuser:admin@example.com:encryptedpwd)
+APP_SU_INFO = "KRONICLE_SU_INFO"  # b64(admin_user:admin_mail@kronicle.org:encrypted_pwd)
 
 
 @dataclass

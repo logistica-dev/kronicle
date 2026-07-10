@@ -39,8 +39,7 @@ jobs:
       KRONICLE_DB_NAME: ${{ secrets.KRONICLE_DB_NAME }}
       KRONICLE_CHAN_CREDS: ${{ secrets.KRONICLE_CHAN_CREDS }}
       KRONICLE_RBAC_CREDS: ${{ secrets.KRONICLE_RBAC_CREDS }}
-      KRONICLE_SU_NAME: ${{ secrets.KRONICLE_SU_NAME }}
-      KRONICLE_SU_PASS: ${{ secrets.KRONICLE_SU_PASS }}
+      KRONICLE_SU_INFO: ${{ secrets.KRONICLE_SU_INFO }}
     steps:
       - uses: actions/checkout@v6
 
