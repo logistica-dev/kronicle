@@ -1,7 +1,7 @@
 black==26.5.1
 commitizen==4.16.4
 flake8==7.3.0
-kronicle-sdk==0.3.2
+kronicle-sdk==0.3.3
 pip-upgrade-outdated==1.5
 pip==26.1.2
 pre-commit==4.6.0
