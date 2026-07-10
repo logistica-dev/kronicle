@@ -69,7 +69,7 @@ class RbacDbSession:
     # ----------------------------------------------------------------------------------------------
     # Utility: execute with error interception
     # ----------------------------------------------------------------------------------------------
-    def execute(self, func: Callable[[Session], Any], *, catch_errors: bool | None = True):
+    def execute(self, func: Callable[[Session], Any], *, catch_errors: bool = True):
         """
         Execute a callable with a Session from transaction(), optionally intercepting errors.
 

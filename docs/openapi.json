@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "TestApp",
-    "summary": "desc",
-    "version": "1.0"
+    "title": "Kronicle",
+    "summary": "FastAPI-powered TimescaleDB microservice for storing time-series measurements",
+    "version": "0.0.1"
   },
   "paths": {
     "/health/live": {
@@ -6065,11 +6065,11 @@
             "temperature": "float",
             "time": "datetime"
           },
-          "id": "f4ddf09c-d77f-437b-b3b7-ad6b2c009581",
+          "id": "837df420-ae89-4331-b624-476f4f9caea1",
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-38c63",
+          "name": "thermo-b5653",
           "read_groups": [
             "analysts"
           ],

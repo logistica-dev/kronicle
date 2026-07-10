@@ -26,7 +26,7 @@ def uuid_to_str(u: UUID | None) -> str | None:
     return u.hex if u else None
 
 
-def serialize(x: Any, *, exclude_none: bool | None = True) -> Any:
+def serialize(x: Any, *, exclude_none: bool = True) -> Any:
     if isinstance(x, (bool, int, float)):
         return x
     if isinstance(x, UUID):
@@ -44,7 +44,7 @@ def serialize(x: Any, *, exclude_none: bool | None = True) -> Any:
     return x
 
 
-def tiny_id(n: int | None = 8) -> str:
+def tiny_id(n: int = 8) -> str:
     if not n or n < 1:
         n = 8
     return uuid4().hex[0:n]
@@ -103,18 +103,18 @@ def normalize_to_snake_case(s: str, *, keep_dots=False) -> str:
         return sub(r"[^\w.]", "_", str(s).lower())
 
 
-def normalize_sort_name(s: str, *, prefix: str | None = "") -> str:
+def normalize_sort_name(s: str, *, prefix: str = "") -> str:
     s = s.strip()
     if not s:
         return ""
     if s[0] == "-":
-        return f"-{normed}" if (normed := normalize_name(s[1:])) else ""
+        return f"-{normed}" if (normed := normalize_name(s[1:], prefix=prefix)) else ""
     else:
-        return normalize_name(s)
+        return normalize_name(s, prefix=prefix)
 
 
-def normalize_name_keep_dots(s: str, *, prefix: str | None = "") -> str:
-    return normalize_name(s, keep_dots=True)
+def normalize_name_keep_dots(s: str, *, prefix: str = "") -> str:
+    return normalize_name(s, keep_dots=True, prefix=prefix)
 
 
 def normalize_name(s: str, *, keep_dots=False, prefix: str = "") -> str:
