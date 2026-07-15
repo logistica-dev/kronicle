@@ -24,8 +24,8 @@ These informations are also required by the init phase. They will need to be pro
 - `KRONICLE_CHAN_CREDS`: base64url-encoded <usr>:<pwd> credentials of the user that will manage the data (metadata, timeseries) in the DB
 - `KRONICLE_RBAC_CREDS`: base64url-encoded <usr>:<pwd> credentials of the user that will manage the RBAC in the DB ("role-base access control" = authorization in this app)
 
-- `KRONICLE_HOST` (defaulted to 0.0.0.0): host for the app server
-- `KRONICLE_PORT` (defaulted to 8000): listening port for the app server
+- `KRONICLE_HOST` (default: 0.0.0.0): host for the app server
+- `KRONICLE_PORT` (default: 8080): listening port for the app server
 - `KRONICLE_ENV`: set to test for the docs to be
 
 You can for instance set all these variables in a `.env` file

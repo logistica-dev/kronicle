@@ -163,12 +163,14 @@ def test_channel(su_setup_client, test_zone) -> Generator[str, None, None]:
 class TestSuperAdmin:
     """super_admin has every permission – all requests should return 200."""
 
-    @pytest.fixture(scope="class")
-    def test_user(self, su_client) -> Generator[dict, None, None]:
+    @pytest.fixture(scope="class", autouse=False)
+    @classmethod
+    def test_user(cls, su_client) -> Generator[dict, None, None]:
         yield from _role_user_fixture(su_client, "super_admin", tiny_id())
 
-    @pytest.fixture(scope="class")
-    def jwt(self, base_url, test_user) -> str:
+    @pytest.fixture(scope="class", autouse=False)
+    @classmethod
+    def jwt(cls, base_url, test_user) -> str:
         return _jwt(base_url, test_user["_email"], test_user["_password"])
 
     def test_create_user(self, su_client, base_url, jwt):
@@ -262,12 +264,14 @@ class TestSuperAdmin:
 class TestRbacAdmin:
     """rbac_admin has RBAC_access_profile + USER/ROLE/GROUP/POLICY CRUD."""
 
-    @pytest.fixture(scope="class")
-    def test_user(self, su_client) -> Generator[dict, None, None]:
+    @pytest.fixture(scope="class", autouse=False)
+    @classmethod
+    def test_user(cls, su_client) -> Generator[dict, None, None]:
         yield from _role_user_fixture(su_client, "rbac_admin", tiny_id())
 
-    @pytest.fixture(scope="class")
-    def jwt(self, base_url, test_user) -> str:
+    @pytest.fixture(scope="class", autouse=False)
+    @classmethod
+    def jwt(cls, base_url, test_user) -> str:
         return _jwt(base_url, test_user["_email"], test_user["_password"])
 
     # Allowed
@@ -371,12 +375,14 @@ class TestDataReader:
     Can only access core endpoints (core_router has no gate beyond require_auth).
     """
 
-    @pytest.fixture(scope="class")
-    def test_user(self, su_client) -> Generator[dict, None, None]:
+    @pytest.fixture(scope="class", autouse=False)
+    @classmethod
+    def test_user(cls, su_client) -> Generator[dict, None, None]:
         yield from _role_user_fixture(su_client, "data_reader", tiny_id())
 
-    @pytest.fixture(scope="class")
-    def jwt(self, base_url, test_user) -> str:
+    @pytest.fixture(scope="class", autouse=False)
+    @classmethod
+    def jwt(cls, base_url, test_user) -> str:
         return _jwt(base_url, test_user["_email"], test_user["_password"])
 
     # Allowed via core_router (no gate, just CHANNEL_READ)
@@ -448,12 +454,14 @@ class TestDataWriter:
     Can access writer_router (requires DATA_access_profile) and core_router.
     """
 
-    @pytest.fixture(scope="class")
-    def test_user(self, su_client) -> Generator[dict, None, None]:
+    @pytest.fixture(scope="class", autouse=False)
+    @classmethod
+    def test_user(cls, su_client) -> Generator[dict, None, None]:
         yield from _role_user_fixture(su_client, "data_writer", tiny_id())
 
-    @pytest.fixture(scope="class")
-    def jwt(self, base_url, test_user) -> str:
+    @pytest.fixture(scope="class", autouse=False)
+    @classmethod
+    def jwt(cls, base_url, test_user) -> str:
         return _jwt(base_url, test_user["_email"], test_user["_password"])
 
     # Allowed – core_router (no gate)
@@ -521,12 +529,14 @@ class TestDataWriter:
 class TestChannelAdmin:
     """channel_admin has SETUP_access_profile + CHANNEL_CRUD + ROW_DELETE."""
 
-    @pytest.fixture(scope="class")
-    def test_user(self, su_client) -> Generator[dict, None, None]:
+    @pytest.fixture(scope="class", autouse=False)
+    @classmethod
+    def test_user(cls, su_client) -> Generator[dict, None, None]:
         yield from _role_user_fixture(su_client, "channel_admin", tiny_id())
 
-    @pytest.fixture(scope="class")
-    def jwt(self, base_url, test_user) -> str:
+    @pytest.fixture(scope="class", autouse=False)
+    @classmethod
+    def jwt(cls, base_url, test_user) -> str:
         return _jwt(base_url, test_user["_email"], test_user["_password"])
 
     # Allowed
@@ -616,12 +626,14 @@ class TestChannelAdmin:
 class TestZoneAdmin:
     """zone_admin has ZONE_CRUD only."""
 
-    @pytest.fixture(scope="class")
-    def test_user(self, su_client) -> Generator[dict, None, None]:
+    @pytest.fixture(scope="class", autouse=False)
+    @classmethod
+    def test_user(cls, su_client) -> Generator[dict, None, None]:
         yield from _role_user_fixture(su_client, "zone_admin", tiny_id())
 
-    @pytest.fixture(scope="class")
-    def jwt(self, base_url, test_user) -> str:
+    @pytest.fixture(scope="class", autouse=False)
+    @classmethod
+    def jwt(cls, base_url, test_user) -> str:
         return _jwt(base_url, test_user["_email"], test_user["_password"])
 
     # Allowed
@@ -683,12 +695,14 @@ class TestAuditor:
     and core_router (no gate) for zone/channel reads.
     """
 
-    @pytest.fixture(scope="class")
-    def test_user(self, su_client) -> Generator[dict, None, None]:
+    @pytest.fixture(scope="class", autouse=False)
+    @classmethod
+    def test_user(cls, su_client) -> Generator[dict, None, None]:
         yield from _role_user_fixture(su_client, "auditor", tiny_id())
 
-    @pytest.fixture(scope="class")
-    def jwt(self, base_url, test_user) -> str:
+    @pytest.fixture(scope="class", autouse=False)
+    @classmethod
+    def jwt(cls, base_url, test_user) -> str:
         return _jwt(base_url, test_user["_email"], test_user["_password"])
 
     # Allowed – read RBAC

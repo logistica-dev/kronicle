@@ -57,7 +57,7 @@ def test_connection_settings(monkeypatch):
     monkeypatch.delenv(se.APP_PORT, raising=False)
     cs = se.ConnectionSettings.from_env()
     assert cs.host == "0.0.0.0"
-    assert cs.port == 8080
+    assert cs.port == 8000
 
     monkeypatch.setenv(se.APP_HOST, "127.0.0.1")
     monkeypatch.setenv(se.APP_PORT, "5000")

@@ -21,7 +21,7 @@ def real_env_conf():
     db_access_profile = DbAccess(
         host="127.0.0.1", port=5432, name="kronicle", usr=chan_creds.username, pwd=chan_creds.password
     )
-    server = ConnectionSettings(host="127.0.0.1", port=8080)
+    server = ConnectionSettings(host="127.0.0.1", port=8000)
     env = AppEnv(_env=AppEnv._ENV_DEV)
     return KronicleEnvConf(
         chan_creds=chan_creds, rbac_creds=rbac_creds, db=db_access_profile, server=server, env=env, conf_file=None

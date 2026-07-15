@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "KRONICLE",
-    "summary": "FastAPI x TimescaleDB \u00b5service for storing time-series measurements",
-    "version": "0.5.1"
+    "title": "TestApp",
+    "summary": "desc",
+    "version": "1.0"
   },
   "paths": {
     "/health/live": {
@@ -6065,11 +6065,11 @@
             "temperature": "float",
             "time": "datetime"
           },
-          "id": "698783f5-671c-4f73-8f1c-77e4db486ddd",
+          "id": "2790287f-cebf-485d-854d-4290de68a7d7",
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-fba57",
+          "name": "thermo-07a44",
           "read_groups": [
             "analysts"
           ],
