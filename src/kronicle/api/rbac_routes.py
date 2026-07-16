@@ -1055,3 +1055,234 @@ def patch_row_policy(
     name = patch_in.name if patch_in else None
     details = patch_in.details if patch_in else None
     return rbac.patch_row_policy(policy_id, name=name, details=details)
+
+
+# ==================================================================================================
+# Introspection: user permissions and resource access
+# ==================================================================================================
+
+
+@rbac_router.get(
+    "/users/{user_id}/permissions",
+    summary="Get effective permissions for a user",
+    description="Returns all roles and policies granting permissions to this user.",
+    dependencies=[Depends(require_permission(PermStr.USER_READ))],
+)
+def get_user_permissions(
+    user_id: UUID,
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.get_user_permissions(user_id)
+
+
+@rbac_router.get(
+    "/users/{user_id}/zones",
+    summary="Get zones accessible to a user",
+    description="Returns zones the user can access via policies, with provenance.",
+    dependencies=[Depends(require_permission(PermStr.USER_READ))],
+)
+def get_user_zones(
+    user_id: UUID,
+    indirect: bool = Query(False, description="Include ancestor zones via zone hierarchy"),
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.get_user_zones(user_id, indirect=indirect)
+
+
+@rbac_router.get(
+    "/users/{user_id}/channels",
+    summary="Get channels accessible to a user",
+    description="Returns channels the user can access via policies (direct or via parent zone), with provenance.",
+    dependencies=[Depends(require_permission(PermStr.USER_READ))],
+)
+def get_user_channels(
+    user_id: UUID,
+    indirect: bool = Query(False, description="Include channels from ancestor zones via zone hierarchy"),
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.get_user_channels(user_id, indirect=indirect)
+
+
+@rbac_router.get(
+    "/users/{user_id}/rows",
+    summary="Get rows accessible to a user",
+    description="Returns row policies the user is assigned to, with provenance.",
+    dependencies=[Depends(require_permission(PermStr.USER_READ))],
+)
+def get_user_rows(
+    user_id: UUID,
+    indirect: bool = Query(False, description="Include indirect group membership"),
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.get_user_rows(user_id, indirect=indirect)
+
+
+@rbac_router.get(
+    "/users/{user_id}/resources",
+    summary="Get all resources accessible to a user",
+    description="Aggregated view of zones, channels, and rows the user can access.",
+    dependencies=[Depends(require_permission(PermStr.USER_READ))],
+)
+def get_user_resources(
+    user_id: UUID,
+    indirect: bool = Query(False, description="Include indirect access via hierarchies"),
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.get_user_resources(user_id, indirect=indirect)
+
+
+# ==================================================================================================
+# Introspection: group permissions and resource access
+# ==================================================================================================
+
+
+@rbac_router.get(
+    "/groups/{group_id}/permissions",
+    summary="Get effective permissions for a group",
+    description="Returns all roles and policies granting permissions to this group.",
+    dependencies=[Depends(require_permission(PermStr.GROUP_READ))],
+)
+def get_group_permissions(
+    group_id: UUID,
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.get_group_permissions(group_id)
+
+
+@rbac_router.get(
+    "/groups/{group_id}/zones",
+    summary="Get zones accessible to a group",
+    description="Returns zones the group can access via policies, with provenance.",
+    dependencies=[Depends(require_permission(PermStr.GROUP_READ))],
+)
+def get_group_zones(
+    group_id: UUID,
+    indirect: bool = Query(False, description="Include ancestor zones via zone hierarchy"),
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.get_group_zones(group_id, indirect=indirect)
+
+
+@rbac_router.get(
+    "/groups/{group_id}/channels",
+    summary="Get channels accessible to a group",
+    description="Returns channels the group can access via policies (direct or via parent zone), with provenance.",
+    dependencies=[Depends(require_permission(PermStr.GROUP_READ))],
+)
+def get_group_channels(
+    group_id: UUID,
+    indirect: bool = Query(False, description="Include channels from ancestor zones via zone hierarchy"),
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.get_group_channels(group_id, indirect=indirect)
+
+
+@rbac_router.get(
+    "/groups/{group_id}/rows",
+    summary="Get rows accessible to a group",
+    description="Returns row policies the group is assigned to, with provenance.",
+    dependencies=[Depends(require_permission(PermStr.GROUP_READ))],
+)
+def get_group_rows(
+    group_id: UUID,
+    indirect: bool = Query(False, description="Include indirect group membership"),
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.get_group_rows(group_id, indirect=indirect)
+
+
+@rbac_router.get(
+    "/groups/{group_id}/resources",
+    summary="Get all resources accessible to a group",
+    description="Aggregated view of zones, channels, and rows the group can access.",
+    dependencies=[Depends(require_permission(PermStr.GROUP_READ))],
+)
+def get_group_resources(
+    group_id: UUID,
+    indirect: bool = Query(False, description="Include indirect access via hierarchies"),
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.get_group_resources(group_id, indirect=indirect)
+
+
+# ==================================================================================================
+# Resource-level policy and access-profile lists
+# ==================================================================================================
+
+
+@rbac_router.get(
+    "/zones/{zone_id}/policies",
+    summary="List policies on a zone",
+    description="Returns all policies (subject → access profile) applied to this zone.",
+    dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
+)
+def list_zone_policies_for_zone(
+    zone_id: UUID,
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.get_zone_policies(zone_id)
+
+
+@rbac_router.get(
+    "/zones/{zone_id}/access_profiles",
+    summary="List access profiles on a zone",
+    description="Returns all access profiles (role + zone) applied to this zone.",
+    dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
+)
+def list_zone_access_profiles_for_zone(
+    zone_id: UUID,
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.get_zone_access_profiles(zone_id)
+
+
+@rbac_router.get(
+    "/channels/{channel_id}/policies",
+    summary="List policies on a channel",
+    description="Returns all policies (subject → access profile) applied to this channel.",
+    dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
+)
+def list_channel_policies_for_channel(
+    channel_id: UUID,
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.get_channel_policies(channel_id)
+
+
+@rbac_router.get(
+    "/channels/{channel_id}/access_profiles",
+    summary="List access profiles on a channel",
+    description="Returns all access profiles (role + channel) applied to this channel.",
+    dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
+)
+def list_channel_access_profiles_for_channel(
+    channel_id: UUID,
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.get_channel_access_profiles(channel_id)
+
+
+@rbac_router.get(
+    "/rows/{row_id}/policies",
+    summary="List policies on a row",
+    description="Returns all policies (subject → access profile) applied to this row.",
+    dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
+)
+def list_row_policies_for_row(
+    row_id: UUID,
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.get_row_policies(row_id)
+
+
+@rbac_router.get(
+    "/rows/{row_id}/access_profiles",
+    summary="List access profiles on a row",
+    description="Returns all access profiles (role + row) applied to this row.",
+    dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
+)
+def list_row_access_profiles_for_row(
+    row_id: UUID,
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.get_row_access_profiles(row_id)

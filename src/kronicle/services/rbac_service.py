@@ -10,6 +10,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.session import Session
 
+from kronicle.db.core.links.zone_hierarchy import ZoneHierarchy
 from kronicle.db.core.models.core_channel import CoreChannel
 from kronicle.db.core.models.core_row import CoreRow
 from kronicle.db.core.models.core_zone import CoreZone
@@ -45,6 +46,7 @@ from kronicle.repo.rbac.links.rbac_user_roles_repo import RbacUserRolesRepositor
 from kronicle.repo.rbac.links.row_access_profile_repo import RowAccessProfileRepository
 from kronicle.repo.rbac.links.zone_access_profile_repo import ZoneAccessProfileRepository
 from kronicle.schemas.core.input_ressource_schema import InputZonePatch
+from kronicle.schemas.output_schema import OutputSchema
 from kronicle.schemas.payload.input_payload import InputPayload
 from kronicle.schemas.permissions.permission import Permission
 from kronicle.schemas.rbac.input_policy_schemas import (
@@ -56,6 +58,7 @@ from kronicle.schemas.rbac.input_role_schemas import InputRole
 from kronicle.schemas.rbac.input_subject_schemas import InputSubject
 from kronicle.schemas.rbac.input_user_schemas import InputUserLogin
 from kronicle.schemas.rbac.safe_group_schemas import OutputGroup
+from kronicle.schemas.rbac.safe_introspect_schemas import ResourceAccess
 from kronicle.schemas.rbac.safe_policy_schemas import (
     OutputAccessProfile,
     OutputChannelAccessProfile,
@@ -1435,3 +1438,384 @@ class RbacService:
                 if user_id in members:
                     return {"is_member": True, "direct": False}
             return {"is_member": False, "direct": False}
+
+    # ----------------------------------------------------------------------------------------------
+    # Introspection: subject resolution
+    # ----------------------------------------------------------------------------------------------
+
+    def _resolve_user_subject_ids(self, db: Session, user_id: UUID, indirect: bool = False) -> list[UUID]:
+        """Return all subject IDs that represent this user (direct + group subjects)."""
+        subject_ids: list[UUID] = []
+
+        # User's own subject
+        user_subj = db.execute(select(RbacSubject.id).where(RbacSubject.user_id == user_id)).scalars().all()
+        subject_ids.extend(user_subj)
+
+        # Direct group subjects
+        group_ids = list(self._user_groups_repo.get_group_ids_for_user(db, user_id=user_id))
+
+        if indirect:
+            # Expand to ancestor groups
+            all_group_ids: set[UUID] = set(group_ids)
+            for gid in group_ids:
+                group = self._group_repo.get_by_id(db, id=gid)
+                if group:
+                    ancestors = self.group_hierarchy_service.ancestors(group)
+                    all_group_ids.update(a.id for a in ancestors)
+            group_ids = list(all_group_ids)
+
+        if group_ids:
+            group_subjs = db.execute(select(RbacSubject.id).where(RbacSubject.group_id.in_(group_ids))).scalars().all()
+            subject_ids.extend(group_subjs)
+
+        return subject_ids
+
+    def _resolve_group_subject_ids(self, db: Session, group_id: UUID, indirect: bool = False) -> list[UUID]:
+        """Return all subject IDs that represent this group (direct + ancestor groups)."""
+        subject_ids: list[UUID] = []
+        group_ids: list[UUID] = [group_id]
+
+        if indirect:
+            group = self._group_repo.get_by_id(db, id=group_id)
+            if group:
+                ancestors = self.group_hierarchy_service.ancestors(group)
+                group_ids.extend(a.id for a in ancestors)
+
+        if group_ids:
+            group_subjs = db.execute(select(RbacSubject.id).where(RbacSubject.group_id.in_(group_ids))).scalars().all()
+            subject_ids.extend(group_subjs)
+
+        return subject_ids
+
+    def _get_zone_ancestor_ids(self, db: Session, zone_id: UUID) -> set[UUID]:
+        """Return all ancestor zone IDs (excluding the zone itself)."""
+        ancestors = db.execute(select(ZoneHierarchy.parent_id).where(ZoneHierarchy.child_id == zone_id)).scalars().all()
+        result: set[UUID] = set(ancestors)
+        for ancestor_id in ancestors:
+            result.update(self._get_zone_ancestor_ids(db, ancestor_id))
+        return result
+
+    def _expand_zone_ids_with_ancestors(self, db: Session, zone_ids: set[UUID]) -> set[UUID]:
+        """Expand a set of zone IDs to include all their ancestors."""
+        expanded = set(zone_ids)
+        for zid in zone_ids:
+            expanded.update(self._get_zone_ancestor_ids(db, zid))
+        return expanded
+
+    def _get_zone_descendant_ids(self, db: Session, zone_id: UUID) -> set[UUID]:
+        """Return all descendant zone IDs (excluding the zone itself)."""
+        descendants = (
+            db.execute(select(ZoneHierarchy.child_id).where(ZoneHierarchy.parent_id == zone_id)).scalars().all()
+        )
+        result: set[UUID] = set(descendants)
+        for desc_id in descendants:
+            result.update(self._get_zone_descendant_ids(db, desc_id))
+        return result
+
+    # ----------------------------------------------------------------------------------------------
+    # Introspection: permissions
+    # ----------------------------------------------------------------------------------------------
+
+    def get_user_permissions(self, user_id: UUID) -> dict:
+        """Return the full permission landscape for a user."""
+        from kronicle.schemas.rbac.safe_group_schemas import OutputGroup
+        from kronicle.schemas.rbac.safe_role_schemas import OutputRole
+
+        with self._db.get_db() as db:
+            direct_roles: list[OutputRole] = []
+            group_roles: list[dict] = []
+            zone_policies: list = []
+            channel_policies: list = []
+            row_policies: list = []
+
+            # Direct user roles
+            role_ids = self._user_roles_repo.get_role_ids_for_user(db, user_id=user_id)
+            for rid in role_ids:
+                role = self._role_repo.get_by_id(db, id=rid)
+                if role:
+                    direct_roles.append(OutputRole.from_db(role))
+
+            # Group roles
+            group_ids = self._user_groups_repo.get_group_ids_for_user(db, user_id=user_id)
+            for gid in group_ids:
+                group = self._group_repo.get_by_id(db, id=gid)
+                if not group:
+                    continue
+                g_role_ids = self._group_roles_repo.get_role_ids_for_group(db, group_id=gid)
+                for rid in g_role_ids:
+                    role = self._role_repo.get_by_id(db, id=rid)
+                    if role:
+                        group_roles.append(
+                            {
+                                "group": OutputGroup.from_db(group),
+                                "role": OutputRole.from_db(role),
+                            }
+                        )
+
+            # Policies via subject resolution
+            subject_ids = self._resolve_user_subject_ids(db, user_id, indirect=False)
+            if subject_ids:
+                zone_policies = self._zone_policy_repo.get_policies_for_subjects(db, subject_ids=subject_ids)
+                channel_policies = self._channel_policy_repo.get_policies_for_subjects(db, subject_ids=subject_ids)
+                row_policies = self._row_policy_repo.get_policies_for_subjects(db, subject_ids=subject_ids)
+
+            return {
+                "direct_roles": direct_roles,
+                "group_roles": group_roles,
+                "zone_policies": zone_policies,
+                "channel_policies": channel_policies,
+                "row_policies": row_policies,
+            }
+
+    def get_group_permissions(self, group_id: UUID) -> dict:
+        """Return the full permission landscape for a group."""
+
+        with self._db.get_db() as db:
+            direct_roles: list[OutputRole] = []
+            group_roles: list[dict] = []
+            zone_policies: list = []
+            channel_policies: list = []
+            row_policies: list = []
+
+            # Direct group roles
+            role_ids = self._group_roles_repo.get_role_ids_for_group(db, group_id=group_id)
+            for rid in role_ids:
+                role = self._role_repo.get_by_id(db, id=rid)
+                if role:
+                    direct_roles.append(OutputRole.from_db(role))
+
+            # Policies via subject resolution
+            subject_ids = self._resolve_group_subject_ids(db, group_id, indirect=False)
+            if subject_ids:
+                zone_policies = self._zone_policy_repo.get_policies_for_subjects(db, subject_ids=subject_ids)
+                channel_policies = self._channel_policy_repo.get_policies_for_subjects(db, subject_ids=subject_ids)
+                row_policies = self._row_policy_repo.get_policies_for_subjects(db, subject_ids=subject_ids)
+
+            return {
+                "direct_roles": direct_roles,
+                "group_roles": group_roles,
+                "zone_policies": zone_policies,
+                "channel_policies": channel_policies,
+                "row_policies": row_policies,
+            }
+
+    # ----------------------------------------------------------------------------------------------
+    # Introspection: resource access
+    # ----------------------------------------------------------------------------------------------
+
+    def _build_resource_access(self, policy, resource, parent=None):
+        """Build a ResourceAccess dict from a policy and its resource."""
+
+        res_ref = OutputSchema(id=resource.id, name=resource.name)
+        parent_ref = OutputSchema(id=parent.id, name=parent.name) if parent else None
+        return ResourceAccess(resource=res_ref, parent=parent_ref, policy=policy)
+
+    def get_user_zones(self, user_id: UUID, indirect: bool = False) -> list:
+        """Return zones the user has access to via policies."""
+        with self._db.get_db() as db:
+            subject_ids = self._resolve_user_subject_ids(db, user_id, indirect=indirect)
+            if not subject_ids:
+                return []
+
+            policies = self._zone_policy_repo.get_policies_for_subjects(db, subject_ids=subject_ids)
+            zone_map: dict[UUID, list] = {}
+            for p in policies:
+                zone_id = p.access_profile.zone_id
+                zone_map.setdefault(zone_id, []).append(p)
+
+            zone_ids = set(zone_map.keys())
+            if indirect:
+                zone_ids = self._expand_zone_ids_with_ancestors(db, zone_ids)
+
+            result = []
+            for zid in zone_ids:
+                zone = self._zone_repo.get_by_id(db, id=zid)
+                if not zone:
+                    continue
+                for p in zone_map.get(zid, []):
+                    result.append(self._build_resource_access(p, zone))
+            return result
+
+    def _build_direct_channel_map(self, db, subject_ids: list) -> dict[UUID, list]:
+        """Map channel_id → list[policy] from direct channel policies."""
+        ch_map: dict[UUID, list] = {}
+        for p in self._channel_policy_repo.get_policies_for_subjects(db, subject_ids=subject_ids):
+            ch_map.setdefault(p.access_profile.channel_id, []).append(p)
+        return ch_map
+
+    def _expand_zone_ids_for_channels(self, db, zone_policies: list, indirect: bool) -> set[UUID]:
+        """Return zone IDs (optionally expanded with ancestors and descendants)."""
+        zone_ids = {p.access_profile.zone_id for p in zone_policies}
+        if indirect:
+            zone_ids = self._expand_zone_ids_with_ancestors(db, zone_ids)
+        all_zone_ids = set(zone_ids)
+        if indirect:
+            for zid in list(zone_ids):
+                all_zone_ids.update(self._get_zone_descendant_ids(db, zid))
+        return all_zone_ids
+
+    def _attach_zone_channels_to_map(
+        self, db, zone_policies: list, all_zone_ids: set[UUID], ch_map: dict[UUID, list]
+    ) -> None:
+        """Populate ch_map with channels found in the given zones, attaching zone policies."""
+        for zid in all_zone_ids:
+            for ch in self._channel_repo.get_by_zone(db, zone_id=zid):
+                ch_map.setdefault(ch.id, [])
+                for zp in zone_policies:
+                    if zp.access_profile.zone_id == zid:
+                        ch_map[ch.id].append(zp)
+
+    def _build_channel_access_results(self, db, ch_map: dict[UUID, list]) -> list:
+        """Resolve channels and build the final resource-access list."""
+        result = []
+        for ch_id, policies in ch_map.items():
+            channel = self._channel_repo.get_by_id(db, id=ch_id)
+            if not channel:
+                continue
+            parent_zone = None
+            if channel.zone_id:
+                parent_zone = self._zone_repo.get_by_id(db, id=channel.zone_id)
+            for p in policies:
+                result.append(self._build_resource_access(p, channel, parent=parent_zone))
+        return result
+
+    def get_user_channels(self, user_id: UUID, indirect: bool = False) -> list:
+        """Return channels the user has access to via policies."""
+        with self._db.get_db() as db:
+            subject_ids = self._resolve_user_subject_ids(db, user_id, indirect=indirect)
+            if not subject_ids:
+                return []
+
+            ch_map = self._build_direct_channel_map(db, subject_ids)
+            zone_policies = self._zone_policy_repo.get_policies_for_subjects(db, subject_ids=subject_ids)
+            all_zone_ids = self._expand_zone_ids_for_channels(db, zone_policies, indirect)
+            self._attach_zone_channels_to_map(db, zone_policies, all_zone_ids, ch_map)
+            return self._build_channel_access_results(db, ch_map)
+
+    def get_user_rows(self, user_id: UUID, indirect: bool = False) -> list:
+        """Return rows the user has access to via policies."""
+        with self._db.get_db() as db:
+            subject_ids = self._resolve_user_subject_ids(db, user_id, indirect=indirect)
+            if not subject_ids:
+                return []
+
+            policies = self._row_policy_repo.get_policies_for_subjects(db, subject_ids=subject_ids)
+            result = []
+            for p in policies:
+                row_id = p.access_profile.row_id
+                row = self._row_repo.get_by_id(db, id=row_id)
+                if not row:
+                    continue
+                channel = self._channel_repo.get_by_id(db, id=row.channel_id) if row.channel_id else None
+                result.append(self._build_resource_access(p, row, parent=channel))
+            return result
+
+    def get_user_resources(self, user_id: UUID, indirect: bool = False) -> dict:
+        """Return all resources (zones, channels, rows) the user has access to."""
+        return {
+            "zones": self.get_user_zones(user_id, indirect=indirect),
+            "channels": self.get_user_channels(user_id, indirect=indirect),
+            "rows": self.get_user_rows(user_id, indirect=indirect),
+        }
+
+    def get_group_zones(self, group_id: UUID, indirect: bool = False) -> list:
+        """Return zones the group has access to via policies."""
+        with self._db.get_db() as db:
+            subject_ids = self._resolve_group_subject_ids(db, group_id, indirect=indirect)
+            if not subject_ids:
+                return []
+
+            policies = self._zone_policy_repo.get_policies_for_subjects(db, subject_ids=subject_ids)
+            zone_map: dict[UUID, list] = {}
+            for p in policies:
+                zone_id = p.access_profile.zone_id
+                zone_map.setdefault(zone_id, []).append(p)
+
+            zone_ids = set(zone_map.keys())
+            if indirect:
+                zone_ids = self._expand_zone_ids_with_ancestors(db, zone_ids)
+
+            result = []
+            for zid in zone_ids:
+                zone = self._zone_repo.get_by_id(db, id=zid)
+                if not zone:
+                    continue
+                for p in zone_map.get(zid, []):
+                    result.append(self._build_resource_access(p, zone))
+            return result
+
+    def get_group_channels(self, group_id: UUID, indirect: bool = False) -> list:
+        """Return channels the group has access to via policies."""
+        with self._db.get_db() as db:
+            subject_ids = self._resolve_group_subject_ids(db, group_id, indirect=indirect)
+            if not subject_ids:
+                return []
+
+            ch_map = self._build_direct_channel_map(db, subject_ids)
+            zone_policies = self._zone_policy_repo.get_policies_for_subjects(db, subject_ids=subject_ids)
+            all_zone_ids = self._expand_zone_ids_for_channels(db, zone_policies, indirect)
+            self._attach_zone_channels_to_map(db, zone_policies, all_zone_ids, ch_map)
+            return self._build_channel_access_results(db, ch_map)
+
+    def get_group_rows(self, group_id: UUID, indirect: bool = False) -> list:
+        """Return rows the group has access to via policies."""
+        with self._db.get_db() as db:
+            subject_ids = self._resolve_group_subject_ids(db, group_id, indirect=indirect)
+            if not subject_ids:
+                return []
+
+            policies = self._row_policy_repo.get_policies_for_subjects(db, subject_ids=subject_ids)
+            result = []
+            for p in policies:
+                row_id = p.access_profile.row_id
+                row = self._row_repo.get_by_id(db, id=row_id)
+                if not row:
+                    continue
+                channel = self._channel_repo.get_by_id(db, id=row.channel_id) if row.channel_id else None
+                result.append(self._build_resource_access(p, row, parent=channel))
+            return result
+
+    def get_group_resources(self, group_id: UUID, indirect: bool = False) -> dict:
+        """Return all resources (zones, channels, rows) the group has access to."""
+        return {
+            "zones": self.get_group_zones(group_id, indirect=indirect),
+            "channels": self.get_group_channels(group_id, indirect=indirect),
+            "rows": self.get_group_rows(group_id, indirect=indirect),
+        }
+
+    # ----------------------------------------------------------------------------------------------
+    # Introspection: resource policy/access-profile lists
+    # ----------------------------------------------------------------------------------------------
+
+    def get_zone_policies(self, zone_id: UUID) -> list:
+        """Return all policies on a zone."""
+        with self._db.get_db() as db:
+            return self._zone_policy_repo.get_policies_for_zone(db, zone_id=zone_id)
+
+    def get_zone_access_profiles(self, zone_id: UUID) -> list:
+        """Return all access profiles on a zone."""
+        with self._db.get_db() as db:
+            stmt = select(ZoneAccessProfile).where(ZoneAccessProfile.zone_id == zone_id)
+            return list(db.execute(stmt).scalars().all())
+
+    def get_channel_policies(self, channel_id: UUID) -> list:
+        """Return all policies on a channel."""
+        with self._db.get_db() as db:
+            return self._channel_policy_repo.get_policies_for_channel(db, channel_id=channel_id)
+
+    def get_channel_access_profiles(self, channel_id: UUID) -> list:
+        """Return all access profiles on a channel."""
+        with self._db.get_db() as db:
+            stmt = select(ChannelAccessProfile).where(ChannelAccessProfile.channel_id == channel_id)
+            return list(db.execute(stmt).scalars().all())
+
+    def get_row_policies(self, row_id: UUID) -> list:
+        """Return all policies on a row."""
+        with self._db.get_db() as db:
+            return self._row_policy_repo.get_policies_for_row(db, row_id=row_id)
+
+    def get_row_access_profiles(self, row_id: UUID) -> list:
+        """Return all access profiles on a row."""
+        with self._db.get_db() as db:
+            stmt = select(RowAccessProfile).where(RowAccessProfile.row_id == row_id)
+            return list(db.execute(stmt).scalars().all())

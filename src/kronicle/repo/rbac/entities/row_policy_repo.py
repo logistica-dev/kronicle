@@ -30,3 +30,9 @@ class RowPolicyRepository(KronicleRepository[RowPolicy]):
             .where(RowAccessProfile.row_id == row_id)
         )
         return list(db.execute(stmt).scalars().all())
+
+    def get_policies_for_subjects(self, db: Session, *, subject_ids: list[UUID]) -> list[RowPolicy]:
+        if not subject_ids:
+            return []
+        stmt = select(self.model).where(self.model.subject_id.in_(subject_ids))
+        return list(db.execute(stmt).scalars().all())

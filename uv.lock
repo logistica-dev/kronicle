@@ -734,7 +734,7 @@ wheels = [
 
 [[package]]
 name = "kronicle"
-version = "1.0.0"
+version = "0.5.2"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },
@@ -742,7 +742,6 @@ dependencies = [
     { name = "asyncpg" },
     { name = "email-validator" },
     { name = "fastapi" },
-    { name = "kronicle-sdk" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "python-jose" },
@@ -757,6 +756,7 @@ dev = [
     { name = "black" },
     { name = "commitizen" },
     { name = "flake8" },
+    { name = "kronicle-sdk" },
     { name = "pip" },
     { name = "pip-upgrade-outdated" },
     { name = "pre-commit" },
@@ -765,8 +765,6 @@ dev = [
     { name = "pytest-cov" },
     { name = "requests" },
     { name = "ruff" },
-    { name = "setuptools" },
-    { name = "wheel" },
 ]
 
 [package.metadata]
@@ -779,7 +777,7 @@ requires-dist = [
     { name = "email-validator", specifier = "==2.3.0" },
     { name = "fastapi", specifier = "==0.139.0" },
     { name = "flake8", marker = "extra == 'dev'", specifier = "==7.3.0" },
-    { name = "kronicle-sdk", specifier = "==0.3.1" },
+    { name = "kronicle-sdk", marker = "extra == 'dev'", specifier = "==0.3.3" },
     { name = "pip", marker = "extra == 'dev'", specifier = "==26.1.2" },
     { name = "pip-upgrade-outdated", marker = "extra == 'dev'", specifier = "==1.5" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = "==4.6.0" },
@@ -793,24 +791,22 @@ requires-dist = [
     { name = "rich", specifier = "==15.0.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = "==0.15.21" },
     { name = "secure", specifier = "==2.0.1" },
-    { name = "setuptools", marker = "extra == 'dev'", specifier = "==83.0.0" },
     { name = "sqlalchemy", extras = ["postgresql"], specifier = "==2.0.51" },
     { name = "starlette", specifier = "==1.3.1" },
-    { name = "wheel", marker = "extra == 'dev'", specifier = "==0.47.0" },
 ]
 provides-extras = ["dev"]
 
 [[package]]
 name = "kronicle-sdk"
-version = "0.3.1"
+version = "0.3.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic" },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c2/4e/c57061dc756516d790b92116188508b3e37df77105715440afe24bbad91e/kronicle_sdk-0.3.1.tar.gz", hash = "sha256:ab35fc5188b0541a5c724d434cc0270bf6e1ec23191bf69f910859dd61c867f6", size = 38422, upload-time = "2026-07-10T11:00:05.525Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/79/5b/12b1666e0953454aa56b75b1be87ac447f496adeb624fd99f8e5569b9c54/kronicle_sdk-0.3.3.tar.gz", hash = "sha256:670524ec6e98097eb0e1aaad645f6e385737ab3a4d0ab7ceaa3132c2385bd480", size = 38499, upload-time = "2026-07-10T12:59:36.865Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/39/46/833245d116164cd72fc80da260a6e99ba09fc23d7026c8213e326343036a/kronicle_sdk-0.3.1-py3-none-any.whl", hash = "sha256:cbce3cd9f95a5f96f3ca5690f1be12d87e233e9aaf4cc1e138bff34e51eb1f13", size = 51583, upload-time = "2026-07-10T11:00:04.443Z" },
+    { url = "https://files.pythonhosted.org/packages/17/98/6268b62e262116e0f39328c574ddd86d9fbe92a7092fef461e69f844e81b/kronicle_sdk-0.3.3-py3-none-any.whl", hash = "sha256:305d303a14583c893e0914e6d148f5edd5a8e03e02705f65395b68c840487fdc", size = 51668, upload-time = "2026-07-10T12:59:35.85Z" },
 ]
 
 [[package]]
@@ -1475,15 +1471,6 @@ wheels = [
 ]
 
 [[package]]
-name = "setuptools"
-version = "83.0.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/34/26/f5d29e25ffdb535afef2d35cdb55b325298f96debd670da4c325e08d70f4/setuptools-83.0.0.tar.gz", hash = "sha256:025bccbbf0fa05b6192bc64ae1e7b16e001fd6d6d4d5de03c97b1c1ade523bef", size = 1154254, upload-time = "2026-07-04T15:31:22.699Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/5d/40/e1e72872c6354b306daef1703549e8e83b4d43cfea356311bf722a043752/setuptools-83.0.0-py3-none-any.whl", hash = "sha256:29b23c360f22f414dc7336bb39178cc7bcbf6021ed2733cde173f09dba19abb3", size = 1008090, upload-time = "2026-07-04T15:31:20.885Z" },
-]
-
-[[package]]
 name = "six"
 version = "1.17.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1682,18 +1669,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/49/b4/51fe890511f0f242d07cb1ebe6a5b6db417262b9d2568b460347c57d95cc/wcwidth-0.8.1.tar.gz", hash = "sha256:faf5b4a5366a72dc49cad48cdf21f52bdf63bdda995178e483ba247ff79089b9", size = 1466072, upload-time = "2026-06-08T05:57:23.146Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/bd/6e/95b0e537de1f4d4301f76f944642c6da50d1511cc7b3d64dc418a66c7509/wcwidth-0.8.1-py3-none-any.whl", hash = "sha256:f453740b1e4a4f3291faa37944c555d71056c4da08d59809b307ef4feba695c8", size = 323092, upload-time = "2026-06-08T05:57:21.413Z" },
-]
-
-[[package]]
-name = "wheel"
-version = "0.47.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "packaging" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/39/62/75f18a0f03b4219c456652c7780e4d749b929eb605c098ce3a5b6b6bc081/wheel-0.47.0.tar.gz", hash = "sha256:cc72bd1009ba0cf63922e28f94d9d83b920aa2bb28f798a31d0691b02fa3c9b3", size = 63854, upload-time = "2026-04-22T15:51:27.727Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/87/1b/9e33c09813d65e248f7f773119148a612516a4bea93e9c6f545f78455b7c/wheel-0.47.0-py3-none-any.whl", hash = "sha256:212281cab4dff978f6cedd499cd893e1f620791ca6ff7107cf270781e587eced", size = 32218, upload-time = "2026-04-22T15:51:26.296Z" },
 ]
 
 [[package]]

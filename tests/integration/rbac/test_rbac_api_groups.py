@@ -1,4 +1,4 @@
-# tests/integration/rbac/test_rbac_groups.py
+# tests/integration/rbac/test_rbac_api_groups.py
 
 import pytest
 from kronicle_sdk.models.rbac.kronicle_group import KronicleGroup
@@ -7,7 +7,7 @@ from kronicle_sdk.utils.str_utils import tiny_id
 
 
 @pytest.mark.integration
-def test_list_groups(kronicle_rbac, test_group):
+def test_api_list_groups(kronicle_rbac, test_group):
     here = "rbac_groups"
     groups = kronicle_rbac.list_groups()
     log_d(here, f"Number of groups: {len(groups)}")
@@ -17,7 +17,7 @@ def test_list_groups(kronicle_rbac, test_group):
 
 
 @pytest.mark.integration
-def test_get_group(kronicle_rbac, test_group):
+def test_api_get_group(kronicle_rbac, test_group):
     group_id = test_group.id
     group = kronicle_rbac.get_group_by_id(group_id=group_id)
     assert group is not None
@@ -26,7 +26,7 @@ def test_get_group(kronicle_rbac, test_group):
 
 
 @pytest.mark.integration
-def test_create_group(kronicle_rbac):
+def test_api_create_group(kronicle_rbac):
     here = "rbac_groups"
     tag = tiny_id()
     group = KronicleGroup(name=f"crud_group_{tag}", details={"test": True})
@@ -41,7 +41,7 @@ def test_create_group(kronicle_rbac):
 
 
 @pytest.mark.integration
-def test_patch_group(kronicle_rbac):
+def test_api_patch_group(kronicle_rbac):
     here = "rbac_groups"
     tag = tiny_id()
     group = KronicleGroup(name=f"patch_group_{tag}", details={"test": True})
@@ -60,7 +60,7 @@ def test_patch_group(kronicle_rbac):
 
 
 @pytest.mark.integration
-def test_delete_group(kronicle_rbac):
+def test_api_delete_group(kronicle_rbac):
     tag = tiny_id()
     group = KronicleGroup(name=f"del_group_{tag}", details={"test": True})
     created = kronicle_rbac.create_group(group)
@@ -71,7 +71,7 @@ def test_delete_group(kronicle_rbac):
 
 
 @pytest.mark.integration
-def test_add_and_remove_user_from_group(kronicle_rbac, test_group, test_user):
+def test_api_add_and_remove_user_from_group(kronicle_rbac, test_group, test_user):
     group_id = test_group.id
     user_id = test_user.id
     result = kronicle_rbac.add_user_to_group(group_id=group_id, user_id=user_id)

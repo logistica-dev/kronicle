@@ -5395,6 +5395,854 @@
           }
         }
       }
+    },
+    "/rbac/v1/users/{user_id}/permissions": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Get effective permissions for a user",
+        "description": "Returns all roles and policies granting permissions to this user.",
+        "operationId": "get_user_permissions_rbac_v1_users__user_id__permissions_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rbac/v1/users/{user_id}/zones": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Get zones accessible to a user",
+        "description": "Returns zones the user can access via policies, with provenance.",
+        "operationId": "get_user_zones_rbac_v1_users__user_id__zones_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "indirect",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include ancestor zones via zone hierarchy",
+              "default": false,
+              "title": "Indirect"
+            },
+            "description": "Include ancestor zones via zone hierarchy"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rbac/v1/users/{user_id}/channels": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Get channels accessible to a user",
+        "description": "Returns channels the user can access via policies (direct or via parent zone), with provenance.",
+        "operationId": "get_user_channels_rbac_v1_users__user_id__channels_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "indirect",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include channels from ancestor zones via zone hierarchy",
+              "default": false,
+              "title": "Indirect"
+            },
+            "description": "Include channels from ancestor zones via zone hierarchy"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rbac/v1/users/{user_id}/rows": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Get rows accessible to a user",
+        "description": "Returns row policies the user is assigned to, with provenance.",
+        "operationId": "get_user_rows_rbac_v1_users__user_id__rows_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "indirect",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include indirect group membership",
+              "default": false,
+              "title": "Indirect"
+            },
+            "description": "Include indirect group membership"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rbac/v1/users/{user_id}/resources": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Get all resources accessible to a user",
+        "description": "Aggregated view of zones, channels, and rows the user can access.",
+        "operationId": "get_user_resources_rbac_v1_users__user_id__resources_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "indirect",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include indirect access via hierarchies",
+              "default": false,
+              "title": "Indirect"
+            },
+            "description": "Include indirect access via hierarchies"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rbac/v1/groups/{group_id}/permissions": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Get effective permissions for a group",
+        "description": "Returns all roles and policies granting permissions to this group.",
+        "operationId": "get_group_permissions_rbac_v1_groups__group_id__permissions_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rbac/v1/groups/{group_id}/zones": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Get zones accessible to a group",
+        "description": "Returns zones the group can access via policies, with provenance.",
+        "operationId": "get_group_zones_rbac_v1_groups__group_id__zones_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          },
+          {
+            "name": "indirect",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include ancestor zones via zone hierarchy",
+              "default": false,
+              "title": "Indirect"
+            },
+            "description": "Include ancestor zones via zone hierarchy"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rbac/v1/groups/{group_id}/channels": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Get channels accessible to a group",
+        "description": "Returns channels the group can access via policies (direct or via parent zone), with provenance.",
+        "operationId": "get_group_channels_rbac_v1_groups__group_id__channels_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          },
+          {
+            "name": "indirect",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include channels from ancestor zones via zone hierarchy",
+              "default": false,
+              "title": "Indirect"
+            },
+            "description": "Include channels from ancestor zones via zone hierarchy"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rbac/v1/groups/{group_id}/rows": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Get rows accessible to a group",
+        "description": "Returns row policies the group is assigned to, with provenance.",
+        "operationId": "get_group_rows_rbac_v1_groups__group_id__rows_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          },
+          {
+            "name": "indirect",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include indirect group membership",
+              "default": false,
+              "title": "Indirect"
+            },
+            "description": "Include indirect group membership"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rbac/v1/groups/{group_id}/resources": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Get all resources accessible to a group",
+        "description": "Aggregated view of zones, channels, and rows the group can access.",
+        "operationId": "get_group_resources_rbac_v1_groups__group_id__resources_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          },
+          {
+            "name": "indirect",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include indirect access via hierarchies",
+              "default": false,
+              "title": "Indirect"
+            },
+            "description": "Include indirect access via hierarchies"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rbac/v1/zones/{zone_id}/policies": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "List policies on a zone",
+        "description": "Returns all policies (subject \u2192 access profile) applied to this zone.",
+        "operationId": "list_zone_policies_for_zone_rbac_v1_zones__zone_id__policies_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "zone_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Zone Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rbac/v1/zones/{zone_id}/access_profiles": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "List access profiles on a zone",
+        "description": "Returns all access profiles (role + zone) applied to this zone.",
+        "operationId": "list_zone_access_profiles_for_zone_rbac_v1_zones__zone_id__access_profiles_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "zone_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Zone Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rbac/v1/channels/{channel_id}/policies": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "List policies on a channel",
+        "description": "Returns all policies (subject \u2192 access profile) applied to this channel.",
+        "operationId": "list_channel_policies_for_channel_rbac_v1_channels__channel_id__policies_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "channel_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Channel Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rbac/v1/channels/{channel_id}/access_profiles": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "List access profiles on a channel",
+        "description": "Returns all access profiles (role + channel) applied to this channel.",
+        "operationId": "list_channel_access_profiles_for_channel_rbac_v1_channels__channel_id__access_profiles_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "channel_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Channel Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rbac/v1/rows/{row_id}/policies": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "List policies on a row",
+        "description": "Returns all policies (subject \u2192 access profile) applied to this row.",
+        "operationId": "list_row_policies_for_row_rbac_v1_rows__row_id__policies_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "row_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Row Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rbac/v1/rows/{row_id}/access_profiles": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "List access profiles on a row",
+        "description": "Returns all access profiles (role + row) applied to this row.",
+        "operationId": "list_row_access_profiles_for_row_rbac_v1_rows__row_id__access_profiles_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "row_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Row Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -6065,11 +6913,11 @@
             "temperature": "float",
             "time": "datetime"
           },
-          "id": "31d9aeb2-1914-45e9-bbbb-54dd4db59ee2",
+          "id": "ca30848f-860a-422a-8304-1b6ddbf17f3c",
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-01e9f",
+          "name": "thermo-a9117",
           "read_groups": [
             "analysts"
           ],

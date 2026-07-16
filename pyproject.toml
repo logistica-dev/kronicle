@@ -53,7 +53,7 @@ version_files = ["pyproject.toml:project.version"]
 markers = [
     "integration: marks tests as integration tests that require a running server",
 ]
-pythonpath = ["src"]
+pythonpath = ["", "src"]
 norecursedirs = ["*.egg", ".eggs", "dist", "build", "wip"]
 filterwarnings = ["ignore:.*pkg_resources.*:DeprecationWarning"]
 addopts = [
@@ -78,7 +78,7 @@ optional-dependencies = { dev = { file = ["requirements-dev.txt"] } }
 [tool.pyright]
 exclude = ["**/__pycache__", "**/.env"]
 extraPaths = ["src"]
-include = ["src", "tests"]
+include = ["src", "tests", "kronicle-sdk"]
 pythonVersion = "3.12"
 reportArgumentType = "warning"
 reportDuplicateImport = true

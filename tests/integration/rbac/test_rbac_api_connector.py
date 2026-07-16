@@ -1,4 +1,4 @@
-# tests/integration/rbac/test_rbac_connector.py
+# tests/integration/rbac/test_rbac_api_connector.py
 
 import pytest
 from kronicle_sdk.models.rbac.kronicle_role import KronicleRole
@@ -8,7 +8,7 @@ from kronicle_sdk.utils.str_utils import tiny_id
 
 
 @pytest.mark.integration
-def test_list_users(kronicle_rbac, test_user):
+def test_api_list_users(kronicle_rbac, test_user):
     """Retrieve all users and inspect the test user."""
     here = "rbac_connector"
     usr_list = kronicle_rbac.list_users()
@@ -21,7 +21,7 @@ def test_list_users(kronicle_rbac, test_user):
 
 
 @pytest.mark.integration
-def test_get_user_by_email_and_name(kronicle_rbac, test_user):
+def test_api_get_user_by_email_and_name(kronicle_rbac, test_user):
     """Test getting a user by email and name, including a non-existent user."""
     by_email = kronicle_rbac.get_user_by_email(email=test_user.email)
     by_name = kronicle_rbac.get_user_by_name(name=test_user.name)
@@ -37,7 +37,7 @@ def test_get_user_by_email_and_name(kronicle_rbac, test_user):
 
 
 @pytest.mark.integration
-def test_crud_user(kronicle_rbac):
+def test_api_crud_user(kronicle_rbac):
     """Test creating, patching, and deleting a user."""
     here = "rbac_connector"
     tag = tiny_id()
@@ -72,7 +72,7 @@ def test_crud_user(kronicle_rbac):
 
 
 @pytest.mark.integration
-def test_get_users_for_role_direct(kronicle_rbac, test_user):
+def test_api_get_users_for_role_direct(kronicle_rbac, test_user):
     """get_users_for_role returns users directly assigned to a role."""
     tag = tiny_id()
     role = kronicle_rbac.create_role(
@@ -87,7 +87,7 @@ def test_get_users_for_role_direct(kronicle_rbac, test_user):
 
 
 @pytest.mark.integration
-def test_get_users_for_role_indirect(kronicle_rbac, test_user, test_group):
+def test_api_get_users_for_role_indirect(kronicle_rbac, test_user, test_group):
     """get_users_for_role with indirect=True includes users via group membership."""
     tag = tiny_id()
     role = kronicle_rbac.create_role(
@@ -109,7 +109,7 @@ def test_get_users_for_role_indirect(kronicle_rbac, test_user, test_group):
 
 
 @pytest.mark.integration
-def test_get_groups_for_role_direct(kronicle_rbac, test_group):
+def test_api_get_groups_for_role_direct(kronicle_rbac, test_group):
     """get_groups_for_role returns groups directly assigned to a role."""
     tag = tiny_id()
     role = kronicle_rbac.create_role(
@@ -124,7 +124,7 @@ def test_get_groups_for_role_direct(kronicle_rbac, test_group):
 
 
 @pytest.mark.integration
-def test_get_users_for_role_empty(kronicle_rbac):
+def test_api_get_users_for_role_empty(kronicle_rbac):
     """get_users_for_role returns empty list when no users are assigned."""
     tag = tiny_id()
     role = kronicle_rbac.create_role(
