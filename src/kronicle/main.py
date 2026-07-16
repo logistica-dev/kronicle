@@ -43,7 +43,7 @@ from kronicle.repo.data.channel_repository import ChannelRepository
 from kronicle.services.channel_service import ChannelService
 from kronicle.services.core_service import CoreService
 from kronicle.services.rbac_service import RbacService
-from kronicle.services.seed_service import seed_default_roles
+from kronicle.services.seed_service import seed_anonymous_group, seed_default_roles
 from kronicle.utils.dev_logs import log_block, log_d, log_e, log_w, request_logger
 
 mod = "main"
@@ -160,8 +160,12 @@ class KronicleApp:
             self.app.state.rbac_service = rbac_service
             self.app.state.allow_anonymous = self.conf.rbac.allow_anonymous
 
-        with log_block(here, "Seed default roles"):
+        with log_block(here, "Seeding default roles"):
             seed_default_roles(self.app.state.rbac_db)
+
+        allow = self.conf.rbac.allow_anonymous
+        with log_block(here, ("Seeding" if allow else "Removing") + " anonymous group"):
+            seed_anonymous_group(self.app.state.rbac_db, allow_anonymous=allow)
 
         # --- Auth service ---
         with log_block(here, "AuthService"):

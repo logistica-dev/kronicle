@@ -2449,34 +2449,6 @@ class TestListRoleSubjectsDescendants:
 
 
 # ==================================================================================================
-# _ensure_anonymous_group creation
-# ==================================================================================================
-
-
-class TestEnsureAnonymousGroup:
-    @patch("kronicle.services.rbac_service.RbacGroup")
-    @patch("kronicle.services.rbac_service.RbacService.__init__", lambda self, *a, **kw: None)
-    def test_creates_group_when_missing(self, MockRbacGroup):
-        mock_db = MagicMock()
-        mock_group_repo = MagicMock()
-        mock_subject_repo = MagicMock()
-
-        svc = RbacService.__new__(RbacService)
-        svc._db = mock_db
-        svc._group_repo = mock_group_repo
-        svc._subject_repo = mock_subject_repo
-        svc._reserved_names = ["superuser", "admin", "anonymous"]
-
-        mock_db.transaction.return_value.__enter__.return_value = MagicMock()
-        mock_group_repo.get_by_name.return_value = None
-
-        svc._ensure_anonymous_group()
-
-        MockRbacGroup.assert_called_once_with(name="anonymous")
-        mock_subject_repo.ensure_from_group.assert_called_once()
-
-
-# ==================================================================================================
 # _check_policy_perm group match (line 421)
 # ==================================================================================================
 

@@ -8,6 +8,7 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
 
+from kronicle.deps.rbac_defaults import RESERVED_NAMES
 from kronicle.utils.dev_logs import log_d
 from kronicle.utils.str_utils import strip_quotes
 
@@ -116,7 +117,7 @@ class JWTSettings(IniSection):
 class RbacSettings(IniSection):
     section = "rbac"
 
-    reserved_names: list[str] = Field(default=["superuser", "admin"])
+    reserved_names: list[str] = Field(default=RESERVED_NAMES)
     allow_anonymous: bool = False
 
     @field_validator("reserved_names", mode="before")

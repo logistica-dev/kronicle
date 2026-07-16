@@ -1,7 +1,19 @@
-# kronicle/schemas/permissions/permission_sets.py
+# kronicle/deps/rbac_defaults.py
+from __future__ import annotations
+
+from typing import Final
 
 from kronicle.schemas.permissions.permission import PermStr
 
+# --------------------------------------------------------------------------------------------------
+# Reserved names
+# --------------------------------------------------------------------------------------------------
+ANONYMOUS_NAME: Final[str] = "anonymous"
+RESERVED_NAMES: Final[list[str]] = ["superuser", "admin", ANONYMOUS_NAME]
+
+# --------------------------------------------------------------------------------------------------
+# Permission sets
+# --------------------------------------------------------------------------------------------------
 PERMISSION_SET_SUPER_ADMIN = [
     PermStr.USER_CREATE,
     PermStr.USER_READ,
@@ -82,6 +94,7 @@ PERMISSION_SET_ZONE_WRITER = [
     PermStr.ROW_CREATE,
     PermStr.ROW_UPDATE,
 ]
+
 PERMISSION_SET_DATA_WRITER = [
     PermStr.DATA_ACCESS_PROFILE,
     PermStr.CHANNEL_READ,
@@ -118,7 +131,9 @@ PERMISSION_SET_AUDITOR = [
     PermStr.ROW_READ,
 ]
 
-
+# --------------------------------------------------------------------------------------------------
+# Default roles
+# --------------------------------------------------------------------------------------------------
 DEFAULT_ROLES: list[dict] = [
     {
         "name": "super_admin",

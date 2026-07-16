@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import functools
-from typing import Any, Final, Sequence
+from typing import Any, Sequence
 from uuid import UUID
 
 from sqlalchemy import cast, func, select
@@ -24,6 +24,7 @@ from kronicle.db.rbac.models.rbac_role import RbacRole
 from kronicle.db.rbac.models.rbac_subject import RbacSubject
 from kronicle.db.rbac.models.rbac_user import RbacUser
 from kronicle.db.rbac.rbac_db_session import RbacDbSession
+from kronicle.deps.rbac_defaults import ANONYMOUS_NAME, RESERVED_NAMES
 from kronicle.errors.error_types import BadRequestError, ConflictError, NotFoundError, UnauthorizedError
 from kronicle.repo.core.core_channel_repo import CoreChannelRepository
 from kronicle.repo.core.core_row_repo import CoreRowRepository
@@ -69,9 +70,6 @@ from kronicle.schemas.rbac.safe_user_schemas import OutputUser, ProcessedUser
 from kronicle.utils.dev_logs import log_d, log_i, log_w
 
 mod = "rbacs"
-
-ANONYMOUS_NAME: Final[str] = "anonymous"
-RESERVED_NAMES = ["superuser", "admin", ANONYMOUS_NAME]
 
 
 def log_service_error(method):
@@ -141,19 +139,6 @@ class RbacService:
             remove_edge=RbacGroupHierarchy.remove,
             max_parents=5,
         )
-
-        self._ensure_anonymous_group()
-
-    def _ensure_anonymous_group(self) -> None:
-        """Create the 'Anonymous' group if it doesn't exist."""
-        with self._db.transaction() as db:
-            existing = self._group_repo.get_by_name(db, name=ANONYMOUS_NAME)
-            if existing:
-                return
-            group = RbacGroup(name=ANONYMOUS_NAME)
-            db.add(group)
-            db.flush()
-            self._subject_repo.ensure_from_group(db, group=group)
 
     # ----------------------------------------------------------------------------------------------
     # Read-only: fetch user info
