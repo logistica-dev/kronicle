@@ -381,17 +381,18 @@ class RbacService:
     ) -> bool:
         """Check permission via one policy type (zone, channel, or row)."""
 
-        # Subject = user directly
-        found = db.execute(
-            select(policy_cls.id)
-            .join(RbacSubject, RbacSubject.id == policy_cls.subject_id)
-            .join(profile_cls, profile_cls.id == policy_cls.access_profile_id)
-            .join(RbacRole, RbacRole.id == profile_cls.role_id)
-            .where(RbacSubject.user_id == user_id)
-            .where(RbacRole.permissions.op("@>")(perm_jsonb))
-        ).first()
-        if found:
-            return True
+        # Subject = user directly (skip for anonymous — user_id is None)
+        if user_id is not None:
+            found = db.execute(
+                select(policy_cls.id)
+                .join(RbacSubject, RbacSubject.id == policy_cls.subject_id)
+                .join(profile_cls, profile_cls.id == policy_cls.access_profile_id)
+                .join(RbacRole, RbacRole.id == profile_cls.role_id)
+                .where(RbacSubject.user_id == user_id)
+                .where(RbacRole.permissions.op("@>")(perm_jsonb))
+            ).first()
+            if found:
+                return True
         # Subject = one of the user's groups
         if group_ids:
             found = db.execute(

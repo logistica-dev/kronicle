@@ -2550,3 +2550,84 @@ class TestPatchRowPolicyEdges:
             rbac_service.patch_row_policy(pid, details={"new": True})
         assert policy.details == {"new": True}
         assert policy.name == "keep"
+
+
+# ==================================================================================================
+# Anonymous user permission leak: user_id=None must not match group subjects via IS NULL
+# ==================================================================================================
+
+
+class TestAnonymousPermissionLeak:
+    """Verify that anonymous users (user_id=None) do not inherit permissions
+    from arbitrary group policies.
+
+    Regression test for a bug where ``RbacSubject.user_id == None`` became
+    ``IS NULL`` in SQL, matching every group subject instead of only the
+    anonymous group.
+    """
+
+    def test_anonymous_does_not_inherit_other_group_policy(self, rbac_service):
+        """Zone policy: another group has USER_READ but anonymous group does not."""
+        anon_gid = uuid4()
+        other_gid = uuid4()
+        db = rbac_service._db.get_db.return_value.__enter__.return_value
+
+        rbac_service._group_repo.get_by_name = MagicMock(return_value=_fake_group(id=anon_gid, name="anonymous"))
+
+        # For each of zone/channel/row: user-subject query (skipped) + group-subject query
+        mock_zone_user = MagicMock()
+        mock_zone_user.first.return_value = None
+        mock_zone_group = MagicMock()
+        mock_zone_group.first.return_value = None  # anonymous group has no zone policy
+        mock_channel_user = MagicMock()
+        mock_channel_user.first.return_value = None
+        mock_channel_group = MagicMock()
+        mock_channel_group.first.return_value = None
+        mock_row_user = MagicMock()
+        mock_row_user.first.return_value = None
+        mock_row_group = MagicMock()
+        mock_row_group.first.return_value = None
+
+        db.execute.side_effect = [
+            mock_zone_user,
+            mock_zone_group,
+            mock_channel_user,
+            mock_channel_group,
+            mock_row_user,
+            mock_row_group,
+        ]
+
+        result = rbac_service.user_has_permission(None, "user:read")
+        assert result is False
+
+    def test_anonymous_inherits_own_group_policy(self, rbac_service):
+        """Zone policy: anonymous group has a matching policy."""
+        anon_gid = uuid4()
+        db = rbac_service._db.get_db.return_value.__enter__.return_value
+
+        rbac_service._group_repo.get_by_name = MagicMock(return_value=_fake_group(id=anon_gid, name="anonymous"))
+
+        mock_zone_user = MagicMock()
+        mock_zone_user.first.return_value = None  # skipped, user_id=None
+        mock_zone_group = MagicMock()
+        mock_zone_group.first.return_value = (uuid4(),)  # anonymous group matches
+        mock_channel_user = MagicMock()
+        mock_channel_user.first.return_value = None
+        mock_channel_group = MagicMock()
+        mock_channel_group.first.return_value = None
+        mock_row_user = MagicMock()
+        mock_row_user.first.return_value = None
+        mock_row_group = MagicMock()
+        mock_row_group.first.return_value = None
+
+        db.execute.side_effect = [
+            mock_zone_user,
+            mock_zone_group,
+            mock_channel_user,
+            mock_channel_group,
+            mock_row_user,
+            mock_row_group,
+        ]
+
+        result = rbac_service.user_has_permission(None, "zone:read")
+        assert result is True

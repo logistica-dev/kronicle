@@ -40,7 +40,7 @@ rbac_router = APIRouter(
     tags=["RBAC"],
     dependencies=[
         Depends(require_auth),
-        Depends(require_any_permission(PermStr.RBAC_ACCESS_PROFILE, PermStr.RBAC_READ)),
+        Depends(require_any_permission(PermStr.RBAC_ACCESS, PermStr.RBAC_READ)),
     ],
 )
 

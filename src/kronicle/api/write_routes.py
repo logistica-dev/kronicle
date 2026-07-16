@@ -20,7 +20,7 @@ writer_router = APIRouter(
     tags=["Input data"],
     dependencies=[
         Depends(require_auth),
-        Depends(require_permission(PermStr.DATA_ACCESS_PROFILE)),
+        Depends(require_permission(PermStr.DATA_ACCESS)),
     ],
 )
 

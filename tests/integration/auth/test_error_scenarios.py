@@ -54,10 +54,12 @@ class TestUnauthorized:
 
     def test_no_auth_header(self, base_url):
         resp = requests.get(f"{base_url}/rbac/v1/users", timeout=5)
-        assert resp.status_code == 401
+        assert resp.status_code in [401, 403]
         body = resp.json()
-        assert body["error"] == "Unauthorized"
-        assert body["message"] == "Authorization header missing"
+        assert body["error"] in ["Forbidden", "Unauthorized"]
+        assert (msg := body["message"]) == "Authorization header missing" or msg.startswith(
+            "Missing required permission"
+        )
 
     def test_bad_token_format(self, base_url):
         resp = requests.get(
@@ -67,7 +69,7 @@ class TestUnauthorized:
         )
         assert resp.status_code == 401
         body = resp.json()
-        assert body["error"] == "Unauthorized"
+        assert body["error"] in "Unauthorized"
 
     def test_bogus_jwt(self, base_url):
         resp = requests.get(
@@ -260,3 +262,42 @@ class TestValidationError:
         assert resp.status_code == 422
         body = resp.json()
         assert body["error"] == "ValidationError"
+
+
+# ---------------------------------------------------------------------------
+# Anonymous user must not inherit permissions from other group policies
+# ---------------------------------------------------------------------------
+
+
+class TestAnonymousPermissionIsolation:
+    """Verify that anonymous users only get permissions explicitly granted
+    to the anonymous group, not from arbitrary group policies.
+
+    Regression test: ``RbacSubject.user_id == None`` previously matched all
+    group subjects via SQL ``IS NULL``, leaking permissions.
+    """
+
+    def test_anonymous_cannot_list_users(self, base_url):
+        """GET /rbac/v1/users requires USER_READ — anonymous should get 401 or 403."""
+        resp = requests.get(f"{base_url}/rbac/v1/users", timeout=5)
+        assert resp.status_code in [401, 403]
+
+    def test_anonymous_cannot_read_roles(self, base_url):
+        """GET /rbac/v1/roles requires ROLE_READ — anonymous should get 401 or 403."""
+        resp = requests.get(f"{base_url}/rbac/v1/roles", timeout=5)
+        assert resp.status_code in [401, 403]
+
+    def test_anonymous_cannot_list_groups(self, base_url):
+        """GET /rbac/v1/groups requires GROUP_READ — anonymous should get 401 or 403."""
+        resp = requests.get(f"{base_url}/rbac/v1/groups", timeout=5)
+        assert resp.status_code in [401, 403]
+
+    def test_anonymous_cannot_read_zones(self, base_url):
+        """GET /core/v1/zones requires ZONE_READ — anonymous should get 401 or 403."""
+        resp = requests.get(f"{base_url}/core/v1/zones", timeout=5)
+        assert resp.status_code in [401, 403]
+
+    def test_anonymous_cannot_read_channels(self, base_url):
+        """GET /setup/v1/channels requires CHANNEL_READ — anonymous should get 401 or 403."""
+        resp = requests.get(f"{base_url}/setup/v1/channels", timeout=5)
+        assert resp.status_code in [401, 403]

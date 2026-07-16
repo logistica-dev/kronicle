@@ -1,0 +1,1290 @@
+{
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "# Kronicle — Interactive Walkthrough\n",
+        "\n",
+        "This notebook walks through setting up and using Kronicle step by step.\n",
+        "Each cell can be executed independently (assuming prior cells in the same section have run).\n",
+        "\n",
+        "**Sections:**\n",
+        "1. [Setup & Pull](#1.-Setup-&-Pull)\n",
+        "2. [First Run — Default Config](#2.-First-Run-—-Default-Config)\n",
+        "3. [First Channel — Write & Read](#3.-First-Channel-—-Write-&-Read)\n",
+        "4. [Run With User Config](#4.-Run-With-User-Config)\n",
+        "5. [RBAC Setup](#5.-RBAC-Setup)\n",
+        "6. [Testing the App (Dev)](#6.-Testing-the-App-(Dev))\n",
+        "7. [Appendix](#7.-Appendix)"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "---\n",
+        "## 1. Setup & Pull\n",
+        "\n",
+        "Pull the Kronicle container image and verify it's available."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "# Pull the latest Kronicle image\n",
+        "!podman pull ghcr.io/logistica-dev/kronicle:latest"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "# Verify the image is available\n",
+        "!podman images | grep kronicle"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "---\n",
+        "## 2. First Run — Default Config\n",
+        "\n",
+        "Start Kronicle with the minimum required configuration.\n",
+        "On first boot, the app auto-initialises the database, creates tables, and seeds a superuser."
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 2.1 Generate superuser credentials\n",
+        "\n",
+        "The `KRONICLE_SU_INFO` variable requires a base64url-encoded triplet of `name:email:argon2_hashed_password`.\n",
+        "A helper script produces this for you:"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "# Generate the superuser credentials string\n",
+        "# Replace the name, email, and password with your own\n",
+        "!python3 ./scripts/utils/hash_creds.py KronicleAdmin admin@kronicle.app \"KronicleAdmin_Passw0rd\""
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "Copy the output and use it as `KRONICLE_SU_INFO` in the `.env` file below."
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 2.2 Create a minimal `.env` file"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "%%writefile .env\n",
+        "# Database superuser (only needed for init + migrations)\n",
+        "POSTGRES_USER=postgres\n",
+        "POSTGRES_PASSWORD=postgres\n",
+        "\n",
+        "# App database name (optional, defaults to kronicle_db)\n",
+        "KRONICLE_DB_NAME=kronicle_db\n",
+        "\n",
+        "# Superuser credentials (output of hash_creds.py)\n",
+        "KRONICLE_SU_INFO=S3JvbmljbGVBZG1pbjphZG1pbkBrcm9uaWNsZS5hcHA6JGFyZ29uMmlkJHY9MTkkbT02NTUzNix0PTMscD00JGVkSE56VDc2YjRXUitiMEowTDRObFEkbkZRNVJqclkreG56QkMzbnZma2Z2OEI0N1YvY2lwbGF5Y1VGUUtzS2pZaw\n",
+        "\n",
+        "# DB users for channel data and RBAC (base64url-encoded user:pass)\n",
+        "KRONICLE_CHAN_CREDS=Y2hhbl91c3JfbmFtZTpjaGFuX3Vzcl9wYXNz\n",
+        "KRONICLE_RBAC_CREDS=cmJhY191c3JfbmFtZTpyYmFjX3Vzcl9wYXNz\n",
+        "\n",
+        "# Server config\n",
+        "KRONICLE_PORT=8000\n",
+        "KRONICLE_HOST=0.0.0.0\n",
+        "KRONICLE_ENV=test\n",
+        "KRONICLE_LOG_LEVEL=3"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 2.3 Start the server"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "!podman-compose up -d"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "# Wait for the server to be ready (check logs)\n",
+        "!podman-compose logs -f app &\n",
+        "import time\n",
+        "time.sleep(5)\n",
+        "!podman-compose logs --tail 20 app"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 2.4 Verify health"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "import urllib.request\n",
+        "import json\n",
+        "\n",
+        "def http_get(path):\n",
+        "    url = f\"http://localhost:8000{path}\"\n",
+        "    resp = urllib.request.urlopen(url)\n",
+        "    return json.loads(resp.read())\n",
+        "\n",
+        "print(\"Liveness: \", http_get(\"/health/live\"))\n",
+        "print(\"Readiness:\", http_get(\"/health/ready\"))\n",
+        "print(\"Version:  \", http_get(\"/health/version\"))"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 2.5 Login and get an access token\n",
+        "\n",
+        "Open the Swagger UI at [http://localhost:8000/docs](http://localhost:8000/docs), or use the API directly:"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "import urllib.request\n",
+        "import json\n",
+        "\n",
+        "def api_post(path, body):\n",
+        "    url = f\"http://localhost:8000{path}\"\n",
+        "    data = json.dumps(body).encode()\n",
+        "    req = urllib.request.Request(url, data=data, headers={\"Content-Type\": \"application/json\"})\n",
+        "    resp = urllib.request.urlopen(req)\n",
+        "    return json.loads(resp.read())\n",
+        "\n",
+        "# Login as superuser\n",
+        "login_resp = api_post(\"/auth/v1/login\", {\n",
+        "    \"name\": \"KronicleAdmin\",\n",
+        "    \"password\": \"KronicleAdmin_Passw0rd\"\n",
+        "})\n",
+        "\n",
+        "TOKEN = login_resp[\"access_token\"]\n",
+        "print(f\"Token obtained: {TOKEN[:20]}...\")\n",
+        "\n",
+        "# Helper for authenticated requests\n",
+        "def api_auth_get(path):\n",
+        "    url = f\"http://localhost:8000{path}\"\n",
+        "    req = urllib.request.Request(url, headers={\"Authorization\": f\"Bearer {TOKEN}\"})\n",
+        "    resp = urllib.request.urlopen(req)\n",
+        "    return json.loads(resp.read())\n",
+        "\n",
+        "def api_auth_post(path, body):\n",
+        "    url = f\"http://localhost:8000{path}\"\n",
+        "    data = json.dumps(body).encode()\n",
+        "    req = urllib.request.Request(url, data=data, headers={\n",
+        "        \"Content-Type\": \"application/json\",\n",
+        "        \"Authorization\": f\"Bearer {TOKEN}\"\n",
+        "    })\n",
+        "    resp = urllib.request.urlopen(req)\n",
+        "    return json.loads(resp.read())"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "---\n",
+        "## 3. First Channel — Write & Read\n",
+        "\n",
+        "Create a channel with a schema, insert rows, and query them back."
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 3.1 Create a channel with data\n",
+        "\n",
+        "The `POST /data/v1/channels` endpoint accepts an `InputPayload`:\n",
+        "- `channel_schema`: column definitions (`{name: type}`)\n",
+        "- `name`: channel name (auto-normalised)\n",
+        "- `metadata`: arbitrary key-value metadata\n",
+        "- `tags`: key-value tags for filtering\n",
+        "- `rows`: list of data points"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "from datetime import datetime, timedelta\n",
+        "\n",
+        "now = datetime.now()\n",
+        "\n",
+        "channel_payload = {\n",
+        "    \"name\": \"room-temperatures\",\n",
+        "    \"channel_schema\": {\n",
+        "        \"time\": \"datetime\",\n",
+        "        \"temperature\": \"float\",\n",
+        "        \"humidity\": \"float\"\n",
+        "    },\n",
+        "    \"metadata\": {\n",
+        "        \"location\": \"building-A\",\n",
+        "        \"unit_temp\": \"celsius\",\n",
+        "        \"unit_humidity\": \"percent\"\n",
+        "    },\n",
+        "    \"tags\": {\n",
+        "        \"floor\": \"3\",\n",
+        "        \"type\": \"environment\"\n",
+        "    },\n",
+        "    \"rows\": [\n",
+        "        {\"time\": (now - timedelta(hours=3)).isoformat(), \"temperature\": 21.5, \"humidity\": 55.0},\n",
+        "        {\"time\": (now - timedelta(hours=2)).isoformat(), \"temperature\": 22.0, \"humidity\": 54.0},\n",
+        "        {\"time\": (now - timedelta(hours=1)).isoformat(), \"temperature\": 22.3, \"humidity\": 53.5},\n",
+        "        {\"time\": now.isoformat(), \"temperature\": 22.1, \"humidity\": 54.2},\n",
+        "    ]\n",
+        "}\n",
+        "\n",
+        "result = api_auth_post(\"/data/v1/channels\", channel_payload)\n",
+        "CHANNEL_ID = result[\"id\"]\n",
+        "print(f\"Channel created: {result['name']} (id: {CHANNEL_ID})\")\n",
+        "print(f\"Schema: {result['channel_schema']}\")\n",
+        "print(f\"Rows inserted: {result.get('op_details', {}).get('inserted_row_count', 'N/A')}\")"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 3.2 List channels"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "channels = api_auth_get(\"/api/v1/channels\")\n",
+        "for ch in (channels if isinstance(channels, list) else [channels]):\n",
+        "    print(f\"  {ch['name']} — {ch.get('row_count', '?')} rows — tags: {ch.get('tags', {})}\")"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 3.3 Read rows"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "rows = api_auth_get(f\"/api/v1/channels/{CHANNEL_ID}/rows\")\n",
+        "print(f\"Rows for '{rows['name']}\":\")\n",
+        "for row in rows.get(\"rows\", []):\n",
+        "    print(f\"  t={row['time']}  temp={row['temperature']}°C  hum={row['humidity']}%\")"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 3.4 Query with filters\n",
+        "\n",
+        "Filter rows using query parameters:\n",
+        "- `{col}` — exact match\n",
+        "- `{col}.min` — minimum value (>=)\n",
+        "- `{col}.max` — maximum value (<=)\n",
+        "- `{col}.any` — value in list\n",
+        "- `{col}.has` — array contains value"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "# Get rows where temperature >= 22.0\n",
+        "filtered = api_auth_get(f\"/api/v1/channels/{CHANNEL_ID}/rows?temperature.min=22.0\")\n",
+        "print(\"Rows with temperature >= 22.0:\")\n",
+        "for row in filtered.get(\"rows\", []):\n",
+        "    print(f\"  t={row['time']}  temp={row['temperature']}°C\")"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 3.5 Append more rows"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "append_payload = {\n",
+        "    \"rows\": [\n",
+        "        {\"time\": (now + timedelta(hours=1)).isoformat(), \"temperature\": 21.8, \"humidity\": 55.5},\n",
+        "        {\"time\": (now + timedelta(hours=2)).isoformat(), \"temperature\": 21.2, \"humidity\": 56.0},\n",
+        "    ]\n",
+        "}\n",
+        "\n",
+        "result = api_auth_post(f\"/data/v1/channels/{CHANNEL_ID}/rows\", append_payload)\n",
+        "print(f\"Rows inserted: {result.get('op_details', {}).get('inserted_row_count', 'N/A')}\")\n",
+        "print(f\"Total rows: {result.get('op_details', {}).get('total_row_count', 'N/A')}\")"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "---\n",
+        "## 4. Run With User Config\n",
+        "\n",
+        "Override default settings by providing a custom INI file and secrets."
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 4.1 Create a custom config file\n",
+        "\n",
+        "Copy the default config and adjust values:"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "%%writefile .conf/my-conf.ini\n",
+        "[app]\n",
+        "version='1.0.0'\n",
+        "name='My Kronicle'\n",
+        "\n",
+        "[auth]\n",
+        "pwd_min_length=8\n",
+        "pwd_require_special=false\n",
+        "\n",
+        "[jwt]\n",
+        "expiration_minutes=60\n",
+        "algorithm=HS256\n",
+        "\n",
+        "[rbac]\n",
+        "reserved_names=superuser,admin,anonymous\n",
+        "allow_anonymous=true\n",
+        "\n",
+        "[db]\n",
+        "; DB credentials are read from environment variables, not here"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 4.2 Create a secrets file"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "%%writefile .conf/.secrets\n",
+        "POSTGRES_USER=postgres\n",
+        "POSTGRES_PASSWORD=postgres\n",
+        "KRONICLE_DB_NAME=kronicle_db\n",
+        "KRONICLE_SU_INFO=S3JvbmljbGVBZG1pbjphZG1pbkBrcm9uaWNsZS5hcHA6JGFyZ29uMmlkJHY9MTkkbT02NTUzNix0PTMscD00JGVkSE56VDc2YjRXUitiMEowTDRObFEkbkZRNVJqclkreG56QkMzbnZma2Z2OEI0N1YvY2lwbGF5Y1VGUUtzS2pZaw\n",
+        "KRONICLE_CHAN_CREDS=Y2hhbl91c3JfbmFtZTpjaGFuX3Vzcl9wYXNz\n",
+        "KRONICLE_RBAC_CREDS=cmJhY191c3JfbmFtZTpyYmFjX3Vzcl9wYXNz\n",
+        "KRONICLE_PORT=8000\n",
+        "KRONICLE_HOST=0.0.0.0\n",
+        "KRONICLE_ENV=test\n",
+        "KRONICLE_LOG_LEVEL=3\n",
+        "KRONICLE_CONF=/opt/kronicle/conf/my-conf.ini"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 4.3 Restart with custom config\n",
+        "\n",
+        "Note: the custom INI file needs to be mounted into the container. For local dev, use `uvicorn` directly:"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "# For docker: mount the conf directory in docker-compose.yml\n",
+        "# For local dev:\n",
+        "# KRONICLE_CONF=.conf/my-conf.ini uvicorn kronicle.main:app --reload --host 0.0.0.0 --port 8000\n",
+        "\n",
+        "# Verify anonymous access is now enabled\n",
+        "try:\n",
+        "    anon_resp = http_get(\"/api/v1/channels\")\n",
+        "    print(\"Anonymous access works:\", anon_resp)\n",
+        "except Exception as e:\n",
+        "    print(f\"Anonymous access denied (expected if no anonymous policy): {e}\")"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "---\n",
+        "## 5. RBAC Setup\n",
+        "\n",
+        "This section demonstrates the full RBAC workflow:\n",
+        "1. Create zones and channels\n",
+        "2. Create users and groups\n",
+        "3. Assign roles and create policies\n",
+        "4. Verify access control\n",
+        "\n",
+        "We use the [`kronicle-sdk`](https://pypi.org/project/kronicle-sdk/) for convenience, but everything can be done via the raw API."
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 5.1 Install the SDK"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "!pip install kronicle-sdk -q"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 5.2 Connect as superuser"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "import os\n",
+        "\n",
+        "os.environ[\"KRONICLE_HOST\"] = \"localhost\"\n",
+        "os.environ[\"KRONICLE_PORT\"] = \"8000\"\n",
+        "os.environ[\"KRONICLE_SU_NAME\"] = \"KronicleAdmin\"\n",
+        "os.environ[\"KRONICLE_SU_PASS\"] = \"KronicleAdmin_Passw0rd\"\n",
+        "\n",
+        "from kronicle_sdk.conf.read_conf import Settings\n",
+        "from kronicle_sdk.connectors.rbac.rbac_setup import KronicleRbac\n",
+        "from kronicle_sdk.connectors.rbac.core_setup import KronicleCore\n",
+        "from kronicle_sdk import KronicleWriter, KronicleReader\n",
+        "\n",
+        "co = Settings().connection_su\n",
+        "\n",
+        "rbac = KronicleRbac.from_connection_info(co)\n",
+        "core = KronicleCore.from_connection_info(co)\n",
+        "writer = KronicleWriter.from_connection_info(co)\n",
+        "\n",
+        "print(\"Connected as superuser:\", co.usr)"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 5.3 Create zones"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "from kronicle_sdk.models.rbac.kronicle_zone import KronicleZone\n",
+        "\n",
+        "zone_a = core.create_zone(KronicleZone(name=\"lab-sensors\"))\n",
+        "zone_b = core.create_zone(KronicleZone(name=\"weather-station\"))\n",
+        "\n",
+        "print(f\"Zone A: {zone_a.name} (id: {zone_a.id})\")\n",
+        "print(f\"Zone B: {zone_b.name} (id: {zone_b.id})\")"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 5.4 Create channels in zones"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "from kronicle_sdk.models.data.kronicle_channel import KronicleChannel\n",
+        "from kronicle_sdk.models.iso_datetime import now_local\n",
+        "\n",
+        "schema = {\"time\": \"datetime\", \"value\": \"float\"}\n",
+        "\n",
+        "chan1 = writer.create_channel(\n",
+        "    KronicleChannel(\n",
+        "        name=\"lab-temp-1\",\n",
+        "        channel_schema=schema,\n",
+        "        tags={\"zone\": \"lab\"},\n",
+        "        rows=[\n",
+        "            {\"time\": now_local(), \"value\": 21.5},\n",
+        "            {\"time\": now_local(), \"value\": 22.0},\n",
+        "        ],\n",
+        "    ),\n",
+        "    zone_id=zone_a.id,\n",
+        ")\n",
+        "\n",
+        "chan2 = writer.create_channel(\n",
+        "    KronicleChannel(\n",
+        "        name=\"lab-temp-2\",\n",
+        "        channel_schema=schema,\n",
+        "        tags={\"zone\": \"lab\"},\n",
+        "        rows=[\n",
+        "            {\"time\": now_local(), \"value\": 19.8},\n",
+        "            {\"time\": now_local(), \"value\": 20.1},\n",
+        "        ],\n",
+        "    ),\n",
+        "    zone_id=zone_a.id,\n",
+        ")\n",
+        "\n",
+        "chan3 = writer.create_channel(\n",
+        "    KronicleChannel(\n",
+        "        name=\"outdoor-temp\",\n",
+        "        channel_schema=schema,\n",
+        "        tags={\"zone\": \"outdoor\"},\n",
+        "        rows=[\n",
+        "            {\"time\": now_local(), \"value\": 5.3},\n",
+        "            {\"time\": now_local(), \"value\": 4.8},\n",
+        "        ],\n",
+        "    ),\n",
+        "    zone_id=zone_b.id,\n",
+        ")\n",
+        "\n",
+        "print(f\"Channel 1: {chan1.name} in zone {zone_a.name} (id: {chan1.id})\")\n",
+        "print(f\"Channel 2: {chan2.name} in zone {zone_a.name} (id: {chan2.id})\")\n",
+        "print(f\"Channel 3: {chan3.name} in zone {zone_b.name} (id: {chan3.id})\")"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 5.5 Inspect default roles\n",
+        "\n",
+        "Kronicle seeds 7 default roles on first boot. Let's see what permissions they grant:"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "roles = rbac.list_roles()\n",
+        "print(\"Default roles:\")\n",
+        "for r in roles:\n",
+        "    print(f\"  {r.name:20s} — {r.description}\")\n",
+        "    print(f\"    permissions: {r.permissions}\")"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 5.6 Create a custom role\n",
+        "\n",
+        "We'll create a `limited_reader` role that can only read from a specific channel (not all channels):"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "from kronicle_sdk.models.rbac.kronicle_role import KronicleRole\n",
+        "\n",
+        "limited_reader = rbac.create_role(KronicleRole(\n",
+        "    name=\"limited_reader\",\n",
+        "    description=\"Can only read a specific channel\",\n",
+        "    permissions=[\"channel:read\", \"row:read\"],\n",
+        "))\n",
+        "\n",
+        "print(f\"Created role: {limited_reader.name} (id: {limited_reader.id})\")\n",
+        "print(f\"Permissions: {limited_reader.permissions}\")"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 5.7 Create access profiles\n",
+        "\n",
+        "Access profiles bind a **role** to a **resource** (zone or channel). They define *what* permissions apply *where*."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "from kronicle_sdk.models.rbac.kronicle_access_profile import KronicleChannelAccess, KronicleZoneAccess\n",
+        "\n",
+        "# Zone-level: full writer access to zone A\n",
+        "zone_a_writer_profile = rbac.create_zone_access_profile(KronicleZoneAccess(\n",
+        "    name=\"lab-sensors-write\",\n",
+        "    description=\"Write access to all channels in lab-sensors\",\n",
+        "    role=\"data_writer\",\n",
+        "    zone=zone_a,\n",
+        "))\n",
+        "\n",
+        "# Zone-level: read-only access to zone B\n",
+        "zone_b_reader_profile = rbac.create_zone_access_profile(KronicleZoneAccess(\n",
+        "    name=\"weather-station-read\",\n",
+        "    description=\"Read access to weather-station\",\n",
+        "    role=\"data_reader\",\n",
+        "    zone=zone_b,\n",
+        "))\n",
+        "\n",
+        "# Channel-level: read-only access to lab-temp-1 only\n",
+        "chan1_reader_profile = rbac.create_channel_access_profile(KronicleChannelAccess(\n",
+        "    name=\"lab-temp-1-read\",\n",
+        "    description=\"Read access to lab-temp-1 only\",\n",
+        "    role=\"limited_reader\",\n",
+        "    channel=chan1,\n",
+        "))\n",
+        "\n",
+        "print(f\"Zone A writer profile: {zone_a_writer_profile.name} (id: {zone_a_writer_profile.id})\")\n",
+        "print(f\"Zone B reader profile: {zone_b_reader_profile.name} (id: {zone_b_reader_profile.id})\")\n",
+        "print(f\"Chan1 reader profile:  {chan1_reader_profile.name} (id: {chan1_reader_profile.id})\")"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 5.8 Create users"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "from kronicle_sdk.models.rbac.kronicle_user import KronicleUser\n",
+        "\n",
+        "alice = rbac.create_user(KronicleUser(\n",
+        "    name=\"alice\",\n",
+        "    email=\"alice@kronicle.app\",\n",
+        "    password=\"Alice_Passw0rd!\",\n",
+        "))\n",
+        "\n",
+        "bob = rbac.create_user(KronicleUser(\n",
+        "    name=\"bob\",\n",
+        "    email=\"bob@kronicle.app\",\n",
+        "    password=\"Bob_Passw0rd!\",\n",
+        "))\n",
+        "\n",
+        "charlie = rbac.create_user(KronicleUser(\n",
+        "    name=\"charlie\",\n",
+        "    email=\"charlie@kronicle.app\",\n",
+        "    password=\"Charlie_Passw0rd!\",\n",
+        "))\n",
+        "\n",
+        "print(f\"alice:   {alice.id}\")\n",
+        "print(f\"bob:     {bob.id}\")\n",
+        "print(f\"charlie: {charlie.id}\")"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 5.9 Create groups and assign users"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "from kronicle_sdk.models.rbac.kronicle_group import KronicleGroup\n",
+        "\n",
+        "writers_group = rbac.create_group(KronicleGroup(name=\"lab-writers\"))\n",
+        "readers_group = rbac.create_group(KronicleGroup(name=\"lab-readers\"))\n",
+        "\n",
+        "# Alice is a writer\n",
+        "rbac.add_user_to_group(user_id=alice.id, group_id=writers_group.id)\n",
+        "\n",
+        "# Bob and Charlie are readers\n",
+        "rbac.add_user_to_group(user_id=bob.id, group_id=readers_group.id)\n",
+        "rbac.add_user_to_group(user_id=charlie.id, group_id=readers_group.id)\n",
+        "\n",
+        "print(f\"Group '{writers_group.name}': alice\")\n",
+        "print(f\"Group '{readers_group.name}': bob, charlie\")"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 5.10 Create policies\n",
+        "\n",
+        "Policies bind **subjects** (users or groups) to **access profiles**. This is where access is actually granted."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "from kronicle_sdk.models.rbac.kronicle_policy import KronicleZonePolicy, KronicleChannelPolicy\n",
+        "from kronicle_sdk.models.rbac.kronicle_rbac_base import KronicleRbacBase\n",
+        "\n",
+        "# Writers group gets write access to zone A (all channels)\n",
+        "zone_write_policy = rbac.create_zone_policy(KronicleZonePolicy(\n",
+        "    name=\"writers-zone-a\",\n",
+        "    access_profile=zone_a_writer_profile,\n",
+        "    subject=KronicleRbacBase(name=writers_group.name, id=writers_group.id),\n",
+        "))\n",
+        "\n",
+        "# Bob gets read access to zone B (weather station)\n",
+        "zone_bob_read_policy = rbac.create_zone_policy(KronicleZonePolicy(\n",
+        "    name=\"bob-read-zone-b\",\n",
+        "    access_profile=zone_b_reader_profile,\n",
+        "    subject=KronicleRbacBase(name=bob.name, id=bob.id),\n",
+        "))\n",
+        "\n",
+        "# Charlie gets read access to lab-temp-1 only (via the limited_reader role)\n",
+        "chan_charlie_policy = rbac.create_channel_policy(KronicleChannelPolicy(\n",
+        "    name=\"charlie-read-lab-temp-1\",\n",
+        "    access_profile=chan1_reader_profile,\n",
+        "    subject=KronicleRbacBase(name=charlie.name, id=charlie.id),\n",
+        "))\n",
+        "\n",
+        "print(\"Policies created:\")\n",
+        "print(f\"  {zone_write_policy.name}: {writers_group.name} → {zone_a_writer_profile.name}\")\n",
+        "print(f\"  {zone_bob_read_policy.name}: bob → {zone_b_reader_profile.name}\")\n",
+        "print(f\"  {chan_charlie_policy.name}: charlie → {chan1_reader_profile.name}\")"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 5.11 Verify access control\n",
+        "\n",
+        "Now let's login as each user and verify what they can and cannot do."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "def login_as(name, password):\n",
+        "    resp = api_post(\"/auth/v1/login\", {\"name\": name, \"password\": password})\n",
+        "    token = resp[\"access_token\"]\n",
+        "    \n",
+        "    def auth_get(path):\n",
+        "        url = f\"http://localhost:8000{path}\"\n",
+        "        req = urllib.request.Request(url, headers={\"Authorization\": f\"Bearer {token}\"})\n",
+        "        return urllib.request.urlopen(req)\n",
+        "    \n",
+        "    def auth_post(path, body):\n",
+        "        url = f\"http://localhost:8000{path}\"\n",
+        "        data = json.dumps(body).encode()\n",
+        "        req = urllib.request.Request(url, data=data, headers={\n",
+        "            \"Content-Type\": \"application/json\",\n",
+        "            \"Authorization\": f\"Bearer {token}\"\n",
+        "        })\n",
+        "        return urllib.request.urlopen(req)\n",
+        "    \n",
+        "    return auth_get, auth_post"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "print(\"=\" * 60)\n",
+        "print(\"ALICE (data_writer via lab-writers group → zone A)\")\n",
+        "print(\"=\" * 60)\n",
+        "alice_get, alice_post = login_as(\"alice\", \"Alice_Passw0rd!\")\n",
+        "\n",
+        "# Can read channels in zone A\n",
+        "resp = alice_get(\"/api/v1/channels\")\n",
+        "channels = json.loads(resp.read())\n",
+        "print(f\"\\nCan read channels: {[c['name'] for c in (channels if isinstance(channels, list) else [channels])]}\" \n",
+        "      if channels else \"No channels visible\")\n",
+        "\n",
+        "# Can write to lab-temp-1\n",
+        "try:\n",
+        "    resp = alice_post(f\"/data/v1/channels/{chan1.id}/rows\", {\n",
+        "        \"rows\": [{\"time\": now_local(), \"value\": 23.0}]\n",
+        "    })\n",
+        "    print(f\"Can write to lab-temp-1: YES\")\n",
+        "except urllib.error.HTTPError as e:\n",
+        "    print(f\"Can write to lab-temp-1: NO ({e.code})\")"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "print(\"=\" * 60)\n",
+        "print(\"BOB (data_reader via direct zone B policy)\")\n",
+        "print(\"=\" * 60)\n",
+        "bob_get, bob_post = login_as(\"bob\", \"Bob_Passw0rd!\")\n",
+        "\n",
+        "# Can read channels in zone B\n",
+        "resp = bob_get(\"/api/v1/channels\")\n",
+        "channels = json.loads(resp.read())\n",
+        "print(f\"\\nVisible channels: {[c['name'] for c in (channels if isinstance(channels, list) else [channels])]}\"\n",
+        "      if channels else \"No channels visible\")\n",
+        "\n",
+        "# Cannot write (only has reader role)\n",
+        "try:\n",
+        "    resp = bob_post(f\"/data/v1/channels/{chan3.id}/rows\", {\n",
+        "        \"rows\": [{\"time\": now_local(), \"value\": 6.0}]\n",
+        "    })\n",
+        "    print(f\"Can write to outdoor-temp: YES (unexpected!)\")\n",
+        "except urllib.error.HTTPError as e:\n",
+        "    print(f\"Can write to outdoor-temp: NO (403 Forbidden — expected)\")"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "print(\"=\" * 60)\n",
+        "print(\"CHARLIE (limited_reader → lab-temp-1 only)\")\n",
+        "print(\"=\" * 60)\n",
+        "charlie_get, charlie_post = login_as(\"charlie\", \"Charlie_Passw0rd!\")\n",
+        "\n",
+        "# Can read lab-temp-1\n",
+        "try:\n",
+        "    resp = charlie_get(f\"/api/v1/channels/{chan1.id}/rows\")\n",
+        "    data = json.loads(resp.read())\n",
+        "    print(f\"\\nCan read lab-temp-1: YES ({len(data.get('rows', []))} rows)\")\n",
+        "except urllib.error.HTTPError as e:\n",
+        "    print(f\"\\nCan read lab-temp-1: NO ({e.code})\")\n",
+        "\n",
+        "# Cannot read lab-temp-2 (different channel, no policy)\n",
+        "try:\n",
+        "    resp = charlie_get(f\"/api/v1/channels/{chan2.id}/rows\")\n",
+        "    print(f\"Can read lab-temp-2: YES (unexpected!)\")\n",
+        "except urllib.error.HTTPError as e:\n",
+        "    print(f\"Can read lab-temp-2: NO (403 Forbidden — expected)\")\n",
+        "\n",
+        "# Cannot read outdoor-temp (different zone)\n",
+        "try:\n",
+        "    resp = charlie_get(f\"/api/v1/channels/{chan3.id}/rows\")\n",
+        "    print(f\"Can read outdoor-temp: YES (unexpected!)\")\n",
+        "except urllib.error.HTTPError as e:\n",
+        "    print(f\"Can read outdoor-temp: NO (403 Forbidden — expected)\")\n",
+        "\n",
+        "# Cannot write\n",
+        "try:\n",
+        "    resp = charlie_post(f\"/data/v1/channels/{chan1.id}/rows\", {\n",
+        "        \"rows\": [{\"time\": now_local(), \"value\": 25.0}]\n",
+        "    })\n",
+        "    print(f\"Can write to lab-temp-1: YES (unexpected!)\")\n",
+        "except urllib.error.HTTPError as e:\n",
+        "    print(f\"Can write to lab-temp-1: NO (403 Forbidden — expected)\")"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 5.12 Anonymous access\n",
+        "\n",
+        "When `allow_anonymous=true` in the config, unauthenticated requests are treated as belonging to the `anonymous` group.\n",
+        "We can grant that group read access to a specific channel."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "from kronicle_sdk.models.rbac.kronicle_group import KronicleGroup\n",
+        "\n",
+        "# Create an access profile for anonymous read access to outdoor-temp\n",
+        "anon_profile = rbac.create_channel_access_profile(KronicleChannelAccess(\n",
+        "    name=\"outdoor-temp-public\",\n",
+        "    description=\"Public read access to outdoor temperature\",\n",
+        "    role=\"data_reader\",\n",
+        "    channel=chan3,\n",
+        "))\n",
+        "\n",
+        "# Get the anonymous group (auto-created when allow_anonymous=true)\n",
+        "groups = rbac.list_groups()\n",
+        "anon_group = next((g for g in groups if g.name == \"anonymous\"), None)\n",
+        "\n",
+        "if anon_group:\n",
+        "    anon_policy = rbac.create_channel_policy(KronicleChannelPolicy(\n",
+        "        name=\"anonymous-read-outdoor\",\n",
+        "        access_profile=anon_profile,\n",
+        "        subject=KronicleRbacBase(name=anon_group.name, id=anon_group.id),\n",
+        "    ))\n",
+        "    print(f\"Anonymous policy created: {anon_policy.name}\")\n",
+        "else:\n",
+        "    print(\"Anonymous group not found. Make sure allow_anonymous=true in your config.\")"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "# Anonymous request — no token\n",
+        "try:\n",
+        "    resp = http_get(f\"/api/v1/channels/{chan3.id}/rows\")\n",
+        "    data = json.loads(resp.read())\n",
+        "    print(f\"Anonymous can read outdoor-temp: YES ({len(data.get('rows', []))} rows)\")\n",
+        "except urllib.error.HTTPError as e:\n",
+        "    print(f\"Anonymous read failed: {e.code}\")\n",
+        "\n",
+        "# Anonymous cannot read lab channels (no policy)\n",
+        "try:\n",
+        "    resp = http_get(f\"/api/v1/channels/{chan1.id}/rows\")\n",
+        "    print(f\"Anonymous can read lab-temp-1: YES (unexpected!)\")\n",
+        "except urllib.error.HTTPError as e:\n",
+        "    print(f\"Anonymous read lab-temp-1: NO (403 Forbidden — expected)\")"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 5.13 Summary of RBAC entities\n",
+        "\n",
+        "| Entity | Purpose | Example |\n",
+        "|--------|---------|---------|\n",
+        "| **Role** | Named set of permissions | `data_reader` → `channel:read`, `row:read` |\n",
+        "| **Access Profile** | Binds a role to a resource | `lab-temp-1-read` → `limited_reader` + `lab-temp-1` channel |\n",
+        "| **Policy** | Binds a subject (user/group) to an access profile | `charlie-read-lab-temp-1` → charlie + `lab-temp-1-read` profile |\n",
+        "| **Subject** | User or group that receives a policy | `charlie` or `lab-writers` |\n",
+        "\n",
+        "**Permission evaluation chain:** user roles → group roles → zone policies → channel policies → row policies.\n",
+        "\n",
+        "Deny always overrides allow. Resource-level policies override zone-level policies."
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "---\n",
+        "## 6. Testing the App (Dev)\n",
+        "\n",
+        "This section covers running the test suite during development."
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 6.1 Unit tests\n",
+        "\n",
+        "Unit tests run without a server or database. They test individual modules in isolation."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "!pytest tests/unit/ -v --tb=short"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 6.2 Integration tests\n",
+        "\n",
+        "Integration tests require a running Kronicle server. They test the full request/response cycle\n",
+        "through the API connectors.\n",
+        "\n",
+        "**Prerequisites:**\n",
+        "- Kronicle server running (e.g. `podman-compose up -d`)\n",
+        "- Environment variables set (from `.conf/.integration.env`):\n",
+        "  - `KRONICLE_USR_NAME` / `KRONICLE_USR_PASS` — regular user credentials\n",
+        "  - `KRONICLE_SU_NAME` / `KRONICLE_SU_PASS` — superuser credentials"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "# Integration tests (requires running server + env vars)\n",
+        "# !source .conf/.integration.env && pytest tests/integration/ -v -m integration\n",
+        "\n",
+        "print(\"Run this in your terminal (not in the notebook):\")\n",
+        "print(\"  source .conf/.integration.env && pytest tests/integration/ -v -m integration\")"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 6.3 Run all tests together"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "print(\"Run this in your terminal:\")\n",
+        "print(\"  source .conf/.integration.env && pytest --run-all\")"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 6.4 Coverage report\n",
+        "\n",
+        "Coverage is configured in `pyproject.toml` and runs automatically with `pytest`.\n",
+        "Reports are generated in `reports/`."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "!pytest --cov=kronicle --cov-report=term-missing --cov-report=html:reports/html_dir"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 6.5 Test structure\n",
+        "\n",
+        "```\n",
+        "tests/\n",
+        "├── conftest.py              # --run-all flag\n",
+        "├── unit/                    # No server required\n",
+        "│   ├── api/\n",
+        "│   ├── auth/\n",
+        "│   ├── db/\n",
+        "│   ├── schemas/\n",
+        "│   ├── services/\n",
+        "│   └── ...\n",
+        "└── integration/             # Requires running server\n",
+        "    ├── conftest.py          # Env var checks, auto-marks tests\n",
+        "    ├── auth/\n",
+        "    ├── data/\n",
+        "    ├── rbac/\n",
+        "    └── setup/\n",
+        "```\n",
+        "\n",
+        "Integration tests are automatically skipped unless:\n",
+        "- `-m integration` is passed, or\n",
+        "- `--run-all` is passed, and\n",
+        "- `KRONICLE_USR_NAME`, `KRONICLE_USR_PASS`, `KRONICLE_SU_NAME`, `KRONICLE_SU_PASS` are set."
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 6.6 Linting & formatting"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "# Ruff linter + formatter\n",
+        "!ruff check src/ tests/\n",
+        "!ruff format --check src/ tests/"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "# Type checking\n",
+        "!pyright src/"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "---\n",
+        "## 7. Appendix"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### Health endpoints\n",
+        "\n",
+        "| Endpoint | Purpose | Auth |\n",
+        "|----------|---------|------|\n",
+        "| `GET /health/live` | Liveness probe | Public |\n",
+        "| `GET /health/ready` | Readiness probe (pings DB) | Public |\n",
+        "| `GET /health/version` | Build version, commit, date | Public |"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### Supported column types\n",
+        "\n",
+        "| User type | Canonical | DB type | Python type |\n",
+        "|-----------|-----------|---------|-------------|\n",
+        "| `str`, `string`, `text` | `str` | `TEXT` | `str` |\n",
+        "| `int`, `integer` | `int` | `INTEGER` | `int` |\n",
+        "| `float`, `number`, `double` | `float` | `DOUBLE PRECISION` | `float` |\n",
+        "| `bool`, `boolean` | `bool` | `BOOLEAN` | `bool` |\n",
+        "| `uuid`, `uuid4` | `uuid` | `UUID` | `UUID` |\n",
+        "| `datetime`, `timestamp`, `timestamptz` | `datetime` | `TIMESTAMPTZ` | `IsoDateTime` |\n",
+        "| `dict`, `json`, `jsonb` | `dict` | `JSONB` | `dict` |\n",
+        "| `list` | `list` | `JSONB` | `list` |\n",
+        "\n",
+        "Any type can be wrapped with `optional[...]` to allow null values (e.g. `optional[float]`)."
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### Useful commands"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "print(\"# View server logs\")\n",
+        "print(\"podman-compose logs -f app\")\n",
+        "print()\n",
+        "print(\"# Stop the server\")\n",
+        "print(\"podman-compose down\")\n",
+        "print()\n",
+        "print(\"# Stop and remove volumes (fresh start)\")\n",
+        "print(\"podman-compose down -v\")\n",
+        "print()\n",
+        "print(\"# Connect to the database\")\n",
+        "print(\"psql -h localhost -U postgres -d kronicle_db\")"
+      ]
+    }
+  ],
+  "metadata": {
+    "kernelspec": {
+      "display_name": "Python 3",
+      "language": "python",
+      "name": "python3"
+    },
+    "language_info": {
+      "name": "python",
+      "version": "3.12.0"
+    }
+  },
+  "nbformat": 4,
+  "nbformat_minor": 5
+}
