@@ -31,6 +31,27 @@ class KronicleLinkRepository(Generic[T]):
         stmt = delete(cls.model).where(*[col == val for col, val in filters.items()])
         db.execute(stmt)
 
+    @classmethod
+    def ensure_link_returning(cls, db: Session, values: dict):
+        """Upsert (idempotent) and return the row — new or existing.
+        Uses a no-op UPDATE on conflict so RETURNING always yields the row."""
+        stmt = (
+            insert(cls.model)
+            .values(**values)
+            .on_conflict_do_update(
+                constraint=cls.model.uq_constraint(),
+                set_=dict(values),  # no-op: sets each column to its own value
+            )
+            .returning(cls.model)
+        )
+        return db.execute(stmt).scalars().first()
+
+    @classmethod
+    def remove_link_returning(cls, db: Session, filters):
+        """Delete and return the removed row, or None if it didn't exist."""
+        stmt = delete(cls.model).where(*[col == val for col, val in filters.items()]).returning(cls.model)
+        return db.execute(stmt).scalars().first()
+
     def add_parent(self, db: Session, parent: T, child: T):
         self.ensure_link(db, {self.model.PARENT_ID: parent.id, self.model.CHILD_ID: child.id})
 

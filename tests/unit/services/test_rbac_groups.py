@@ -155,47 +155,64 @@ class TestUserInGroup:
     def test_direct(self, rbac_service):
         uid, gid = uuid4(), uuid4()
         db = rbac_service._db.get_db.return_value.__enter__.return_value
-        db.query.return_value.filter_by.return_value.first.return_value = (uid, gid)
+        rbac_service._user_repo.get_by_id = MagicMock(return_value=fake_user(id=uid))
+        rbac_service._group_repo.get_by_id = MagicMock(return_value=fake_group(id=gid))
+        db.query.return_value.filter_by.return_value.first.return_value = object()
 
         result = rbac_service.check_user_in_group(uid, gid)
-        assert result == {"is_member": True, "direct": True}
+        assert result is not None
+        assert result.user.id == uid
+        assert result.group.id == gid
+        assert result.indirect is False
+        assert result.parent is None
 
     def test_not_direct_no_indirect(self, rbac_service):
         uid, gid = uuid4(), uuid4()
         db = rbac_service._db.get_db.return_value.__enter__.return_value
+        rbac_service._user_repo.get_by_id = MagicMock(return_value=fake_user(id=uid))
+        rbac_service._group_repo.get_by_id = MagicMock(return_value=fake_group(id=gid))
         db.query.return_value.filter_by.return_value.first.return_value = None
 
         result = rbac_service.check_user_in_group(uid, gid, indirect=False)
-        assert result == {"is_member": False, "direct": False}
+        assert result is None
 
     def test_via_descendant(self, rbac_service):
         uid, gid, did = uuid4(), uuid4(), uuid4()
         db = rbac_service._db.get_db.return_value.__enter__.return_value
+        rbac_service._user_repo.get_by_id = MagicMock(return_value=fake_user(id=uid))
+        rbac_service._group_repo.get_by_id = MagicMock(return_value=fake_group(id=gid))
         db.query.return_value.filter_by.return_value.first.return_value = None
-        db.query.return_value.filter.return_value.all.return_value = [(did,)]
+        rbac_service._get_group_descendant_ids = MagicMock(return_value={did})
         rbac_service._user_groups_repo.get_user_ids_for_group = MagicMock(return_value={uid})
+        rbac_service._group_repo.get_by_id = MagicMock(return_value=fake_group(id=did))
 
         result = rbac_service.check_user_in_group(uid, gid, indirect=True)
-        assert result == {"is_member": True, "direct": False}
+        assert result is not None
+        assert result.indirect is True
+        assert result.parent.id == did
 
     def test_not_found_indirect(self, rbac_service):
         uid, gid = uuid4(), uuid4()
         db = rbac_service._db.get_db.return_value.__enter__.return_value
+        rbac_service._user_repo.get_by_id = MagicMock(return_value=fake_user(id=uid))
+        rbac_service._group_repo.get_by_id = MagicMock(return_value=fake_group(id=gid))
         db.query.return_value.filter_by.return_value.first.return_value = None
-        db.query.return_value.filter.return_value.all.return_value = []
+        rbac_service._get_group_descendant_ids = MagicMock(return_value=set())
 
         result = rbac_service.check_user_in_group(uid, gid, indirect=True)
-        assert result == {"is_member": False, "direct": False}
+        assert result is None
 
     def test_via_descendant_no_membership(self, rbac_service):
         uid, gid, did = uuid4(), uuid4(), uuid4()
         db = rbac_service._db.get_db.return_value.__enter__.return_value
+        rbac_service._user_repo.get_by_id = MagicMock(return_value=fake_user(id=uid))
+        rbac_service._group_repo.get_by_id = MagicMock(return_value=fake_group(id=gid))
         db.query.return_value.filter_by.return_value.first.return_value = None
-        db.query.return_value.filter.return_value.all.return_value = [(did,)]
+        rbac_service._get_group_descendant_ids = MagicMock(return_value={did})
         rbac_service._user_groups_repo.get_user_ids_for_group = MagicMock(return_value=set())
 
         result = rbac_service.check_user_in_group(uid, gid, indirect=True)
-        assert result == {"is_member": False, "direct": False}
+        assert result is None
 
 
 # ==================================================================================================

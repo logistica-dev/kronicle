@@ -58,7 +58,13 @@ from kronicle.schemas.rbac.input_role_schemas import InputRole
 from kronicle.schemas.rbac.input_subject_schemas import InputSubject
 from kronicle.schemas.rbac.input_user_schemas import InputUserLogin
 from kronicle.schemas.rbac.safe_group_schemas import OutputGroup
-from kronicle.schemas.rbac.safe_introspect_schemas import ResourceAccess
+from kronicle.schemas.rbac.safe_introspect_schemas import OutputGroupPermissions, OutputUserPermissions, ResourceAccess
+from kronicle.schemas.rbac.safe_link_schemas import (
+    OutputGroupRole,
+    OutputRoleSubjects,
+    OutputUserGroupMembership,
+    OutputUserRole,
+)
 from kronicle.schemas.rbac.safe_policy_schemas import (
     OutputAccessProfile,
     OutputChannelAccessProfile,
@@ -1370,86 +1376,139 @@ class RbacService:
     # Relationship checks
     # ----------------------------------------------------------------------------------------------
 
-    def check_user_has_role(self, user_id: UUID, role_id: UUID, indirect: bool = False) -> dict:
+    def check_user_has_role(self, user_id: UUID, role_id: UUID, indirect: bool = False) -> OutputUserRole | None:
         with self._db.get_db() as db:
+            user = self._user_repo.get_by_id(db, id=user_id)
+            if not user:
+                return None
+            role = self._role_repo.get_by_id(db, id=role_id)
+            if not role:
+                return None
+
             direct = db.query(RbacUserRoles.__table__).filter_by(user_id=user_id, role_id=role_id).first() is not None
             if direct:
-                return {"has_role": True, "direct": True}
+                return OutputUserRole(user=OutputUser.from_db(user), role=OutputRole.from_db(role))
             if not indirect:
-                return {"has_role": False, "direct": False}
+                return None
+
             user_group_ids = self._user_groups_repo.get_group_ids_for_user(db, user_id=user_id)
             all_group_ids = set(user_group_ids)
             for gid in user_group_ids:
                 all_group_ids.update(self._get_group_ancestor_ids(db, gid))
-            has_via_group = (
+            group_role = (
                 db.query(RbacGroupRoles.__table__)
                 .filter(RbacGroupRoles.group_id.in_(all_group_ids), RbacGroupRoles.role_id == role_id)
                 .first()
-                is not None
             )
-            return {"has_role": has_via_group, "direct": False}
+            if not group_role:
+                return None
+            parent_group = self._group_repo.get_by_id(db, id=group_role.group_id)
+            parent = OutputGroup.from_db(parent_group) if parent_group else None
+            return OutputUserRole(
+                user=OutputUser.from_db(user), role=OutputRole.from_db(role), indirect=True, parent=parent
+            )
 
-    def check_group_has_role(self, group_id: UUID, role_id: UUID, indirect: bool = False) -> dict:
+    def check_group_has_role(self, group_id: UUID, role_id: UUID, indirect: bool = False) -> OutputGroupRole | None:
         with self._db.get_db() as db:
+            group = self._group_repo.get_by_id(db, id=group_id)
+            if not group:
+                return None
+            role = self._role_repo.get_by_id(db, id=role_id)
+            if not role:
+                return None
+
             direct = (
                 db.query(RbacGroupRoles.__table__).filter_by(group_id=group_id, role_id=role_id).first() is not None
             )
             if direct:
-                return {"has_role": True, "direct": True}
+                return OutputGroupRole(group=OutputGroup.from_db(group), role=OutputRole.from_db(role))
             if not indirect:
-                return {"has_role": False, "direct": False}
+                return None
+
             ancestor_ids = self._get_group_ancestor_ids(db, group_id)
-            has_via_ancestor = (
+            group_role = (
                 db.query(RbacGroupRoles.__table__)
                 .filter(RbacGroupRoles.group_id.in_(ancestor_ids), RbacGroupRoles.role_id == role_id)
                 .first()
-                is not None
             )
-            return {"has_role": has_via_ancestor, "direct": False}
+            if not group_role:
+                return None
+            parent_group = self._group_repo.get_by_id(db, id=group_role.group_id)
+            parent = OutputGroup.from_db(parent_group) if parent_group else None
+            return OutputGroupRole(
+                group=OutputGroup.from_db(group), role=OutputRole.from_db(role), indirect=True, parent=parent
+            )
 
-    def list_role_subjects(self, role_id: UUID, indirect: bool = False) -> dict:
+    def list_role_subjects(self, role_id: UUID, indirect: bool = False) -> OutputRoleSubjects:
         with self._db.get_db() as db:
             user_ids = list(db.query(RbacUserRoles.user_id).filter(RbacUserRoles.role_id == role_id).all())
-            user_ids = [str(u[0]) for u in user_ids]
+            users: list[OutputUser] = []
+            for (uid,) in user_ids:
+                u = self._user_repo.get_by_id(db, id=uid)
+                if u:
+                    users.append(OutputUser.from_db(u))
 
             group_ids = list(db.query(RbacGroupRoles.group_id).filter(RbacGroupRoles.role_id == role_id).all())
-            group_ids = [str(g[0]) for g in group_ids]
+            groups: list[OutputGroup] = []
+            for (gid,) in group_ids:
+                g = self._group_repo.get_by_id(db, id=gid)
+                if g:
+                    groups.append(OutputGroup.from_db(g))
 
             if not indirect:
-                return {"users": user_ids, "groups": group_ids}
+                return OutputRoleSubjects(users=users, groups=groups)
 
-            indirect_user_ids: set[str] = set()
-            for (gid,) in db.query(RbacGroupRoles.group_id).filter(RbacGroupRoles.role_id == role_id).all():
+            direct_user_ids = {uid for (uid,) in user_ids}
+            indirect_user_ids: set[UUID] = set()
+            for (gid,) in group_ids:
                 members = self._user_groups_repo.get_user_ids_for_group(db, group_id=gid)
-                indirect_user_ids.update(str(m) for m in members)
+                indirect_user_ids.update(members)
                 descendant_ids = self._get_group_descendant_ids(db, gid)
                 for desc_id in descendant_ids:
                     members = self._user_groups_repo.get_user_ids_for_group(db, group_id=desc_id)
-                    indirect_user_ids.update(str(m) for m in members)
+                    indirect_user_ids.update(members)
 
-            direct_user_set = set(user_ids)
-            indirect_only = sorted(indirect_user_ids - direct_user_set)
-            return {
-                "users": sorted(user_ids),
-                "groups": sorted(group_ids),
-                "indirect_users": indirect_only,
-            }
+            indirect_only = sorted(indirect_user_ids - direct_user_ids)
+            indirect_users: list[OutputUser] = []
+            for uid in indirect_only:
+                u = self._user_repo.get_by_id(db, id=uid)
+                if u:
+                    indirect_users.append(OutputUser.from_db(u))
 
-    def check_user_in_group(self, user_id: UUID, group_id: UUID, indirect: bool = False) -> dict:
+            return OutputRoleSubjects(users=users, groups=groups, indirect_users=indirect_users)
+
+    def check_user_in_group(
+        self, user_id: UUID, group_id: UUID, indirect: bool = False
+    ) -> OutputUserGroupMembership | None:
         with self._db.get_db() as db:
+            user = self._user_repo.get_by_id(db, id=user_id)
+            if not user:
+                return None
+            group = self._group_repo.get_by_id(db, id=group_id)
+            if not group:
+                return None
+
             direct = (
                 db.query(RbacUserGroups.__table__).filter_by(user_id=user_id, group_id=group_id).first() is not None
             )
             if direct:
-                return {"is_member": True, "direct": True}
+                return OutputUserGroupMembership(user=OutputUser.from_db(user), group=OutputGroup.from_db(group))
             if not indirect:
-                return {"is_member": False, "direct": False}
+                return None
+
             descendant_ids = self._get_group_descendant_ids(db, group_id)
             for desc_id in descendant_ids:
                 members = self._user_groups_repo.get_user_ids_for_group(db, group_id=desc_id)
                 if user_id in members:
-                    return {"is_member": True, "direct": False}
-            return {"is_member": False, "direct": False}
+                    parent_group = self._group_repo.get_by_id(db, id=desc_id)
+                    parent = OutputGroup.from_db(parent_group) if parent_group else None
+                    return OutputUserGroupMembership(
+                        user=OutputUser.from_db(user),
+                        group=OutputGroup.from_db(group),
+                        indirect=True,
+                        parent=parent,
+                    )
+            return None
 
     # ----------------------------------------------------------------------------------------------
     # Introspection: subject resolution
@@ -1528,24 +1587,25 @@ class RbacService:
     # Introspection: permissions
     # ----------------------------------------------------------------------------------------------
 
-    def get_user_permissions(self, user_id: UUID) -> dict:
+    def get_user_permissions(self, user_id: UUID) -> OutputUserPermissions:
         """Return the full permission landscape for a user."""
 
         with self._db.get_db() as db:
-            direct_roles: list[OutputRole] = []
-            group_roles: list[dict] = []
-            zone_policies: list = []
-            channel_policies: list = []
-            row_policies: list = []
+            user = self._user_repo.get_by_id(db, id=user_id)
+            if not user:
+                return OutputUserPermissions()
+            out_user = OutputUser.from_db(user)
+
+            roles: list[OutputUserRole] = []
 
             # Direct user roles
             role_ids = self._user_roles_repo.get_role_ids_for_user(db, user_id=user_id)
             for rid in role_ids:
                 role = self._role_repo.get_by_id(db, id=rid)
                 if role:
-                    direct_roles.append(OutputRole.from_db(role))
+                    roles.append(OutputUserRole(user=out_user, role=OutputRole.from_db(role)))
 
-            # Group roles
+            # Group roles (indirect via group membership)
             group_ids = self._user_groups_repo.get_group_ids_for_user(db, user_id=user_id)
             for gid in group_ids:
                 group = self._group_repo.get_by_id(db, id=gid)
@@ -1555,70 +1615,105 @@ class RbacService:
                 for rid in g_role_ids:
                     role = self._role_repo.get_by_id(db, id=rid)
                     if role:
-                        group_roles.append(
-                            {
-                                "group": OutputGroup.from_db(group),
-                                "role": OutputRole.from_db(role),
-                            }
+                        roles.append(
+                            OutputUserRole(
+                                user=out_user,
+                                role=OutputRole.from_db(role),
+                                indirect=True,
+                                parent=OutputGroup.from_db(group),
+                            )
                         )
 
             # Policies via subject resolution
             subject_ids = self._resolve_user_subject_ids(db, user_id, indirect=False)
+            zone_policies: list[OutputZonePolicy] = []
+            channel_policies: list[OutputChannelPolicy] = []
+            row_policies: list[OutputRowPolicy] = []
             if subject_ids:
-                zone_policies = self._zone_policy_repo.get_policies_for_subjects(db, subject_ids=subject_ids)
-                channel_policies = self._channel_policy_repo.get_policies_for_subjects(db, subject_ids=subject_ids)
-                row_policies = self._row_policy_repo.get_policies_for_subjects(db, subject_ids=subject_ids)
+                zone_policies = [
+                    OutputZonePolicy.from_db(p)
+                    for p in self._zone_policy_repo.get_policies_for_subjects(db, subject_ids=subject_ids)
+                ]
+                channel_policies = [
+                    OutputChannelPolicy.from_db(p)
+                    for p in self._channel_policy_repo.get_policies_for_subjects(db, subject_ids=subject_ids)
+                ]
+                row_policies = [
+                    OutputRowPolicy.from_db(p)
+                    for p in self._row_policy_repo.get_policies_for_subjects(db, subject_ids=subject_ids)
+                ]
 
-            return {
-                "direct_roles": direct_roles,
-                "group_roles": group_roles,
-                "zone_policies": zone_policies,
-                "channel_policies": channel_policies,
-                "row_policies": row_policies,
-            }
+            return OutputUserPermissions(
+                roles=roles,
+                zone_policies=zone_policies,
+                channel_policies=channel_policies,
+                row_policies=row_policies,
+            )
 
-    def get_group_permissions(self, group_id: UUID) -> dict:
+    def get_group_permissions(self, group_id: UUID) -> OutputGroupPermissions:
         """Return the full permission landscape for a group."""
 
         with self._db.get_db() as db:
-            direct_roles: list[OutputRole] = []
-            group_roles: list[dict] = []
-            zone_policies: list = []
-            channel_policies: list = []
-            row_policies: list = []
+            group = self._group_repo.get_by_id(db, id=group_id)
+            if not group:
+                return OutputGroupPermissions()
+            out_group = OutputGroup.from_db(group)
+
+            roles: list[OutputGroupRole] = []
 
             # Direct group roles
             role_ids = self._group_roles_repo.get_role_ids_for_group(db, group_id=group_id)
             for rid in role_ids:
                 role = self._role_repo.get_by_id(db, id=rid)
                 if role:
-                    direct_roles.append(OutputRole.from_db(role))
+                    roles.append(OutputGroupRole(group=out_group, role=OutputRole.from_db(role)))
 
             # Policies via subject resolution
             subject_ids = self._resolve_group_subject_ids(db, group_id, indirect=False)
+            zone_policies: list[OutputZonePolicy] = []
+            channel_policies: list[OutputChannelPolicy] = []
+            row_policies: list[OutputRowPolicy] = []
             if subject_ids:
-                zone_policies = self._zone_policy_repo.get_policies_for_subjects(db, subject_ids=subject_ids)
-                channel_policies = self._channel_policy_repo.get_policies_for_subjects(db, subject_ids=subject_ids)
-                row_policies = self._row_policy_repo.get_policies_for_subjects(db, subject_ids=subject_ids)
+                zone_policies = [
+                    OutputZonePolicy.from_db(p)
+                    for p in self._zone_policy_repo.get_policies_for_subjects(db, subject_ids=subject_ids)
+                ]
+                channel_policies = [
+                    OutputChannelPolicy.from_db(p)
+                    for p in self._channel_policy_repo.get_policies_for_subjects(db, subject_ids=subject_ids)
+                ]
+                row_policies = [
+                    OutputRowPolicy.from_db(p)
+                    for p in self._row_policy_repo.get_policies_for_subjects(db, subject_ids=subject_ids)
+                ]
 
-            return {
-                "direct_roles": direct_roles,
-                "group_roles": group_roles,
-                "zone_policies": zone_policies,
-                "channel_policies": channel_policies,
-                "row_policies": row_policies,
-            }
+            return OutputGroupPermissions(
+                roles=roles,
+                zone_policies=zone_policies,
+                channel_policies=channel_policies,
+                row_policies=row_policies,
+            )
 
     # ----------------------------------------------------------------------------------------------
     # Introspection: resource access
     # ----------------------------------------------------------------------------------------------
 
     def _build_resource_access(self, policy, resource, parent=None):
-        """Build a ResourceAccess dict from a policy and its resource."""
+        """Build a ResourceAccess from a policy and its resource."""
 
         res_ref = OutputSchema(id=resource.id, name=resource.name)
         parent_ref = OutputSchema(id=parent.id, name=parent.name) if parent else None
-        return ResourceAccess(resource=res_ref, parent=parent_ref, policy=policy)
+
+        if isinstance(policy, ZonePolicy):
+            out_policy = OutputZonePolicy.from_db(policy)
+        elif isinstance(policy, ChannelPolicy):
+            out_policy = OutputChannelPolicy.from_db(policy)
+        elif isinstance(policy, RowPolicy):
+            out_policy = OutputRowPolicy.from_db(policy)
+        else:
+            out_policy = policy
+
+        return ResourceAccess(resource=res_ref, parent=parent_ref, policy=out_policy)
 
     def get_user_zones(self, user_id: UUID, indirect: bool = False) -> list:
         """Return zones the user has access to via policies."""
@@ -1797,35 +1892,41 @@ class RbacService:
     # Introspection: resource policy/access-profile lists
     # ----------------------------------------------------------------------------------------------
 
-    def get_zone_policies(self, zone_id: UUID) -> list:
+    def get_zone_policies(self, zone_id: UUID) -> list[OutputZonePolicy]:
         """Return all policies on a zone."""
         with self._db.get_db() as db:
-            return self._zone_policy_repo.get_policies_for_zone(db, zone_id=zone_id)
+            policies = self._zone_policy_repo.get_policies_for_zone(db, zone_id=zone_id)
+            return [OutputZonePolicy.from_db(p) for p in policies]
 
-    def get_zone_access_profiles(self, zone_id: UUID) -> list:
+    def get_zone_access_profiles(self, zone_id: UUID) -> list[OutputZoneAccessProfile]:
         """Return all access profiles on a zone."""
         with self._db.get_db() as db:
             stmt = select(ZoneAccessProfile).where(ZoneAccessProfile.zone_id == zone_id)
-            return list(db.execute(stmt).scalars().all())
+            profiles = list(db.execute(stmt).scalars().all())
+            return [OutputZoneAccessProfile.from_db(p) for p in profiles]
 
-    def get_channel_policies(self, channel_id: UUID) -> list:
+    def get_channel_policies(self, channel_id: UUID) -> list[OutputChannelPolicy]:
         """Return all policies on a channel."""
         with self._db.get_db() as db:
-            return self._channel_policy_repo.get_policies_for_channel(db, channel_id=channel_id)
+            policies = self._channel_policy_repo.get_policies_for_channel(db, channel_id=channel_id)
+            return [OutputChannelPolicy.from_db(p) for p in policies]
 
-    def get_channel_access_profiles(self, channel_id: UUID) -> list:
+    def get_channel_access_profiles(self, channel_id: UUID) -> list[OutputChannelAccessProfile]:
         """Return all access profiles on a channel."""
         with self._db.get_db() as db:
             stmt = select(ChannelAccessProfile).where(ChannelAccessProfile.channel_id == channel_id)
-            return list(db.execute(stmt).scalars().all())
+            profiles = list(db.execute(stmt).scalars().all())
+            return [OutputChannelAccessProfile.from_db(p) for p in profiles]
 
-    def get_row_policies(self, row_id: UUID) -> list:
+    def get_row_policies(self, row_id: UUID) -> list[OutputRowPolicy]:
         """Return all policies on a row."""
         with self._db.get_db() as db:
-            return self._row_policy_repo.get_policies_for_row(db, row_id=row_id)
+            policies = self._row_policy_repo.get_policies_for_row(db, row_id=row_id)
+            return [OutputRowPolicy.from_db(p) for p in policies]
 
-    def get_row_access_profiles(self, row_id: UUID) -> list:
+    def get_row_access_profiles(self, row_id: UUID) -> list[OutputRowAccessProfile]:
         """Return all access profiles on a row."""
         with self._db.get_db() as db:
             stmt = select(RowAccessProfile).where(RowAccessProfile.row_id == row_id)
-            return list(db.execute(stmt).scalars().all())
+            profiles = list(db.execute(stmt).scalars().all())
+            return [OutputRowAccessProfile.from_db(p) for p in profiles]

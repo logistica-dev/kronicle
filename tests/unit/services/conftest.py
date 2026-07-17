@@ -136,6 +136,17 @@ def fake_channel_policy_mock(id=None, name="policy-name", **kwargs):
     return policy
 
 
+def _fake_core_row(id=None, name="row", channel_id=None):
+    r = MagicMock()
+    r.id = id or uuid4()
+    r.name = name
+    r.channel_id = channel_id
+    r.details = {}
+    ch_id = channel_id or uuid4()
+    r.channel = _fake_core_channel(id=ch_id, name="channel", zone_id=ch_id)
+    return r
+
+
 def _fake_row_policy_mock(id=None, name="policy-name", **kwargs):
     """Build a MagicMock that mimics a RowPolicy with loaded access relationship."""
     policy = MagicMock()
@@ -159,5 +170,6 @@ def _fake_row_policy_mock(id=None, name="policy-name", **kwargs):
     profile.description = None
     row_id = kwargs.get("row_id", uuid4())
     profile.row_id = row_id
+    profile.row = _fake_core_row(id=row_id, name=kwargs.get("row_name", "row"), channel_id=kwargs.get("channel_id"))
     policy.access_profile = profile
     return policy

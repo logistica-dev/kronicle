@@ -24,6 +24,18 @@ from kronicle.schemas.rbac.input_policy_schemas import (
 from kronicle.schemas.rbac.input_role_schemas import InputRole
 from kronicle.schemas.rbac.input_user_schemas import InputUser, InputUserPatch
 from kronicle.schemas.rbac.safe_group_schemas import OutputGroup
+from kronicle.schemas.rbac.safe_introspect_schemas import (
+    OutputGroupPermissions,
+    OutputUserPermissions,
+    ResourceAccess,
+    ResourceAccessList,
+)
+from kronicle.schemas.rbac.safe_link_schemas import (
+    OutputGroupRole,
+    OutputRoleSubjects,
+    OutputUserGroupMembership,
+    OutputUserRole,
+)
 from kronicle.schemas.rbac.safe_policy_schemas import (
     OutputChannelAccessProfile,
     OutputChannelPolicy,
@@ -484,6 +496,7 @@ def delete_role(
     "/users/{user_id}/roles/{role_id}",
     summary="Check if a role is assigned to a user",
     description="Returns whether a role is assigned to a user (directly or via group membership).",
+    response_model=OutputUserRole | None,
     dependencies=[Depends(require_permission(PermStr.USER_READ))],
 )
 def check_user_role(
@@ -499,6 +512,7 @@ def check_user_role(
     "/groups/{group_id}/roles/{role_id}",
     summary="Check if a role is assigned to a group",
     description="Returns whether a role is assigned to a group (directly or via parent groups).",
+    response_model=OutputGroupRole | None,
     dependencies=[Depends(require_permission(PermStr.GROUP_READ))],
 )
 def check_group_role(
@@ -514,6 +528,7 @@ def check_group_role(
     "/roles/{role_id}/subjects",
     summary="List subjects assigned to a role",
     description="Returns users and groups assigned to a role (direct or indirect).",
+    response_model=OutputRoleSubjects,
     dependencies=[Depends(require_permission(PermStr.ROLE_READ))],
 )
 def list_role_subjects(
@@ -528,6 +543,7 @@ def list_role_subjects(
     "/users/{user_id}/groups/{group_id}",
     summary="Check if a user belongs to a group",
     description="Returns whether a user is a member of a group (directly or via sub-groups).",
+    response_model=OutputUserGroupMembership | None,
     dependencies=[Depends(require_permission(PermStr.GROUP_READ))],
 )
 def check_user_group(
@@ -547,6 +563,7 @@ def check_user_group(
 @rbac_router.get(
     "/access-profiles",
     summary="List all access profiles grouped by resource type",
+    response_model=dict,
     dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
 )
 def list_access_profiles(
@@ -1081,6 +1098,7 @@ def patch_row_policy(
     "/users/{user_id}/permissions",
     summary="Get effective permissions for a user",
     description="Returns all roles and policies granting permissions to this user.",
+    response_model=OutputUserPermissions,
     dependencies=[Depends(require_permission(PermStr.USER_READ))],
 )
 def get_user_permissions(
@@ -1094,6 +1112,7 @@ def get_user_permissions(
     "/users/{user_id}/zones",
     summary="Get zones accessible to a user",
     description="Returns zones the user can access via policies, with provenance.",
+    response_model=list[ResourceAccess],
     dependencies=[Depends(require_permission(PermStr.USER_READ))],
 )
 def get_user_zones(
@@ -1108,6 +1127,7 @@ def get_user_zones(
     "/users/{user_id}/channels",
     summary="Get channels accessible to a user",
     description="Returns channels the user can access via policies (direct or via parent zone), with provenance.",
+    response_model=list[ResourceAccess],
     dependencies=[Depends(require_permission(PermStr.USER_READ))],
 )
 def get_user_channels(
@@ -1122,6 +1142,7 @@ def get_user_channels(
     "/users/{user_id}/rows",
     summary="Get rows accessible to a user",
     description="Returns row policies the user is assigned to, with provenance.",
+    response_model=list[ResourceAccess],
     dependencies=[Depends(require_permission(PermStr.USER_READ))],
 )
 def get_user_rows(
@@ -1136,6 +1157,7 @@ def get_user_rows(
     "/users/{user_id}/resources",
     summary="Get all resources accessible to a user",
     description="Aggregated view of zones, channels, and rows the user can access.",
+    response_model=ResourceAccessList,
     dependencies=[Depends(require_permission(PermStr.USER_READ))],
 )
 def get_user_resources(
@@ -1155,6 +1177,7 @@ def get_user_resources(
     "/groups/{group_id}/permissions",
     summary="Get effective permissions for a group",
     description="Returns all roles and policies granting permissions to this group.",
+    response_model=OutputGroupPermissions,
     dependencies=[Depends(require_permission(PermStr.GROUP_READ))],
 )
 def get_group_permissions(
@@ -1168,6 +1191,7 @@ def get_group_permissions(
     "/groups/{group_id}/zones",
     summary="Get zones accessible to a group",
     description="Returns zones the group can access via policies, with provenance.",
+    response_model=list[ResourceAccess],
     dependencies=[Depends(require_permission(PermStr.GROUP_READ))],
 )
 def get_group_zones(
@@ -1182,6 +1206,7 @@ def get_group_zones(
     "/groups/{group_id}/channels",
     summary="Get channels accessible to a group",
     description="Returns channels the group can access via policies (direct or via parent zone), with provenance.",
+    response_model=list[ResourceAccess],
     dependencies=[Depends(require_permission(PermStr.GROUP_READ))],
 )
 def get_group_channels(
@@ -1196,6 +1221,7 @@ def get_group_channels(
     "/groups/{group_id}/rows",
     summary="Get rows accessible to a group",
     description="Returns row policies the group is assigned to, with provenance.",
+    response_model=list[ResourceAccess],
     dependencies=[Depends(require_permission(PermStr.GROUP_READ))],
 )
 def get_group_rows(
@@ -1210,6 +1236,7 @@ def get_group_rows(
     "/groups/{group_id}/resources",
     summary="Get all resources accessible to a group",
     description="Aggregated view of zones, channels, and rows the group can access.",
+    response_model=ResourceAccessList,
     dependencies=[Depends(require_permission(PermStr.GROUP_READ))],
 )
 def get_group_resources(
@@ -1229,6 +1256,7 @@ def get_group_resources(
     "/zones/{zone_id}/policies",
     summary="List policies on a zone",
     description="Returns all policies (subject → access profile) applied to this zone.",
+    response_model=list[OutputZonePolicy],
     dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
 )
 def list_zone_policies_for_zone(
@@ -1242,6 +1270,7 @@ def list_zone_policies_for_zone(
     "/zones/{zone_id}/access_profiles",
     summary="List access profiles on a zone",
     description="Returns all access profiles (role + zone) applied to this zone.",
+    response_model=list[OutputZoneAccessProfile],
     dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
 )
 def list_zone_access_profiles_for_zone(
@@ -1255,6 +1284,7 @@ def list_zone_access_profiles_for_zone(
     "/channels/{channel_id}/policies",
     summary="List policies on a channel",
     description="Returns all policies (subject → access profile) applied to this channel.",
+    response_model=list[OutputChannelPolicy],
     dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
 )
 def list_channel_policies_for_channel(
@@ -1268,6 +1298,7 @@ def list_channel_policies_for_channel(
     "/channels/{channel_id}/access_profiles",
     summary="List access profiles on a channel",
     description="Returns all access profiles (role + channel) applied to this channel.",
+    response_model=list[OutputChannelAccessProfile],
     dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
 )
 def list_channel_access_profiles_for_channel(
@@ -1281,6 +1312,7 @@ def list_channel_access_profiles_for_channel(
     "/rows/{row_id}/policies",
     summary="List policies on a row",
     description="Returns all policies (subject → access profile) applied to this row.",
+    response_model=list[OutputRowPolicy],
     dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
 )
 def list_row_policies_for_row(
@@ -1294,6 +1326,7 @@ def list_row_policies_for_row(
     "/rows/{row_id}/access_profiles",
     summary="List access profiles on a row",
     description="Returns all access profiles (role + row) applied to this row.",
+    response_model=list[OutputRowAccessProfile],
     dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
 )
 def list_row_access_profiles_for_row(

@@ -1,4 +1,6 @@
 # kronicle/repo/rbac/links/rbac_user_group_repo.py
+from __future__ import annotations
+
 from uuid import UUID
 
 from sqlalchemy import delete, select
@@ -42,18 +44,29 @@ class RbacUserGroupRepository(KronicleLinkRepository[RbacUserGroups]):
         return set(db.execute(stmt).scalars().all())
 
     # ----------------------------------------------------------------------------------------------
+    # Full edge rows
+    # ----------------------------------------------------------------------------------------------
+    def get_groups_for_user(self, db: Session, *, user_id: UUID) -> list[RbacUserGroups]:
+        stmt = select(self.model).where(self.model.user_id == user_id)
+        return list(db.execute(stmt).scalars().all())
+
+    def get_users_for_group(self, db: Session, *, group_id: UUID) -> list[RbacUserGroups]:
+        stmt = select(self.model).where(self.model.group_id == group_id)
+        return list(db.execute(stmt).scalars().all())
+
+    # ----------------------------------------------------------------------------------------------
     # Write methods
     # ----------------------------------------------------------------------------------------------
-    def add_user_to_group(self, db: Session, *, user: RbacUser, group: RbacGroup):
-        self.ensure_link(db, {self.model.USER_ID: user.id, self.model.GROUP_ID: group.id})
+    def add_user_to_group(self, db: Session, *, user: RbacUser, group: RbacGroup) -> RbacUserGroups | None:
+        return self.ensure_link_returning(db, {self.model.USER_ID: user.id, self.model.GROUP_ID: group.id})
 
-    def remove_user_from_group(self, db: Session, *, user: RbacUser, group: RbacGroup):
-        self.remove_link(db, {self.model.USER_ID: user.id, self.model.GROUP_ID: group.id})
+    def remove_user_from_group(self, db: Session, *, user: RbacUser, group: RbacGroup) -> RbacUserGroups | None:
+        return self.remove_link_returning(db, {self.model.USER_ID: user.id, self.model.GROUP_ID: group.id})
 
-    def delete_all_for_user(self, db: Session, *, user_id: UUID) -> None:
-        stmt = delete(self.model).where(self.model.user_id == user_id)
-        db.execute(stmt)
+    def delete_all_for_user(self, db: Session, *, user_id: UUID) -> list[RbacUserGroups]:
+        stmt = delete(self.model).where(self.model.user_id == user_id).returning(self.model)
+        return list(db.execute(stmt).scalars().all())
 
-    def delete_all_for_group(self, db: Session, *, group_id: UUID) -> None:
-        stmt = delete(self.model).where(self.model.group_id == group_id)
-        db.execute(stmt)
+    def delete_all_for_group(self, db: Session, *, group_id: UUID) -> list[RbacUserGroups]:
+        stmt = delete(self.model).where(self.model.group_id == group_id).returning(self.model)
+        return list(db.execute(stmt).scalars().all())

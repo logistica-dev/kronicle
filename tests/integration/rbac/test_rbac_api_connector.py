@@ -81,7 +81,7 @@ def test_api_get_users_for_role_direct(kronicle_rbac, test_user):
     try:
         kronicle_rbac.assign_role_to_user(role_id=role.id, user_id=test_user.id)
         users = kronicle_rbac.get_users_for_role(role_id=role.id)
-        assert str(test_user.id) in users
+        assert str(test_user.id) in [u.id for u in users]
     finally:
         kronicle_rbac.delete_role(role_id=role.id, force=True)
 
@@ -97,9 +97,9 @@ def test_api_get_users_for_role_indirect(kronicle_rbac, test_user, test_group):
         kronicle_rbac.add_user_to_group(group_id=test_group.id, user_id=test_user.id)
         kronicle_rbac.assign_role_to_group(role_id=role.id, group_id=test_group.id)
         direct_users = kronicle_rbac.get_users_for_role(role_id=role.id, indirect=False)
-        assert str(test_user.id) not in direct_users
+        assert str(test_user.id) not in [u.id for u in direct_users]
         all_users = kronicle_rbac.get_users_for_role(role_id=role.id, indirect=True)
-        assert str(test_user.id) in all_users
+        assert str(test_user.id) in [u.id for u in all_users]
     finally:
         try:
             kronicle_rbac.remove_user_from_group(group_id=test_group.id, user_id=test_user.id)

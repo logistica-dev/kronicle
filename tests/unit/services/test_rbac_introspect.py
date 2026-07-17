@@ -10,6 +10,7 @@ from tests.unit.services.conftest import (
     fake_channel_policy_mock,
     fake_group,
     fake_role,
+    fake_user,
     fake_zone_policy_mock,
 )
 
@@ -24,6 +25,12 @@ def _fake_channel(id=None, name="ch", zone_id=None):
     ch.name = name
     ch.zone_id = zone_id
     ch.details = {}
+    zid = zone_id or uuid4()
+    zone = MagicMock()
+    zone.id = zid
+    zone.name = "zone"
+    zone.details = {}
+    ch.zone = zone
     return ch
 
 
@@ -33,7 +40,48 @@ def _fake_row(id=None, name="row", channel_id=None):
     r.name = name
     r.channel_id = channel_id
     r.details = {}
+    ch_id = channel_id or uuid4()
+    r.channel = _fake_channel(id=ch_id, name="ch", zone_id=ch_id)
     return r
+
+
+def _fake_zone_access_profile(id=None, zone_id=None, zone_name="zone", role_name="role"):
+    ap = MagicMock()
+    ap.id = id or uuid4()
+    ap.name = "profile-name"
+    ap.description = None
+    zid = zone_id or uuid4()
+    ap.zone_id = zid
+    ap.zone = _fake_zone(id=zid, name=zone_name)
+    ap.role_id = uuid4()
+    ap.role = fake_role(id=ap.role_id, name=role_name)
+    return ap
+
+
+def _fake_channel_access_profile(id=None, channel_id=None, channel_name="channel", role_name="role"):
+    ap = MagicMock()
+    ap.id = id or uuid4()
+    ap.name = "profile-name"
+    ap.description = None
+    chid = channel_id or uuid4()
+    ap.channel_id = chid
+    ap.channel = _fake_channel(id=chid, name=channel_name)
+    ap.role_id = uuid4()
+    ap.role = fake_role(id=ap.role_id, name=role_name)
+    return ap
+
+
+def _fake_row_access_profile(id=None, row_id=None, row_name="row", role_name="role"):
+    ap = MagicMock()
+    ap.id = id or uuid4()
+    ap.name = "profile-name"
+    ap.description = None
+    rid = row_id or uuid4()
+    ap.row_id = rid
+    ap.row = _fake_row(id=rid, name=row_name)
+    ap.role_id = uuid4()
+    ap.role = fake_role(id=ap.role_id, name=role_name)
+    return ap
 
 
 # --------------------------------------------------------------------------------------------------
@@ -49,6 +97,7 @@ class TestGetUserPermissions:
         gid = uuid4()
         subj_id = uuid4()
 
+        rbac_service._user_repo.get_by_id = MagicMock(return_value=fake_user(id=uid, name="usr", email="u@k.app"))
         rbac_service._user_roles_repo.get_role_ids_for_user = MagicMock(return_value=[rid1])
         rbac_service._role_repo.get_by_id = MagicMock(return_value=fake_role(id=rid1, name="admin"))
         rbac_service._user_groups_repo.get_group_ids_for_user = MagicMock(return_value=[gid])
@@ -60,14 +109,17 @@ class TestGetUserPermissions:
         rbac_service._row_policy_repo.get_policies_for_subjects = MagicMock(return_value=[])
 
         result = rbac_service.get_user_permissions(uid)
-        assert len(result["direct_roles"]) == 1
-        assert len(result["group_roles"]) == 1
-        assert result["group_roles"][0]["group"].name == "eng"
-        assert result["group_roles"][0]["role"].name == "admin"
+        direct = [r for r in result.roles if not r.indirect]
+        indirect = [r for r in result.roles if r.indirect]
+        assert len(direct) == 1
+        assert len(indirect) == 1
+        assert indirect[0].parent.name == "eng"
+        assert indirect[0].role.name == "admin"
 
     def test_empty_when_no_subjects(self, rbac_service):
         uid = uuid4()
 
+        rbac_service._user_repo.get_by_id = MagicMock(return_value=fake_user(id=uid))
         rbac_service._user_roles_repo.get_role_ids_for_user = MagicMock(return_value=[])
         rbac_service._user_groups_repo.get_group_ids_for_user = MagicMock(return_value=[])
         rbac_service._resolve_user_subject_ids = MagicMock(return_value=[])
@@ -76,11 +128,10 @@ class TestGetUserPermissions:
         rbac_service._row_policy_repo.get_policies_for_subjects = MagicMock(return_value=[])
 
         result = rbac_service.get_user_permissions(uid)
-        assert result["direct_roles"] == []
-        assert result["group_roles"] == []
-        assert result["zone_policies"] == []
-        assert result["channel_policies"] == []
-        assert result["row_policies"] == []
+        assert result.roles == []
+        assert result.zone_policies == []
+        assert result.channel_policies == []
+        assert result.row_policies == []
 
 
 class TestGetGroupPermissions:
@@ -89,6 +140,7 @@ class TestGetGroupPermissions:
         rid = uuid4()
         subj_id = uuid4()
 
+        rbac_service._group_repo.get_by_id = MagicMock(return_value=fake_group(id=gid, name="eng"))
         rbac_service._group_roles_repo.get_role_ids_for_group = MagicMock(return_value=[rid])
         rbac_service._role_repo.get_by_id = MagicMock(return_value=fake_role(id=rid, name="editor"))
         rbac_service._resolve_group_subject_ids = MagicMock(return_value=[subj_id])
@@ -97,9 +149,9 @@ class TestGetGroupPermissions:
         rbac_service._row_policy_repo.get_policies_for_subjects = MagicMock(return_value=[])
 
         result = rbac_service.get_group_permissions(gid)
-        assert len(result["direct_roles"]) == 1
-        assert result["direct_roles"][0].name == "editor"
-        assert result["group_roles"] == []
+        assert len(result.roles) == 1
+        assert result.roles[0].role.name == "editor"
+        assert result.roles[0].group.name == "eng"
 
 
 # --------------------------------------------------------------------------------------------------
@@ -313,8 +365,9 @@ class TestResourcePolicyEndpoints:
 
     def test_get_zone_access_profiles(self, rbac_service):
         zid = uuid4()
+        ap = _fake_zone_access_profile(zone_id=zid)
         mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = [MagicMock()]
+        mock_result.scalars.return_value.all.return_value = [ap]
         db = rbac_service._db.get_db.return_value.__enter__.return_value
         db.execute.return_value = mock_result
 
@@ -332,8 +385,10 @@ class TestResourcePolicyEndpoints:
 
     def test_get_channel_access_profiles(self, rbac_service):
         cid = uuid4()
+        ap1 = _fake_channel_access_profile(channel_id=cid)
+        ap2 = _fake_channel_access_profile(channel_id=cid)
         mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = [MagicMock(), MagicMock()]
+        mock_result.scalars.return_value.all.return_value = [ap1, ap2]
         db = rbac_service._db.get_db.return_value.__enter__.return_value
         db.execute.return_value = mock_result
 
@@ -351,10 +406,11 @@ class TestResourcePolicyEndpoints:
 
     def test_get_row_access_profiles(self, rbac_service):
         rid = uuid4()
+        ap = _fake_row_access_profile(row_id=rid)
         mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = []
+        mock_result.scalars.return_value.all.return_value = [ap]
         db = rbac_service._db.get_db.return_value.__enter__.return_value
         db.execute.return_value = mock_result
 
         result = rbac_service.get_row_access_profiles(rid)
-        assert result == []
+        assert len(result) == 1

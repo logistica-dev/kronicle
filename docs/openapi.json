@@ -2846,7 +2846,17 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/OutputUserRole"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Check User Role Rbac V1 Users  User Id  Roles  Role Id  Get"
+                }
               }
             }
           },
@@ -3493,7 +3503,17 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/OutputGroupRole"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Check Group Role Rbac V1 Groups  Group Id  Roles  Role Id  Get"
+                }
               }
             }
           },
@@ -3847,7 +3867,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/OutputRoleSubjects"
+                }
               }
             }
           },
@@ -3916,7 +3938,17 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/OutputUserGroupMembership"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Check User Group Rbac V1 Users  User Id  Groups  Group Id  Get"
+                }
               }
             }
           },
@@ -3945,7 +3977,11 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response List Access Profiles Rbac V1 Access Profiles Get"
+                }
               }
             }
           }
@@ -5518,7 +5554,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/OutputUserPermissions"
+                }
               }
             }
           },
@@ -5577,7 +5615,13 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResourceAccess"
+                  },
+                  "title": "Response Get User Zones Rbac V1 Users  User Id  Zones Get"
+                }
               }
             }
           },
@@ -5636,7 +5680,13 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResourceAccess"
+                  },
+                  "title": "Response Get User Channels Rbac V1 Users  User Id  Channels Get"
+                }
               }
             }
           },
@@ -5695,7 +5745,13 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResourceAccess"
+                  },
+                  "title": "Response Get User Rows Rbac V1 Users  User Id  Rows Get"
+                }
               }
             }
           },
@@ -5754,7 +5810,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceAccessList"
+                }
               }
             }
           },
@@ -5801,7 +5859,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/OutputGroupPermissions"
+                }
               }
             }
           },
@@ -5860,7 +5920,13 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResourceAccess"
+                  },
+                  "title": "Response Get Group Zones Rbac V1 Groups  Group Id  Zones Get"
+                }
               }
             }
           },
@@ -5919,7 +5985,13 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResourceAccess"
+                  },
+                  "title": "Response Get Group Channels Rbac V1 Groups  Group Id  Channels Get"
+                }
               }
             }
           },
@@ -5978,7 +6050,13 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResourceAccess"
+                  },
+                  "title": "Response Get Group Rows Rbac V1 Groups  Group Id  Rows Get"
+                }
               }
             }
           },
@@ -6037,7 +6115,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceAccessList"
+                }
               }
             }
           },
@@ -6084,7 +6164,13 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OutputZonePolicy"
+                  },
+                  "title": "Response List Zone Policies For Zone Rbac V1 Zones  Zone Id  Policies Get"
+                }
               }
             }
           },
@@ -6131,7 +6217,13 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OutputZoneAccessProfile"
+                  },
+                  "title": "Response List Zone Access Profiles For Zone Rbac V1 Zones  Zone Id  Access Profiles Get"
+                }
               }
             }
           },
@@ -6178,7 +6270,13 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OutputChannelPolicy"
+                  },
+                  "title": "Response List Channel Policies For Channel Rbac V1 Channels  Channel Id  Policies Get"
+                }
               }
             }
           },
@@ -6225,7 +6323,13 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OutputChannelAccessProfile"
+                  },
+                  "title": "Response List Channel Access Profiles For Channel Rbac V1 Channels  Channel Id  Access Profiles Get"
+                }
               }
             }
           },
@@ -6272,7 +6376,13 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OutputRowPolicy"
+                  },
+                  "title": "Response List Row Policies For Row Rbac V1 Rows  Row Id  Policies Get"
+                }
               }
             }
           },
@@ -6319,7 +6429,13 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OutputRowAccessProfile"
+                  },
+                  "title": "Response List Row Access Profiles For Row Rbac V1 Rows  Row Id  Access Profiles Get"
+                }
               }
             }
           },
@@ -7005,11 +7121,11 @@
             "temperature": "float",
             "time": "datetime"
           },
-          "id": "7b79206f-0c5e-4b11-ad8a-80bc0e19964a",
+          "id": "39d2198e-f748-4b2d-8e37-71c22e2813d2",
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-d8524",
+          "name": "thermo-d5e02",
           "read_groups": [
             "analysts"
           ],
@@ -8033,6 +8149,75 @@
         ],
         "title": "OutputGroup"
       },
+      "OutputGroupPermissions": {
+        "properties": {
+          "roles": {
+            "items": {
+              "$ref": "#/components/schemas/OutputGroupRole"
+            },
+            "type": "array",
+            "title": "Roles",
+            "default": []
+          },
+          "zone_policies": {
+            "items": {
+              "$ref": "#/components/schemas/OutputZonePolicy"
+            },
+            "type": "array",
+            "title": "Zone Policies",
+            "default": []
+          },
+          "channel_policies": {
+            "items": {
+              "$ref": "#/components/schemas/OutputChannelPolicy"
+            },
+            "type": "array",
+            "title": "Channel Policies",
+            "default": []
+          },
+          "row_policies": {
+            "items": {
+              "$ref": "#/components/schemas/OutputRowPolicy"
+            },
+            "type": "array",
+            "title": "Row Policies",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "OutputGroupPermissions"
+      },
+      "OutputGroupRole": {
+        "properties": {
+          "group": {
+            "$ref": "#/components/schemas/OutputGroup"
+          },
+          "role": {
+            "$ref": "#/components/schemas/OutputRole"
+          },
+          "indirect": {
+            "type": "boolean",
+            "title": "Indirect",
+            "default": false
+          },
+          "parent": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OutputGroup"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "group",
+          "role"
+        ],
+        "title": "OutputGroupRole"
+      },
       "OutputPolicy": {
         "properties": {
           "id": {
@@ -8142,6 +8327,36 @@
           "id"
         ],
         "title": "OutputRole"
+      },
+      "OutputRoleSubjects": {
+        "properties": {
+          "users": {
+            "items": {
+              "$ref": "#/components/schemas/OutputUser"
+            },
+            "type": "array",
+            "title": "Users",
+            "default": []
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/OutputGroup"
+            },
+            "type": "array",
+            "title": "Groups",
+            "default": []
+          },
+          "indirect_users": {
+            "items": {
+              "$ref": "#/components/schemas/OutputUser"
+            },
+            "type": "array",
+            "title": "Indirect Users",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "OutputRoleSubjects"
       },
       "OutputRowAccessProfile": {
         "properties": {
@@ -8389,6 +8604,106 @@
         "title": "OutputUser",
         "description": "Represents validated and processed user data ready for database insertion.\nContains derived fields (e.g., hashed passwords) and metadata."
       },
+      "OutputUserGroupMembership": {
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/OutputUser"
+          },
+          "group": {
+            "$ref": "#/components/schemas/OutputGroup"
+          },
+          "indirect": {
+            "type": "boolean",
+            "title": "Indirect",
+            "default": false
+          },
+          "parent": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OutputGroup"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "user",
+          "group"
+        ],
+        "title": "OutputUserGroupMembership"
+      },
+      "OutputUserPermissions": {
+        "properties": {
+          "roles": {
+            "items": {
+              "$ref": "#/components/schemas/OutputUserRole"
+            },
+            "type": "array",
+            "title": "Roles",
+            "default": []
+          },
+          "zone_policies": {
+            "items": {
+              "$ref": "#/components/schemas/OutputZonePolicy"
+            },
+            "type": "array",
+            "title": "Zone Policies",
+            "default": []
+          },
+          "channel_policies": {
+            "items": {
+              "$ref": "#/components/schemas/OutputChannelPolicy"
+            },
+            "type": "array",
+            "title": "Channel Policies",
+            "default": []
+          },
+          "row_policies": {
+            "items": {
+              "$ref": "#/components/schemas/OutputRowPolicy"
+            },
+            "type": "array",
+            "title": "Row Policies",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "OutputUserPermissions"
+      },
+      "OutputUserRole": {
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/OutputUser"
+          },
+          "role": {
+            "$ref": "#/components/schemas/OutputRole"
+          },
+          "indirect": {
+            "type": "boolean",
+            "title": "Indirect",
+            "default": false
+          },
+          "parent": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OutputGroup"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "user",
+          "role"
+        ],
+        "title": "OutputUserRole"
+      },
       "OutputZone": {
         "properties": {
           "id": {
@@ -8531,6 +8846,55 @@
           "access_profile"
         ],
         "title": "OutputZonePolicy"
+      },
+      "ResourceAccess": {
+        "properties": {
+          "resource": {
+            "title": "Resource"
+          },
+          "parent": {
+            "title": "Parent"
+          },
+          "policy": {
+            "title": "Policy"
+          }
+        },
+        "type": "object",
+        "required": [
+          "resource",
+          "policy"
+        ],
+        "title": "ResourceAccess"
+      },
+      "ResourceAccessList": {
+        "properties": {
+          "zones": {
+            "items": {
+              "$ref": "#/components/schemas/ResourceAccess"
+            },
+            "type": "array",
+            "title": "Zones",
+            "default": []
+          },
+          "channels": {
+            "items": {
+              "$ref": "#/components/schemas/ResourceAccess"
+            },
+            "type": "array",
+            "title": "Channels",
+            "default": []
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ResourceAccess"
+            },
+            "type": "array",
+            "title": "Rows",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "ResourceAccessList"
       },
       "ResponsePayload": {
         "properties": {

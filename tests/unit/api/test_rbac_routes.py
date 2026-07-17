@@ -53,9 +53,6 @@ from kronicle.api.rbac_routes import (
     list_channel_policies_for_channel,
     list_groups,
     list_policies,
-    list_policies_for_channel,
-    list_policies_for_row,
-    list_policies_for_zone,
     list_role_subjects,
     list_roles,
     list_row_access_profiles,
@@ -449,16 +446,17 @@ class TestPolicyRoutes:
 
     def test_list_zone_policies(self, mock_rbac, any_uuid):
         expected = [{"id": uuid4(), "zone_id": any_uuid}]
-        mock_rbac.list_policies_for_zone.return_value = expected
-        result = list_policies_for_zone(zone_id=any_uuid, rbac=mock_rbac)
-        mock_rbac.list_policies_for_zone.assert_called_once_with(any_uuid)
+        mock_rbac.get_zone_policies.return_value = expected
+        result = list_zone_policies_for_zone(zone_id=any_uuid, rbac=mock_rbac)
+        mock_rbac.get_zone_policies.assert_called_once_with(any_uuid)
         assert result == expected
 
     def test_delete_zone_policy(self, mock_rbac, any_uuid):
-        mock_rbac.delete_zone_policy.return_value = None
+        expected = {"id": any_uuid}
+        mock_rbac.delete_zone_policy.return_value = expected
         result = delete_zone_policy(policy_id=any_uuid, rbac=mock_rbac)
         mock_rbac.delete_zone_policy.assert_called_once_with(any_uuid)
-        assert result == {"detail": f"ZonePolicy '{any_uuid}' deleted"}
+        assert result == expected
 
     def test_create_channel_policy(self, mock_rbac):
         policy_in = InputChannelPolicy(
@@ -482,16 +480,17 @@ class TestPolicyRoutes:
 
     def test_list_channel_policies(self, mock_rbac, any_uuid):
         expected = [{"id": uuid4(), "channel_id": any_uuid}]
-        mock_rbac.list_policies_for_channel.return_value = expected
-        result = list_policies_for_channel(channel_id=any_uuid, rbac=mock_rbac)
-        mock_rbac.list_policies_for_channel.assert_called_once_with(any_uuid)
+        mock_rbac.get_channel_policies.return_value = expected
+        result = list_channel_policies_for_channel(channel_id=any_uuid, rbac=mock_rbac)
+        mock_rbac.get_channel_policies.assert_called_once_with(any_uuid)
         assert result == expected
 
     def test_delete_channel_policy(self, mock_rbac, any_uuid):
-        mock_rbac.delete_channel_policy.return_value = None
+        expected = {"id": any_uuid}
+        mock_rbac.delete_channel_policy.return_value = expected
         result = delete_channel_policy(policy_id=any_uuid, rbac=mock_rbac)
         mock_rbac.delete_channel_policy.assert_called_once_with(any_uuid)
-        assert result == {"detail": f"ChannelPolicy '{any_uuid}' deleted"}
+        assert result == expected
 
     def test_patch_zone_policy(self, mock_rbac, any_uuid):
         patch_in = InputPolicyPatch(name="updated", details={"k": "v"})
@@ -544,16 +543,17 @@ class TestPolicyRoutes:
 
     def test_list_policies_for_row(self, mock_rbac, any_uuid):
         expected = [{"id": uuid4(), "row_id": any_uuid}]
-        mock_rbac.list_policies_for_row.return_value = expected
-        result = list_policies_for_row(row_id=any_uuid, rbac=mock_rbac)
-        mock_rbac.list_policies_for_row.assert_called_once_with(any_uuid)
+        mock_rbac.get_row_policies.return_value = expected
+        result = list_row_policies_for_row(row_id=any_uuid, rbac=mock_rbac)
+        mock_rbac.get_row_policies.assert_called_once_with(any_uuid)
         assert result == expected
 
     def test_delete_row_policy(self, mock_rbac, any_uuid):
-        mock_rbac.delete_row_policy.return_value = None
+        expected = {"id": any_uuid}
+        mock_rbac.delete_row_policy.return_value = expected
         result = delete_row_policy(policy_id=any_uuid, rbac=mock_rbac)
         mock_rbac.delete_row_policy.assert_called_once_with(any_uuid)
-        assert result == {"detail": f"RowPolicy '{any_uuid}' deleted"}
+        assert result == expected
 
     def test_patch_row_policy(self, mock_rbac, any_uuid):
         patch_in = InputPolicyPatch(name="row-updated", details={"x": 1})
@@ -707,10 +707,11 @@ class TestAccessProfileRoutes:
         assert result == expected
 
     def test_delete_zone_access_profile(self, mock_rbac, any_uuid):
-        mock_rbac.delete_zone_access_profile.return_value = None
+        expected = {"id": any_uuid}
+        mock_rbac.delete_zone_access_profile.return_value = expected
         result = delete_zone_access_profile(profile_id=any_uuid, rbac=mock_rbac)
         mock_rbac.delete_zone_access_profile.assert_called_once_with(any_uuid)
-        assert result == {"detail": f"ZoneAccessProfile '{any_uuid}' deleted"}
+        assert result == expected
 
     def test_create_channel_access_profile(self, mock_rbac):
         profile_in = InputChannelAccessProfile(
@@ -767,10 +768,11 @@ class TestAccessProfileRoutes:
         assert result == expected
 
     def test_delete_channel_access_profile(self, mock_rbac, any_uuid):
-        mock_rbac.delete_channel_access_profile.return_value = None
+        expected = {"id": any_uuid}
+        mock_rbac.delete_channel_access_profile.return_value = expected
         result = delete_channel_access_profile(profile_id=any_uuid, rbac=mock_rbac)
         mock_rbac.delete_channel_access_profile.assert_called_once_with(any_uuid)
-        assert result == {"detail": f"ChannelAccessProfile '{any_uuid}' deleted"}
+        assert result == expected
 
     def test_create_row_access_profile(self, mock_rbac):
         profile_in = InputRowAccessProfile(
@@ -827,10 +829,11 @@ class TestAccessProfileRoutes:
         assert result == expected
 
     def test_delete_row_access_profile(self, mock_rbac, any_uuid):
-        mock_rbac.delete_row_access_profile.return_value = None
+        expected = {"id": any_uuid}
+        mock_rbac.delete_row_access_profile.return_value = expected
         result = delete_row_access_profile(profile_id=any_uuid, rbac=mock_rbac)
         mock_rbac.delete_row_access_profile.assert_called_once_with(any_uuid)
-        assert result == {"detail": f"RowAccessProfile '{any_uuid}' deleted"}
+        assert result == expected
 
 
 class TestListPoliciesGlobal:
@@ -844,21 +847,21 @@ class TestListPoliciesGlobal:
     def test_list_zone_policies(self, mock_rbac):
         expected = [{"id": uuid4(), "name": "zp1"}]
         mock_rbac.list_zone_policies.return_value = expected
-        result = list_zone_policies(rbac=mock_rbac)
+        result = list_zone_policies(zone_id=None, rbac=mock_rbac)
         mock_rbac.list_zone_policies.assert_called_once()
         assert result == expected
 
     def test_list_channel_policies(self, mock_rbac):
         expected = [{"id": uuid4(), "name": "cp1"}]
         mock_rbac.list_channel_policies.return_value = expected
-        result = list_channel_policies(rbac=mock_rbac)
+        result = list_channel_policies(channel_id=None, rbac=mock_rbac)
         mock_rbac.list_channel_policies.assert_called_once()
         assert result == expected
 
     def test_list_row_policies(self, mock_rbac):
         expected = [{"id": uuid4(), "name": "rp1"}]
         mock_rbac.list_row_policies.return_value = expected
-        result = list_row_policies(rbac=mock_rbac)
+        result = list_row_policies(row_id=None, rbac=mock_rbac)
         mock_rbac.list_row_policies.assert_called_once()
         assert result == expected
 

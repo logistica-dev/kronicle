@@ -81,14 +81,14 @@ def test_channel(kronicle_setup, test_zone) -> Generator[KronicleChannel, None, 
     channel = KronicleChannel(
         name=f"test_channel_{tag}",
         channel_schema={"time": "datetime", "value": "float"},
-        metadata={"source": "integration-test"},
         rows=[
             {"time": "2025-01-10T00:00:00Z", "value": 1.0},
             {"time": "2025-01-11T00:00:00Z", "value": 2.0},
         ],
+        metadata={"source": "integration-test"},
+        tags={"test": True},
     )
-    res = kronicle_setup.create_channel(channel, zone_id=test_zone.id)
-    created = KronicleChannel.from_json(res)
+    created = kronicle_setup.create_channel(channel, zone_id=test_zone.id)
     yield created
     try:
         kronicle_setup.delete_channel(created.id)
