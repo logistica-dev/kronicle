@@ -9,6 +9,7 @@ Requires a running server with valid KRONICLE_SU_NAME / KRONICLE_SU_PASS env var
 """
 
 from collections.abc import Generator
+from uuid import UUID
 
 import pytest
 from kronicle_sdk.models.rbac.kronicle_permissions import KroniclePermissions
@@ -76,7 +77,6 @@ class TestApiUserPermissionsDetail:
 
     def test_api_user_permissions_nonexistent_user(self, kronicle_rbac):
         """Permissions for a nonexistent user should return empty or raise."""
-        from uuid import UUID
 
         fake_id = UUID("00000000-0000-0000-0000-000000000000")
         try:
@@ -114,8 +114,6 @@ class TestApiGroupPermissionsDetail:
 
     def test_api_group_permissions_nonexistent_group(self, kronicle_rbac):
         """Permissions for a nonexistent group should return empty or raise."""
-        from uuid import UUID
-
         fake_id = UUID("00000000-0000-0000-0000-000000000000")
         try:
             perms = kronicle_rbac.get_group_permissions(group_id=fake_id)

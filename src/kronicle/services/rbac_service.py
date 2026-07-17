@@ -495,8 +495,7 @@ class RbacService:
             existing = self._role_repo.get_by_name(db, name=name)
             if existing:
                 raise BadRequestError(f"Role '{name}' already exists")
-            db.add(role)
-            db.flush()
+            self._role_repo.add(db, entity=role)
             return OutputRole.from_db(role)
 
     def get_roles(self) -> list[OutputRole]:
@@ -582,8 +581,7 @@ class RbacService:
             self._user_roles_repo.delete_all_for_role(db, role_id=role_id)
             self._group_roles_repo.delete_all_for_role(db, role_id=role_id)
 
-            db.delete(role)
-            db.flush()
+            role = self._role_repo.delete(db, entity=role)
             return OutputRole.from_db(role)
 
     # ----------------------------------------------------------------------------------------------
@@ -800,8 +798,7 @@ class RbacService:
             profile = self._zone_access_profile_repo.get_by_id(db, id=profile_id)
             if not profile:
                 raise NotFoundError(f"ZoneAccessProfile '{profile_id}' not found")
-            db.delete(profile)
-            db.flush()
+            profile = self._zone_access_profile_repo.delete(db, entity=profile)
             return OutputZoneAccessProfile.from_db(profile)
 
     def create_channel_access_profile(self, *, profile_in: InputChannelAccessProfile) -> OutputChannelAccessProfile:
@@ -848,8 +845,7 @@ class RbacService:
             profile = self._channel_access_profile_repo.get_by_id(db, id=profile_id)
             if not profile:
                 raise NotFoundError(f"ChannelAccessProfile '{profile_id}' not found")
-            db.delete(profile)
-            db.flush()
+            profile = self._channel_access_profile_repo.delete(db, entity=profile)
             return OutputChannelAccessProfile.from_db(profile)
 
     def create_row_access_profile(self, *, profile_in: InputRowAccessProfile) -> OutputRowAccessProfile:
@@ -896,8 +892,7 @@ class RbacService:
             profile = self._row_access_profile_repo.get_by_id(db, id=profile_id)
             if not profile:
                 raise NotFoundError(f"RowAccessProfile '{profile_id}' not found")
-            db.delete(profile)
-            db.flush()
+            profile = self._row_access_profile_repo.delete(db, entity=profile)
             return OutputRowAccessProfile.from_db(profile)
 
     def list_access_profiles(self) -> dict[str, Sequence[OutputAccessProfile]]:
@@ -936,9 +931,7 @@ class RbacService:
             name=name,
             details=details,
         )
-        db.add(policy)
-        db.flush()
-        db.refresh(policy)
+        policy = policy_repo.add(db, entity=policy)
         return output_cls.from_db(policy)
 
     def create_zone_policy(
@@ -969,6 +962,14 @@ class RbacService:
             policies = self._zone_policy_repo.get_policies_for_zone(db, zone_id=zone_id)
             return [OutputZonePolicy.from_db(p) for p in policies]
 
+    def get_zone_policy(self, policy_id: UUID) -> OutputZonePolicy:
+        """Get a zone policy by ID."""
+        with self._db.get_db() as db:
+            policy = self._zone_policy_repo.get_by_id(db, id=policy_id)
+            if not policy:
+                raise NotFoundError(f"ZonePolicy '{policy_id}' not found")
+            return OutputZonePolicy.from_db(policy)
+
     def delete_zone_policy(self, policy_id: UUID) -> OutputZonePolicy:
         """Delete a zone policy by ID."""
 
@@ -976,8 +977,7 @@ class RbacService:
             policy = self._zone_policy_repo.get_by_id(db, id=policy_id)
             if not policy:
                 raise NotFoundError(f"ZonePolicy '{policy_id}' not found")
-            db.delete(policy)
-            db.flush()
+            policy = self._zone_policy_repo.delete(db, entity=policy)
             return OutputZonePolicy.from_db(policy)
 
     def patch_zone_policy(
@@ -1029,6 +1029,14 @@ class RbacService:
             policies = self._channel_policy_repo.get_policies_for_channel(db, channel_id=channel_id)
             return [OutputChannelPolicy.from_db(p) for p in policies]
 
+    def get_channel_policy(self, policy_id: UUID) -> OutputChannelPolicy:
+        """Get a channel policy by ID."""
+        with self._db.get_db() as db:
+            policy = self._channel_policy_repo.get_by_id(db, id=policy_id)
+            if not policy:
+                raise NotFoundError(f"ChannelPolicy '{policy_id}' not found")
+            return OutputChannelPolicy.from_db(policy)
+
     def delete_channel_policy(self, policy_id: UUID) -> OutputChannelPolicy:
         """Delete a channel policy by ID."""
 
@@ -1036,8 +1044,7 @@ class RbacService:
             policy = self._channel_policy_repo.get_by_id(db, id=policy_id)
             if not policy:
                 raise NotFoundError(f"ChannelPolicy '{policy_id}' not found")
-            db.delete(policy)
-            db.flush()
+            policy = self._channel_policy_repo.delete(db, entity=policy)
             return OutputChannelPolicy.from_db(policy)
 
     def patch_channel_policy(
@@ -1157,14 +1164,21 @@ class RbacService:
             policies = self._row_policy_repo.get_policies_for_row(db, row_id=row_id)
             return [OutputRowPolicy.from_db(p) for p in policies]
 
+    def get_row_policy(self, policy_id: UUID) -> OutputRowPolicy:
+        """Get a row policy by ID."""
+        with self._db.get_db() as db:
+            policy = self._row_policy_repo.get_by_id(db, id=policy_id)
+            if not policy:
+                raise NotFoundError(f"RowPolicy '{policy_id}' not found")
+            return OutputRowPolicy.from_db(policy)
+
     def delete_row_policy(self, policy_id: UUID) -> OutputRowPolicy:
         """Delete a row policy by ID."""
         with self._db.transaction() as db:
             policy = self._row_policy_repo.get_by_id(db, id=policy_id)
             if not policy:
                 raise NotFoundError(f"RowPolicy '{policy_id}' not found")
-            db.delete(policy)
-            db.flush()
+            policy = self._row_policy_repo.delete(db, entity=policy)
             return OutputRowPolicy.from_db(policy)
 
     def patch_row_policy(
@@ -1222,8 +1236,7 @@ class RbacService:
             existing = self._group_repo.get_by_name(db, name=name)
             if existing:
                 raise BadRequestError(f"Group '{name}' already exists")
-            db.add(group)
-            db.flush()
+            group = self._group_repo.add(db, entity=group)
             return OutputGroup.from_db(group)
 
     def get_groups(self) -> list[OutputGroup]:
@@ -1296,8 +1309,7 @@ class RbacService:
             # handle PK-as-FK with ondelete=CASCADE (tries to NULL the PK first).
             self._user_groups_repo.delete_all_for_group(db, group_id=group_id)
 
-            db.delete(group)
-            db.flush()
+            group = self._group_repo.delete(db, entity=group)
             return OutputGroup.from_db(group)
 
     def add_user_to_group(self, user_id: UUID, group_id: UUID) -> None:
@@ -1518,8 +1530,6 @@ class RbacService:
 
     def get_user_permissions(self, user_id: UUID) -> dict:
         """Return the full permission landscape for a user."""
-        from kronicle.schemas.rbac.safe_group_schemas import OutputGroup
-        from kronicle.schemas.rbac.safe_role_schemas import OutputRole
 
         with self._db.get_db() as db:
             direct_roles: list[OutputRole] = []

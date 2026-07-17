@@ -5,6 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from kronicle.schemas.output_schema import OutputSchema
 from kronicle.schemas.rbac.safe_group_schemas import OutputGroup
 from kronicle.schemas.rbac.safe_policy_schemas import (
     OutputChannelPolicy,
@@ -12,20 +13,26 @@ from kronicle.schemas.rbac.safe_policy_schemas import (
     OutputZonePolicy,
 )
 from kronicle.schemas.rbac.safe_role_schemas import OutputRole
+from kronicle.schemas.rbac.safe_user_schemas import OutputUser
 
 # --------------------------------------------------------------------------------------------------
 # Permissions introspection
 # --------------------------------------------------------------------------------------------------
 
 
-class GroupRolePair(BaseModel):
+class OutputGroupRole(OutputSchema):
     group: OutputGroup
+    role: OutputRole
+
+
+class OutputUserRole(OutputSchema):
+    user: OutputUser
     role: OutputRole
 
 
 class SubjectPermissions(BaseModel):
     direct_roles: list[OutputRole] = []
-    group_roles: list[GroupRolePair] = []
+    group_roles: list[OutputGroupRole] = []
     zone_policies: list[OutputZonePolicy] = []
     channel_policies: list[OutputChannelPolicy] = []
     row_policies: list[OutputRowPolicy] = []

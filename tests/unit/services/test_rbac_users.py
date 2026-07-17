@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 
 from kronicle.errors.error_types import BadRequestError, NotFoundError, UnauthorizedError
 from kronicle.schemas.rbac.input_user_schemas import InputUserLogin
@@ -153,7 +154,6 @@ class TestUserWrite:
             rbac_service.patch_user(user)
 
     def test_patch_user_integrity_error(self, rbac_service):
-        from sqlalchemy.exc import IntegrityError
 
         db_user = fake_user(email="u@k.app", name="u")
         db_user.full_name = None
@@ -196,7 +196,6 @@ class TestUserWrite:
             rbac_service.patch_user_by_id(uuid4(), name="x")
 
     def test_patch_user_by_id_integrity_error(self, rbac_service):
-        from sqlalchemy.exc import IntegrityError
 
         uid = uuid4()
         db_user = fake_user(id=uid, name="old")

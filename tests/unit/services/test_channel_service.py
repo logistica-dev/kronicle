@@ -6,6 +6,7 @@ import pytest
 
 from kronicle.errors.error_types import BadRequestError, NotFoundError
 from kronicle.repo.data.channel_repository import ChannelRepository
+from kronicle.schemas.filters.row_request_filter import RowRequestFilter
 from kronicle.schemas.payload.input_payload import InputPayload
 from kronicle.schemas.payload.processed_payload import ProcessedPayload
 from kronicle.schemas.payload.response_payload import ResponsePayload
@@ -464,7 +465,6 @@ class TestFetchRows:
             mock_repo.fetch_channel_rows.assert_awaited_once_with(channel_id, filter=None)
 
     async def test_fetch_with_filter(self, service, mock_repo):
-        from kronicle.schemas.filters.row_request_filter import RowRequestFilter
 
         channel_id = uuid4()
         rrf = RowRequestFilter(limit=10, skip_received=False)
@@ -502,7 +502,6 @@ class TestDeleteRowsForChannel:
             mock_repo.delete_rows.assert_awaited_once_with(channel_id, filter=None)
 
     async def test_delete_with_filter(self, service, mock_repo):
-        from kronicle.schemas.filters.row_request_filter import RowRequestFilter
 
         channel_id = uuid4()
         rrf = RowRequestFilter(limit=5)

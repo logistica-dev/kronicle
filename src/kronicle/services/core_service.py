@@ -56,8 +56,7 @@ class CoreService:
             existing = self._zone_repo.get_by_name(db, name=name)
             if existing:
                 raise BadRequestError(f"Zone '{name}' already exists")
-            db.add(zone)
-            db.flush()
+            zone = self._zone_repo.add(db, entity=zone)
             return OutputZone.from_db(zone)
 
     def get_zone(self, zone_id: UUID) -> OutputZone | None:
@@ -77,8 +76,7 @@ class CoreService:
             zone = self._zone_repo.get_by_id(db, id=zone_id)
             if not zone:
                 raise NotFoundError(f"Zone '{zone_id}' not found")
-            db.delete(zone)
-            db.flush()
+            zone = self._zone_repo.delete(db, entity=zone)
             return OutputZone.from_db(zone)
 
     def patch_zone(self, zone_id: UUID, name: str | None = None, details: dict | None = None) -> OutputZone:
@@ -140,9 +138,8 @@ class CoreService:
                 return existing
         zone = CoreZone(name=name)
         with self._db.transaction() as db:
-            db.add(zone)
-            db.flush()
-        log_i(f"{mod}.ensure_default_zone", f"Created default zone '{name}'")
+            zone = self._zone_repo.add(db, entity=zone)
+            log_i(f"{mod}.ensure_default_zone", f"Created default zone '{name}'")
         return zone
 
     def get_core_channels(self, *, zone_id: UUID | None = None) -> list[OutputCoreChannel]:
@@ -177,8 +174,7 @@ class CoreService:
                 zone_id=zone_id,
                 details=channel.details or {},
             )
-            db.add(core_channel)
-            db.flush()
+            core_channel = self._channel_repo.add(db, entity=core_channel)
             return OutputCoreChannel.from_db(core_channel)
 
     def ensure_channel_in_zone(self, channel: InputCoreChannel, zone_id: UUID) -> None:
@@ -197,8 +193,7 @@ class CoreService:
             channel: CoreChannel = self._channel_repo.get_by_id(db, id=channel_id)
             if not channel:
                 return None
-            db.delete(channel)
-            db.flush()
+            channel = self._channel_repo.delete(db, entity=channel)
             return OutputCoreChannel.from_db(channel)
 
     def patch_core_channel(

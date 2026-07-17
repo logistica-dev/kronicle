@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "TestApp",
-    "summary": "desc",
-    "version": "1.0"
+    "title": "KRONICLE",
+    "summary": "FastAPI x TimescaleDB \u00b5service for storing time-series measurements",
+    "version": "0.5.1"
   },
   "paths": {
     "/health/live": {
@@ -2190,7 +2190,9 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/OutputPolicy"
+                  },
                   "type": "object",
                   "title": "Response Sync Core Channels Core V1 Sync Post"
                 }
@@ -4169,7 +4171,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/OutputZoneAccessProfile"
+                }
               }
             }
           },
@@ -4400,7 +4404,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/OutputChannelAccessProfile"
+                }
               }
             }
           },
@@ -4418,35 +4424,6 @@
       }
     },
     "/rbac/v1/policies/zones": {
-      "get": {
-        "tags": [
-          "RBAC"
-        ],
-        "summary": "List all zone policies",
-        "description": "Returns all zone policies regardless of zone.",
-        "operationId": "list_zone_policies_rbac_v1_policies_zones_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/OutputZonePolicy"
-                  },
-                  "type": "array",
-                  "title": "Response List Zone Policies Rbac V1 Policies Zones Get"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      },
       "post": {
         "tags": [
           "RBAC"
@@ -4454,15 +4431,20 @@
         "summary": "Assign a role to a subject for a zone",
         "description": "Creates a policy that grants a role to a user or group for a specific zone.",
         "operationId": "create_zone_policy_rbac_v1_policies_zones_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/InputZonePolicy"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -4485,22 +4467,15 @@
               }
             }
           }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
-    "/rbac/v1/policies/zones/{zone_id}": {
+        }
+      },
       "get": {
         "tags": [
           "RBAC"
         ],
-        "summary": "List policies for a zone",
-        "description": "Returns all policies assigned for a specific zone.",
-        "operationId": "list_policies_for_zone_rbac_v1_policies_zones__zone_id__get",
+        "summary": "List zone policies",
+        "description": "Returns all zone policies. Optionally filter by zone.",
+        "operationId": "list_zone_policies_rbac_v1_policies_zones_get",
         "security": [
           {
             "HTTPBearer": []
@@ -4509,13 +4484,22 @@
         "parameters": [
           {
             "name": "zone_id",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "required": false,
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by zone ID",
               "title": "Zone Id"
-            }
+            },
+            "description": "Filter by zone ID"
           }
         ],
         "responses": {
@@ -4526,10 +4510,9 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "type": "object",
-                    "additionalProperties": true
+                    "$ref": "#/components/schemas/OutputZonePolicy"
                   },
-                  "title": "Response List Policies For Zone Rbac V1 Policies Zones  Zone Id  Get"
+                  "title": "Response List Zone Policies Rbac V1 Policies Zones Get"
                 }
               }
             }
@@ -4548,6 +4531,53 @@
       }
     },
     "/rbac/v1/policies/zones/{policy_id}": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Get a zone policy by ID",
+        "description": "Returns a single zone policy by its ID.",
+        "operationId": "get_zone_policy_rbac_v1_policies_zones__policy_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "policy_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Policy Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutputZonePolicy"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "delete": {
         "tags": [
           "RBAC"
@@ -4577,7 +4607,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/OutputZonePolicy"
+                }
               }
             }
           },
@@ -4659,35 +4691,6 @@
       }
     },
     "/rbac/v1/policies/channels": {
-      "get": {
-        "tags": [
-          "RBAC"
-        ],
-        "summary": "List all channel policies",
-        "description": "Returns all channel policies regardless of channel.",
-        "operationId": "list_channel_policies_rbac_v1_policies_channels_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/OutputChannelPolicy"
-                  },
-                  "type": "array",
-                  "title": "Response List Channel Policies Rbac V1 Policies Channels Get"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      },
       "post": {
         "tags": [
           "RBAC"
@@ -4695,15 +4698,20 @@
         "summary": "Assign a role to a subject for a channel",
         "description": "Creates a policy that grants a role to a user or group for a specific channel.",
         "operationId": "create_channel_policy_rbac_v1_policies_channels_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/InputChannelPolicy"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -4726,22 +4734,15 @@
               }
             }
           }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
-    "/rbac/v1/policies/channels/{channel_id}": {
+        }
+      },
       "get": {
         "tags": [
           "RBAC"
         ],
-        "summary": "List policies for a channel",
-        "description": "Returns all policies assigned for a specific channel.",
-        "operationId": "list_policies_for_channel_rbac_v1_policies_channels__channel_id__get",
+        "summary": "List channel policies",
+        "description": "Returns all channel policies. Optionally filter by channel.",
+        "operationId": "list_channel_policies_rbac_v1_policies_channels_get",
         "security": [
           {
             "HTTPBearer": []
@@ -4750,13 +4751,22 @@
         "parameters": [
           {
             "name": "channel_id",
-            "in": "path",
-            "required": true,
+            "in": "query",
+            "required": false,
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by channel ID",
               "title": "Channel Id"
-            }
+            },
+            "description": "Filter by channel ID"
           }
         ],
         "responses": {
@@ -4767,10 +4777,9 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "type": "object",
-                    "additionalProperties": true
+                    "$ref": "#/components/schemas/OutputChannelPolicy"
                   },
-                  "title": "Response List Policies For Channel Rbac V1 Policies Channels  Channel Id  Get"
+                  "title": "Response List Channel Policies Rbac V1 Policies Channels Get"
                 }
               }
             }
@@ -4789,6 +4798,53 @@
       }
     },
     "/rbac/v1/policies/channels/{policy_id}": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Get a channel policy by ID",
+        "description": "Returns a single channel policy by its ID.",
+        "operationId": "get_channel_policy_rbac_v1_policies_channels__policy_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "policy_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Policy Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutputChannelPolicy"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "delete": {
         "tags": [
           "RBAC"
@@ -4818,7 +4874,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/OutputChannelPolicy"
+                }
               }
             }
           },
@@ -5113,7 +5171,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/OutputRowAccessProfile"
+                }
               }
             }
           },
@@ -5143,7 +5203,13 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/OutputPolicy"
+                  },
+                  "type": "object",
+                  "title": "Response List Policies Rbac V1 Policies Get"
+                }
               }
             }
           }
@@ -5160,30 +5226,61 @@
         "tags": [
           "RBAC"
         ],
-        "summary": "List all row policies",
-        "description": "Returns all row policies regardless of row.",
+        "summary": "List row policies",
+        "description": "Returns all row policies. Optionally filter by row.",
         "operationId": "list_row_policies_rbac_v1_policies_rows_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "row_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by row ID",
+              "title": "Row Id"
+            },
+            "description": "Filter by row ID"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
+                  "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/OutputRowPolicy"
                   },
-                  "type": "array",
                   "title": "Response List Row Policies Rbac V1 Policies Rows Get"
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
           }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
+        }
       },
       "post": {
         "tags": [
@@ -5192,15 +5289,20 @@
         "summary": "Assign a role to a subject for a row",
         "description": "Creates a policy that grants a role to a user or group for a specific row.",
         "operationId": "create_row_policy_rbac_v1_policies_rows_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/InputRowPolicy"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -5223,22 +5325,17 @@
               }
             }
           }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
+        }
       }
     },
-    "/rbac/v1/policies/rows/{row_id}": {
+    "/rbac/v1/policies/rows/{policy_id}": {
       "get": {
         "tags": [
           "RBAC"
         ],
-        "summary": "List policies for a row",
-        "description": "Returns all policies assigned for a specific row.",
-        "operationId": "list_policies_for_row_rbac_v1_policies_rows__row_id__get",
+        "summary": "Get a row policy by ID",
+        "description": "Returns a single row policy by its ID.",
+        "operationId": "get_row_policy_rbac_v1_policies_rows__policy_id__get",
         "security": [
           {
             "HTTPBearer": []
@@ -5246,13 +5343,13 @@
         ],
         "parameters": [
           {
-            "name": "row_id",
+            "name": "policy_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Row Id"
+              "title": "Policy Id"
             }
           }
         ],
@@ -5262,12 +5359,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "additionalProperties": true
-                  },
-                  "title": "Response List Policies For Row Rbac V1 Policies Rows  Row Id  Get"
+                  "$ref": "#/components/schemas/OutputRowPolicy"
                 }
               }
             }
@@ -5283,9 +5375,7 @@
             }
           }
         }
-      }
-    },
-    "/rbac/v1/policies/rows/{policy_id}": {
+      },
       "delete": {
         "tags": [
           "RBAC"
@@ -5315,7 +5405,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/OutputRowPolicy"
+                }
               }
             }
           },
@@ -6913,11 +7005,11 @@
             "temperature": "float",
             "time": "datetime"
           },
-          "id": "ca30848f-860a-422a-8304-1b6ddbf17f3c",
+          "id": "7b79206f-0c5e-4b11-ad8a-80bc0e19964a",
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-a9117",
+          "name": "thermo-d8524",
           "read_groups": [
             "analysts"
           ],
@@ -7940,6 +8032,52 @@
           "id"
         ],
         "title": "OutputGroup"
+      },
+      "OutputPolicy": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
+          },
+          "subject": {
+            "$ref": "#/components/schemas/OutputSubject"
+          },
+          "is_delegation": {
+            "type": "boolean",
+            "title": "Is Delegation",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "subject"
+        ],
+        "title": "OutputPolicy"
       },
       "OutputRole": {
         "properties": {

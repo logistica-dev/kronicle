@@ -5,6 +5,7 @@ from uuid import uuid4
 import pytest
 from fastapi import HTTPException, Request
 from fastapi.exceptions import RequestValidationError
+from pydantic import BaseModel, ValidationError
 
 from kronicle.errors.error_types import BadRequestError
 from kronicle.errors.exception_handlers import (
@@ -84,7 +85,6 @@ class TestPydanticExceptionHandler:
         assert response.status_code == 422
 
     def test_handles_validation_error(self, mock_request):
-        from pydantic import BaseModel, ValidationError
 
         class M(BaseModel):
             x: int
@@ -100,7 +100,6 @@ class TestPydanticExceptionHandler:
 
 class TestPydanticExceptionAdapter:
     def test_routes_validation_error(self, mock_request):
-        from pydantic import BaseModel, ValidationError
 
         class M(BaseModel):
             x: int
