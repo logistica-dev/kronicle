@@ -28,6 +28,16 @@ class RbacGroupRolesRepository(KronicleLinkRepository[RbacGroupRoles]):
         stmt = select(self.model.role_id).where(self.model.group_id == group_id)
         return set(db.execute(stmt).scalars().all())
 
+    def list_roles_for_group(self, db: Session, *, group_id: UUID) -> list[RbacGroupRoles]:
+        stmt = select(self.model).where(self.model.group_id == group_id)
+        return list(db.execute(stmt).scalars().all())
+
+    def list_roles_for_groups(self, db: Session, *, group_ids: set[UUID]) -> list[RbacGroupRoles]:
+        if not group_ids:
+            return []
+        stmt = select(self.model).where(self.model.group_id.in_(group_ids))
+        return list(db.execute(stmt).scalars().all())
+
     # ----------------------------------------------------------------------------------------------
     # Role → Groups
     # ----------------------------------------------------------------------------------------------
@@ -40,6 +50,19 @@ class RbacGroupRolesRepository(KronicleLinkRepository[RbacGroupRoles]):
             return set()
         stmt = select(self.model.group_id).where(self.model.role_id.in_(role_ids))
         return set(db.execute(stmt).scalars().all())
+
+    # ----------------------------------------------------------------------------------------------
+    # Single edge rows
+    # ----------------------------------------------------------------------------------------------
+    def get_role_link(self, db: Session, *, group_id: UUID, role_id: UUID) -> RbacGroupRoles | None:
+        stmt = select(self.model).where(self.model.group_id == group_id, self.model.role_id == role_id)
+        return db.execute(stmt).scalars().first()
+
+    def get_role_link_for_groups(self, db: Session, *, group_ids: set[UUID], role_id: UUID) -> RbacGroupRoles | None:
+        if not group_ids:
+            return None
+        stmt = select(self.model).where(self.model.group_id.in_(group_ids), self.model.role_id == role_id)
+        return db.execute(stmt).scalars().first()
 
     # ----------------------------------------------------------------------------------------------
     # Write methods

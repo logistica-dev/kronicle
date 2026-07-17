@@ -44,13 +44,20 @@ class RbacUserGroupRepository(KronicleLinkRepository[RbacUserGroups]):
         return set(db.execute(stmt).scalars().all())
 
     # ----------------------------------------------------------------------------------------------
+    # Single edge rows
+    # ----------------------------------------------------------------------------------------------
+    def get_membership_link(self, db: Session, *, user_id: UUID, group_id: UUID) -> RbacUserGroups | None:
+        stmt = select(self.model).where(self.model.user_id == user_id, self.model.group_id == group_id)
+        return db.execute(stmt).scalars().first()
+
+    # ----------------------------------------------------------------------------------------------
     # Full edge rows
     # ----------------------------------------------------------------------------------------------
-    def get_groups_for_user(self, db: Session, *, user_id: UUID) -> list[RbacUserGroups]:
+    def list_groups_for_user(self, db: Session, *, user_id: UUID) -> list[RbacUserGroups]:
         stmt = select(self.model).where(self.model.user_id == user_id)
         return list(db.execute(stmt).scalars().all())
 
-    def get_users_for_group(self, db: Session, *, group_id: UUID) -> list[RbacUserGroups]:
+    def list_users_for_group(self, db: Session, *, group_id: UUID) -> list[RbacUserGroups]:
         stmt = select(self.model).where(self.model.group_id == group_id)
         return list(db.execute(stmt).scalars().all())
 

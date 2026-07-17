@@ -30,7 +30,13 @@ class OutputSchema(BaseModel):
 
     @classmethod
     def from_db(cls, db_obj: KronicleBase) -> Self:
-        return cls.model_validate(db_obj, from_attributes=True)
+        data = {}
+        for field_name, field_info in cls.model_fields.items():
+            value = getattr(db_obj, field_name, None)
+            if (field_type := field_info.annotation) and hasattr(field_type, "from_db"):
+                value = field_type.from_db(value)
+            data[field_name] = value
+        return cls(**data)
 
 
 if __name__ == "__main__":  # pragma: no cover

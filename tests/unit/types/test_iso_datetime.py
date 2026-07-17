@@ -1,6 +1,7 @@
 # tests/unit/types/test_iso_datetime.py
 from datetime import datetime, timezone
 
+from pydantic import BaseModel
 from pytest import mark, raises
 
 from kronicle.types.iso_datetime import IsoDateTime
@@ -122,7 +123,6 @@ def test_now_methods():
 # Pydantic v2 integration
 # ------------------------------------------------------------------
 def test_pydantic_parsing():
-    from pydantic import BaseModel
 
     class Event(BaseModel):
         timestamp: IsoDateTime

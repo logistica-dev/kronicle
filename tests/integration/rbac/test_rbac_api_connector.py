@@ -76,7 +76,11 @@ def test_api_get_users_for_role_direct(kronicle_rbac, test_user):
     """get_users_for_role returns users directly assigned to a role."""
     tag = tiny_id()
     role = kronicle_rbac.create_role(
-        KronicleRole(name=f"test_usr_role_{tag}", permissions=["channel:read"], details={"test": True})
+        KronicleRole(
+            name=f"test_usr_role_{tag}",
+            permissions=["channel:read"],
+            details={"test": True},
+        )
     )
     try:
         kronicle_rbac.assign_role_to_user(role_id=role.id, user_id=test_user.id)
@@ -91,7 +95,11 @@ def test_api_get_users_for_role_indirect(kronicle_rbac, test_user, test_group):
     """get_users_for_role with indirect=True includes users via group membership."""
     tag = tiny_id()
     role = kronicle_rbac.create_role(
-        KronicleRole(name=f"test_usr_role_ind_{tag}", permissions=["channel:read"], details={"test": True})
+        KronicleRole(
+            name=f"test_usr_role_ind_{tag}",
+            permissions=["channel:read"],
+            details={"test": True},
+        )
     )
     try:
         kronicle_rbac.add_user_to_group(group_id=test_group.id, user_id=test_user.id)

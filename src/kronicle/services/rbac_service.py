@@ -456,25 +456,29 @@ class RbacService:
     # User ↔ Role assignment
     # ----------------------------------------------------------------------------------------------
 
-    def assign_role_to_user(self, user_id: UUID, role_id: UUID) -> None:
+    def assign_role_to_user(self, user_id: UUID, role_id: UUID) -> OutputUserRole | None:
         with self._db.transaction() as db:
-            self._user_roles_repo.assign_role_to_user(db, user_id=user_id, role_id=role_id)
+            link = self._user_roles_repo.assign_role_to_user(db, user_id=user_id, role_id=role_id)
+            return OutputUserRole.from_db(link) if link else None
 
-    def remove_role_from_user(self, user_id: UUID, role_id: UUID) -> None:
+    def remove_role_from_user(self, user_id: UUID, role_id: UUID) -> OutputUserRole | None:
         with self._db.transaction() as db:
-            self._user_roles_repo.remove_role_from_user(db, user_id=user_id, role_id=role_id)
+            link = self._user_roles_repo.remove_role_from_user(db, user_id=user_id, role_id=role_id)
+            return OutputUserRole.from_db(link) if link else None
 
     # ----------------------------------------------------------------------------------------------
     # Group ↔ Role assignment
     # ----------------------------------------------------------------------------------------------
 
-    def assign_role_to_group(self, group_id: UUID, role_id: UUID) -> None:
+    def assign_role_to_group(self, group_id: UUID, role_id: UUID) -> OutputGroupRole | None:
         with self._db.transaction() as db:
-            self._group_roles_repo.assign_role_to_group(db, group_id=group_id, role_id=role_id)
+            link = self._group_roles_repo.assign_role_to_group(db, group_id=group_id, role_id=role_id)
+            return OutputGroupRole.from_db(link) if link else None
 
-    def remove_role_from_group(self, group_id: UUID, role_id: UUID) -> None:
+    def remove_role_from_group(self, group_id: UUID, role_id: UUID) -> OutputGroupRole | None:
         with self._db.transaction() as db:
-            self._group_roles_repo.remove_role_from_group(db, group_id=group_id, role_id=role_id)
+            link = self._group_roles_repo.remove_role_from_group(db, group_id=group_id, role_id=role_id)
+            return OutputGroupRole.from_db(link) if link else None
 
     # ----------------------------------------------------------------------------------------------
     # Roles
@@ -1376,18 +1380,22 @@ class RbacService:
     # Relationship checks
     # ----------------------------------------------------------------------------------------------
 
-    def check_user_has_role(self, user_id: UUID, role_id: UUID, indirect: bool = False) -> OutputUserRole | None:
+    def check_user_has_role(
+        self, user_id: UUID, role_id: UUID, indirect: bool = False
+    ) -> OutputUserRole | OutputGroupRole | None:
         with self._db.get_db() as db:
             user = self._user_repo.get_by_id(db, id=user_id)
-            if not user:
+            if user is None:
                 return None
             role = self._role_repo.get_by_id(db, id=role_id)
-            if not role:
+            if role is None:
                 return None
-
-            direct = db.query(RbacUserRoles.__table__).filter_by(user_id=user_id, role_id=role_id).first() is not None
-            if direct:
-                return OutputUserRole(user=OutputUser.from_db(user), role=OutputRole.from_db(role))
+            direct_role: RbacUserRoles = self._user_roles_repo.check_link(
+                db, filters={"user_id": user_id, "role_id": role_id}
+            )
+            # direct = db.query(RbacUserRoles.__table__).filter_by(user_id=user_id, role_id=role_id).first()
+            if direct_role is not None:
+                return OutputUserRole.from_db(direct_role)
             if not indirect:
                 return None
 
@@ -1395,18 +1403,11 @@ class RbacService:
             all_group_ids = set(user_group_ids)
             for gid in user_group_ids:
                 all_group_ids.update(self._get_group_ancestor_ids(db, gid))
-            group_role = (
-                db.query(RbacGroupRoles.__table__)
-                .filter(RbacGroupRoles.group_id.in_(all_group_ids), RbacGroupRoles.role_id == role_id)
-                .first()
-            )
+            group_role = self._group_roles_repo.get_role_link_for_groups(db, group_ids=all_group_ids, role_id=role_id)
+
             if not group_role:
                 return None
-            parent_group = self._group_repo.get_by_id(db, id=group_role.group_id)
-            parent = OutputGroup.from_db(parent_group) if parent_group else None
-            return OutputUserRole(
-                user=OutputUser.from_db(user), role=OutputRole.from_db(role), indirect=True, parent=parent
-            )
+            return OutputGroupRole.from_db(group_role)
 
     def check_group_has_role(self, group_id: UUID, role_id: UUID, indirect: bool = False) -> OutputGroupRole | None:
         with self._db.get_db() as db:
@@ -1417,40 +1418,32 @@ class RbacService:
             if not role:
                 return None
 
-            direct = (
-                db.query(RbacGroupRoles.__table__).filter_by(group_id=group_id, role_id=role_id).first() is not None
+            direct_role: RbacGroupRoles = self._group_roles_repo.check_link(
+                db, filters={"group_id": group_id, "role_id": role_id}
             )
-            if direct:
-                return OutputGroupRole(group=OutputGroup.from_db(group), role=OutputRole.from_db(role))
+            if direct_role is not None:
+                return OutputGroupRole.from_db(direct_role)
             if not indirect:
                 return None
 
             ancestor_ids = self._get_group_ancestor_ids(db, group_id)
-            group_role = (
-                db.query(RbacGroupRoles.__table__)
-                .filter(RbacGroupRoles.group_id.in_(ancestor_ids), RbacGroupRoles.role_id == role_id)
-                .first()
-            )
+            group_role = self._group_roles_repo.get_role_link_for_groups(db, group_ids=ancestor_ids, role_id=role_id)
             if not group_role:
                 return None
-            parent_group = self._group_repo.get_by_id(db, id=group_role.group_id)
-            parent = OutputGroup.from_db(parent_group) if parent_group else None
-            return OutputGroupRole(
-                group=OutputGroup.from_db(group), role=OutputRole.from_db(role), indirect=True, parent=parent
-            )
+            return OutputGroupRole.from_db(group_role)
 
     def list_role_subjects(self, role_id: UUID, indirect: bool = False) -> OutputRoleSubjects:
         with self._db.get_db() as db:
-            user_ids = list(db.query(RbacUserRoles.user_id).filter(RbacUserRoles.role_id == role_id).all())
+            user_ids = self._user_roles_repo.get_user_ids_for_role(db, role_id=role_id)
             users: list[OutputUser] = []
-            for (uid,) in user_ids:
+            for uid in user_ids:
                 u = self._user_repo.get_by_id(db, id=uid)
                 if u:
                     users.append(OutputUser.from_db(u))
 
-            group_ids = list(db.query(RbacGroupRoles.group_id).filter(RbacGroupRoles.role_id == role_id).all())
+            group_ids = self._group_roles_repo.get_group_ids_for_role(db, role_id=role_id)
             groups: list[OutputGroup] = []
-            for (gid,) in group_ids:
+            for gid in group_ids:
                 g = self._group_repo.get_by_id(db, id=gid)
                 if g:
                     groups.append(OutputGroup.from_db(g))
@@ -1458,9 +1451,8 @@ class RbacService:
             if not indirect:
                 return OutputRoleSubjects(users=users, groups=groups)
 
-            direct_user_ids = {uid for (uid,) in user_ids}
             indirect_user_ids: set[UUID] = set()
-            for (gid,) in group_ids:
+            for gid in group_ids:
                 members = self._user_groups_repo.get_user_ids_for_group(db, group_id=gid)
                 indirect_user_ids.update(members)
                 descendant_ids = self._get_group_descendant_ids(db, gid)
@@ -1468,7 +1460,7 @@ class RbacService:
                     members = self._user_groups_repo.get_user_ids_for_group(db, group_id=desc_id)
                     indirect_user_ids.update(members)
 
-            indirect_only = sorted(indirect_user_ids - direct_user_ids)
+            indirect_only = sorted(indirect_user_ids - user_ids)
             indirect_users: list[OutputUser] = []
             for uid in indirect_only:
                 u = self._user_repo.get_by_id(db, id=uid)
@@ -1488,25 +1480,29 @@ class RbacService:
             if not group:
                 return None
 
-            direct = (
-                db.query(RbacUserGroups.__table__).filter_by(user_id=user_id, group_id=group_id).first() is not None
-            )
+            direct = self._user_groups_repo.get_membership_link(db, user_id=user_id, group_id=group_id)
             if direct:
-                return OutputUserGroupMembership(user=OutputUser.from_db(user), group=OutputGroup.from_db(group))
+                return OutputUserGroupMembership.from_db(direct)
             if not indirect:
                 return None
 
             descendant_ids = self._get_group_descendant_ids(db, group_id)
             for desc_id in descendant_ids:
-                members = self._user_groups_repo.get_user_ids_for_group(db, group_id=desc_id)
-                if user_id in members:
-                    parent_group = self._group_repo.get_by_id(db, id=desc_id)
-                    parent = OutputGroup.from_db(parent_group) if parent_group else None
+                link = self._user_groups_repo.get_membership_link(db, user_id=user_id, group_id=desc_id)
+                if link:
+                    desc_ancestors = self._get_group_ancestor_ids(db, desc_id)
+                    target_ancestors = self._get_group_ancestor_ids(db, group_id)
+                    chain_ids = (desc_ancestors - target_ancestors) | {group_id}
+                    ancestors = []
+                    for aid in chain_ids:
+                        ag = self._group_repo.get_by_id(db, id=aid)
+                        if ag:
+                            ancestors.append(OutputGroup.from_db(ag))
                     return OutputUserGroupMembership(
                         user=OutputUser.from_db(user),
-                        group=OutputGroup.from_db(group),
+                        group=OutputGroup.from_db(self._group_repo.get_by_id(db, id=desc_id)),
                         indirect=True,
-                        parent=parent,
+                        ancestors=ancestors,
                     )
             return None
 
@@ -1594,35 +1590,23 @@ class RbacService:
             user = self._user_repo.get_by_id(db, id=user_id)
             if not user:
                 return OutputUserPermissions()
-            out_user = OutputUser.from_db(user)
 
             roles: list[OutputUserRole] = []
 
             # Direct user roles
-            role_ids = self._user_roles_repo.get_role_ids_for_user(db, user_id=user_id)
-            for rid in role_ids:
-                role = self._role_repo.get_by_id(db, id=rid)
-                if role:
-                    roles.append(OutputUserRole(user=out_user, role=OutputRole.from_db(role)))
+            user_roles = self._user_roles_repo.list_roles_for_user(db, user_id=user_id)
+            roles.extend([OutputUserRole.from_db(u) for u in user_roles])
 
-            # Group roles (indirect via group membership)
-            group_ids = self._user_groups_repo.get_group_ids_for_user(db, user_id=user_id)
-            for gid in group_ids:
-                group = self._group_repo.get_by_id(db, id=gid)
-                if not group:
-                    continue
-                g_role_ids = self._group_roles_repo.get_role_ids_for_group(db, group_id=gid)
-                for rid in g_role_ids:
-                    role = self._role_repo.get_by_id(db, id=rid)
-                    if role:
-                        roles.append(
-                            OutputUserRole(
-                                user=out_user,
-                                role=OutputRole.from_db(role),
-                                indirect=True,
-                                parent=OutputGroup.from_db(group),
-                            )
-                        )
+            # Group roles (indirect via group membership + hierarchy)
+            indirect_roles: list[OutputGroupRole] = []
+            user_groups: list[RbacUserGroups] = self._user_groups_repo.list_groups_for_user(db, user_id=user_id)
+            ancestor_ids: set[UUID] = set()
+            for ug in user_groups:
+                ancestor_ids.update(self.group_hierarchy_service.engine.ancestors_ids(ug))
+            all_group_ids = {g.id for g in user_groups} | ancestor_ids
+            if all_group_ids:
+                group_roles = self._group_roles_repo.list_roles_for_groups(db, group_ids=all_group_ids)
+                indirect_roles.extend([OutputGroupRole.from_db(gr) for gr in group_roles])
 
             # Policies via subject resolution
             subject_ids = self._resolve_user_subject_ids(db, user_id, indirect=False)
@@ -1644,7 +1628,9 @@ class RbacService:
                 ]
 
             return OutputUserPermissions(
+                user=OutputUser.from_db(user),
                 roles=roles,
+                indirect_roles=indirect_roles,
                 zone_policies=zone_policies,
                 channel_policies=channel_policies,
                 row_policies=row_policies,
@@ -1657,16 +1643,21 @@ class RbacService:
             group = self._group_repo.get_by_id(db, id=group_id)
             if not group:
                 return OutputGroupPermissions()
-            out_group = OutputGroup.from_db(group)
 
             roles: list[OutputGroupRole] = []
 
             # Direct group roles
-            role_ids = self._group_roles_repo.get_role_ids_for_group(db, group_id=group_id)
-            for rid in role_ids:
-                role = self._role_repo.get_by_id(db, id=rid)
-                if role:
-                    roles.append(OutputGroupRole(group=out_group, role=OutputRole.from_db(role)))
+            direct_roles = self._group_roles_repo.list_roles_for_group(db, group_id=group_id)
+            roles.extend([OutputGroupRole.from_db(gr) for gr in direct_roles])
+
+            # Indirect group roles (indirect via group hierarchy)
+            indirect_roles: list[OutputGroupRole] = []
+            ancestor_ids = self.group_hierarchy_service.engine.ancestors_ids(group)
+            if ancestor_ids:
+                indirect_roles = [
+                    OutputGroupRole.from_db(gr)
+                    for gr in self._group_roles_repo.list_roles_for_groups(db, group_ids=ancestor_ids)
+                ]
 
             # Policies via subject resolution
             subject_ids = self._resolve_group_subject_ids(db, group_id, indirect=False)
@@ -1688,7 +1679,9 @@ class RbacService:
                 ]
 
             return OutputGroupPermissions(
+                group=OutputGroup.from_db(group),
                 roles=roles,
+                indirect_roles=indirect_roles,
                 zone_policies=zone_policies,
                 channel_policies=channel_policies,
                 row_policies=row_policies,

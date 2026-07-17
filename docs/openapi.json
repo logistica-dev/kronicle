@@ -7121,11 +7121,11 @@
             "temperature": "float",
             "time": "datetime"
           },
-          "id": "39d2198e-f748-4b2d-8e37-71c22e2813d2",
+          "id": "3c04a804-7b79-49b9-86e0-46a482582fd4",
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-d5e02",
+          "name": "thermo-83b9e",
           "read_groups": [
             "analysts"
           ],
@@ -8151,12 +8151,30 @@
       },
       "OutputGroupPermissions": {
         "properties": {
+          "group": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OutputGroup"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "roles": {
             "items": {
               "$ref": "#/components/schemas/OutputGroupRole"
             },
             "type": "array",
             "title": "Roles",
+            "default": []
+          },
+          "indirect_roles": {
+            "items": {
+              "$ref": "#/components/schemas/OutputGroupRole"
+            },
+            "type": "array",
+            "title": "Indirect Roles",
             "default": []
           },
           "zone_policies": {
@@ -8189,30 +8207,44 @@
       },
       "OutputGroupRole": {
         "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
+          },
           "group": {
             "$ref": "#/components/schemas/OutputGroup"
           },
           "role": {
             "$ref": "#/components/schemas/OutputRole"
-          },
-          "indirect": {
-            "type": "boolean",
-            "title": "Indirect",
-            "default": false
-          },
-          "parent": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/OutputGroup"
-              },
-              {
-                "type": "null"
-              }
-            ]
           }
         },
         "type": "object",
         "required": [
+          "id",
           "group",
           "role"
         ],
@@ -8617,15 +8649,13 @@
             "title": "Indirect",
             "default": false
           },
-          "parent": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/OutputGroup"
-              },
-              {
-                "type": "null"
-              }
-            ]
+          "ancestors": {
+            "items": {
+              "$ref": "#/components/schemas/OutputGroup"
+            },
+            "type": "array",
+            "title": "Ancestors",
+            "default": []
           }
         },
         "type": "object",
@@ -8637,12 +8667,30 @@
       },
       "OutputUserPermissions": {
         "properties": {
+          "user": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OutputUser"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "roles": {
             "items": {
               "$ref": "#/components/schemas/OutputUserRole"
             },
             "type": "array",
             "title": "Roles",
+            "default": []
+          },
+          "indirect_roles": {
+            "items": {
+              "$ref": "#/components/schemas/OutputGroupRole"
+            },
+            "type": "array",
+            "title": "Indirect Roles",
             "default": []
           },
           "zone_policies": {
@@ -8675,30 +8723,44 @@
       },
       "OutputUserRole": {
         "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
+          },
           "user": {
             "$ref": "#/components/schemas/OutputUser"
           },
           "role": {
             "$ref": "#/components/schemas/OutputRole"
-          },
-          "indirect": {
-            "type": "boolean",
-            "title": "Indirect",
-            "default": false
-          },
-          "parent": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/OutputGroup"
-              },
-              {
-                "type": "null"
-              }
-            ]
           }
         },
         "type": "object",
         "required": [
+          "id",
           "user",
           "role"
         ],

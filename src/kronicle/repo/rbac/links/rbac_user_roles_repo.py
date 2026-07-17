@@ -28,6 +28,14 @@ class RbacUserRolesRepository(KronicleLinkRepository[RbacUserRoles]):
         stmt = select(self.model.role_id).where(self.model.user_id == user_id)
         return set(db.execute(stmt).scalars().all())
 
+    def list_roles_for_user(self, db: Session, *, user_id: UUID) -> list[RbacUserRoles]:
+        stmt = select(self.model).where(self.model.user_id == user_id)
+        return list(db.execute(stmt).scalars().all())
+
+    def list_user_for_role(self, db: Session, *, role_id: UUID) -> list[RbacUserRoles]:
+        stmt = select(self.model).where(self.model.role_id == role_id)
+        return list(db.execute(stmt).scalars().all())
+
     # ----------------------------------------------------------------------------------------------
     # Role → Users
     # ----------------------------------------------------------------------------------------------
@@ -42,9 +50,16 @@ class RbacUserRolesRepository(KronicleLinkRepository[RbacUserRoles]):
         return set(db.execute(stmt).scalars().all())
 
     # ----------------------------------------------------------------------------------------------
+    # Single edge rows
+    # ----------------------------------------------------------------------------------------------
+    def get_role_link(self, db: Session, *, user_id: UUID, role_id: UUID) -> RbacUserRoles | None:
+        stmt = select(self.model).where(self.model.user_id == user_id, self.model.role_id == role_id)
+        return db.execute(stmt).scalars().first()
+
+    # ----------------------------------------------------------------------------------------------
     # Write methods
     # ----------------------------------------------------------------------------------------------
-    def assign_role_to_user(self, db: Session, *, user_id: UUID, role_id: UUID) -> RbacUserRoles | None:
+    def assign_role_to_user(self, db: Session, *, user_id: UUID, role_id: UUID) -> RbacUserRoles:
         return self.ensure_link_returning(db, {self.model.USER_ID: user_id, self.model.ROLE_ID: role_id})
 
     def remove_role_from_user(self, db: Session, *, user_id: UUID, role_id: UUID) -> RbacUserRoles | None:

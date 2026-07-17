@@ -1,7 +1,6 @@
 # tests/unit/utils/test_str_utils.py
-
 import re
-from uuid import UUID, uuid4
+from uuid import UUID, uuid1, uuid4
 
 from pytest import mark, raises
 
@@ -32,8 +31,8 @@ from kronicle.utils.str_utils import (
     split_strip_norm_one,
     strip_quotes,
     tiny_id,
-    uuid_to_str,
     uuid4_str,
+    uuid_to_str,
     validate_name_syntax,
 )
 
@@ -151,7 +150,6 @@ def test_ensure_uuid4_raises_on_invalid_or_wrong_version():
     with raises(ValueError):
         ensure_uuid4("not-a-uuid")
     # UUID v1
-    from uuid import uuid1
 
     with raises(ValueError):
         ensure_uuid4(uuid1())
