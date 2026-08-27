@@ -133,21 +133,21 @@ def test_parse_bracketed_filters_basic():
 # from_query_params
 # ------------------------------------------------------
 def test_from_query_params_creates_instance():
-    query_items = [
-        ("limit", "10"),
-        ("offset", "5"),
-        ("sort", "a,-b"),
-        ("columns", "x,y"),
-        ("skip_received", "true"),
-        ("strict", "true"),
+    mock_request = MagicMock(spec=Request)
+    mock_request.query_params.multi_items.return_value = [
         ("min[time]", "2026-03-20"),
         ("col[name]", "Alice"),
     ]
-    mock_request = MagicMock(spec=Request)
-    mock_request.query_params.get.side_effect = lambda k: dict(query_items).get(k)
-    mock_request.query_params.multi_items.return_value = query_items
 
-    f = RowQueryFilter.from_query_params(mock_request)
+    f = RowQueryFilter.from_query_params(
+        request=mock_request,
+        limit=10,
+        offset=5,
+        sort="a,-b",
+        columns="x,y",
+        skip_received=True,
+        strict=True,
+    )
     assert f.limit == 10
     assert f.offset == 5
     assert f.col == {"name": "Alice"}

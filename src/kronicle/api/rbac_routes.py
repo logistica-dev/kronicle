@@ -963,7 +963,7 @@ def delete_row_access_profile(
     "/policies",
     summary="List all policies across all resource types",
     description="Returns a dict with 'zone', 'channel', and 'row' keys containing all policies.",
-    response_model=dict[str, OutputPolicy],
+    response_model=dict[str, list[OutputPolicy]],
     dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
 )
 def list_policies(

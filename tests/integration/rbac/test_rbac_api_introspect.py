@@ -107,13 +107,13 @@ class TestApiUserPermissions:
         resp = _get(base_url, su_jwt, f"rbac/v1/users/{sample_user_id}/permissions")
         assert resp.status_code == 200
         body = resp.json()
-        assert "direct_roles" in body
-        assert "group_roles" in body
+        assert "roles" in body
+        assert "indirect_roles" in body
         assert "zone_policies" in body
         assert "channel_policies" in body
         assert "row_policies" in body
-        assert isinstance(body["direct_roles"], list)
-        assert isinstance(body["group_roles"], list)
+        assert isinstance(body["roles"], list)
+        assert isinstance(body["indirect_roles"], list)
 
 
 class TestApiUserZones:
@@ -175,8 +175,8 @@ class TestApiGroupPermissions:
         resp = _get(base_url, su_jwt, f"rbac/v1/groups/{sample_group_id}/permissions")
         assert resp.status_code == 200
         body = resp.json()
-        assert "direct_roles" in body
-        assert "group_roles" in body
+        assert "roles" in body
+        assert "indirect_roles" in body
         assert "zone_policies" in body
 
 

@@ -2881,7 +2881,14 @@
               "application/json": {
                 "schema": {
                   "additionalProperties": {
-                    "$ref": "#/components/schemas/OutputPolicy"
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "integer"
+                      }
+                    ]
                   },
                   "type": "object",
                   "title": "Response Sync Core Channels Core V1 Sync Post"
@@ -5931,7 +5938,10 @@
               "application/json": {
                 "schema": {
                   "additionalProperties": {
-                    "$ref": "#/components/schemas/OutputPolicy"
+                    "items": {
+                      "$ref": "#/components/schemas/OutputPolicy"
+                    },
+                    "type": "array"
                   },
                   "type": "object",
                   "title": "Response List Policies Rbac V1 Policies Get"
@@ -7811,11 +7821,11 @@
             "temperature": "float",
             "time": "datetime"
           },
-          "id": "e734201f-db48-47c5-b5cc-fb0dff6452b3",
+          "id": "3ce8840b-db68-40be-959a-ca8026990cdd",
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-3d52b",
+          "name": "thermo-6ab1a",
           "read_groups": [
             "analysts"
           ],

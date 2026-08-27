@@ -17,7 +17,6 @@ from kronicle.schemas.core.input_ressource_schema import (
 )
 from kronicle.schemas.core.safe_ressource_schema import OutputCoreChannel, OutputZone
 from kronicle.schemas.permissions.permission import PermStr
-from kronicle.schemas.rbac.safe_policy_schemas import OutputPolicy
 from kronicle.services.channel_service import ChannelService
 from kronicle.services.core_service import CoreService
 from kronicle.utils.str_utils import uuid_to_str
@@ -209,7 +208,7 @@ def delete_core_channel(
         "Scans all ChannelResources in the data DB and creates missing CoreChannel records "
         "in the core RBAC schema. Also ensures a default zone exists."
     ),
-    response_model=dict[str, OutputPolicy],
+    response_model=dict[str, str | int],
     dependencies=[Depends(require_permission(PermStr.CHANNEL_SYNC))],
 )
 async def sync_core_channels(

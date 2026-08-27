@@ -110,8 +110,10 @@ class TestCreateZone:
 
         assert result is not None
         mock_zone_repo.get_by_name.assert_called_once_with(mock_db_session, name="new-zone")
-        mock_db_session.add.assert_called_once()
-        mock_db_session.flush.assert_called_once()
+        mock_zone_repo.add.assert_called_once()
+        added = mock_zone_repo.add.call_args[1]["entity"]
+        assert added.name == "new-zone"
+        assert added.details == {"key": "val"}
 
     def test_raises_if_zone_exists(self, service, mock_db, mock_db_session, mock_zone_repo):
         mock_zone_repo.get_by_name.return_value = make_zone()
@@ -148,8 +150,9 @@ class TestDeleteZone:
             result = service.delete_zone(zone.id)
 
         assert result is not None
-        mock_db_session.delete.assert_called_once_with(zone)
-        mock_db_session.flush.assert_called_once()
+        mock_zone_repo.delete.assert_called_once()
+        deleted = mock_zone_repo.delete.call_args[1]["entity"]
+        assert deleted is zone
 
     def test_raises_if_not_found(self, service, mock_db, mock_db_session, mock_zone_repo):
         mock_zone_repo.get_by_id.return_value = None
@@ -251,12 +254,13 @@ class TestEnsureDefaultZone:
 
     def test_creates_new_default_zone(self, service, mock_db, mock_db_session, mock_zone_repo):
         mock_zone_repo.get_by_name.return_value = None
+        mock_zone_repo.add.side_effect = lambda db, entity: entity
 
         result = service.ensure_default_zone()
 
         assert result is not None
         assert result.name == "default"
-        mock_db_session.add.assert_called_once()
+        mock_zone_repo.add.assert_called_once()
 
 
 class TestGetCoreChannels:
@@ -308,7 +312,7 @@ class TestGetCoreChannel:
 
 
 class TestCreateCoreChannel:
-    def test_creates_channel(self, service, mock_db, mock_db_session):
+    def test_creates_channel(self, service, mock_db, mock_db_session, mock_channel_repo):
         channel_id = uuid4()
         zone_id = uuid4()
         channel = InputCoreChannel(
@@ -320,8 +324,8 @@ class TestCreateCoreChannel:
             result = service.create_core_channel(channel, zone_id=zone_id)
 
         assert result is not None
-        mock_db_session.add.assert_called_once()
-        added = mock_db_session.add.call_args[0][0]
+        mock_channel_repo.add.assert_called_once()
+        added = mock_channel_repo.add.call_args[1]["entity"]
         assert added.id == channel_id
         assert added.zone_id == zone_id
         assert added.name == "custom-name"

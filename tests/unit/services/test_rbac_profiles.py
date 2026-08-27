@@ -271,6 +271,7 @@ class TestEnsureChannelAccessProfile:
         rid, cid = uuid4(), uuid4()
         rbac_service._channel_access_profile_repo.get_by_id = MagicMock(return_value=None)
         rbac_service._channel_access_profile_repo.get_by_name = MagicMock(return_value=None)
+        rbac_service._channel_access_profile_repo.get_by_role_and_channel = MagicMock(return_value=None)
         role = fake_role(id=rid, name="reader")
         channel = _fake_core_channel(id=cid, name="channel_my_data")
         rbac_service._role_repo.get_by_id = MagicMock(return_value=role)
@@ -291,6 +292,7 @@ class TestEnsureChannelAccessProfile:
         rid, cid = uuid4(), uuid4()
         rbac_service._channel_access_profile_repo.get_by_id = MagicMock(return_value=None)
         rbac_service._channel_access_profile_repo.get_by_name = MagicMock(return_value=None)
+        rbac_service._channel_access_profile_repo.get_by_role_and_channel = MagicMock(return_value=None)
         role = fake_role(id=rid, name="r")
         channel = _fake_core_channel(id=cid, name="chan")
         rbac_service._role_repo.get_by_id = MagicMock(return_value=role)
@@ -311,6 +313,23 @@ class TestEnsureChannelAccessProfile:
         )
         assert result.description == "desc"
         assert result.details == {"k": "v"}
+
+    def test_existing_by_role_and_channel(self, rbac_service):
+        db = rbac_service._db.transaction.return_value.__enter__.return_value
+        rid, cid = uuid4(), uuid4()
+        rbac_service._channel_access_profile_repo.get_by_id = MagicMock(return_value=None)
+        rbac_service._channel_access_profile_repo.get_by_name = MagicMock(return_value=None)
+        role = fake_role(id=rid, name="r")
+        channel = _fake_core_channel(id=cid, name="c")
+        rbac_service._role_repo.get_by_id = MagicMock(return_value=role)
+        rbac_service._channel_repo.get_by_id = MagicMock(return_value=channel)
+        existing = MagicMock()
+        rbac_service._channel_access_profile_repo.get_by_role_and_channel = MagicMock(return_value=existing)
+
+        result = rbac_service._ensure_channel_access_profile(
+            db, InputChannelAccessProfile(role=InputRole(id=rid), channel=InputPayload(id=cid))
+        )
+        assert result is existing
 
 
 # ==================================================================================================

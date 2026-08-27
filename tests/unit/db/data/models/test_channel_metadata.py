@@ -122,7 +122,7 @@ def test_table_schema_is_copy():
 
 def test_create_table_sql_contains_expected_parts():
     sql = ChannelMetadata.create_table_sql()
-    assert "CREATE TABLE data.channel_metadata" in sql
+    assert "CREATE TABLE IF NOT EXISTS data.channel_metadata" in sql
     assert "channel_id UUID PRIMARY KEY" in sql
 
 

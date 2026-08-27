@@ -29,8 +29,8 @@ class CoreService:
         self._zone_hierarchy_repo = ZoneHierarchyRepository()
 
         zone_engine = HierarchyEngine(
-            parents_of=lambda g: g.parent,
-            children_of=lambda g: g.children,
+            parents_of=lambda z: z.parent,
+            children_of=lambda z: z.children,
         )
 
         self.zone_hierarchy_service = HierarchyService(

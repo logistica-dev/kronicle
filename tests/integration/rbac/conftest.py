@@ -97,8 +97,9 @@ def test_channel(kronicle_setup, test_zone) -> Generator[KronicleChannel, None, 
 
 
 @pytest.fixture(scope="module")
-def test_row_id(test_channel):
+def test_row_id(test_channel, kronicle_setup):
     """Return the ID of the first row in the test channel."""
-    rows = test_channel.rows or []
+    rows = kronicle_setup.get_rows_for_channel(test_channel.id, "dict")
     assert rows, "Test channel has no rows"
+    assert "id" in rows[0], f"Rows have no id: {rows[0]}"
     return rows[0]["id"]

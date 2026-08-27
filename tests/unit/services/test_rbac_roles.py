@@ -6,7 +6,7 @@ import pytest
 
 from kronicle.errors.error_types import BadRequestError, ConflictError, NotFoundError
 from kronicle.schemas.rbac.safe_role_schemas import OutputRole
-from tests.unit.services.conftest import fake_group, fake_role, fake_user
+from tests.unit.services.conftest import fake_group, fake_group_role_link, fake_role, fake_user, fake_user_role_link
 
 
 class TestRoles:
@@ -134,9 +134,7 @@ class TestRoles:
 class TestAssignments:
     def test_assign_role_to_user(self, rbac_service):
         uid, rid = uuid4(), uuid4()
-        link = MagicMock()
-        link.user = fake_user(id=uid)
-        link.role = fake_role(id=rid)
+        link = fake_user_role_link(user=fake_user(id=uid), role=fake_role(id=rid))
         rbac_service._user_roles_repo.assign_role_to_user = MagicMock(return_value=link)
         result = rbac_service.assign_role_to_user(uid, rid)
         assert result is not None
@@ -145,9 +143,7 @@ class TestAssignments:
 
     def test_remove_role_from_user(self, rbac_service):
         uid, rid = uuid4(), uuid4()
-        link = MagicMock()
-        link.user = fake_user(id=uid)
-        link.role = fake_role(id=rid)
+        link = fake_user_role_link(user=fake_user(id=uid), role=fake_role(id=rid))
         rbac_service._user_roles_repo.remove_role_from_user = MagicMock(return_value=link)
         result = rbac_service.remove_role_from_user(uid, rid)
         assert result is not None
@@ -156,9 +152,7 @@ class TestAssignments:
 
     def test_assign_role_to_group(self, rbac_service):
         gid, rid = uuid4(), uuid4()
-        link = MagicMock()
-        link.group = fake_group(id=gid)
-        link.role = fake_role(id=rid)
+        link = fake_group_role_link(group=fake_group(id=gid), role=fake_role(id=rid))
         rbac_service._group_roles_repo.assign_role_to_group = MagicMock(return_value=link)
         result = rbac_service.assign_role_to_group(gid, rid)
         assert result is not None
@@ -167,9 +161,7 @@ class TestAssignments:
 
     def test_remove_role_from_group(self, rbac_service):
         gid, rid = uuid4(), uuid4()
-        link = MagicMock()
-        link.group = fake_group(id=gid)
-        link.role = fake_role(id=rid)
+        link = fake_group_role_link(group=fake_group(id=gid), role=fake_role(id=rid))
         rbac_service._group_roles_repo.remove_role_from_group = MagicMock(return_value=link)
         result = rbac_service.remove_role_from_group(gid, rid)
         assert result is not None
@@ -187,9 +179,7 @@ class TestUserHasRole:
         uid, rid = uuid4(), uuid4()
         rbac_service._user_repo.get_by_id = MagicMock(return_value=fake_user(id=uid))
         rbac_service._role_repo.get_by_id = MagicMock(return_value=fake_role(id=rid))
-        link = MagicMock()
-        link.user = fake_user(id=uid)
-        link.role = fake_role(id=rid)
+        link = fake_user_role_link(user=fake_user(id=uid), role=fake_role(id=rid))
         rbac_service._user_roles_repo.check_link = MagicMock(return_value=link)
 
         result = rbac_service.check_user_has_role(uid, rid)
@@ -213,9 +203,7 @@ class TestUserHasRole:
         rbac_service._user_roles_repo.check_link = MagicMock(return_value=None)
         rbac_service._user_groups_repo.get_group_ids_for_user = MagicMock(return_value={gid})
         rbac_service._get_group_ancestor_ids = MagicMock(return_value={gid})
-        group_role = MagicMock()
-        group_role.group = fake_group(id=gid)
-        group_role.role = fake_role(id=rid)
+        group_role = fake_group_role_link(group=fake_group(id=gid), role=fake_role(id=rid))
         rbac_service._group_roles_repo.get_role_link_for_groups = MagicMock(return_value=group_role)
 
         result = rbac_service.check_user_has_role(uid, rid, indirect=True)
@@ -241,9 +229,7 @@ class TestUserHasRole:
         rbac_service._user_roles_repo.check_link = MagicMock(return_value=None)
         rbac_service._user_groups_repo.get_group_ids_for_user = MagicMock(return_value={gid})
         rbac_service._get_group_ancestor_ids = MagicMock(return_value={aid})
-        group_role = MagicMock()
-        group_role.group = fake_group(id=aid)
-        group_role.role = fake_role(id=rid)
+        group_role = fake_group_role_link(group=fake_group(id=aid), role=fake_role(id=rid))
         rbac_service._group_roles_repo.get_role_link_for_groups = MagicMock(return_value=group_role)
 
         result = rbac_service.check_user_has_role(uid, rid, indirect=True)
@@ -256,9 +242,7 @@ class TestGroupHasRole:
         gid, rid = uuid4(), uuid4()
         rbac_service._group_repo.get_by_id = MagicMock(return_value=fake_group(id=gid))
         rbac_service._role_repo.get_by_id = MagicMock(return_value=fake_role(id=rid))
-        link = MagicMock()
-        link.group = fake_group(id=gid)
-        link.role = fake_role(id=rid)
+        link = fake_group_role_link(group=fake_group(id=gid), role=fake_role(id=rid))
         rbac_service._group_roles_repo.check_link = MagicMock(return_value=link)
 
         result = rbac_service.check_group_has_role(gid, rid)
@@ -281,9 +265,7 @@ class TestGroupHasRole:
         rbac_service._role_repo.get_by_id = MagicMock(return_value=fake_role(id=rid))
         rbac_service._group_roles_repo.check_link = MagicMock(return_value=None)
         rbac_service._get_group_ancestor_ids = MagicMock(return_value={aid})
-        group_role = MagicMock()
-        group_role.group = fake_group(id=aid)
-        group_role.role = fake_role(id=rid)
+        group_role = fake_group_role_link(group=fake_group(id=aid), role=fake_role(id=rid))
         rbac_service._group_roles_repo.get_role_link_for_groups = MagicMock(return_value=group_role)
 
         result = rbac_service.check_group_has_role(gid, rid, indirect=True)

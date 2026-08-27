@@ -22,7 +22,7 @@ class KronicleLink(KronicleBase):
     PARENT_ID = "parent_id"
     CHILD_ID = "child_id"
 
-    PARENT_LINKS = "parent_links"
+    PARENTS = "parents"
     CHILDREN = "children"
 
     UQ_CONSTRAINT: str

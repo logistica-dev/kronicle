@@ -6,6 +6,7 @@ from uuid import uuid4
 
 import pytest
 
+from kronicle.schemas.core.safe_ressource_schema import OutputCoreChannel
 from kronicle.services.rbac_service import RbacService
 
 
@@ -56,6 +57,28 @@ def fake_group(id=None, name="grp"):
     g.details = {}
     g.snapshot = {"id": str(g.id), "name": name}
     return g
+
+
+def fake_user_role_link(user=None, role=None):
+    """Build a MagicMock that mimics an RbacUserRoles link for OutputUserRole.from_db."""
+    link = MagicMock()
+    link.id = uuid4()
+    link.name = None
+    link.details = None
+    link.user = user or fake_user()
+    link.role = role or fake_role()
+    return link
+
+
+def fake_group_role_link(group=None, role=None):
+    """Build a MagicMock that mimics an RbacGroupRoles link for OutputGroupRole.from_db."""
+    link = MagicMock()
+    link.id = uuid4()
+    link.name = None
+    link.details = None
+    link.group = group or fake_group()
+    link.role = role or fake_role()
+    return link
 
 
 def _fake_zone(id=None, name="zone"):
@@ -143,7 +166,7 @@ def _fake_core_row(id=None, name="row", channel_id=None):
     r.channel_id = channel_id
     r.details = {}
     ch_id = channel_id or uuid4()
-    r.channel = _fake_core_channel(id=ch_id, name="channel", zone_id=ch_id)
+    r.channel = OutputCoreChannel(id=ch_id, name="channel", details={})
     return r
 
 

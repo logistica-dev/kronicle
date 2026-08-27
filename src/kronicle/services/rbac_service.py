@@ -138,7 +138,7 @@ class RbacService:
         self._row_policy_repo = RowPolicyRepository()
 
         group_engine = HierarchyEngine(
-            parents_of=lambda g: g.parent_links,
+            parents_of=lambda g: g.parents,
             children_of=lambda g: g.children,
         )
 
@@ -680,6 +680,11 @@ class RbacService:
                 return existing
         db_role = self._resolve_role(db, access_profile.role)
         db_channel = self._resolve_channel(db, access_profile.channel)
+        existing = self._channel_access_profile_repo.get_by_role_and_channel(
+            db, role_id=db_role.id, channel_id=db_channel.id
+        )
+        if existing:
+            return existing
         name = access_profile.name or None
         if not name:
             channel_name = str(db_channel.name)
