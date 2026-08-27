@@ -622,7 +622,8 @@ if __name__ == "__main__":
     here = "migr_manager"
 
     # load .conf/.secrets into os.environ
-    secrets_path = Path(__file__).resolve().parent.parent.parent.parent.parent / ".conf" / ".secrets"
+    # secrets_path = Path(__file__).resolve().parent.parent.parent.parent.parent / ".conf" / ".secrets"
+    secrets_path = Path(__file__).resolve().parent.parent.parent.parent.parent / ".conf" / ".rims.secrets"
     if secrets_path.exists():
         load_env_file(secrets_path)
         log_d(here, "Env var loaded")
@@ -630,6 +631,7 @@ if __name__ == "__main__":
     settings = KronicleSettings()
     db_url = settings.db.rbac_connection_url
     log_d(here, "db_url", settings.db.masked_rbac_connection_url)
+    log_d(here, "dbsu_url", settings.db.dbsu_connection_url)
     dbsu_url = settings.db.dbsu_connection_url
     assert dbsu_url
 

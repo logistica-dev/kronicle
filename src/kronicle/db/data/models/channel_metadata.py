@@ -242,7 +242,7 @@ class ChannelMetadata(BaseModel):
 
     @classmethod
     def create_table_sql(cls) -> str:
-        return f"CREATE TABLE {cls.table()} ({cls.get_schema_defs()});"
+        return f"CREATE TABLE IF NOT EXISTS {cls.table()} ({cls.get_schema_defs()});"
 
     @classmethod
     async def ensure_table(cls, db: PoolConnectionProxy):

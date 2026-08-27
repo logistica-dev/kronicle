@@ -140,10 +140,12 @@ def create_sqlalchemy_tables(db, tables, namespace):
 
             if is_view:
                 # Create view if KronicleView
-                log_d(here, f"Creating view '{namespace}.{table_name}' ({cls_name})...")
-                db.execute(text(table_cls.create_view_sql()))
-                log_d(here, f"Created view '{namespace}.{table_name}'")
-                continue  # No hierarchy setup needed, we can skip the rest
+                log_e(here, "KronicleView is now obsolete")
+                raise RuntimeError("KronicleView is now obsolete and shouldn't be used")
+                # log_d(here, f"Creating view '{namespace}.{table_name}' ({cls_name})...")
+                # db.execute(text(table_cls.create_view_sql()))
+                # log_d(here, f"Created view '{namespace}.{table_name}'")
+                # continue  # No hierarchy setup needed, we can skip the rest
             else:
                 log_d(here, f"Creating table '{namespace}.{table_name}' ({cls_name})...")
 

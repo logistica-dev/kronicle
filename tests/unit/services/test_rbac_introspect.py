@@ -91,9 +91,7 @@ def _fake_row_access_profile(id=None, row_id=None, row_name="row", role_name="ro
 
 class TestGetUserPermissions:
     def test_returns_direct_roles_and_group_roles(self, rbac_service):
-        uid = uuid4()
-        gid = uuid4()
-        subj_id = uuid4()
+        uid, gid, subj_id = uuid4(), uuid4(), uuid4()
 
         rbac_service._user_repo.get_by_id = MagicMock(return_value=fake_user(id=uid, name="usr", email="u@k.app"))
 

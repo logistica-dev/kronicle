@@ -579,10 +579,7 @@ class DropTableOp(DbStructureOperation):
         return f"drop_table:{self.schema}.{self.table}"
 
     def apply(self, op: Operations) -> None:
-        op.drop_table(
-            self.table,
-            schema=self.schema,
-        )
+        op.drop_table(self.table, schema=self.schema)
 
 
 # ==================================================================================================
