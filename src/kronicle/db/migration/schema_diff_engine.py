@@ -28,6 +28,7 @@ from kronicle.db.migration.operations import (
     DropIndexOp,
     DropPrimaryKeyOp,
     DropTableOp,
+    DropViewOp,
     RenameColumnOp,
     RenameConstraintOp,
     RenameTableOp,
@@ -114,6 +115,7 @@ class SchemaDiffEngine:
         self._create_missing_tables(result, schema, tables, missing_tables)
         self._diff_tables_in_common(result, schema, tables, metadata_names, db_tables, matched)
         self._drop_extra_tables(result, schema, extra_tables)
+        self._drop_extra_views(result, schema)
 
     def _create_missing_tables(
         self, result: SchemaDiff, schema: str, tables: dict[str, Table], missing_tables: set[str]
@@ -161,6 +163,18 @@ class SchemaDiffEngine:
     def _drop_extra_tables(self, result: SchemaDiff, schema: str, extra_tables: set[str]) -> None:
         for table_name in sorted(extra_tables):
             result.add(DropTableOp(schema=schema, table=table_name))
+
+    def _drop_extra_views(self, result: SchemaDiff, schema: str) -> None:
+        """
+        Drop database views that have no metadata model (orphans).
+
+        Views are invisible to table inspection (get_table_names), so a stale
+        view would otherwise block the drop/alter of the tables it depends on
+        with DependentObjectsStillExist.
+        """
+        for view_name in sorted(self.inspector.get_view_names(schema=schema) or []):
+            log_w(mod, f"Orphan view detected (no model) — dropping: {schema}.{view_name}")
+            result.add(DropViewOp(schema=schema, view=view_name))
 
     # ==============================================================================================
     # Metadata helpers

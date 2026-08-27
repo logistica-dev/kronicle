@@ -312,6 +312,121 @@
               "format": "uuid",
               "title": "Channel Id"
             }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 500,
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Max rows to return",
+              "default": 100,
+              "title": "Limit"
+            },
+            "description": "Max rows to return"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 10000,
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Number of rows to skip",
+              "title": "Offset"
+            },
+            "description": "Number of rows to skip"
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sort columns, '-' prefix for descending",
+              "title": "Sort"
+            },
+            "description": "Sort columns, '-' prefix for descending"
+          },
+          {
+            "name": "columns",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Name of the columns to include",
+              "title": "Columns"
+            },
+            "description": "Name of the columns to include"
+          },
+          {
+            "name": "skip_received",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "False to include reception timestamp",
+              "default": true,
+              "title": "Skip Received"
+            },
+            "description": "False to include reception timestamp"
+          },
+          {
+            "name": "strict",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Raise errors if true",
+              "default": false,
+              "title": "Strict"
+            },
+            "description": "Raise errors if true"
           }
         ],
         "responses": {
@@ -361,6 +476,121 @@
               "format": "uuid",
               "title": "Channel Id"
             }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 500,
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Max rows to return",
+              "default": 100,
+              "title": "Limit"
+            },
+            "description": "Max rows to return"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 10000,
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Number of rows to skip",
+              "title": "Offset"
+            },
+            "description": "Number of rows to skip"
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sort columns, '-' prefix for descending",
+              "title": "Sort"
+            },
+            "description": "Sort columns, '-' prefix for descending"
+          },
+          {
+            "name": "columns",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Name of the columns to include",
+              "title": "Columns"
+            },
+            "description": "Name of the columns to include"
+          },
+          {
+            "name": "skip_received",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "False to include reception timestamp",
+              "default": true,
+              "title": "Skip Received"
+            },
+            "description": "False to include reception timestamp"
+          },
+          {
+            "name": "strict",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Raise errors if true",
+              "default": false,
+              "title": "Strict"
+            },
+            "description": "Raise errors if true"
           }
         ],
         "responses": {
@@ -684,6 +914,121 @@
               "format": "uuid",
               "title": "Channel Id"
             }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 500,
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Max rows to return",
+              "default": 100,
+              "title": "Limit"
+            },
+            "description": "Max rows to return"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 10000,
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Number of rows to skip",
+              "title": "Offset"
+            },
+            "description": "Number of rows to skip"
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sort columns, '-' prefix for descending",
+              "title": "Sort"
+            },
+            "description": "Sort columns, '-' prefix for descending"
+          },
+          {
+            "name": "columns",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Name of the columns to include",
+              "title": "Columns"
+            },
+            "description": "Name of the columns to include"
+          },
+          {
+            "name": "skip_received",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "False to include reception timestamp",
+              "default": true,
+              "title": "Skip Received"
+            },
+            "description": "False to include reception timestamp"
+          },
+          {
+            "name": "strict",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Raise errors if true",
+              "default": false,
+              "title": "Strict"
+            },
+            "description": "Raise errors if true"
           }
         ],
         "responses": {
@@ -802,6 +1147,121 @@
               "format": "uuid",
               "title": "Channel Id"
             }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 500,
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Max rows to return",
+              "default": 100,
+              "title": "Limit"
+            },
+            "description": "Max rows to return"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 10000,
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Number of rows to skip",
+              "title": "Offset"
+            },
+            "description": "Number of rows to skip"
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sort columns, '-' prefix for descending",
+              "title": "Sort"
+            },
+            "description": "Sort columns, '-' prefix for descending"
+          },
+          {
+            "name": "columns",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Name of the columns to include",
+              "title": "Columns"
+            },
+            "description": "Name of the columns to include"
+          },
+          {
+            "name": "skip_received",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "False to include reception timestamp",
+              "default": true,
+              "title": "Skip Received"
+            },
+            "description": "False to include reception timestamp"
+          },
+          {
+            "name": "strict",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Raise errors if true",
+              "default": false,
+              "title": "Strict"
+            },
+            "description": "Raise errors if true"
           }
         ],
         "responses": {
@@ -1162,6 +1622,121 @@
               "format": "uuid",
               "title": "Channel Id"
             }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 500,
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Max rows to return",
+              "default": 100,
+              "title": "Limit"
+            },
+            "description": "Max rows to return"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 10000,
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Number of rows to skip",
+              "title": "Offset"
+            },
+            "description": "Number of rows to skip"
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sort columns, '-' prefix for descending",
+              "title": "Sort"
+            },
+            "description": "Sort columns, '-' prefix for descending"
+          },
+          {
+            "name": "columns",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Name of the columns to include",
+              "title": "Columns"
+            },
+            "description": "Name of the columns to include"
+          },
+          {
+            "name": "skip_received",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "False to include reception timestamp",
+              "default": true,
+              "title": "Skip Received"
+            },
+            "description": "False to include reception timestamp"
+          },
+          {
+            "name": "strict",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Raise errors if true",
+              "default": false,
+              "title": "Strict"
+            },
+            "description": "Raise errors if true"
           }
         ],
         "responses": {
@@ -1407,6 +1982,121 @@
               "format": "uuid",
               "title": "Channel Id"
             }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 500,
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Max rows to return",
+              "default": 100,
+              "title": "Limit"
+            },
+            "description": "Max rows to return"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 10000,
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Number of rows to skip",
+              "title": "Offset"
+            },
+            "description": "Number of rows to skip"
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sort columns, '-' prefix for descending",
+              "title": "Sort"
+            },
+            "description": "Sort columns, '-' prefix for descending"
+          },
+          {
+            "name": "columns",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Name of the columns to include",
+              "title": "Columns"
+            },
+            "description": "Name of the columns to include"
+          },
+          {
+            "name": "skip_received",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "False to include reception timestamp",
+              "default": true,
+              "title": "Skip Received"
+            },
+            "description": "False to include reception timestamp"
+          },
+          {
+            "name": "strict",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Raise errors if true",
+              "default": false,
+              "title": "Strict"
+            },
+            "description": "Raise errors if true"
           }
         ],
         "responses": {
@@ -7121,11 +7811,11 @@
             "temperature": "float",
             "time": "datetime"
           },
-          "id": "2cc58c13-b41f-43c8-bc78-d5282c4eb361",
+          "id": "e734201f-db48-47c5-b5cc-fb0dff6452b3",
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-cdc57",
+          "name": "thermo-3d52b",
           "read_groups": [
             "analysts"
           ],

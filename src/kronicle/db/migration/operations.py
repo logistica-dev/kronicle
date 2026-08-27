@@ -582,6 +582,27 @@ class DropTableOp(DbStructureOperation):
         op.drop_table(self.table, schema=self.schema)
 
 
+@dataclass(frozen=True)
+class DropViewOp(DbStructureOperation):
+    """Drop an orphan database view (no corresponding metadata model).
+
+    Runs early so that dependent tables/columns can be dropped or altered
+    without PostgreSQL raising DependentObjectsStillExist.
+    """
+
+    schema: str
+    view: str
+
+    priority = 5
+    safety = DestructivePolicy()
+
+    def describe(self):
+        return f"drop_view:{self.schema}.{self.view}"
+
+    def apply(self, op: Operations) -> None:
+        op.execute(f"DROP VIEW IF EXISTS {self.schema}.{self.view}")
+
+
 # ==================================================================================================
 # Registry
 # ==================================================================================================
@@ -607,4 +628,5 @@ ALL_OPERATION_TYPES: tuple[type, ...] = (
     DropColumnOp,
     DropIndexOp,
     DropTableOp,
+    DropViewOp,
 )

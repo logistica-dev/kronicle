@@ -230,20 +230,31 @@ class MigrationManager:
         catalog = DatabaseCatalogBuilder.from_metadata(tables)
         return catalog.compute_hash()
 
+    def _ensure_tracking_tables(self, conn) -> None:
+        """
+        Create + sync the per-schema migration tracking tables.
+
+        Must run inside a committed transaction: the plan only proposes them if
+        they are already absent, and the failure path relies on them existing
+        after the plan transaction rolls back / the restore replaces the schemas.
+        """
+        for schema in self.schemas:
+            state_cls = _SCHEMA_STATE[schema]
+            history_cls = _SCHEMA_HISTORY[schema]
+            state_cls.ensure_table(conn)
+            self._sync_tracking_table(conn, state_cls)
+            history_cls.ensure_table(conn)
+            self._sync_tracking_table(conn, history_cls)
+
     def _pre_migration_check(self, conn):
         """
         Read current stored state for each schema, compute actual DB hash,
         and detect drift.
         """
+        self._ensure_tracking_tables(conn)
+
         for schema in self.schemas:
             state_cls = _SCHEMA_STATE[schema]
-            history_cls = _SCHEMA_HISTORY[schema]
-
-            # Ensure tracking tables exist and match the model
-            state_cls.ensure_table(conn)
-            self._sync_tracking_table(conn, state_cls)
-            history_cls.ensure_table(conn)
-            self._sync_tracking_table(conn, history_cls)
 
             # Actual DB hash
             actual_hash = self._compute_db_hash(conn, schema)
@@ -342,6 +353,11 @@ class MigrationManager:
         Revisions are chained via previous_revision.
         """
         now = datetime.now(timezone.utc)
+
+        # Tracking tables may be missing on the failure path: they were rolled
+        # back with the plan transaction and absent from the restored dump.
+        with self.db._engine.begin() as conn:
+            self._ensure_tracking_tables(conn)
 
         for schema in self.schemas:
             state_cls = _SCHEMA_STATE[schema]
@@ -508,8 +524,11 @@ class MigrationManager:
 
             # --------------------------------------------------
             # 1. PRE-CHECK (read stored state, detect drift)
+            #    A committed transaction: tracking-table DDL must persist so
+            #    the plan sees them as "up to date" rather than re-creating
+            #    them inside the (rollback-able) plan transaction.
             # --------------------------------------------------
-            with self.db._engine.connect() as conn:
+            with self.db._engine.begin() as conn:
                 self._pre_migration_check(conn)
 
             # --------------------------------------------------
@@ -603,6 +622,14 @@ class MigrationManager:
                         )
 
                     # Transfer table ownership so the app user can run DDL (e.g. ADD CONSTRAINT)
+                    self._ensure_table_ownership()
+
+                    # Re-create the tracking tables as superuser: they were
+                    # rolled back with the plan transaction and are absent from
+                    # the restored dump. Hand them back to the app user so the
+                    # failure state can actually be recorded.
+                    with create_engine(restore_url).begin() as conn:
+                        self._ensure_tracking_tables(conn)
                     self._ensure_table_ownership()
 
             if plan is not None:

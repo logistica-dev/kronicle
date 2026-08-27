@@ -228,33 +228,36 @@ class RowQueryFilter(BaseModel):
         return adv_filters
 
     @classmethod
-    def from_query_params(cls, request: Request) -> RowQueryFilter:
+    def from_query_params(
+        cls,
+        request: Request,
+        limit: int | None = Query(DEFAULT_LIMIT, ge=1, le=MAX_LIMIT, description="Max rows to return"),
+        offset: int | None = Query(None, ge=0, le=MAX_OFFSET, description="Number of rows to skip"),
+        sort: str | None = Query(None, description="Sort columns, '-' prefix for descending"),
+        columns: str | None = Query(None, description="Name of the columns to include"),
+        skip_received: bool | None = Query(True, description="False to include reception timestamp"),
+        strict: bool | None = Query(DEFAULT_STRICT_MODE, description="Raise errors if true"),
+    ) -> RowQueryFilter:
         # Pydantic parse simple params
         query_params = request.query_params
-        simple_fields = {
-            "limit": int(limit) if (limit := query_params.get("limit")) is not None else None,
-            "offset": query_params.get("offset"),
-            "sort": query_params.get("sort"),
-            "columns": query_params.get("columns"),
-            "skip_received": query_params.get("skip_received"),
-            "strict": query_params.get("strict"),
-        }
+        base_params = {k: v for k, v in locals().items() if k not in ("cls", "request", "query_params")}
+
         # Parse advanced bracketed filters manually
-        adv = cls.parse_bracketed_filters(query_params.multi_items())
+        adv_params = cls.parse_bracketed_filters(query_params.multi_items())
 
         # Convert lists to single values for single-value filters
-        min_dict = {k: v[0] for k, v in adv.get("min", {}).items()}
-        max_dict = {k: v[0] for k, v in adv.get("max", {}).items()}
-        col_dict = {k: v[0] for k, v in adv.get("col", {}).items()}
-        any_dict = adv.get("any", {})
-        has_dict = adv.get("has", {})
+        min_dict = {k: v[0] for k, v in adv_params.get("min", {}).items()}
+        max_dict = {k: v[0] for k, v in adv_params.get("max", {}).items()}
+        col_dict = {k: v[0] for k, v in adv_params.get("col", {}).items()}
+        any_dict = adv_params.get("any", {})
+        has_dict = adv_params.get("has", {})
         return RowQueryFilter(
             min=min_dict,
             max=max_dict,
             col=col_dict,
             any=any_dict,
             has=has_dict,
-            **simple_fields,
+            **base_params,
         )
 
 

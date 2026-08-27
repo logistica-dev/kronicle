@@ -105,14 +105,7 @@ async def fetch_channel(
         "The response includes both metadata and data rows according to the channel's schema.\n"
     ),
     response_model=ResponsePayload,
-    dependencies=[
-        Depends(
-            require_any_permission(
-                PermStr.CHANNEL_READ,
-                PermStr.ROW_READ,
-            )
-        )
-    ],
+    dependencies=[Depends(require_any_permission(PermStr.CHANNEL_READ, PermStr.ROW_READ))],
 )
 async def fetch_channel_rows(
     channel_id: UUID,

@@ -131,33 +131,22 @@ def create_sqlalchemy_tables(db, tables, namespace):
 
         table_name = table.tablename() if hasattr(table, "tablename") else table_obj.name
         cls_name = table_cls.__name__
-        is_view = getattr(table_cls, "is_view", False)
 
         # --- Create table or view ---
         if table_exists(db, namespace, table_name):
-            log_d(here, "View" if is_view else "Table", f"'{namespace}.{table_name}' already exists")
+            log_d(here, f"Table '{namespace}.{table_name}' already exists")
         else:
+            log_d(here, f"Creating table '{namespace}.{table_name}' ({cls_name})...")
 
-            if is_view:
-                # Create view if KronicleView
-                log_e(here, "KronicleView is now obsolete")
-                raise RuntimeError("KronicleView is now obsolete and shouldn't be used")
-                # log_d(here, f"Creating view '{namespace}.{table_name}' ({cls_name})...")
-                # db.execute(text(table_cls.create_view_sql()))
-                # log_d(here, f"Created view '{namespace}.{table_name}'")
-                # continue  # No hierarchy setup needed, we can skip the rest
-            else:
-                log_d(here, f"Creating table '{namespace}.{table_name}' ({cls_name})...")
-
-                # Note: ensure schema is set for belt-and-suspenders
-                table_obj.schema = namespace
-                # Create the table (DDL) and commit immediately
-                try:
-                    table_obj.create(bind=db, checkfirst=True)
-                    log_d(here, f"Created table '{namespace}.{table_name}'")
-                except Exception as e:
-                    log_e(here, f"Table creation failed for '{namespace}.{table_name}'")
-                    raise e
+            # Note: ensure schema is set for belt-and-suspenders
+            table_obj.schema = namespace
+            # Create the table (DDL) and commit immediately
+            try:
+                table_obj.create(bind=db, checkfirst=True)
+                log_d(here, f"Created table '{namespace}.{table_name}'")
+            except Exception as e:
+                log_e(here, f"Table creation failed for '{namespace}.{table_name}'")
+                raise e
 
         # # --- Setup hierarchy if applicable (KronicleHierarchyMixin) ---
         # if issubclass(table_cls, KronicleHierarchyMixin):
