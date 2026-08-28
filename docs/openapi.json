@@ -7540,56 +7540,6 @@
         "title": "InputChannelPolicy",
         "description": "Assign a role to a subject (user or group) for a specific channel."
       },
-      "InputCoreChannel": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id"
-          },
-          "name": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 64,
-                "minLength": 4
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Name"
-          },
-          "details": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Details",
-            "description": "Optional JSONB metadata"
-          },
-          "zone": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/InputZone"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "type": "object",
-        "required": [
-          "id"
-        ],
-        "title": "InputCoreChannel"
-      },
       "InputCoreChannelPatch": {
         "properties": {
           "id": {
@@ -7821,11 +7771,11 @@
             "temperature": "float",
             "time": "datetime"
           },
-          "id": "3ce8840b-db68-40be-959a-ca8026990cdd",
+          "id": "8e6ef67e-1625-4149-a430-f6a43387d532",
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-6ab1a",
+          "name": "thermo-9a507",
           "read_groups": [
             "analysts"
           ],
@@ -7975,8 +7925,7 @@
       "InputRow": {
         "properties": {
           "id": {
-            "type": "string",
-            "format": "uuid",
+            "type": "integer",
             "title": "Id"
           },
           "name": {
@@ -8005,14 +7954,16 @@
             "title": "Details",
             "description": "Optional JSONB metadata"
           },
-          "channel": {
-            "$ref": "#/components/schemas/InputCoreChannel"
+          "channel_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Channel Id"
           }
         },
         "type": "object",
         "required": [
           "id",
-          "channel"
+          "channel_id"
         ],
         "title": "InputRow"
       },
@@ -8768,9 +8719,32 @@
       "OutputCoreRow": {
         "properties": {
           "id": {
-            "type": "string",
-            "format": "uuid",
+            "type": "integer",
             "title": "Id"
+          },
+          "core_row_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Core Row Id"
+          },
+          "channel_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channel Id"
           },
           "name": {
             "anyOf": [
@@ -8869,12 +8843,28 @@
             "title": "Roles",
             "default": []
           },
+          "direct_roles": {
+            "items": {
+              "$ref": "#/components/schemas/OutputGroupRole"
+            },
+            "type": "array",
+            "title": "Direct Roles",
+            "default": []
+          },
           "indirect_roles": {
             "items": {
               "$ref": "#/components/schemas/OutputGroupRole"
             },
             "type": "array",
             "title": "Indirect Roles",
+            "default": []
+          },
+          "group_roles": {
+            "items": {
+              "$ref": "#/components/schemas/OutputGroupRole"
+            },
+            "type": "array",
+            "title": "Group Roles",
             "default": []
           },
           "zone_policies": {
@@ -9385,12 +9375,28 @@
             "title": "Roles",
             "default": []
           },
+          "direct_roles": {
+            "items": {
+              "$ref": "#/components/schemas/OutputUserRole"
+            },
+            "type": "array",
+            "title": "Direct Roles",
+            "default": []
+          },
           "indirect_roles": {
             "items": {
               "$ref": "#/components/schemas/OutputGroupRole"
             },
             "type": "array",
             "title": "Indirect Roles",
+            "default": []
+          },
+          "group_roles": {
+            "items": {
+              "$ref": "#/components/schemas/OutputGroupRole"
+            },
+            "type": "array",
+            "title": "Group Roles",
             "default": []
           },
           "zone_policies": {

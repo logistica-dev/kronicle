@@ -8,6 +8,39 @@ from sqlalchemy import Column, String
 from kronicle.db.base.kronicle_link import KronicleLink
 
 
+class TestRelationshipContract:
+    """Pin the ORM navigation attribute names to the KronicleLink constants.
+
+    The engine lambdas (rbac_service, core_service) resolve links via
+    getattr(..., KronicleLink.PARENT/CHILD/PARENTS/CHILDREN). Renaming a
+    relationship (or a constant) must fail here, not at runtime.
+    """
+
+    def test_group_hierarchy_relationship_names_track_constants(self):
+        from kronicle.db.rbac.links.group_hierarchy import RbacGroupHierarchy
+        from kronicle.db.rbac.models.rbac_group import RbacGroup
+
+        link_rels = RbacGroupHierarchy.__mapper__.relationships
+        assert KronicleLink.PARENT in link_rels
+        assert KronicleLink.CHILD in link_rels
+
+        group_rels = RbacGroup.__mapper__.relationships
+        assert KronicleLink.PARENT_LINKS in group_rels
+        assert KronicleLink.CHILDREN in group_rels
+
+    def test_zone_hierarchy_relationship_names_track_constants(self):
+        from kronicle.db.core.links.zone_hierarchy import ZoneHierarchy
+        from kronicle.db.core.models.core_zone import CoreZone
+
+        link_rels = ZoneHierarchy.__mapper__.relationships
+        assert KronicleLink.PARENT in link_rels
+        assert KronicleLink.CHILD in link_rels
+
+        zone_rels = CoreZone.__mapper__.relationships
+        assert KronicleLink.PARENT_LINKS in zone_rels
+        assert KronicleLink.CHILDREN in zone_rels
+
+
 @pytest.fixture
 def mock_db():
     return MagicMock()

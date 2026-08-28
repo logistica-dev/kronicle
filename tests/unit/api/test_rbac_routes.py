@@ -79,7 +79,7 @@ from kronicle.api.rbac_routes import (
     remove_user_from_group,
 )
 from kronicle.errors.error_types import BadRequestError, NotFoundError
-from kronicle.schemas.core.input_ressource_schema import InputCoreChannel, InputRow, InputZonePatch
+from kronicle.schemas.core.input_ressource_schema import InputRow, InputZonePatch
 from kronicle.schemas.payload.input_payload import InputPayload
 from kronicle.schemas.rbac.input_group_schemas import InputGroup
 from kronicle.schemas.rbac.input_policy_schemas import (
@@ -527,7 +527,7 @@ class TestPolicyRoutes:
             subject=InputSubject(type="user", user_id=uuid4()),
             access_profile=InputRowAccessProfile(
                 role=InputRole(id=uuid4()),
-                row=InputRow(id=uuid4(), channel=InputCoreChannel(id=uuid4())),
+                row=InputRow(id=5, channel_id=uuid4()),
             ),
         )
         expected = {"id": uuid4()}
@@ -777,7 +777,7 @@ class TestAccessProfileRoutes:
     def test_create_row_access_profile(self, mock_rbac):
         profile_in = InputRowAccessProfile(
             role=InputRole(id=uuid4()),
-            row=InputRow(id=uuid4(), channel=InputCoreChannel(id=uuid4())),
+            row=InputRow(id=5, channel_id=uuid4()),
             description="test",
         )
         expected = {"id": uuid4()}

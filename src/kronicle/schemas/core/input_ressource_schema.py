@@ -35,5 +35,6 @@ class InputCoreChannelPatch(InputSchema):
 
 
 class InputRow(InputSchema):
-    id: UUID  # type: ignore
-    channel: InputCoreChannel
+    # Timeseries BIGSERIAL row_id of the targeted row (see data.channel_* tables).
+    id: int  # type: ignore
+    channel_id: UUID

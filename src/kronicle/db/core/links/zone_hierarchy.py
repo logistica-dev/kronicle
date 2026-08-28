@@ -1,15 +1,14 @@
 # kronicle/db/core/links/zone_hierarchy.py
-from uuid import UUID
+from __future__ import annotations
 
-from sqlalchemy import ForeignKey, UniqueConstraint
-from sqlalchemy.orm import Mapped, backref, mapped_column, relationship
+from sqlalchemy import UniqueConstraint
 
-from kronicle.db.base.kronicle_link import KronicleLink
+from kronicle.db.base.kronicle_hierarchy import KronicleHierarchy
 from kronicle.db.core.links.core_link import CoreLink
 from kronicle.db.core.models.core_zone import CoreZone
 
 
-class ZoneHierarchy(CoreLink):
+class ZoneHierarchy(KronicleHierarchy[CoreZone]):
     """
     Zone hierarchy definition.
 
@@ -18,22 +17,20 @@ class ZoneHierarchy(CoreLink):
     - Used for physical or logical partitioning
     """
 
+    node_model = CoreZone
+
     UQ_CONSTRAINT = "uq_zone_parent"
 
     __tablename__ = "zone_hierarchy"
     __table_args__ = (
-        UniqueConstraint(CoreLink.PARENT_ID, CoreLink.CHILD_ID, name=UQ_CONSTRAINT),  # Tuple of constraints first
+        UniqueConstraint(
+            KronicleHierarchy.PARENT_ID,
+            KronicleHierarchy.CHILD_ID,
+            name=UQ_CONSTRAINT,
+        ),  # Tuple of constraints first
         {"schema": CoreLink.namespace(), "extend_existing": True},  # Options dictionary last
     )
 
-    # Note: ondelete=CASCADE
-    # => If a referenced RbacGroup row is deleted, automatically delete the rows in this table that point to it.
-    parent_id: Mapped[UUID] = mapped_column(ForeignKey(CoreZone.id, ondelete="CASCADE"), primary_key=True)
-    child_id: Mapped[UUID] = mapped_column(ForeignKey(CoreZone.id, ondelete="CASCADE"), primary_key=True)
-
-    parent = relationship(
-        CoreZone,
-        foreign_keys=[parent_id],
-        backref=backref(KronicleLink.CHILDREN, passive_deletes=True),
-        passive_deletes=True,
-    )
+    @classmethod
+    def namespace(cls) -> str:
+        return CoreLink.namespace()

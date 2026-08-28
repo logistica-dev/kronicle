@@ -159,10 +159,11 @@ def fake_channel_policy_mock(id=None, name="policy-name", **kwargs):
     return policy
 
 
-def _fake_core_row(id=None, name="row", channel_id=None):
+def _fake_core_row(id=None, name="row", channel_id=None, timeseries_row_id=None):
     r = MagicMock()
     r.id = id or uuid4()
     r.name = name
+    r.timeseries_row_id = timeseries_row_id or 5
     r.channel_id = channel_id
     r.details = {}
     ch_id = channel_id or uuid4()

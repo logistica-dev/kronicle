@@ -1,11 +1,6 @@
 # kronicle/db/base/kronicle_link.py
 from __future__ import annotations
 
-from sqlalchemy import and_
-from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy.orm import Session
-from sqlalchemy.sql import delete
-
 from kronicle.db.base.kronicle_base import KronicleBase
 
 
@@ -18,12 +13,6 @@ class KronicleLink(KronicleBase):
     """
 
     __abstract__ = True  # Do not create a table for this class itself
-
-    PARENT_ID = "parent_id"
-    CHILD_ID = "child_id"
-
-    PARENTS = "parents"
-    CHILDREN = "children"
 
     UQ_CONSTRAINT: str
 
@@ -46,21 +35,3 @@ class KronicleLink(KronicleBase):
         if not cls.UQ_CONSTRAINT:
             raise NotImplementedError("KronicleLink classes should define UQ_CONSTRAINT")
         return cls.UQ_CONSTRAINT
-
-    @classmethod
-    def add(cls, db: Session, parent, child) -> None:
-        stmt = (
-            insert(cls.__table__).values(**{cls.PARENT_ID: parent.id, cls.CHILD_ID: child.id}).on_conflict_do_nothing()
-        )
-        db.execute(stmt)
-
-    @classmethod
-    def remove(cls, db: Session, parent, child) -> None:
-
-        stmt = delete(cls.__table__).where(
-            and_(
-                getattr(cls.__table__.c, cls.PARENT_ID) == parent.id,
-                getattr(cls.__table__.c, cls.CHILD_ID) == child.id,
-            )
-        )
-        db.execute(stmt)

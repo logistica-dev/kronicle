@@ -5,7 +5,7 @@ from uuid import uuid4
 import pytest
 
 from kronicle.errors.error_types import BadRequestError, NotFoundError
-from kronicle.schemas.core.input_ressource_schema import InputCoreChannel, InputRow, InputZonePatch
+from kronicle.schemas.core.input_ressource_schema import InputRow, InputZonePatch
 from kronicle.schemas.payload.input_payload import InputPayload
 from kronicle.schemas.rbac.input_policy_schemas import (
     InputChannelAccessProfile,
@@ -344,13 +344,11 @@ class TestEnsureRowAccessProfile:
         existing = MagicMock()
         rbac_service._row_access_profile_repo.get_by_id = MagicMock(return_value=existing)
 
-        row_id = uuid4()
+        row_id = 5
         channel = _fake_core_channel()
         result = rbac_service._ensure_row_access_profile(
             db,
-            InputRowAccessProfile(
-                id=pid, role=InputRole(id=uuid4()), row=InputRow(id=row_id, channel=InputCoreChannel(id=channel.id))
-            ),
+            InputRowAccessProfile(id=pid, role=InputRole(id=uuid4()), row=InputRow(id=row_id, channel_id=channel.id)),
         )
         assert result is existing
 
@@ -360,14 +358,14 @@ class TestEnsureRowAccessProfile:
         rbac_service._row_access_profile_repo.get_by_id = MagicMock(return_value=None)
         rbac_service._row_access_profile_repo.get_by_name = MagicMock(return_value=existing)
 
-        row_id = uuid4()
+        row_id = 5
         channel = _fake_core_channel()
         result = rbac_service._ensure_row_access_profile(
             db,
             InputRowAccessProfile(
                 name="my-row-profile",
                 role=InputRole(id=uuid4()),
-                row=InputRow(id=row_id, channel=InputCoreChannel(id=channel.id)),
+                row=InputRow(id=row_id, channel_id=channel.id),
             ),
         )
         assert result is existing
@@ -384,13 +382,13 @@ class TestEnsureRowAccessProfile:
         new_profile.details = None
         rbac_service._row_access_profile_repo.create = MagicMock(return_value=new_profile)
 
-        row_id = uuid4()
+        row_id = 5
         channel = _fake_core_channel()
         result = rbac_service._ensure_row_access_profile(
             db,
             InputRowAccessProfile(
                 role=InputRole(id=rid),
-                row=InputRow(id=row_id, channel=InputCoreChannel(id=channel.id)),
+                row=InputRow(id=row_id, channel_id=channel.id),
                 description="desc",
                 details={"k": "v"},
             ),
@@ -410,13 +408,13 @@ class TestEnsureRowAccessProfile:
         new_profile.details = None
         rbac_service._row_access_profile_repo.create = MagicMock(return_value=new_profile)
 
-        row_id = uuid4()
+        row_id = 5
         channel = _fake_core_channel()
         rbac_service._ensure_row_access_profile(
             db,
             InputRowAccessProfile(
                 role=InputRole(id=rid),
-                row=InputRow(id=row_id, channel=InputCoreChannel(id=channel.id)),
+                row=InputRow(id=row_id, channel_id=channel.id),
             ),
         )
         rbac_service._row_access_profile_repo.create.assert_called_once()
@@ -452,7 +450,7 @@ class TestRowAccessProfileCRUD:
             out = rbac_service.create_row_access_profile(
                 profile_in=InputRowAccessProfile(
                     role=InputRole(id=uuid4()),
-                    row=InputRow(id=uuid4(), channel=InputCoreChannel(id=uuid4())),
+                    row=InputRow(id=5, channel_id=uuid4()),
                     description="desc",
                 )
             )

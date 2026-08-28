@@ -98,8 +98,8 @@ def test_channel(kronicle_setup, test_zone) -> Generator[KronicleChannel, None, 
 
 @pytest.fixture(scope="module")
 def test_row_id(test_channel, kronicle_setup):
-    """Return the ID of the first row in the test channel."""
+    """Return the timeseries row_id (BIGSERIAL) of the first row in the test channel."""
     rows = kronicle_setup.get_rows_for_channel(test_channel.id, "dict")
     assert rows, "Test channel has no rows"
-    assert "id" in rows[0], f"Rows have no id: {rows[0]}"
-    return rows[0]["id"]
+    assert "row_id" in rows[0], f"Rows have no row_id: {rows[0]}"
+    return rows[0]["row_id"]

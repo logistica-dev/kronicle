@@ -4,14 +4,12 @@ from __future__ import annotations
 from collections.abc import Sequence
 from uuid import UUID
 
-from kronicle.db.core.links.zone_hierarchy import ZoneHierarchy
 from kronicle.db.core.models.core_channel import CoreChannel
 from kronicle.db.core.models.core_zone import CoreZone
 from kronicle.db.rbac.rbac_db_session import RbacDbSession
 from kronicle.errors.error_types import BadRequestError, ConflictError, NotFoundError
 from kronicle.repo.core.core_channel_repo import CoreChannelRepository
 from kronicle.repo.core.core_zone_repo import CoreZoneRepository
-from kronicle.repo.hierarchy.hierarchy_engine import HierarchyEngine
 from kronicle.repo.hierarchy.hierarchy_service import HierarchyService
 from kronicle.repo.hierarchy.zone_hierarchy_repo import ZoneHierarchyRepository
 from kronicle.schemas.core.input_ressource_schema import InputCoreChannel
@@ -26,17 +24,9 @@ class CoreService:
         self._db = core_db_session
         self._channel_repo = CoreChannelRepository()
         self._zone_repo = CoreZoneRepository()
-        self._zone_hierarchy_repo = ZoneHierarchyRepository()
-
-        zone_engine = HierarchyEngine(
-            parents_of=lambda z: z.parent,
-            children_of=lambda z: z.children,
-        )
 
         self.zone_hierarchy_service = HierarchyService(
-            engine=zone_engine,
-            add_edge=ZoneHierarchy.add,
-            remove_edge=ZoneHierarchy.remove,
+            repo=ZoneHierarchyRepository(),
             max_parents=1,
         )
 

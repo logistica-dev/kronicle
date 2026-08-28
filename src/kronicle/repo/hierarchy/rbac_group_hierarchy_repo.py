@@ -2,8 +2,10 @@
 
 
 from kronicle.db.rbac.links.group_hierarchy import RbacGroupHierarchy
-from kronicle.repo.kronicle_link_repo import KronicleLinkRepository
+from kronicle.db.rbac.models.rbac_group import RbacGroup
+from kronicle.repo.hierarchy.hierarchy_repo import KronicleHierarchyRepo
 
 
-class RbacGroupHierarchyRepository(KronicleLinkRepository[RbacGroupHierarchy]):
+class RbacGroupHierarchyRepository(KronicleHierarchyRepo[RbacGroupHierarchy, RbacGroup]):
     model = RbacGroupHierarchy
+    node_model = RbacGroup

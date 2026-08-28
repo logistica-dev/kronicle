@@ -1,17 +1,10 @@
 # kronicle/repo/hierarchy/zone_hierarchy_repo.py
-from sqlalchemy.orm import Session
 
 from kronicle.db.core.links.zone_hierarchy import ZoneHierarchy
 from kronicle.db.core.models.core_zone import CoreZone
-from kronicle.repo.kronicle_link_repo import KronicleLinkRepository
+from kronicle.repo.hierarchy.hierarchy_repo import KronicleHierarchyRepo
 
 
-class ZoneHierarchyRepository(KronicleLinkRepository[ZoneHierarchy]):
+class ZoneHierarchyRepository(KronicleHierarchyRepo[ZoneHierarchy, CoreZone]):
     model = ZoneHierarchy
-
-    # --- Minimal persistence API ---
-    def add_parent_zone(self, db: Session, parent: CoreZone, child: CoreZone):
-        self.ensure_link(db, {self.model.PARENT_ID: parent.id, self.model.CHILD_ID: child.id})
-
-    def remove_parent_zone(self, db: Session, parent: CoreZone, child: CoreZone):
-        self.remove_link(db, {self.model.PARENT_ID: parent.id, self.model.CHILD_ID: child.id})
+    node_model = CoreZone

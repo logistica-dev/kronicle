@@ -246,6 +246,9 @@ class ChannelSchema(BaseModel):
         else:
             validated["received_at"] = now
 
+        if not from_user and (ts_row_id := row.get("row_id")) is not None:
+            validated["row_id"] = ts_row_id
+
         return validated
 
 

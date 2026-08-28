@@ -30,15 +30,16 @@ class CoreRow(KronicleBase):
     def namespace(cls) -> str:
         return "core"
 
-    # Unique timeseries row ID (BIGSERIAL from upstream), not PK — id from KronicleBase is the PK
-    timeseries_row_id: Mapped[int] = mapped_column(unique=True)
+    # Unique timeseries row ID (BIGSERIAL from upstream), not PK — id from KronicleBase is the PK.
+    # Scoped uniqueness is enforced by the composite (channel_id, timeseries_row_id) constraint.
+    timeseries_row_id: Mapped[int] = mapped_column()
 
     # The channel this row belongs to
     channel_id: Mapped[UUID] = mapped_column(ForeignKey(CoreChannel.id, ondelete="CASCADE"), nullable=False)
     channel: Mapped[CoreChannel] = relationship(CoreChannel, backref=__tablename__)
 
     # User-friendly name is made optional because it makes no sense at the row level.
-    name: Mapped[str] = mapped_column(String(36), unique=True, nullable=True)
+    name: Mapped[str] = mapped_column(String(36), nullable=True)
 
     # optional: store metadata like origin_user or public flag if convenient
     is_public: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)

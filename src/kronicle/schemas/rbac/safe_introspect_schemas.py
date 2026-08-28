@@ -22,7 +22,9 @@ from kronicle.schemas.rbac.safe_user_schemas import OutputUser
 class OutputUserPermissions(BaseModel):
     user: OutputUser | None = None
     roles: list[OutputUserRole] = []
+    direct_roles: list[OutputUserRole] = []
     indirect_roles: list[OutputGroupRole] = []
+    group_roles: list[OutputGroupRole] = []
     zone_policies: list[OutputZonePolicy] = []
     channel_policies: list[OutputChannelPolicy] = []
     row_policies: list[OutputRowPolicy] = []
@@ -31,7 +33,9 @@ class OutputUserPermissions(BaseModel):
 class OutputGroupPermissions(BaseModel):
     group: OutputGroup | None = None
     roles: list[OutputGroupRole] = []
+    direct_roles: list[OutputGroupRole] = []
     indirect_roles: list[OutputGroupRole] = []
+    group_roles: list[OutputGroupRole] = []
     zone_policies: list[OutputZonePolicy] = []
     channel_policies: list[OutputChannelPolicy] = []
     row_policies: list[OutputRowPolicy] = []

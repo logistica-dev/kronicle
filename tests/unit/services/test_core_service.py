@@ -49,7 +49,6 @@ def service(mock_db, mock_zone_repo, mock_channel_repo):
         patch("kronicle.services.core_service.CoreChannelRepository", return_value=mock_channel_repo),
         patch("kronicle.services.core_service.CoreZoneRepository", return_value=mock_zone_repo),
         patch("kronicle.services.core_service.ZoneHierarchyRepository"),
-        patch("kronicle.services.core_service.HierarchyEngine"),
         patch("kronicle.services.core_service.HierarchyService"),
     ):
         svc = CoreService(core_db_session=mock_db)

@@ -61,9 +61,3 @@ class KronicleLinkRepository(Generic[T]):
         """Delete and return the removed row, or None if it didn't exist."""
         stmt = delete(cls.model).where(*[col == val for col, val in filters.items()]).returning(cls.model)
         return db.execute(stmt).scalars().first()
-
-    def add_parent(self, db: Session, parent: T, child: T):
-        self.ensure_link(db, {self.model.PARENT_ID: parent.id, self.model.CHILD_ID: child.id})
-
-    def remove_parent(self, db: Session, parent: T, child: T):
-        self.remove_link(db, {self.model.PARENT_ID: parent.id, self.model.CHILD_ID: child.id})

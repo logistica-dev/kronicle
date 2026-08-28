@@ -1,6 +1,7 @@
 # kronicle/repo/hierarchy/hierarchy_engine.py
 from collections.abc import Callable, Iterable, Iterator
 from typing import Generic, TypeVar
+from uuid import UUID
 
 from kronicle.db.base.kronicle_base import KronicleBase
 
@@ -81,10 +82,10 @@ class HierarchyEngine(Generic[T]):
     def descendants_list(self, node: T) -> list[T]:
         return list(self.descendants(node))
 
-    def ancestors_ids(self, node: T) -> set:
+    def ancestors_ids(self, node: T) -> set[UUID]:
         return {n.id for n in self.ancestors(node)}
 
-    def descendants_ids(self, node: T) -> set:
+    def descendants_ids(self, node: T) -> set[UUID]:
         return {n.id for n in self.descendants(node)}
 
     # ----------------------------------------------------------------------------------------------

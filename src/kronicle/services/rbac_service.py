@@ -17,6 +17,7 @@ from kronicle.db.core.models.core_zone import CoreZone
 from kronicle.db.rbac.links.group_hierarchy import RbacGroupHierarchy
 from kronicle.db.rbac.links.group_roles import RbacGroupRoles
 from kronicle.db.rbac.links.rbac_access_profile import ChannelAccessProfile, RowAccessProfile, ZoneAccessProfile
+from kronicle.db.rbac.links.rbac_link import RbacLink
 from kronicle.db.rbac.links.rbac_policy import ChannelPolicy, RowPolicy, ZonePolicy
 from kronicle.db.rbac.links.user_groups import RbacUserGroups
 from kronicle.db.rbac.links.user_roles import RbacUserRoles
@@ -30,8 +31,8 @@ from kronicle.errors.error_types import BadRequestError, ConflictError, NotFound
 from kronicle.repo.core.core_channel_repo import CoreChannelRepository
 from kronicle.repo.core.core_row_repo import CoreRowRepository
 from kronicle.repo.core.core_zone_repo import CoreZoneRepository
-from kronicle.repo.hierarchy.hierarchy_engine import HierarchyEngine
 from kronicle.repo.hierarchy.hierarchy_service import HierarchyService
+from kronicle.repo.hierarchy.rbac_group_hierarchy_repo import RbacGroupHierarchyRepository
 from kronicle.repo.rbac.entities.channel_policy_repo import ChannelPolicyRepository
 from kronicle.repo.rbac.entities.rbac_group_repo import RbacGroupRepository
 from kronicle.repo.rbac.entities.rbac_role_repo import RbacRoleRepository
@@ -137,15 +138,8 @@ class RbacService:
         self._channel_policy_repo = ChannelPolicyRepository()
         self._row_policy_repo = RowPolicyRepository()
 
-        group_engine = HierarchyEngine(
-            parents_of=lambda g: g.parents,
-            children_of=lambda g: g.children,
-        )
-
         self.group_hierarchy_service = HierarchyService(
-            engine=group_engine,
-            add_edge=RbacGroupHierarchy.add,
-            remove_edge=RbacGroupHierarchy.remove,
+            repo=RbacGroupHierarchyRepository(),
             max_parents=5,
         )
 
@@ -699,6 +693,24 @@ class RbacService:
         db.flush()
         return profile
 
+    def _ensure_core_row(self, db: Session, *, channel_id: UUID, timeseries_row_id: int) -> CoreRow:
+        """Find a CoreRow for (channel_id, timeseries_row_id) or create it lazily."""
+        row = self._row_repo.get_by_channel_and_row_id(
+            db,
+            channel_id=channel_id,
+            timeseries_row_id=timeseries_row_id,
+        )
+        if row:
+            return row
+        row = CoreRow(
+            timeseries_row_id=timeseries_row_id,
+            channel_id=channel_id,
+            name=f"row_{timeseries_row_id}",
+        )
+        db.add(row)
+        db.flush()
+        return row
+
     def _ensure_row_access_profile(self, db: Session, access_profile: InputRowAccessProfile) -> RowAccessProfile:
         """Resolve a RowAccessProfile by id or name, or create it from the full input."""
         if access_profile.id:
@@ -710,11 +722,16 @@ class RbacService:
             if existing:
                 return existing
         db_role = self._resolve_role(db, access_profile.role)
+        db_row = self._ensure_core_row(
+            db,
+            channel_id=access_profile.row.channel_id,
+            timeseries_row_id=access_profile.row.id,
+        )
         name = access_profile.name or None
         if not name:
-            row_id = access_profile.row.id.hex
+            row_id = db_row.id.hex
             name = f"Row {row_id[:15]} {db_role.name[:15]} access"
-        profile = self._row_access_profile_repo.create(db, role_id=db_role.id, row_id=access_profile.row.id, name=name)
+        profile = self._row_access_profile_repo.create(db, role_id=db_role.id, row_id=db_row.id, name=name)
         if access_profile.description is not None:
             profile.description = access_profile.description
         if access_profile.details is not None:
@@ -1106,13 +1123,10 @@ class RbacService:
             db_role = self._resolve_role(db, reader_role)
 
             for ts_row_id in timeseries_row_ids:
-                core_row = self._row_repo.save(
+                core_row = self._ensure_core_row(
                     db,
-                    entity=CoreRow(
-                        timeseries_row_id=ts_row_id,
-                        channel_id=channel_id,
-                        name=f"row_{ts_row_id}",
-                    ),
+                    channel_id=channel_id,
+                    timeseries_row_id=ts_row_id,
                 )
                 row_ap = self._row_access_profile_repo.create(
                     db,
@@ -1396,7 +1410,7 @@ class RbacService:
             if role is None:
                 return None
             direct_role: RbacUserRoles = self._user_roles_repo.check_link(
-                db, filters={"user_id": user_id, "role_id": role_id}
+                db, filters={RbacLink.USER_ID: user_id, RbacLink.ROLE_ID: role_id}
             )
             # direct = db.query(RbacUserRoles.__table__).filter_by(user_id=user_id, role_id=role_id).first()
             if direct_role is not None:
@@ -1424,7 +1438,7 @@ class RbacService:
                 return None
 
             direct_role: RbacGroupRoles = self._group_roles_repo.check_link(
-                db, filters={"group_id": group_id, "role_id": role_id}
+                db, filters={RbacLink.GROUP_ID: group_id, RbacLink.ROLE_ID: role_id}
             )
             if direct_role is not None:
                 return OutputGroupRole.from_db(direct_role)
@@ -1532,7 +1546,7 @@ class RbacService:
             for gid in group_ids:
                 group = self._group_repo.get_by_id(db, id=gid)
                 if group:
-                    ancestors = self.group_hierarchy_service.ancestors(group)
+                    ancestors = self.group_hierarchy_service.ancestors(db, group)
                     all_group_ids.update(a.id for a in ancestors)
             group_ids = list(all_group_ids)
 
@@ -1550,7 +1564,7 @@ class RbacService:
         if indirect:
             group = self._group_repo.get_by_id(db, id=group_id)
             if group:
-                ancestors = self.group_hierarchy_service.ancestors(group)
+                ancestors = self.group_hierarchy_service.ancestors(db, group)
                 group_ids.extend(a.id for a in ancestors)
 
         if group_ids:
@@ -1607,8 +1621,8 @@ class RbacService:
             user_groups: list[RbacUserGroups] = self._user_groups_repo.list_groups_for_user(db, user_id=user_id)
             ancestor_ids: set[UUID] = set()
             for ug in user_groups:
-                ancestor_ids.update(self.group_hierarchy_service.engine.ancestors_ids(ug))
-            all_group_ids = {g.id for g in user_groups} | ancestor_ids
+                ancestor_ids.update(self.group_hierarchy_service.ancestors_ids(db, ug.group))
+            all_group_ids = {ug.group_id for ug in user_groups} | ancestor_ids
             if all_group_ids:
                 group_roles = self._group_roles_repo.list_roles_for_groups(db, group_ids=all_group_ids)
                 indirect_roles.extend([OutputGroupRole.from_db(gr) for gr in group_roles])
@@ -1635,7 +1649,9 @@ class RbacService:
             return OutputUserPermissions(
                 user=OutputUser.from_db(user),
                 roles=roles,
+                direct_roles=roles,
                 indirect_roles=indirect_roles,
+                group_roles=indirect_roles,
                 zone_policies=zone_policies,
                 channel_policies=channel_policies,
                 row_policies=row_policies,
@@ -1657,7 +1673,7 @@ class RbacService:
 
             # Indirect group roles (indirect via group hierarchy)
             indirect_roles: list[OutputGroupRole] = []
-            ancestor_ids = self.group_hierarchy_service.engine.ancestors_ids(group)
+            ancestor_ids = self.group_hierarchy_service.ancestors_ids(db, group)
             if ancestor_ids:
                 indirect_roles = [
                     OutputGroupRole.from_db(gr)
@@ -1686,7 +1702,9 @@ class RbacService:
             return OutputGroupPermissions(
                 group=OutputGroup.from_db(group),
                 roles=roles,
+                direct_roles=roles,
                 indirect_roles=indirect_roles,
+                group_roles=indirect_roles,
                 zone_policies=zone_policies,
                 channel_policies=channel_policies,
                 row_policies=row_policies,

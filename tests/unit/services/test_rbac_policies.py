@@ -5,7 +5,7 @@ from uuid import uuid4
 import pytest
 
 from kronicle.errors.error_types import NotFoundError
-from kronicle.schemas.core.input_ressource_schema import InputCoreChannel, InputRow, InputZonePatch
+from kronicle.schemas.core.input_ressource_schema import InputRow, InputZonePatch
 from kronicle.schemas.payload.input_payload import InputPayload
 from kronicle.schemas.rbac.input_policy_schemas import (
     InputChannelAccessProfile,
@@ -174,7 +174,7 @@ class TestChannelPolicy:
 
 class TestRowPolicy:
     def test_create(self, rbac_service):
-        sid, rid, row_id = uuid4(), uuid4(), uuid4()
+        sid, rid, row_id = uuid4(), uuid4(), 5
         role = fake_role(id=rid, name="role")
         rbac_service._role_repo.get_by_id = MagicMock(return_value=role)
 
@@ -195,7 +195,7 @@ class TestRowPolicy:
                 subject=InputSubject(id=sid, type="user", user_id=sid),
                 access_profile=InputRowAccessProfile(
                     role=InputRole(id=rid),
-                    row=InputRow(id=row_id, channel=InputCoreChannel(id=uuid4())),
+                    row=InputRow(id=row_id, channel_id=uuid4()),
                 ),
             )
 

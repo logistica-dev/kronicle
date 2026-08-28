@@ -119,7 +119,9 @@ class ChannelTimeseries:
         """BIGSERIAL row_id values returned after the last insert."""
         return list(self._inserted_row_ids)
 
-    def add_rows(self, rows: list[dict[str, Any]], *, strict: bool = False) -> ChannelTimeseries:
+    def add_rows(
+        self, rows: list[dict[str, Any]], *, strict: bool = False, from_user: bool = True
+    ) -> ChannelTimeseries:
         """
         Validate and store multiple rows in the channel timeseries.
 
@@ -163,7 +165,7 @@ class ChannelTimeseries:
         pad_width = len(str(len(rows)))
         for idx, row in enumerate(rows, start=1):
             try:
-                validated_rows.append(self.channel_schema.validate_row(row, from_user=True))
+                validated_rows.append(self.channel_schema.validate_row(row, from_user=from_user))
             except ValueError as e:
                 row_label = f"row_{str(idx).zfill(pad_width)}"
                 self.op_feedback.add_detail(message=str(e), field="rows", subfield=row_label)
@@ -188,9 +190,9 @@ class ChannelTimeseries:
     def clear_rows(self) -> None:
         self._rows.clear()
 
-    def set_rows(self, rows: list[dict[str, Any]]) -> None:
+    def set_rows(self, rows: list[dict[str, Any]], *, from_user: bool = False) -> None:
         self.clear_rows()
-        self.add_rows(rows)
+        self.add_rows(rows, from_user=from_user)
 
     def __len__(self) -> int:
         return len(self._rows)
@@ -212,7 +214,8 @@ class ChannelTimeseries:
             if actual.upper() != expected.upper():
                 raise ValueError(f"Column '{col}' type mismatch (expected {expected}, found {actual})")
 
-        extra_cols = set(db_columns) - set(expected_types)
+        system_cols = {"time", "received_at", "row_id"}
+        extra_cols = set(db_columns) - set(expected_types) - system_cols
         if extra_cols:
             raise ValueError(f"Unexpected columns in DB table {self.table}: {extra_cols}")
 
