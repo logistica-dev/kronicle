@@ -106,7 +106,7 @@ class TestGetUserPermissions:
         user_group_link.user = fake_user(id=uid)
         user_group_link.group = fake_group(id=gid, name="eng")
         rbac_service._user_groups_repo.list_groups_for_user = MagicMock(return_value=[user_group_link])
-        rbac_service.group_hierarchy_service.engine.ancestors_ids = MagicMock(return_value=set())
+        rbac_service.group_hierarchy_service.ancestors_ids = MagicMock(return_value=set())
 
         group_role_link = fake_group_role_link(
             group=fake_group(id=gid, name="eng"), role=fake_role(id=uuid4(), name="editor")
@@ -131,7 +131,7 @@ class TestGetUserPermissions:
         rbac_service._user_repo.get_by_id = MagicMock(return_value=fake_user(id=uid))
         rbac_service._user_roles_repo.list_roles_for_user = MagicMock(return_value=[])
         rbac_service._user_groups_repo.list_groups_for_user = MagicMock(return_value=[])
-        rbac_service.group_hierarchy_service.engine.ancestors_ids = MagicMock(return_value=set())
+        rbac_service.group_hierarchy_service.ancestors_ids = MagicMock(return_value=set())
         rbac_service._group_roles_repo.list_roles_for_groups = MagicMock(return_value=[])
         rbac_service._resolve_user_subject_ids = MagicMock(return_value=[])
         rbac_service._zone_policy_repo.get_policies_for_subjects = MagicMock(return_value=[])
@@ -156,7 +156,7 @@ class TestGetGroupPermissions:
             group=fake_group(id=gid, name="eng"), role=fake_role(id=uuid4(), name="editor")
         )
         rbac_service._group_roles_repo.list_roles_for_group = MagicMock(return_value=[group_role_link])
-        rbac_service.group_hierarchy_service.engine.ancestors_ids = MagicMock(return_value=set())
+        rbac_service.group_hierarchy_service.ancestors_ids = MagicMock(return_value=set())
         rbac_service._group_roles_repo.list_roles_for_groups = MagicMock(return_value=[])
 
         rbac_service._resolve_group_subject_ids = MagicMock(return_value=[subj_id])

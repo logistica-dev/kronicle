@@ -18,21 +18,21 @@ class KronicleHierarchyRepo(KronicleLinkRepository[T], Generic[T, N]):
     node_model: Type[N]
 
     def add_parent(self, db: Session, parent: N, child: N) -> None:
-        self.ensure_link(db, {self.node_model.PARENT_ID: parent.id, self.node_model.CHILD_ID: child.id})
+        self.ensure_link(db, {self.model.PARENT_ID: parent.id, self.model.CHILD_ID: child.id})
 
     def remove_parent(self, db: Session, parent: N, child: N) -> None:
-        self.remove_link(db, {self.node_model.PARENT_ID: parent.id, self.node_model.CHILD_ID: child.id})
+        self.remove_link(db, {self.model.PARENT_ID: parent.id, self.model.CHILD_ID: child.id})
 
     def list_parents(self, db: Session, node: N) -> list[N]:
         """
         List direct parents of a node
         """
-        links: list[T] = self.list_links(db, filters={self.node_model.CHILD_ID: node.id})
+        links: list[T] = self.list_links(db, filters={self.model.CHILD_ID: node.id})
         return [ln.parent for ln in links]
 
     def list_children(self, db: Session, node: N) -> list[N]:
         """
         List direct children of a node
         """
-        links = self.list_links(db, filters={self.node_model.PARENT_ID: node.id})
+        links = self.list_links(db, filters={self.model.PARENT_ID: node.id})
         return [ln.child for ln in links]

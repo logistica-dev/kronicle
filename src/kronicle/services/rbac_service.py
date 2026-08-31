@@ -727,6 +727,9 @@ class RbacService:
             channel_id=access_profile.row.channel_id,
             timeseries_row_id=access_profile.row.id,
         )
+        existing = self._row_access_profile_repo.get_by_role_and_row(db, role_id=db_role.id, row_id=db_row.id)
+        if existing:
+            return existing
         name = access_profile.name or None
         if not name:
             row_id = db_row.id.hex

@@ -7,6 +7,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from sqlalchemy import DateTime, func, inspect, text
+from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, declarative_base, mapped_column
@@ -78,19 +79,21 @@ class KronicleBase(Base):
         server_default=text("'{}'::jsonb"),  # PostgreSQL default
     )
 
-    def model_dump(self, *args, mode="json", exclude_none=True, **kwargs) -> dict:
-        d = super().model_dump(*args, mode=mode, exclude_none=exclude_none, **kwargs)
+    def model_dump(self, exclude_none: bool = True, **kwargs) -> dict:
+        d = {c.key: getattr(self, c.key) for c in sa_inspect(self).mapper.column_attrs}
+        if exclude_none:
+            d = {k: v for k, v in d.items() if v is not None}
         return serialize(d)
 
     @property
     def snapshot(self) -> dict[str, Any]:
         return self.model_dump()
 
-    def model_dump_json(self, *args, indent: int | None = None, exclude_none=True, **kwargs) -> str:
-        return dumps(self.model_dump(*args, exclude_none=exclude_none, **kwargs))
+    def model_dump_json(self, exclude_none: bool = True, **kwargs) -> str:
+        return dumps(self.model_dump(exclude_none=exclude_none, **kwargs))
 
     def __str__(self) -> str:
-        return super().model_dump_json(exclude_none=True)
+        return self.model_dump_json(exclude_none=True)
 
     @classmethod
     def ensure_table(cls, conn):

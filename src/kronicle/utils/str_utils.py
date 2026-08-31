@@ -1,6 +1,7 @@
 # kronicle/utils/str_utils.py
 
 from base64 import urlsafe_b64decode, urlsafe_b64encode
+from datetime import datetime
 from random import choices
 from re import compile, escape, fullmatch, sub
 from string import ascii_lowercase, digits
@@ -31,6 +32,8 @@ def serialize(x: Any, *, exclude_none: bool = True) -> Any:
         return x
     if isinstance(x, UUID):
         return x.hex
+    if isinstance(x, datetime):
+        return x.astimezone().isoformat()
     if exclude_none and not x and isinstance(x, (list, dict, set, str)):
         return None
     if isinstance(x, (list, tuple, set)):

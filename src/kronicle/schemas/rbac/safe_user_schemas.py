@@ -82,7 +82,7 @@ class OutputUser(BaseModel):
     name: str | None = None
     orcid: str | None = None
     full_name: str | None = None
-    details: dict[str, Any] = {"auth_method": "local"}  # Default metadata
+    details: dict[str, Any] | None = None
     is_active: bool | None = None
 
     # Internal attribute, not part of .dict()/JSON by default

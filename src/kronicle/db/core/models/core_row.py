@@ -36,7 +36,8 @@ class CoreRow(KronicleBase):
 
     # The channel this row belongs to
     channel_id: Mapped[UUID] = mapped_column(ForeignKey(CoreChannel.id, ondelete="CASCADE"), nullable=False)
-    channel: Mapped[CoreChannel] = relationship(CoreChannel, backref=__tablename__)
+
+    channel: Mapped[CoreChannel] = relationship(CoreChannel, back_populates="rows")
 
     # User-friendly name is made optional because it makes no sense at the row level.
     name: Mapped[str] = mapped_column(String(36), nullable=True)
