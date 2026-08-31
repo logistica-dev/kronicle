@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.sql import delete, select
 
 from kronicle.db.rbac.links.group_roles import RbacGroupRoles
+from kronicle.db.rbac.links.rbac_link import RbacLink
 from kronicle.repo.kronicle_link_repo import KronicleLinkRepository
 
 """
@@ -68,10 +69,10 @@ class RbacGroupRolesRepository(KronicleLinkRepository[RbacGroupRoles]):
     # Write methods
     # ----------------------------------------------------------------------------------------------
     def assign_role_to_group(self, db: Session, *, group_id: UUID, role_id: UUID) -> RbacGroupRoles | None:
-        return self.ensure_link_returning(db, {self.model.GROUP_ID: group_id, self.model.ROLE_ID: role_id})
+        return self.ensure_link_returning(db, {RbacLink.GROUP_ID: group_id, RbacLink.ROLE_ID: role_id})
 
     def remove_role_from_group(self, db: Session, *, group_id: UUID, role_id: UUID) -> RbacGroupRoles | None:
-        return self.remove_link_returning(db, {self.model.GROUP_ID: group_id, self.model.ROLE_ID: role_id})
+        return self.remove_link_returning(db, {RbacLink.GROUP_ID: group_id, RbacLink.ROLE_ID: role_id})
 
     def delete_all_for_group(self, db: Session, *, group_id: UUID) -> list[RbacGroupRoles]:
         stmt = delete(self.model).where(self.model.group_id == group_id).returning(self.model)

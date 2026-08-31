@@ -6,6 +6,7 @@ from uuid import UUID
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
+from kronicle.db.rbac.links.rbac_link import RbacLink
 from kronicle.db.rbac.links.user_groups import RbacUserGroups
 from kronicle.db.rbac.models.rbac_group import RbacGroup
 from kronicle.db.rbac.models.rbac_user import RbacUser
@@ -65,10 +66,10 @@ class RbacUserGroupRepository(KronicleLinkRepository[RbacUserGroups]):
     # Write methods
     # ----------------------------------------------------------------------------------------------
     def add_user_to_group(self, db: Session, *, user: RbacUser, group: RbacGroup) -> RbacUserGroups | None:
-        return self.ensure_link_returning(db, {self.model.USER_ID: user.id, self.model.GROUP_ID: group.id})
+        return self.ensure_link_returning(db, {RbacLink.USER_ID: user.id, RbacLink.GROUP_ID: group.id})
 
     def remove_user_from_group(self, db: Session, *, user: RbacUser, group: RbacGroup) -> RbacUserGroups | None:
-        return self.remove_link_returning(db, {self.model.USER_ID: user.id, self.model.GROUP_ID: group.id})
+        return self.remove_link_returning(db, {RbacLink.USER_ID: user.id, RbacLink.GROUP_ID: group.id})
 
     def delete_all_for_user(self, db: Session, *, user_id: UUID) -> list[RbacUserGroups]:
         stmt = delete(self.model).where(self.model.user_id == user_id).returning(self.model)

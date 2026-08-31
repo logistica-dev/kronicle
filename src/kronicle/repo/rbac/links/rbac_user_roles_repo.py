@@ -6,6 +6,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import delete, select
 
+from kronicle.db.rbac.links.rbac_link import RbacLink
 from kronicle.db.rbac.links.user_roles import RbacUserRoles
 from kronicle.repo.kronicle_link_repo import KronicleLinkRepository
 
@@ -60,10 +61,10 @@ class RbacUserRolesRepository(KronicleLinkRepository[RbacUserRoles]):
     # Write methods
     # ----------------------------------------------------------------------------------------------
     def assign_role_to_user(self, db: Session, *, user_id: UUID, role_id: UUID) -> RbacUserRoles:
-        return self.ensure_link_returning(db, {self.model.USER_ID: user_id, self.model.ROLE_ID: role_id})
+        return self.ensure_link_returning(db, {RbacLink.USER_ID: user_id, RbacLink.ROLE_ID: role_id})
 
     def remove_role_from_user(self, db: Session, *, user_id: UUID, role_id: UUID) -> RbacUserRoles | None:
-        return self.remove_link_returning(db, {self.model.USER_ID: user_id, self.model.ROLE_ID: role_id})
+        return self.remove_link_returning(db, {RbacLink.USER_ID: user_id, RbacLink.ROLE_ID: role_id})
 
     def delete_all_for_user(self, db: Session, *, user_id: UUID) -> list[RbacUserRoles]:
         stmt = delete(self.model).where(self.model.user_id == user_id).returning(self.model)

@@ -19,6 +19,11 @@ class KronicleLinkRepository(Generic[T]):
     model: Type[T]
 
     @classmethod
+    def _cols(cls, filters: dict) -> list:
+        """Resolve string-key filters (e.g. 'group_id') to actual mapped columns."""
+        return [getattr(cls.model, col) == val for col, val in filters.items()]
+
+    @classmethod
     def ensure_link(cls, db: Session, values: dict):
         """
         duplicate is ignored (idempotent operation)
@@ -28,17 +33,17 @@ class KronicleLinkRepository(Generic[T]):
 
     @classmethod
     def check_link(cls, db: Session, filters) -> T | None:
-        stmt = select(cls.model).where(*[col == val for col, val in filters.items()])
+        stmt = select(cls.model).where(*cls._cols(filters))
         return db.execute(stmt).scalars().first()
 
     @classmethod
     def list_links(cls, db: Session, filters) -> list[T]:
-        stmt = select(cls.model).where(*[col == val for col, val in filters.items()])
+        stmt = select(cls.model).where(*cls._cols(filters))
         return list(db.execute(stmt).scalars().all())
 
     @classmethod
     def remove_link(cls, db: Session, filters):
-        stmt = delete(cls.model).where(*[col == val for col, val in filters.items()])
+        stmt = delete(cls.model).where(*cls._cols(filters))
         db.execute(stmt)
 
     @classmethod
@@ -59,5 +64,5 @@ class KronicleLinkRepository(Generic[T]):
     @classmethod
     def remove_link_returning(cls, db: Session, filters) -> T | None:
         """Delete and return the removed row, or None if it didn't exist."""
-        stmt = delete(cls.model).where(*[col == val for col, val in filters.items()]).returning(cls.model)
+        stmt = delete(cls.model).where(*cls._cols(filters)).returning(cls.model)
         return db.execute(stmt).scalars().first()
