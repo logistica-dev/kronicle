@@ -5,13 +5,14 @@ from uuid import UUID
 from sqlalchemy import select
 
 from kronicle.db.core.models.core_row import CoreRow
-from kronicle.repo.kronicle_repo import KronicleRepository
+from kronicle.repo.kronicle_repo import KronicleRepository, log_repo_error
 
 
 class CoreRowRepository(KronicleRepository[CoreRow]):
 
     model = CoreRow
 
+    @log_repo_error
     def get_by_channel_and_row_id(
         self,
         db,

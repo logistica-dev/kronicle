@@ -120,9 +120,11 @@ class RbacUserRepository(KronicleRepository[RbacUser]):
     # ----------------------------------------------------------------------------------------------
     # Write methods
     # ----------------------------------------------------------------------------------------------
+    @log_repo_error
     def create_user(self, db: Session, *, user: RbacUser) -> RbacUser:
         return self.add(db, entity=user)
 
+    @log_repo_error
     def update_user(self, db: Session, *, user: RbacUser) -> RbacUser:
         return self.save(db, entity=user)
 

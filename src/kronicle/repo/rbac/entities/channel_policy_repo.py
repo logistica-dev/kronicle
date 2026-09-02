@@ -7,12 +7,13 @@ from sqlalchemy.orm import Session
 from kronicle.db.rbac.links.rbac_access_profile import ChannelAccessProfile
 from kronicle.db.rbac.links.rbac_policy import ChannelPolicy
 from kronicle.db.rbac.models.rbac_role import RbacRole
-from kronicle.repo.kronicle_repo import KronicleRepository
+from kronicle.repo.kronicle_repo import KronicleRepository, log_repo_error
 
 
 class ChannelPolicyRepository(KronicleRepository[ChannelPolicy]):
     model = ChannelPolicy
 
+    @log_repo_error
     def get_by_subject_and_access_profile(
         self, db: Session, *, subject_id: UUID, access_profile_id: UUID
     ) -> ChannelPolicy | None:
@@ -31,6 +32,7 @@ class ChannelPolicyRepository(KronicleRepository[ChannelPolicy]):
         )
         return list(db.execute(stmt).scalars().all())
 
+    @log_repo_error
     def get_policies_for_subjects(self, db: Session, *, subject_ids: list[UUID]) -> list[ChannelPolicy]:
         if not subject_ids:
             return []
