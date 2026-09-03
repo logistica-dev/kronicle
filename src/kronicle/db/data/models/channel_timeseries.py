@@ -288,6 +288,28 @@ class ChannelTimeseries:
             return
         await db.execute(self.create_table_sql())
 
+    async def _is_hypertable(self, db: PoolConnectionProxy) -> bool:
+        """Check if the table is already a TimescaleDB hypertable."""
+        result = await db.fetchval(
+            "SELECT 1 FROM timescaledb_information.hypertables "
+            "WHERE hypertable_schema = $1 AND hypertable_name = $2",
+            self.namespace,
+            self.table_name,
+        )
+        return result is not None
+
+    async def _convert_to_hypertable(self, db: PoolConnectionProxy):
+        """Convert the table to a TimescaleDB hypertable if not already one (for later use)."""
+        if await self._is_hypertable(db):
+            return
+        await db.execute(
+            f"SELECT * FROM create_hypertable("
+            f"'{self.table}', 'time', "
+            f"if_not_exists => TRUE, "
+            f"create_default_indexes => TRUE"
+            f")"
+        )
+
     async def count_rows(self, db: PoolConnectionProxy) -> int:
         """
         Return the total number of rows in the channel's timeseries table.

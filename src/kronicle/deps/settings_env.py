@@ -287,8 +287,39 @@ class DBSettings:
             self._dbsu_usr = ""
             self._dbsu_pwd = SecretStr("")
 
+    @property
+    def host(self) -> str:
+        return self._host
+
+    @property
+    def port(self) -> int:
+        return self._port
+
+    @property
+    def db_name(self) -> str:
+        return self._name
+
+    @property
+    def rbac_user(self) -> str:
+        return self._rbac_usr
+
+    @property
+    def chan_user(self) -> str:
+        return self._chan_usr
+
+    @property
+    def owner_passwords(self) -> dict[str, str]:
+        return {
+            self._rbac_usr: self._rbac_pwd.get_secret_value(),
+            self._chan_usr: self._chan_pwd.get_secret_value(),
+        }
+
     def get_connection_url(self, usr: str, pwd: str) -> str:
         return f"postgresql://{usr}:{pwd}@{self._host}:{self._port}/{self._name}"
+
+    def get_maintenance_url(self, usr: str, pwd: str) -> str:
+        """A connection URL pointing at the cluster-level 'postgres' maintenance DB."""
+        return f"postgresql://{usr}:{pwd}@{self._host}:{self._port}/postgres"
 
     @property
     def channel_connection_url(self) -> str:
@@ -305,15 +336,33 @@ class DBSettings:
         return None
 
     @property
+    def dbsu_maintenance_url(self) -> str | None:
+        """dbsu URL pointing at the 'postgres' maintenance DB, or None without dbsu."""
+        if self._dbsu_usr:
+            return self.get_maintenance_url(usr=self._dbsu_usr, pwd=self._dbsu_pwd.get_secret_value())
+        return None
+
+    @property
     def masked_connection_url(self) -> str | None:
         """Return URL safe for logging (password hidden)"""
         return obfuscate_pwd_in_connection_url(self.channel_connection_url)
 
     @property
     def masked_rbac_connection_url(self) -> str:
-        return obfuscate_pwd_in_connection_url(
-            self.get_connection_url(usr=self._rbac_usr, pwd=self._rbac_pwd.get_secret_value())
-        )
+        """Return URL safe for logging (password hidden)"""
+        return obfuscate_pwd_in_connection_url(self.rbac_connection_url)
+
+    @property
+    def masked_dbsu_connection_url(self) -> str | None:
+        """Return URL safe for logging (password hidden)"""
+        if self.dbsu_connection_url:
+            return obfuscate_pwd_in_connection_url(self.dbsu_connection_url)
+
+    @property
+    def masked_maintenance_url(self) -> str | None:
+        """Return URL safe for logging (password hidden)"""
+        if self.dbsu_maintenance_url:
+            return obfuscate_pwd_in_connection_url(self.dbsu_maintenance_url)
 
     def model_dump(self, **kwargs) -> dict[str, str | None]:
         return {"connection_url": self.masked_connection_url}

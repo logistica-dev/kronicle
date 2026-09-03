@@ -41,15 +41,14 @@ def run_migration(conf_path: str | None = None) -> None:
     load_secrets(conf_path)
 
     settings = KronicleSettings()
-    db_url = settings.db.rbac_connection_url
-    log_d(here, "db_url", obfuscate_pwd_in_connection_url(db_url))
+    log_d(here, "db_url", settings.db.masked_rbac_connection_url)
 
     backup_url = os.environ.get("KRONICLE_BACKUP_URL") or None
     if backup_url:
         log_d(here, "backup_url", obfuscate_pwd_in_connection_url(backup_url))
 
     log_d(here, "Launching migration")
-    migration_manager = MigrationManager(db_url=db_url, backup_url=backup_url)
+    migration_manager = MigrationManager(db=settings.db, backup_url=backup_url)
     migration_manager.run()
 
 
