@@ -9,7 +9,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.engine.interfaces import ReflectedColumn, ReflectedForeignKeyConstraint
 from sqlalchemy.schema import MetaData, Table
 
-from kronicle.db.migration.operations import (
+from kronicle.db.migration.engine.operations import (
     AddCheckConstraintOp,
     AddColumnOp,
     AddForeignKeyOp,

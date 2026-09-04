@@ -1,4 +1,26 @@
-# kronicle/db/migration/migration_manager.py
+# kronicle/db/migration/db_rbac_provisioner.py
+"""
+RbacSchemasProvisioner: schema-level migration for the `core` and `rbac` schemas.
+
+Complements DbProvisioner (infra: DB + owner roles + schemas + TimescaleDB extension).
+This object owns the migration lifecycle for the two SQLAlchemy-backed, RBAC-owned
+schemas (`core` + `rbac`): analysis, plan, user gate, backup, apply, state recording,
+and the per-schema tracking tables (schema_migration_state / schema_migration_history).
+
+Pipeline (check → plan → validate → execute), same principle as MigrationManager:
+  1. check_analysis_requirements  — rbac owner connection can read the schemas
+  2. check_tracking_tables_exist  — state + history tables present per schema
+  3. pre_migration_check          — read stored state, detect drift (read-only)
+  4. build_plan                   — diff metadata vs DB, no side effects
+  5. check_mutation_requirements  — schemas owned (else dbsu ownership transfer), backup writable
+  6. user gate                    — y/n before any mutation (skipped if auto_approve)
+  7. execute                      — backup, clean orphans, apply plan (as owner), record state
+
+Most of the migration-core here is copied from MigrationManager, scoped to core+rbac
+(it also carried the `data` schema). MigrationManager is kept as a fallback/backup until
+it is retired; the DataMigrationManager (asyncpg) will take over `data`.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -16,11 +38,10 @@ from sqlalchemy import create_engine, inspect, select, text
 
 from kronicle.db.base.kronicle_base import Base
 from kronicle.db.core.models._registry import CORE_NAMESPACE
-from kronicle.db.data.models._registry import DATA_NAMESPACE
 from kronicle.db.migration.engine.db_catalog import DatabaseCatalogBuilder
 from kronicle.db.migration.engine.migration_plan import MigrationPlan
 from kronicle.db.migration.engine.migration_proposal import MigrationProposal
-from kronicle.db.migration.engine.operations import AddColumnOp
+from kronicle.db.migration.engine.operations import AddColumnOp, SafetyLevel
 from kronicle.db.migration.persistence.schema_migration_history import (
     CoreSchemaMigrationHistory,
     RbacSchemaMigrationHistory,
@@ -38,10 +59,10 @@ from kronicle.types.iso_datetime import IsoDateTime
 from kronicle.utils.dev_logs import log_d, log_e, log_i, log_w
 from kronicle.utils.file_utils import load_env_file
 
-mod = "migration"
+mod = "rbac_schemas"
 
 # --------------------------------------------------------------------------------------
-# Schema → model mapping
+# Schema → model mapping (core + rbac only)
 # --------------------------------------------------------------------------------------
 _SCHEMA_STATE: dict[str, type] = {}
 _SCHEMA_HISTORY: dict[str, type] = {}
@@ -68,6 +89,27 @@ class _FkCheck:
     ref_table: str
     src_cols: list[str]
     ref_cols: list[str]
+
+
+@dataclass(frozen=True)
+class ApplyResult:
+    """Outcome of a single `run_once()` pass, consumed by the orchestrator."""
+
+    applied_ops: int
+    """Number of operations applied during this pass (0 == no work / already converged)."""
+
+    safety_level: str | None
+    """Worst safety level among the applied operations (None if nothing was applied)."""
+
+    revision: str | None
+    """Plan revision that was executed (None if nothing was applied)."""
+
+    aborted: bool = False
+    """True when the user declined at a confirmation gate (nothing applied, stop)."""
+
+    @property
+    def converged(self) -> bool:
+        return self.applied_ops == 0 and not self.aborted
 
 
 def _build_fk_checks(schemas: list[str], plan: MigrationPlan) -> list[_FkCheck]:
@@ -131,22 +173,22 @@ def _build_orphan_delete_sql(c: _FkCheck) -> str:
     )
 
 
-# ======================================================================================
-# MigrationManager
-# ======================================================================================
+# --------------------------------------------------------------------------------------
+# Prerequisite action labels (plan-readable, shown to the operator)
+# --------------------------------------------------------------------------------------
 _USER_CREATION = "creation of user"
 _SCHEMA_OWNERSHIP = "ownership of schema"
 _TRACK_TABLES_CREATION = "creation of the tracking tables for schema"
 
 
-class MigrationManager:
+class RbacSchemasProvisioner:
     """
-    Orchestrates the full migration lifecycle:
+    Orchestrates the migration lifecycle for the `core` and `rbac` schemas.
 
-        1. Pre-check (current state, drift detection)
+        1. Analysis requirements (owner can read schemas)
         2. Proposal (diff)
         3. Plan (ordering + safety)
-        4. User gate
+        4. User gate (before any mutation)
         5. Backup
         6. Execution (Alembic Ops)
         7. History + State recording (chained revisions)
@@ -164,34 +206,27 @@ class MigrationManager:
         self._db_settings = db_settings
         self.backup_url = backup_url or self.rbac_url
 
-        self.schemas = get_migration_schemas()
+        self.schemas = sorted(get_migration_schemas())
         self._previous_revisions: dict[str, str | None] = {}
 
         self.rbac_db = RbacDbSession(self.rbac_url)
 
         self.auto_approve = auto_approve
 
-        # Ownership intent: `core` + `rbac` are owned by the rbac user, `data` by the
-        # chan user. Owners/usernames MUST come from DBSettings (which reads them from
-        # the configured creds) — never parse them out of a connection URL.
+        # Only `core` + `rbac`, both owned by the rbac user.
         self._schema_owners = {
             CORE_NAMESPACE: self.rbac_user,
             RBAC_NAMESPACE: self.rbac_user,
-            DATA_NAMESPACE: self.chan_user,
         }
 
-        # Per-schema (owner, connection-url) pairs: the app connection for each schema
-        # is the schema owner's own connection (rbac URL for core/rbac, chan URL for data).
         self._schema_connections = {
             CORE_NAMESPACE: (self.rbac_user, self.rbac_url),
             RBAC_NAMESPACE: (self.rbac_user, self.rbac_url),
-            DATA_NAMESPACE: (self.chan_user, self.data_url),
         }
 
         # Owner passwords, used only to (re)create a missing role via the dbsu superuser.
         self._owner_passwords = {
             self.rbac_user: self._db_settings._rbac_pwd.get_secret_value(),
-            self.chan_user: self._db_settings._chan_pwd.get_secret_value(),
         }
 
         log_i(mod, f"Migration scope: {self.schemas}")
@@ -201,16 +236,8 @@ class MigrationManager:
         return self._db_settings._rbac_usr
 
     @property
-    def chan_user(self) -> str:
-        return self._db_settings._chan_usr
-
-    @property
     def rbac_url(self) -> str:
         return self._db_settings.rbac_connection_url
-
-    @property
-    def data_url(self) -> str:
-        return self._db_settings.channel_connection_url
 
     @property
     def dbsu_url(self) -> str | None:
@@ -228,18 +255,21 @@ class MigrationManager:
     # BACKUP
     # ------------------------------------------------------------------
 
-    def _backup_url(self) -> str:
+    def _backup_connection_url(self) -> str:
         return self.dbsu_url or self.backup_url
 
-    def backup(self) -> Path:
+    def _backup_file_path(self) -> Path:
         backup_prefix = os.environ.get(KRONICLE_RBAC_BACKUP, "./backup/kronicle")
         backup_prefix_path = Path(backup_prefix)
-
         ts = IsoDateTime.now_utc().strftime("%Y%m%d_%H%M%S")
-        backup_file = backup_prefix_path.parent / f"{backup_prefix_path.name}_{ts}.dump"
+        backup_file = backup_prefix_path.parent / f"{backup_prefix_path.name}_rbac_{ts}.dump"
+        return backup_file
+
+    def backup(self) -> Path:
+        backup_file = self._backup_file_path()
         backup_file.parent.mkdir(parents=True, exist_ok=True)
 
-        cmd = ["pg_dump", "-Fc", "-f", str(backup_file), self._backup_url()]
+        cmd = ["pg_dump", "-Fc", "-f", str(backup_file), self._backup_connection_url()]
 
         for schema in self.schemas:
             cmd += ["-n", schema]
@@ -254,7 +284,7 @@ class MigrationManager:
         return backup_file
 
     # ------------------------------------------------------------------
-    # PRE-MIGRATION CHECK
+    # PRE-MIGRATION CHECK (read stored state, detect drift)
     # ------------------------------------------------------------------
 
     @staticmethod
@@ -381,7 +411,7 @@ class MigrationManager:
                 log_i(mod, f"Schema '{schema}' already up to date")
 
     # ------------------------------------------------------------------
-    # CORE PIPELINE
+    # BUILD PLAN (no side effects)
     # ------------------------------------------------------------------
 
     def build_plan(self) -> MigrationPlan:
@@ -498,9 +528,7 @@ class MigrationManager:
             log_w(mod, f"Failed migration recorded — revision {plan.revision}")
 
     # ------------------------------------------------------------------
-    # STATE REFRESH (when no operat
-    #
-    # ions but hash has drifted)
+    # STATE REFRESH (when no operations but hash has drifted)
     # ------------------------------------------------------------------
 
     def refresh_state_if_needed(self, plan: MigrationPlan) -> None:
@@ -535,7 +563,7 @@ class MigrationManager:
                 log_i(mod, f"Migration state refreshed — revision {plan.revision}")
 
     # ------------------------------------------------------------------
-    # RUN
+    # OWNERSHIP + BACKUP requirements
     # ------------------------------------------------------------------
 
     def ensure_table_ownership(self, dbsu_url) -> None:
@@ -579,12 +607,37 @@ class MigrationManager:
             ]
             subprocess.run(cmd, check=True, capture_output=True, text=True)
 
+    def _table_exists(self, schema: str, table: str, url: str) -> bool:
+        """Read-only: does the given table already exist in the DB?"""
+        engine = create_engine(url)
+        try:
+            with engine.connect() as conn:
+                row = conn.execute(
+                    text(
+                        "SELECT 1 FROM information_schema.tables " "WHERE table_schema = :schema AND table_name = :name"
+                    ),
+                    {"schema": schema, "name": table},
+                ).first()
+                return row is not None
+        finally:
+            engine.dispose()
+
     def clean_orphans(self, plan: MigrationPlan) -> None:
-        """Delete rows that would violate FK constraints the plan is about to add."""
-        checks = _build_fk_checks(list(self.schemas), plan)
+        """
+        Delete rows that would violate Foreign Key constraints the plan is about to add.
+
+        Only runs for FK relationships where BOTH tables already exist: on a fresh
+        DB the referencing tables do not exist yet (the plan is about to create
+        them), so there is nothing to clean and the DELETE would otherwise fail.
+        """
+        conn_str = self.dbsu_url or self.rbac_url
+        checks = [
+            c
+            for c in _build_fk_checks(list(self.schemas), plan)
+            if self._table_exists(c.src_schema, c.src_table, conn_str)
+        ]
         if not checks:
             return
-        conn_str = self.dbsu_url or self.rbac_url
         log_i(mod, f"Cleaning orphan rows for {len(checks)} FK relationships")
         _delete_orphans(checks, conn_str)
 
@@ -618,24 +671,6 @@ class MigrationManager:
             log_w(mod, f"Connectivity check failed for {label}: {e}")
             return False
 
-    def check_psql_user_exists(self, user: str, url: str) -> bool:
-        """Read-only: does the owner role exist in the DB?"""
-        if self.dbsu_url:
-            log_d(mod, f"Checking if PSQL user '{user}' exists")
-            result = subprocess.run(
-                ["psql", "-d", self.dbsu_url, "-t", "-A", "-c", f"SELECT 1 FROM pg_roles WHERE rolname = '{user}'"],
-                check=True,
-                capture_output=True,
-                text=True,
-            )
-            exists = result.stdout.strip() == "1"
-        else:
-            # No dbsu configured: fall back to attempting a connection with the role.
-            log_d(mod, f"Checking connection with PSQL user '{user}'")
-            exists = self._can_connect(url, f"owner '{user}'")
-        log_d(mod, f"PSQL user '{user}' {'exists' if exists else 'does not exist'}")
-        return exists
-
     def check_schema_ownership(self, schema: str, owner: str, url: str) -> bool:
         """Read-only: does the given schema belong to its intended owner?"""
         try:
@@ -657,19 +692,11 @@ class MigrationManager:
                 return False
         return True
 
-    def ensure_users_exist(self, dbsu_url: str) -> None:
-        """Create any missing owner roles via the dbsu superuser connection."""
-        for schema, (owner, _) in self.schema_connections.items():
-            password = self._owner_passwords.get(owner)
-            if password is None:
-                raise RuntimeError(f"No password configured for PSQL user '{owner}' — cannot create role")
-            log_i(mod, f"Creating PSQL user '{owner}' (owner of schema '{schema}')")
-            subprocess.run(
-                ["psql", "-d", dbsu_url, "-c", f"CREATE ROLE \"{owner}\" LOGIN PASSWORD '{password}'"],
-                check=True,
-                capture_output=True,
-                text=True,
-            )
+    def check_backup_writable(self) -> None:
+        backup_file = self._backup_file_path()
+        backup_dir = backup_file.parent
+        if not os.access(backup_dir, os.W_OK):
+            raise RuntimeError(f"Backup directory is not writable: '{backup_dir}'")
 
     def check_mutation_requirements(self, plan: MigrationPlan) -> None:
         """
@@ -690,155 +717,133 @@ class MigrationManager:
 
         self.check_backup_writable()
 
-    def check_backup_writable(self) -> None:
-        backup_prefix = os.environ.get(KRONICLE_RBAC_BACKUP, "./backup/kronicle")
-        backup_dir = Path(backup_prefix).parent
-        if not os.access(backup_dir, os.W_OK):
-            raise RuntimeError(f"Backup directory is not writable: {backup_dir}")
-
-    def check_prerequisites(self) -> dict[str, dict]:
-        """
-        Check DB prerequisites per schema (owner role, schema ownership,
-        tracking tables), gather the operations needed, confirm with the
-        operator, then apply them.
-
-        Always runs at startup; the same path is used by the migration CLI, so the
-        CLI is exactly what startup will run (no special modes).
-        """
+    def check_tracking_prerequisites(self) -> dict[str, dict]:
+        """Check per-schema tracking tables; report the fixes needed (read-only)."""
         fixes: dict[str, dict] = {}
-
-        # --- gather (read-only) ---
-        # Report every fix needed per schema, not just the first blocker: if the owner
-        # role is missing we still list the ownership + tracking-table work that will
-        # follow once it exists. Ownership failing implies the tracking tables are not
-        # yet provisioned for the owning user either. All are applied together below.
-        for schema, (psql_user, url) in self.schema_connections.items():
-            if not self.check_psql_user_exists(psql_user, url):
-                fixes[schema] = {
-                    _USER_CREATION: f"{_USER_CREATION} '{psql_user}' for schema '{schema}'",
-                    _SCHEMA_OWNERSHIP: f"{_SCHEMA_OWNERSHIP} '{schema}' by user '{psql_user}'",
-                    _TRACK_TABLES_CREATION: f"{_TRACK_TABLES_CREATION} '{schema}'",
-                }
-            elif not self.check_schema_ownership(schema, psql_user, url):
-                fixes[schema] = {
-                    _SCHEMA_OWNERSHIP: f"{_SCHEMA_OWNERSHIP} '{schema}' by user '{psql_user}'",
-                    _TRACK_TABLES_CREATION: f"{_TRACK_TABLES_CREATION} '{schema}'",
-                }
-            elif not self.check_tracking_tables_exist(schema, url):
+        for schema in self.schemas:
+            if not self.check_tracking_tables_exist(schema, self.rbac_url):
                 fixes[schema] = {_TRACK_TABLES_CREATION: f"{_TRACK_TABLES_CREATION} '{schema}'"}
         return fixes
 
-    def ensure_prerequisites(self, fixes: dict[str, dict], *, auto_approve: bool = False):
-        """
-        Rule: every validation/migration/ownership change in the DB must be explicitly
-        confirmed by the operator with a (y/n) prompt before any mutation — never applied
-        silently unless auto approve flag is True.
-        Same rule as the migration-plan gate in run().
-        """
-        log_i(mod, "The following fixes are needed:")
+    def ensure_tracking_prerequisites(self, fixes: dict[str, dict], *, auto_approve: bool = False) -> None:
+        """Create the missing per-schema tracking tables (after operator confirmation)."""
+        log_i(mod, "The following tracking-table fixes are needed:")
         for schema, actions in fixes.items():
-            log_i(mod, f"- schema '{schema}'")
             for action in actions:
-                log_i(mod, f"    + {action}")
+                log_i(mod, f"  - [{schema}] {action}")
 
         if not auto_approve:
-            confirm = input("Apply these prerequisite fixes? (y/n): ")
+            confirm = input("Apply these tracking-table fixes? (y/n): ")
             if confirm.lower() != "y":
-                log_i(mod, "Prerequisite fixes aborted by user")
-                raise RuntimeError("Prerequisite fixes not approved")
-
-        # --- apply (mutation, in the right order) ---
-        # Order matters: create missing roles first, then (re)establish schema/table
-        # ownership so the owning user can act, then create the tracking tables.
-        user_creation_needed = any(_USER_CREATION in fix for fix in fixes.keys())
-        schema_ownership_needed = any(_SCHEMA_OWNERSHIP in fix for fix in fixes.keys())
-        needs_dbsu = user_creation_needed or schema_ownership_needed
-        if needs_dbsu:
-            if not self.dbsu_url:
-                if user_creation_needed:
-                    log_e(mod, f"DB superuser connection needed for {_USER_CREATION} and {_SCHEMA_OWNERSHIP}")
-                else:
-                    log_e(mod, f"DB superuser connection needed for {_SCHEMA_OWNERSHIP}")
-                raise RuntimeError("Prerequisite fixes require dbsu_url (DB superuser) but it is not configured")
-            if user_creation_needed:
-                self.ensure_users_exist(self.dbsu_url)
-            self.ensure_table_ownership(self.dbsu_url)
+                log_i(mod, "Tracking-table fixes aborted by user")
+                raise RuntimeError("Tracking-table fixes not approved")
 
         with self.rbac_db._engine.begin() as conn:
             self.ensure_tracking_tables(conn)
 
-    def run(self, *, auto_approve: bool | None = None, verbose: bool = True):  # noqa: C901
-        """Run the full migration pipeline (prerequisites → analysis → plan → gate → apply).
+    # ------------------------------------------------------------------
+    # RUN (check → plan → validate → execute)
+    # ------------------------------------------------------------------
 
-        This is the exact path the application runs at startup (no special modes).
+    def _is_non_destructive(self, plan: MigrationPlan) -> bool:
+        return not plan.destructive_ops()
+
+    def run_once(
+        self,
+        *,
+        auto_approve: bool | None = None,
+        auto_approve_if_non_destructive: bool = False,
+        verbose: bool = True,
+    ) -> ApplyResult:
+        """Run one full migration pass (check → plan → gate → execute).
+
+        The confirmation gate is skipped when:
+          - ``auto_approve`` is True (full auto, e.g. CLI ``--auto-approve``), or
+          - ``auto_approve_if_non_destructive`` is True **and** the plan contains
+            no destructive operations (used by the orchestrator for convergence
+            rounds, where the plan is expected to be purely additive). If such a
+            plan unexpectedly contains destructive operations, the guard falls
+            back to prompting rather than silently applying them.
         """
-        log_i(mod, "Starting migration pipeline")
-
-        # Per-call override for the confirmation gates; falls back to the instance
+        # Per-call override for the full-approve gate; falls back to the instance
         # auto_approve (from __init__/CLI).
         auto_approve = self.auto_approve if auto_approve is None else auto_approve
 
-        plan = None
+        # --------------------------------------------------
+        # PHASE 1 - ANALYSIS REQUIREMENTS (read-only)
+        # --------------------------------------------------
+        self.check_analysis_requirements()
+
+        # --------------------------------------------------
+        # PHASE 0 - TRACKING TABLES (read-only check → confirmed creation)
+        #    Tracking tables are core+rbac-scope (table-level), not infra:
+        #    they are owned here, not by DbProvisioner.
+        # --------------------------------------------------
+        tracking_fixes = self.check_tracking_prerequisites()
+        if tracking_fixes:
+            self.ensure_tracking_prerequisites(tracking_fixes, auto_approve=auto_approve)
+
+        # --------------------------------------------------
+        # PRE-CHECK (read stored state, detect drift)
+        # --------------------------------------------------
+        with self.rbac_db._engine.begin() as conn:
+            self.pre_migration_check(conn)
+
+        # --------------------------------------------------
+        # BUILD PLAN (no side effects)
+        # --------------------------------------------------
+        plan = self.build_plan()
+
+        if not plan.operations:
+            log_i(mod, "No changes detected — nothing to apply")
+            # Re-record state if the hash computation changed (e.g. defaults excluded)
+            self.refresh_state_if_needed(plan)
+            return ApplyResult(applied_ops=0, safety_level=None, revision=None)
+
+        if verbose:
+            log_i(mod, f"Plan summary: {plan.summary()}")
+
+        # --------------------------------------------------
+        # PHASE 2 - EXECUTION REQUIREMENTS (now we know the actions)
+        #    Fail fast before the gate / any mutation.
+        # --------------------------------------------------
+        self.check_mutation_requirements(plan)
+
+        # --------------------------------------------------
+        # 3. USER GATE (before ANY mutation)
+        #    Guard: auto-approve only if non-destructive when using
+        #    auto_approve_if_non_destructive — never silently drop things.
+        # --------------------------------------------------
+        should_prompt = not auto_approve and not (auto_approve_if_non_destructive and self._is_non_destructive(plan))
+        if should_prompt:
+            confirm = input("Review above migration plan.\n" "Proceed with backup + migration? (y/n): ")
+            if confirm.lower() != "y":
+                log_i(mod, "Migration aborted by user")
+                return ApplyResult(applied_ops=0, safety_level=None, revision=None, aborted=True)
+
+        # --------------------------------------------------
+        # 4. SIDE EFFECTS (only after approval)
+        #    Post-execution analysis is NOT run here: on a fresh DB the diff
+        #    engine needs multiple passes to converge (tables first, then
+        #    cross-table constraints), so a single pass legitimately leaves
+        #    operations outstanding. Raising here would break the orchestrator's
+        #    convergence loop, so run_once() only executes the pass and returns
+        #    how much work remains via ApplyResult. Convergence and terminal
+        #    verification are the orchestrator's (run_post_analysis()).
+        # --------------------------------------------------
+        return self._execute_pass(plan)
+
+    def _execute_pass(self, plan: MigrationPlan) -> ApplyResult:
+        """Execute the validated plan's side effects (backup, clean, apply, record).
+
+        Self-contained on failure: restores from the backup, re-creates the
+        tracking tables and privileges, records the failed state, then re-raises.
+        """
         backup_file = None
-
         try:
-
-            # --------------------------------------------------
-            # PHASE 0 - PREREQUISITES
-            # --------------------------------------------------
-            fixes = self.check_prerequisites()
-
-            if not fixes:
-                log_i(mod, "All prerequisites satisfied")
-            else:
-                self.ensure_prerequisites(fixes, auto_approve=auto_approve)
-
-            # --------------------------------------------------
-            # PHASE 1 - ANALYSIS REQUIREMENTS (read-only)
-            # --------------------------------------------------
-            self.check_analysis_requirements()
-
-            # --------------------------------------------------
-            # PRE-CHECK (read stored state, detect drift)
-            # --------------------------------------------------
-            with self.rbac_db._engine.begin() as conn:
-                self.pre_migration_check(conn)
-
-            # --------------------------------------------------
-            # BUILD PLAN (no side effects)
-            # --------------------------------------------------
-            plan = self.build_plan()
-
-            if not plan.operations:
-                log_i(mod, "No changes detected — nothing to apply")
-                # Re-record state if the hash computation changed (e.g. defaults excluded)
-                self.refresh_state_if_needed(plan)
-                return
-
-            if verbose:
-                log_i(mod, f"Plan summary: {plan.summary()}")
-
-            # --------------------------------------------------
-            # PHASE 2 - EXECUTION REQUIREMENTS (now we know the actions)
-            #    Fail fast before the gate / any mutation.
-            # --------------------------------------------------
-            self.check_mutation_requirements(plan)
-
-            # --------------------------------------------------
-            # 3. USER GATE (before ANY mutation)
-            # --------------------------------------------------
-            if not auto_approve:
-                confirm = input("Review above migration plan.\n" "Proceed with backup + migration? (y/n): ")
-                if confirm.lower() != "y":
-                    log_i(mod, "Migration aborted by user")
-                    return
-
-            # --------------------------------------------------
-            # 4. SIDE EFFECTS (only after approval)
-            # --------------------------------------------------
             backup_file = self.backup()
 
-            # Remove orphan rows that would break FK creation
+            # Remove orphan rows in relationship tables that would break FK creation
             self.clean_orphans(plan)
 
             # Run DDL as the app (owning) user: ownership was ensured during the
@@ -848,6 +853,19 @@ class MigrationManager:
                 self.apply_plan(plan, connection=conn)
 
             self.record_migration_state(plan, success=True)
+
+            if plan.destructive_ops():
+                safety = SafetyLevel.DESTRUCTIVE
+            elif plan.warning_ops():
+                safety = SafetyLevel.WARNING
+            else:
+                safety = SafetyLevel.SAFE
+
+            return ApplyResult(
+                applied_ops=len(plan.ordered_operations),
+                safety_level=safety,
+                revision=plan.revision,
+            )
 
         except Exception as e:
             log_i(mod, f"FAILED migration: {e}")
@@ -906,49 +924,66 @@ class MigrationManager:
                 if self.dbsu_url:
                     self.ensure_table_ownership(self.dbsu_url)
 
-            if plan is not None:
-                self.record_migration_state(plan, success=False)
+            self.record_migration_state(plan, success=False)
 
             raise
 
-        log_i(mod, "Migration completed successfully")
+    def run_post_analysis(self) -> None:
+        """Post-execution verification: the live DB must match metadata.
+
+        Re-derives the plan for the current scope; if any operations remain the
+        migration did not converge and the database has drifted from the metadata
+        model. Raises :class:`RuntimeError` listing the outstanding operations.
+        """
+        plan = self.build_plan()
+        if plan.operations:
+            outstanding = "; ".join(op.describe() for op in plan.ordered_operations)
+            log_w(mod, f"Post-execution analysis FAILED — {len(plan.operations)} op(s) outstanding: {outstanding}")
+            raise RuntimeError(
+                f"Post-execution analysis failed: {len(plan.operations)} operation(s) still "
+                f"pending — database has drifted from the metadata model. Outstanding: {outstanding}"
+            )
+        log_i(mod, "Post-execution analysis OK — database matches metadata")
 
 
 # ======================================================================================
 # CLI entrypoint
 # ======================================================================================
-
-
 if __name__ == "__main__":
-    here = "migr_manager"
-
-    parser = argparse.ArgumentParser(description="Kronicle DB migration manager")
+    parser = argparse.ArgumentParser(description="Kronicle RBAC/core schema provisioner")
+    parser.add_argument("--secrets", default=None, help="Path to a .secrets file to load")
     parser.add_argument(
-        "--secrets",
-        default=None,
-        help="Path to a .secrets file to load (default: $KRONICLE_SECRETS_PATH or .conf/.secrets)",
+        "--auto-approve",
+        action="store_true",
+        help="Approve prerequisite + migration changes without y/n prompts",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Run the read-only checks and plan, but do not mutate (do not gate/apply)",
     )
     args = parser.parse_args()
 
     secrets_env = os.environ.get("KRONICLE_SECRETS_PATH")
     secrets_default = Path(__file__).resolve().parent.parent.parent.parent.parent / ".conf" / ".secrets"
     secrets_path = Path(args.secrets) if args.secrets else Path(secrets_env) if secrets_env else secrets_default
+
     if secrets_path.exists():
         load_env_file(secrets_path)
-        log_d(here, "Env var loaded")
+        log_d(mod, "Env var loaded")
     else:
-        log_d(here, "Secrets file not found", secrets_path)
+        log_d(mod, "Secrets file not found", secrets_path)
 
     settings = KronicleSettings()
-    log_d(here, "db_url", settings.db.masked_rbac_connection_url)
-    log_d(here, "data_url", settings.db.masked_connection_url)
-    log_d(here, "dbsu_url", settings.db.masked_dbsu_connection_url)
+    provisioner = RbacSchemasProvisioner(db_settings=settings.db)
 
-    # Optional: override backup connection (e.g. superuser) via env var
-    backup_url = os.environ.get("KRONICLE_BACKUP_URL") or None
-
-    manager = MigrationManager(
-        db_settings=settings.db,
-        backup_url=backup_url,
-    )
-    manager.run()
+    if args.dry_run:
+        provisioner.check_analysis_requirements()
+        provisioner.check_tracking_prerequisites()
+        plan = provisioner.build_plan()
+        if not plan.operations:
+            log_i(mod, "No changes detected")
+        else:
+            log_i(mod, f"Plan summary: {plan.summary()}")
+    else:
+        provisioner.run_once(auto_approve=args.auto_approve)

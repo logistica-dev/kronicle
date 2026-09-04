@@ -1,30 +1,4 @@
 # kronicle/db/migration/db_provisioner.py
-
-
-from __future__ import annotations
-
-import argparse
-import os
-import subprocess
-from pathlib import Path
-
-from sqlalchemy import create_engine, text
-
-from kronicle.db.core.models._registry import CORE_NAMESPACE
-from kronicle.db.data.models._registry import DATA_NAMESPACE
-from kronicle.db.rbac.models._registry import RBAC_NAMESPACE
-from kronicle.deps.settings import KronicleSettings
-from kronicle.deps.settings_env import DBSettings, get_env_var
-from kronicle.types.iso_datetime import IsoDateTime
-from kronicle.utils.dev_logs import log_d, log_e, log_i, log_w
-from kronicle.utils.file_utils import load_env_file
-
-mod = "db_provisioner"
-
-_TIMESCALEDB_EXT = "timescaledb"
-
-KRONICLE_FULL_BACKUP = "KRONICLE_FULL_BACKUP"
-
 """
 DbProvisioner: checks and possibly ensures database readiness.
 
@@ -46,15 +20,42 @@ refined to cover this object's larger scope (DB creation + TimescaleDB extension
 MigrationManager is kept as a fallback/backup until it is retired.
 """
 
+from __future__ import annotations
 
-class DbProvisioner:
+import argparse
+import os
+import subprocess
+from pathlib import Path
+
+from sqlalchemy import create_engine, text
+
+from kronicle.db.core.models._registry import CORE_NAMESPACE
+from kronicle.db.data.models._registry import DATA_NAMESPACE
+from kronicle.db.rbac.models._registry import RBAC_NAMESPACE
+from kronicle.db.migration.orchestrators.provisioner_base import BaseProvisioner, backup_path
+from kronicle.deps.settings import KronicleSettings
+from kronicle.deps.settings_env import KRONICLE_FULL_BACKUP, DBSettings, get_env_var
+from kronicle.utils.dev_logs import log_d, log_e, log_i, log_w
+from kronicle.utils.file_utils import load_env_file
+
+mod = "db_provisioner"
+
+_TIMESCALEDB_EXT = "timescaledb"
+
+
+class DbProvisioner(BaseProvisioner):
     """
     Checks and possibly ensures database readiness: DB, owner roles, SQL schemas,
     TimescaleDB extension. See module docstring for the check/ensure split.
+
+    Implements the BaseProvisioner contract (analyze / ask_validation / backup /
+    restore_backup / execute_plan / run_post_analysis) driven by the shared
+    ``run_once()`` workflow.
     """
 
-    def __init__(self, db_settings: DBSettings):
+    def __init__(self, db_settings: DBSettings, *, auto_approve: bool = False):
         self._db_settings = db_settings
+        self.auto_approve = auto_approve
 
     # ------------------------------------------------------------------
     # Config (resolved once; passed explicitly into the atomic checks)
@@ -250,16 +251,28 @@ class DbProvisioner:
     # ------------------------------------------------------------------
     # Backup (safeguard before mutating an existing database)
     # ------------------------------------------------------------------
-    def backup(self, dbsu_url: str, schema_owners: dict[str, str]) -> Path:
-        """pg_dump the three managed schemas (custom format) via the dbsu connection."""
+    def backup(self) -> Path | str | None:
+        """Safeguard pg_dump of the managed schemas — only when the DB already exists.
+
+        Returns the backup file path, or None when the app DB does not exist yet
+        (nothing to preserve before creating it).
+        """
+        maintenance_url = self.dbsu_maintenance_url
+        if not (self.dbsu_url and maintenance_url):
+            raise RuntimeError(
+                "Database prerequisites (DB, roles, schemas, extension) require dbsu_url "
+                "(the DB superuser connection) but it is not configured"
+            )
+        if not self.check_db_exists(maintenance_url):
+            log_d(mod, "Application DB does not exist — skipping safeguard backup")
+            return None
+
         backup_prefix = get_env_var(KRONICLE_FULL_BACKUP, "./backup/kronicle")
-        backup_prefix_path = Path(backup_prefix)
-        ts = IsoDateTime.now_utc().strftime("%Y%m%d_%H%M%S")
-        backup_file = backup_prefix_path.parent / f"{backup_prefix_path.name}_provisioner_{ts}.dump"
+        backup_file = backup_path(backup_prefix, "full")
         backup_file.parent.mkdir(parents=True, exist_ok=True)
 
-        cmd = ["pg_dump", "-Fc", "-f", str(backup_file), dbsu_url]
-        for schema in schema_owners:
+        cmd = ["pg_dump", "-Fc", "-f", str(backup_file), self.dbsu_url]
+        for schema in self.schema_owners:
             cmd += ["-n", schema]
 
         log_i(mod, f"Creating safeguard backup: {backup_file}")
@@ -272,26 +285,40 @@ class DbProvisioner:
         return backup_file
 
     # ------------------------------------------------------------------
-    # Ensure (mutating, idempotent, requires dbsu)
+    # BaseProvisioner contract
     # ------------------------------------------------------------------
-    def ensure_readiness(self, *, auto_approve: bool = False) -> None:
-        """Apply the prerequisites read by check_readiness(), creating anything missing."""
-        missing_prepreq = self.check_readiness()
-        if not missing_prepreq:
-            log_i(mod, "All database prerequisites satisfied")
-            return
 
+    def analyze(self, *, auto_approve: bool | None = None, **kwargs) -> None:
+        """Read-only: report the missing database prerequisites."""
+        auto_approve = self.auto_approve if auto_approve is None else auto_approve
+        self._auto_approve = auto_approve
+        self._missing = self.check_readiness()
+        self._has_work = bool(self._missing)
+        if not self._has_work:
+            log_i(mod, "All database prerequisites satisfied")
+
+    def ask_validation(self, **kwargs) -> bool:
+        """Present the missing prerequisites and confirm before mutating."""
+        missing = self._missing
         log_w(mod, "The following database prerequisites are missing:")
-        for kind, items in missing_prepreq.items():
+        for kind, items in missing.items():
             for item in items:
                 log_w(mod, f"  - [{kind}] {item}")
 
-        if not auto_approve:
+        if not self._auto_approve:
             confirm = input("Apply fixes for the missing database prerequisites (requires superuser)? (y/n): ")
             if confirm.lower() != "y":
                 log_i(mod, "Database prerequisites fixes aborted by user")
-                raise RuntimeError("Database prerequisites fixes not approved")
+                return False
+        return True
 
+    def restore_backup(self, backup_file: Path | str | None) -> None:
+        """Infra changes are idempotent and re-runnable; nothing to roll back."""
+        if backup_file:
+            log_i(mod, f"Infra is idempotent — no restore needed (safeguard backup: {backup_file})")
+
+    def execute_plan(self, **kwargs) -> None:
+        """Apply the missing prerequisites (idempotent; requires dbsu)."""
         if not ((dbsu_url := self.dbsu_url) and (maintenance_url := self.dbsu_maintenance_url)):
             raise RuntimeError(
                 "Database prerequisites (DB, roles, schemas, extension) require dbsu_url "
@@ -300,14 +327,26 @@ class DbProvisioner:
 
         self._ensure_users_exist(dbsu_url)
 
-        if self.check_db_exists(maintenance_url):
-            self.backup(dbsu_url, self.schema_owners)
-        else:
+        if not self.check_db_exists(maintenance_url):
             self._ensure_database_exists(maintenance_url)
 
         self._ensure_schemas(dbsu_url)
         self._ensure_extension(dbsu_url)
+
+        # Number of distinct fixes the analysis detected (approximate "applied ops").
+        self._applied_ops = sum(len(items) for items in self._missing.values())
         log_i(mod, "Database prerequisites ensured")
+
+    def run_post_analysis(self, **kwargs) -> bool:
+        """Re-check readiness; return True when all prerequisites are satisfied."""
+        missing = self.check_readiness()
+        if missing:
+            for kind, items in missing.items():
+                for item in items:
+                    log_w(mod, f"  - [{kind}] {item}")
+            return False
+        log_i(mod, "Post-execution analysis OK — all database prerequisites satisfied")
+        return True
 
     # ------------------------------------------------------------------
     # Individual ensure helpers (idempotent)
@@ -401,9 +440,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Kronicle DB provisioner (infra prerequisites)")
     parser.add_argument("--secrets", default=None, help="Path to a .secrets file to load")
     parser.add_argument(
-        "--ensure",
+        "--check-only",
         action="store_true",
-        help="Run the (superuser-requiring) ensure phase; otherwise only run the read-only check",
+        help="Run only the read-only readiness check; do not apply fixes",
     )
     parser.add_argument(
         "--auto-approve",
@@ -422,16 +461,14 @@ if __name__ == "__main__":
         log_d(here, "Secrets file not found", secrets_path)
 
     settings = KronicleSettings()
-    provisioner = DbProvisioner(db_settings=settings.db)
+    provisioner = DbProvisioner(db_settings=settings.db, auto_approve=args.auto_approve)
 
-    missing_prereq = provisioner.check_readiness()
-    if missing_prereq:
-        log_w(here, "Database prerequisites are NOT satisfied:")
-        for kind, items in missing_prereq.items():
-            for item in items:
-                log_w(here, f"  - [{kind}] {item}")
+    if args.check_only:
+        provisioner.analyze(auto_approve=args.auto_approve)
     else:
-        log_i(here, "All database prerequisites satisfied")
-
-    if args.ensure:
-        provisioner.ensure_readiness(auto_approve=args.auto_approve)
+        result = provisioner.run_once(auto_approve=args.auto_approve)
+        if result.failed:
+            log_e(here, result.message)
+            raise SystemExit(1)
+        if not result.converged:
+            raise SystemExit(1)

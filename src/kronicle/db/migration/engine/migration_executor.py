@@ -9,12 +9,12 @@ from alembic.migration import MigrationContext
 from alembic.operations import Operations
 from sqlalchemy.engine import Connection
 
-from kronicle.db.migration.execution_result import (
+from kronicle.db.migration.engine.execution_result import (
     MigrationExecutionResult,
     OperationResult,
 )
-from kronicle.db.migration.migration_plan import MigrationPlan
-from kronicle.db.migration.operations import DbStructureOperation
+from kronicle.db.migration.engine.migration_plan import MigrationPlan
+from kronicle.db.migration.engine.operations import DbStructureOperation
 from kronicle.types.iso_datetime import IsoDateTime
 from kronicle.utils.dev_logs import log_e, log_i
 

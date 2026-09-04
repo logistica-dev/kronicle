@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from kronicle.db.migration.execution_result import MigrationExecutionResult
+from kronicle.db.migration.engine.execution_result import MigrationExecutionResult
 
 
 class HistoryWriter:

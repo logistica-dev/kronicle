@@ -45,7 +45,8 @@ DBSU_CREDS = "KRONICLE_DB_SU_CREDS"  # (optional) b64(rbac_usr:rbac_pwd)
 KRONICLE_CONF = "KRONICLE_CONF"
 KRONICLE_ENV = "KRONICLE_ENV"
 
-KRONICLE_SQLA_BACKUP = "KRONICLE_SQLA_BACKUP"
+KRONICLE_FULL_BACKUP = "KRONICLE_FULL_BACKUP"
+KRONICLE_RBAC_BACKUP = "KRONICLE_RBAC_BACKUP"
 
 
 # --------------------------------------------------------------------------------------------------

@@ -6,7 +6,7 @@ from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from typing import Iterable
 
-from kronicle.db.migration.operations import DbStructureOperation, SafetyLevel
+from kronicle.db.migration.engine.operations import DbStructureOperation, SafetyLevel
 
 
 # =============================================================================

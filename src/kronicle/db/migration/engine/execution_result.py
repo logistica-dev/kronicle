@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from kronicle.db.migration.operations import DbStructureOperation
+from kronicle.db.migration.engine.operations import DbStructureOperation
 from kronicle.types.iso_datetime import IsoDateTime
 
 
