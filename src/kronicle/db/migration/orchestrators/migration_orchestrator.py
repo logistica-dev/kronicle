@@ -4,10 +4,12 @@ MigrationOrchestrator: drives the provisioners to bring the database fully
 in line with the metadata model.
 
 Responsibilities:
-  - infra  : DbProvisioner.run_once()        (DB, owner roles, schemas, TimescaleDB)
+  - infra  : DbProvisioner.run_once()         (DB, owner roles, schemas, TimescaleDB)
   - schema : RbacSchemasProvisioner.run_once() looped until converged (core+rbac)
+  - data   : DataSchemaProvisioner.run_once() looped until converged (data tracking
+             tables + channel hypertables)
 
-Both provisioners implement the shared BaseProvisioner contract, whose concrete
+All provisioners implement the shared BaseProvisioner contract, whose concrete
 run_once() runs analyze -> ask_validation -> backup -> execute_plan -> run_post_analysis
 and returns an ApplyResult with a status: ``ok`` / ``leftovers`` / ``error`` / ``aborted``.
 
@@ -16,7 +18,8 @@ Why schema convergence is a loop:
   tables + indexes first, then the cross-table constraints (uniques, checks, FKs) that
   depend on all tables existing. A single run_once() therefore legitimately returns
   ``leftovers`` (post-analysis found work still outstanding). The orchestrator simply
-  repeats run_once() until it reports ``ok`` (converged).
+  repeats run_once() until it reports ``ok`` (converged). The data provisioner is
+  generally one-pass, but is driven through the same bounded loop for uniformity.
 
 Convergence policy:
   1. round 0   run with the operator's gate (or auto_approve) — user validates the plan
@@ -30,7 +33,7 @@ Convergence policy:
   instead of auto-applying.
 
 MigrationManager is intentionally NOT used here; it is kept as a fallback until it is
-retired. DataMigrationManager (data schema, asyncpg) will be added as a later provisioner.
+retired.
 """
 
 from __future__ import annotations
@@ -41,6 +44,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from kronicle.db.migration.orchestrators.data_provisioner import DataSchemaProvisioner
 from kronicle.db.migration.orchestrators.db_provisioner import DbProvisioner
 from kronicle.db.migration.orchestrators.db_rbac_provisioner import RbacSchemasProvisioner
 from kronicle.deps.settings import KronicleSettings
@@ -84,7 +88,7 @@ class OrchestrationResult:
 
 
 class MigrationOrchestrator:
-    """Run infra + schema provisioners to convergence, then post-analyse."""
+    """Run infra, schema, and data provisioners to convergence, then post-analyse."""
 
     def __init__(
         self,
@@ -95,6 +99,7 @@ class MigrationOrchestrator:
         max_total_seconds: float | None = 600.0,
         infra_provisioner: DbProvisioner | None = None,
         schema_provisioner: RbacSchemasProvisioner | None = None,
+        data_provisioner: DataSchemaProvisioner | None = None,
     ):
         if max_iterations < 1:
             raise ValueError("max_iterations must be >= 1")
@@ -105,6 +110,7 @@ class MigrationOrchestrator:
 
         self.infra = infra_provisioner or DbProvisioner(db_settings=db_settings)
         self.schema = schema_provisioner or RbacSchemasProvisioner(db_settings=db_settings)
+        self.data = data_provisioner or DataSchemaProvisioner(db_settings=db_settings)
 
     def run(self, *, auto_approve: bool | None = None, verbose: bool = True) -> OrchestrationResult:
         """Run infra provisioner, then the schema convergence loop."""
@@ -123,27 +129,58 @@ class MigrationOrchestrator:
         result.infra_required_fixes = infra.applied_ops > 0
 
         # --------------------------------------------------------------
-        # 2. SCHEMA CONVERGENCE (bounded loop over BaseProvisioner.run_once)
-        #    Each run_once() finishes with run_post_analysis(), so it reports
-        #    ok / leftovers; we simply repeat until it converges.
+        # 2. SCHEMA CONVERGENCE (core+rbac)
         # --------------------------------------------------------------
+        schema_result = self._converge("schema", self.schema, auto_approve=auto_approve, verbose=verbose)
+        if schema_result["aborted"]:
+            return result
+        if not schema_result["converged"]:
+            return result
+        result.passes.extend(schema_result["passes"])
+
+        # --------------------------------------------------------------
+        # 3. DATA CONVERGENCE (data schema: tracking tables + hypertables)
+        # --------------------------------------------------------------
+        data_result = self._converge("data", self.data, auto_approve=auto_approve, verbose=verbose)
+        if data_result["aborted"]:
+            return result
+        if not data_result["converged"]:
+            return result
+        result.passes.extend(data_result["passes"])
+
+        # run_post_analysis() already ran as the last step of each run_once(); a
+        # converged result means the database matches the metadata model.
+        result.converged = True
+        result.verified = True
+        log_i(mod, "Orchestrated migration complete and verified.")
+        return result
+
+    def _converge(
+        self,
+        label: str,
+        provisioner,
+        *,
+        auto_approve: bool,
+        verbose: bool,
+    ) -> dict:
+        """Drive one provisioner's run_once() to convergence within the bounds."""
         deadline = (time.monotonic() + self.max_total_seconds) if self.max_total_seconds else None
+        passes: list[PassOutcome] = []
 
         for round_no in range(1, self.max_iterations + 1):
             if deadline is not None and time.monotonic() > deadline:
                 raise OrchestrationError(
-                    f"Schema migration did not converge within {self.max_total_seconds}s "
-                    f"(stopped after round {round_no})."
+                    f"{label} did not converge within {self.max_total_seconds}s " f"(stopped after round {round_no})."
                 )
 
             if round_no == 1:
-                # Round 0: operator validates the (first, meaningful) plan.
-                outcome = self.schema.run_once(auto_approve=auto_approve, verbose=verbose)
+                # Round 1: operator validates the (first, meaningful) plan.
+                outcome = provisioner.run_once(auto_approve=auto_approve, verbose=verbose)
             else:
                 # Convergence tail: auto-approve only if non-destructive (guarded).
-                outcome = self.schema.run_once(auto_approve_if_non_destructive=True, verbose=verbose)
+                outcome = provisioner.run_once(auto_approve_if_non_destructive=True, verbose=verbose)
 
-            result.passes.append(
+            passes.append(
                 PassOutcome(
                     round=round_no,
                     applied_ops=outcome.applied_ops,
@@ -153,24 +190,17 @@ class MigrationOrchestrator:
             )
 
             if outcome.failed:
-                raise OrchestrationError(f"Schema migration failed: {outcome.message}")
+                raise OrchestrationError(f"{label} migration failed: {outcome.message}")
 
             if outcome.aborted:
-                log_i(mod, "Schema migration aborted by user; leaving database unchanged.")
-                return result
+                log_i(mod, f"{label} migration aborted by user; leaving database unchanged.")
+                return {"passes": passes, "converged": False, "aborted": True}
 
             if outcome.converged:
-                result.converged = True
-                log_i(mod, f"Schema migration converged after round {round_no}.")
-                break
-        else:
-            raise OrchestrationError(f"Schema migration did not converge after {self.max_iterations} rounds.")
+                log_i(mod, f"{label} migration converged after round {round_no}.")
+                return {"passes": passes, "converged": True, "aborted": False}
 
-        # run_post_analysis() already ran as the last step of run_once(); a
-        # converged result means the database matches the metadata model.
-        result.verified = True
-        log_i(mod, "Orchestrated migration complete and verified.")
-        return result
+        raise OrchestrationError(f"{label} did not converge after {self.max_iterations} rounds.")
 
 
 # ======================================================================================

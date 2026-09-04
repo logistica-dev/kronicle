@@ -261,6 +261,9 @@ class ChannelTimeseries:
     def create_table_sql(self) -> str:
         """
         Generate CREATE TABLE SQL based on the schema.
+
+        TimescaleDB requires the partitioning column to be part of the primary
+        key, so the PK is the composite ``(time, row_id)`` with ``time`` leading.
         """
         user_columns_sql = []
         for col, col_type in self.channel_schema.user_columns.items():
@@ -268,10 +271,11 @@ class ChannelTimeseries:
 
         return f"""
         CREATE TABLE IF NOT EXISTS {self.table} (
-            row_id BIGSERIAL PRIMARY KEY,
+            row_id BIGSERIAL,
             time TIMESTAMPTZ NOT NULL,
             {", ".join(user_columns_sql)},
-            received_at TIMESTAMPTZ NOT NULL
+            received_at TIMESTAMPTZ NOT NULL,
+            PRIMARY KEY (time, row_id)
         );
         """.strip()
 
@@ -283,10 +287,11 @@ class ChannelTimeseries:
         return await table_exists(db, namespace=self.namespace, table_name=self.table_name)
 
     async def ensure_table(self, db: PoolConnectionProxy):
-        """Ensure the table exists in the database."""
+        """Ensure the table exists in the database and is a TimescaleDB hypertable."""
         if await self.table_exists(db):
             return
         await db.execute(self.create_table_sql())
+        await self._convert_to_hypertable(db)
 
     async def _is_hypertable(self, db: PoolConnectionProxy) -> bool:
         """Check if the table is already a TimescaleDB hypertable."""

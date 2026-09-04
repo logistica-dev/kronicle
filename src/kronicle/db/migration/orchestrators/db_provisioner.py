@@ -31,8 +31,8 @@ from sqlalchemy import create_engine, text
 
 from kronicle.db.core.models._registry import CORE_NAMESPACE
 from kronicle.db.data.models._registry import DATA_NAMESPACE
-from kronicle.db.rbac.models._registry import RBAC_NAMESPACE
 from kronicle.db.migration.orchestrators.provisioner_base import BaseProvisioner, backup_path
+from kronicle.db.rbac.models._registry import RBAC_NAMESPACE
 from kronicle.deps.settings import KronicleSettings
 from kronicle.deps.settings_env import KRONICLE_FULL_BACKUP, DBSettings, get_env_var
 from kronicle.utils.dev_logs import log_d, log_e, log_i, log_w

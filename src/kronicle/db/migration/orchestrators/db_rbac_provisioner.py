@@ -196,6 +196,7 @@ class RbacSchemasProvisioner(BaseProvisioner):
 
         self.auto_approve = auto_approve
 
+        self.schemas = [CORE_NAMESPACE, RBAC_NAMESPACE]
         # Only `core` + `rbac`, both owned by the rbac user.
         self._schema_owners = {
             CORE_NAMESPACE: self.rbac_user,
@@ -205,11 +206,6 @@ class RbacSchemasProvisioner(BaseProvisioner):
         self._schema_connections = {
             CORE_NAMESPACE: (self.rbac_user, self.rbac_url),
             RBAC_NAMESPACE: (self.rbac_user, self.rbac_url),
-        }
-
-        # Owner passwords, used only to (re)create a missing role via the dbsu superuser.
-        self._owner_passwords = {
-            self.rbac_user: self._db_settings._rbac_pwd.get_secret_value(),
         }
 
         log_i(mod, f"Migration scope: {self.schemas}")

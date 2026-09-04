@@ -47,6 +47,7 @@ KRONICLE_ENV = "KRONICLE_ENV"
 
 KRONICLE_FULL_BACKUP = "KRONICLE_FULL_BACKUP"
 KRONICLE_RBAC_BACKUP = "KRONICLE_RBAC_BACKUP"
+KRONICLE_DATA_BACKUP = "KRONICLE_DATA_BACKUP"
 
 
 # --------------------------------------------------------------------------------------------------
