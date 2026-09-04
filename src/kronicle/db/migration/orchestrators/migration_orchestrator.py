@@ -44,7 +44,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from kronicle.db.migration.orchestrators.data_provisioner import DataSchemaProvisioner
+from kronicle.db.migration.orchestrators.db_data_provisioner import DataSchemaProvisioner
 from kronicle.db.migration.orchestrators.db_provisioner import DbProvisioner
 from kronicle.db.migration.orchestrators.db_rbac_provisioner import RbacSchemasProvisioner
 from kronicle.deps.settings import KronicleSettings
@@ -128,6 +128,7 @@ class MigrationOrchestrator:
             return result
         result.infra_required_fixes = infra.applied_ops > 0
 
+        print()
         # --------------------------------------------------------------
         # 2. SCHEMA CONVERGENCE (core+rbac)
         # --------------------------------------------------------------
@@ -138,6 +139,7 @@ class MigrationOrchestrator:
             return result
         result.passes.extend(schema_result["passes"])
 
+        print()
         # --------------------------------------------------------------
         # 3. DATA CONVERGENCE (data schema: tracking tables + hypertables)
         # --------------------------------------------------------------

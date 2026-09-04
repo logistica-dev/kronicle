@@ -40,7 +40,7 @@ from kronicle.deps.settings_env import KRONICLE_DATA_BACKUP, DBSettings
 from kronicle.utils.dev_logs import log_d, log_e, log_i, log_w
 from kronicle.utils.file_utils import load_env_file
 
-mod = "data_prov"
+mod = "data_schema"
 
 CHANNEL_TABLE_PREFIX = "channel_"
 # System columns every channel timeseries table must carry, with their canonical types.

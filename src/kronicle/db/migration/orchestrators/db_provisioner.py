@@ -156,6 +156,25 @@ class DbProvisioner(BaseProvisioner):
         log_d(mod, f"PSQL user '{user}' {'can connect' if ok else 'cannot connect (bad/missing password or NOLOGIN)'}")
         return ok
 
+    def check_db_create_privilege(self, user: str, url: str) -> bool:
+        """Read-only: does the role hold CREATE on the application database?
+
+        Needed so an owning (non-superuser) role can recreate its schemas during a
+        dbsu-free ``pg_restore`` (a schema can only be created by a role that has
+        CREATE on the database).
+        """
+        try:
+            engine = create_engine(url)
+            with engine.connect() as conn:
+                row = conn.execute(
+                    text("SELECT has_database_privilege(:u, current_database(), 'CREATE')"),
+                    {"u": user},
+                ).first()
+            engine.dispose()
+            return row is not None and bool(row[0])
+        except Exception:
+            return False
+
     def check_schema_ownership(self, schema: str, owner: str, url: str) -> bool:
         """Read-only: does the given schema exist and belong to its intended owner?"""
         try:
@@ -239,6 +258,13 @@ class DbProvisioner(BaseProvisioner):
                 msg = f"schema '{schema}' not owned by '{owner}' (missing or wrong owner)"
                 log_d(mod, msg)
                 missing_prereq.setdefault("schemas", []).append(msg)
+
+        # --- Owner roles can create schemas on the app DB (needed for dbsu-free restore)
+        for user in sorted(set(self.schema_owners.values())):
+            if not self.check_db_create_privilege(user, probe_url):
+                msg = f"owner role '{user}' lacks CREATE ON DATABASE '{self.db_name}'"
+                log_d(mod, msg)
+                missing_prereq.setdefault("privileges", []).append(msg)
 
         # --- TimescaleDB extension
         if not self.check_timescaledb_extension(probe_url):
@@ -330,6 +356,7 @@ class DbProvisioner(BaseProvisioner):
         if not self.check_db_exists(maintenance_url):
             self._ensure_database_exists(maintenance_url)
 
+        self._ensure_db_create_privilege(dbsu_url)
         self._ensure_schemas(dbsu_url)
         self._ensure_extension(dbsu_url)
 
@@ -378,6 +405,27 @@ class DbProvisioner(BaseProvisioner):
             text=True,
         )
         log_i(mod, f"Created database '{self.db_name}'")
+
+    def _ensure_db_create_privilege(self, dbsu_url: str) -> None:
+        """Grant each owner role CREATE on the application database (idempotent).
+
+        A non-superuser owner needs CREATE on the database to recreate its schemas
+        during a dbsu-free ``pg_restore`` (restore-as-owner).
+        """
+        for user in sorted(set(self.schema_owners.values())):
+            subprocess.run(
+                [
+                    "psql",
+                    "-d",
+                    dbsu_url,
+                    "-c",
+                    f'GRANT CREATE ON DATABASE "{self.db_name}" TO "{user}"',
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        log_i(mod, f"Granted CREATE ON DATABASE '{self.db_name}' to owner roles")
 
     def _ensure_schemas(self, dbsu_url: str) -> None:
         """Ensure each SQL schema exists with its intended owner role."""

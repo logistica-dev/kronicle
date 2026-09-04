@@ -160,6 +160,8 @@ class BaseProvisioner(abc.ABC):
             return ApplyResult(status="error", message=str(e))
 
         converged = self.run_post_analysis()
+
+        print()
         return ApplyResult(
             status="ok" if converged else "leftovers",
             applied_ops=getattr(self, "_applied_ops", 0),

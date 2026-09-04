@@ -152,14 +152,6 @@ def _build_orphan_delete_sql(c: _FkCheck) -> str:
     )
 
 
-# --------------------------------------------------------------------------------------
-# Prerequisite action labels (plan-readable, shown to the operator)
-# --------------------------------------------------------------------------------------
-_USER_CREATION = "creation of user"
-_SCHEMA_OWNERSHIP = "ownership of schema"
-_TRACK_TABLES_CREATION = "creation of the tracking tables for schema"
-
-
 class RbacSchemasProvisioner(BaseProvisioner):
     """
     Orchestrates the migration lifecycle for the `core` and `rbac` schemas.
@@ -197,16 +189,6 @@ class RbacSchemasProvisioner(BaseProvisioner):
         self.auto_approve = auto_approve
 
         self.schemas = [CORE_NAMESPACE, RBAC_NAMESPACE]
-        # Only `core` + `rbac`, both owned by the rbac user.
-        self._schema_owners = {
-            CORE_NAMESPACE: self.rbac_user,
-            RBAC_NAMESPACE: self.rbac_user,
-        }
-
-        self._schema_connections = {
-            CORE_NAMESPACE: (self.rbac_user, self.rbac_url),
-            RBAC_NAMESPACE: (self.rbac_user, self.rbac_url),
-        }
 
         log_i(mod, f"Migration scope: {self.schemas}")
 
@@ -222,20 +204,12 @@ class RbacSchemasProvisioner(BaseProvisioner):
     def dbsu_url(self) -> str | None:
         return self._db_settings.dbsu_connection_url
 
-    @property
-    def schema_owners(self) -> dict:
-        return self._schema_owners
-
-    @property
-    def schema_connections(self) -> dict:
-        return self._schema_connections
-
     # ------------------------------------------------------------------
     # BACKUP
     # ------------------------------------------------------------------
 
     def _backup_connection_url(self) -> str:
-        return self.dbsu_url or self.backup_url
+        return self.backup_url
 
     # ------------------------------------------------------------------
     # PRE-MIGRATION CHECK (read stored state, detect drift)
@@ -522,7 +496,8 @@ class RbacSchemasProvisioner(BaseProvisioner):
 
     def ensure_table_ownership(self, dbsu_url) -> None:
         """Transfer ownership of tracked schema objects to the owning user so DDL can run."""
-        for schema, owner in self.schema_owners.items():
+        for schema in self.schemas:
+            owner = self.rbac_user
             # Grant USAGE on schema (lost when pg_restore --clean recreates them)
             subprocess.run(
                 ["psql", "-d", dbsu_url, "-c", f"GRANT USAGE ON SCHEMA {schema} TO {owner}"],
@@ -584,7 +559,7 @@ class RbacSchemasProvisioner(BaseProvisioner):
         DB the referencing tables do not exist yet (the plan is about to create
         them), so there is nothing to clean and the DELETE would otherwise fail.
         """
-        conn_str = self.dbsu_url or self.rbac_url
+        conn_str = self.rbac_url
         checks = [
             c
             for c in _build_fk_checks(list(self.schemas), plan)
@@ -641,8 +616,8 @@ class RbacSchemasProvisioner(BaseProvisioner):
 
     def check_schemas_ownership(self) -> bool:
         """Read-only: does each migrated schema belong to its intended owner?"""
-        for schema, (owner, url) in self.schema_connections.items():
-            if not self.check_schema_ownership(schema, owner, url):
+        for schema in self.schemas:
+            if not self.check_schema_ownership(schema, self.rbac_user, self.rbac_url):
                 return False
         return True
 
@@ -671,20 +646,15 @@ class RbacSchemasProvisioner(BaseProvisioner):
 
         self.check_backup_writable()
 
-    def check_tracking_prerequisites(self) -> dict[str, dict]:
+    def check_tracking_prerequisites(self) -> list[str]:
         """Check per-schema tracking tables; report the fixes needed (read-only)."""
-        fixes: dict[str, dict] = {}
-        for schema in self.schemas:
-            if not self.check_tracking_tables_exist(schema, self.rbac_url):
-                fixes[schema] = {_TRACK_TABLES_CREATION: f"{_TRACK_TABLES_CREATION} '{schema}'"}
-        return fixes
+        return [schema for schema in self.schemas if not self.check_tracking_tables_exist(schema, self.rbac_url)]
 
-    def ensure_tracking_prerequisites(self, fixes: dict[str, dict], *, auto_approve: bool = False) -> None:
+    def ensure_tracking_prerequisites(self, fixes: list[str], *, auto_approve: bool = False) -> None:
         """Create the missing per-schema tracking tables (after operator confirmation)."""
         log_i(mod, "The following tracking-table fixes are needed:")
-        for schema, actions in fixes.items():
-            for action in actions:
-                log_i(mod, f"  - [{schema}] {action}")
+        for schema in fixes:
+            log_i(mod, f"  - [{schema}] create tracking tables")
 
         if not auto_approve:
             confirm = input("Apply these tracking-table fixes? (y/n): ")
@@ -820,56 +790,16 @@ class RbacSchemasProvisioner(BaseProvisioner):
             return
 
         log_i(mod, f"Restoring backup: {backup_file}")
-        restore_url = self.dbsu_url or self.rbac_url
+        restore_url = self.backup_url
         subprocess.run(
             ["pg_restore", "--clean", "--if-exists", "--no-owner", "-d", restore_url, str(backup_file)],
             check=True,
         )
 
-        # Restore privileges lost when schemas/tables are dropped/recreated
-        for schema, owner in self.schema_owners.items():
-            subprocess.run(
-                ["psql", "-d", restore_url, "-c", f"GRANT USAGE ON SCHEMA {schema} TO {owner}"],
-                check=True,
-                capture_output=True,
-                text=True,
-            )
-            subprocess.run(
-                [
-                    "psql",
-                    "-d",
-                    restore_url,
-                    "-c",
-                    f"GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA {schema} TO {owner}",
-                ],
-                check=True,
-                capture_output=True,
-                text=True,
-            )
-            subprocess.run(
-                [
-                    "psql",
-                    "-d",
-                    restore_url,
-                    "-c",
-                    f"GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA {schema} TO {owner}",
-                ],
-                check=True,
-                capture_output=True,
-                text=True,
-            )
-
-        # Transfer table ownership so the owning user can run DDL (e.g. ADD CONSTRAINT)
-        if self.dbsu_url:
-            self.ensure_table_ownership(self.dbsu_url)
-
-        # Re-create the tracking tables as superuser: they were rolled back with the
-        # plan transaction and are absent from the restored dump. Hand them back to
-        # the owning user so the failure state can actually be recorded.
+        # Re-create the tracking tables: they were rolled back with the plan
+        # transaction and are absent from the restored dump.
         with create_engine(restore_url).begin() as conn:
             self.ensure_tracking_tables(conn)
-        if self.dbsu_url:
-            self.ensure_table_ownership(self.dbsu_url)
 
         # Record the failure so the state tables reflect it.
         self.record_migration_state(self._plan, success=False)
