@@ -157,6 +157,73 @@ class MigrationOrchestrator:
         log_i(mod, "Orchestrated migration complete and verified.")
         return result
 
+    def validate(self, *, verbose: bool = True) -> OrchestrationResult:
+        """Read-only validation of every stage; raises if the DB is not aligned.
+
+        Implements PROD mode: run all analyses (infra, schema, data) without
+        prompting and without mutating, gather the complete report of the actions
+        that would be needed, and — if any prerequisite is missing or any schema
+        is misaligned — raise an :class:`OrchestrationError` with that full report
+        so the caller can fail startup. Returns an ``OrchestrationResult`` with
+        ``converged=True`` only when every stage is already satisfied.
+        """
+        report: list[str] = []
+        report.extend(self._validate_infra())
+        report.extend(self._validate_schema())
+        report.extend(self._validate_data())
+
+        if report:
+            raise OrchestrationError(
+                "Database is not aligned with the app version; the following actions would be "
+                "required (run a migration/RbacSchemasProvisioner to apply them):\n"
+                + "\n".join(f"  - {line}" for line in report)
+            )
+
+        log_i(mod, "Validation OK — all schemas and prerequisites are aligned.")
+        result = OrchestrationResult()
+        result.converged = True
+        result.verified = True
+        return result
+
+    def _validate_infra(self) -> list[str]:
+        """Read-only infra analysis; report the missing DB prerequisites."""
+        report: list[str] = []
+        self.infra.analyze()
+        for kind, items in (getattr(self.infra, "_missing", None) or {}).items():
+            for item in items:
+                report.append(f"[infra:{kind}] {item}")
+        return report
+
+    def _validate_schema(self) -> list[str]:
+        """Read-only core+rbac analysis; report tracking + plan operations needed."""
+        report: list[str] = []
+        self.schema.analyze()
+        for schema in getattr(self.schema, "_tracking_fixes", None) or []:
+            report.append(f"[schema] create tracking tables in '{schema}'")
+        for op in getattr(getattr(self.schema, "_plan", None), "operations", None) or []:
+            report.append(f"[schema:{op.schema}] {op.describe()}")
+        return report
+
+    def _validate_data(self) -> list[str]:
+        """Read-only data analysis; report tracking/metadata/hypertable gaps needed."""
+        report: list[str] = []
+        self.data.analyze()
+        if getattr(self.data, "_tracking_missing", False):
+            report.append("[data] create migration tracking tables")
+        if getattr(self.data, "_metadata_missing", False):
+            report.append("[data] create ChannelMetadata table")
+        for drift in getattr(self.data, "channels", None) or []:
+            issues = []
+            if drift.missing_columns:
+                issues.append("missing " + ",".join(drift.missing_columns))
+            if tuple(drift.pk_columns) != ("time", "row_id"):
+                issues.append(f"PK {list(drift.pk_columns)} != ['time','row_id']")
+            if not drift.is_hypertable:
+                issues.append("not a hypertable")
+            if issues:
+                report.append(f"[data] {drift.table}: " + "; ".join(issues))
+        return report
+
     def _converge(
         self,
         label: str,

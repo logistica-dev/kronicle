@@ -29,6 +29,7 @@ from kronicle.auth.jwt_service import JWTService
 from kronicle.auth.pwd.pwd_manager import PasswordManager
 from kronicle.auth.pwd.pwd_policy import PasswordPolicy
 from kronicle.db.data.channel_db_session import ChannelDbSession
+from kronicle.db.migration.orchestrators.migration_orchestrator import MigrationOrchestrator
 from kronicle.db.rbac.rbac_db_session import RbacDbSession
 from kronicle.deps.settings import KronicleSettings
 from kronicle.errors.error_types import KronicleAppError, KronicleHTTPErrorPayload
@@ -146,19 +147,15 @@ class KronicleApp:
         with log_block(here, "RBAC mappers"):
             configure_mappers()
 
-        with log_block(here, "RBAC tables validation"):
-            if self.conf.autovalidate:
-                from kronicle.db.migration.orchestrators.migration_orchestrator import MigrationOrchestrator
+        with log_block(here, "Schema alignment"):
 
-                orchestrator = MigrationOrchestrator(self.conf.db)
-                try:
-                    orchestrator.run()
-                except Exception as e:
-                    log_e(here, "Startup DB auto-validation failed — database is not aligned with the app version")
-                    log_e(here, str(e))
-                    raise
+            orchestrator = MigrationOrchestrator(self.conf.db)
+            if self.conf.autovalidate:
+                # INIT mode: first launch / full provisioning — any DB action is permitted.
+                orchestrator.run(auto_approve=True)
             else:
-                self.app.state.rbac_db.validate_tables()  # Add all RBAC models here
+                # PROD mode: read-only validation — fail startup if the DB is not aligned.
+                orchestrator.validate()
 
         with log_block(here, "Core service"):
             self.app.state.core_service = CoreService(self.app.state.rbac_db)

@@ -277,6 +277,13 @@ class RbacSchemasProvisioner(BaseProvisioner):
             history_cls.ensure_table(conn)
             self._sync_tracking_table(conn, history_cls)
 
+    def _load_stored_state(self, conn, state_cls):
+        """Most recent stored migration row, or None if the tracking table is absent."""
+        try:
+            return conn.execute(select(state_cls).order_by(state_cls.created_at.desc()).limit(1)).first()
+        except Exception:
+            return None
+
     def pre_migration_check(self, conn):
         """
         Read current stored state for each schema, compute actual DB hash,
@@ -289,8 +296,8 @@ class RbacSchemasProvisioner(BaseProvisioner):
             # Actual DB hash
             actual_hash = self._compute_db_hash(conn, schema)
 
-            # Stored state
-            row = conn.execute(select(state_cls).order_by(state_cls.created_at.desc()).limit(1)).first()
+            # Stored state (tracking tables may not exist yet on a fresh schema)
+            row = self._load_stored_state(conn, state_cls)
 
             if row is not None:
                 self._previous_revisions[schema] = row.revision
@@ -570,21 +577,6 @@ class RbacSchemasProvisioner(BaseProvisioner):
         """Check per-schema tracking tables; report the fixes needed (read-only)."""
         return [schema for schema in self.schemas if not self.check_tracking_tables_exist(schema, self.rbac_url)]
 
-    def ensure_tracking_prerequisites(self, fixes: list[str], *, auto_approve: bool = False) -> None:
-        """Create the missing per-schema tracking tables (after operator confirmation)."""
-        log_i(mod, "The following tracking-table fixes are needed:")
-        for schema in fixes:
-            log_i(mod, f"  - [{schema}] create tracking tables")
-
-        if not auto_approve:
-            confirm = input("Apply these tracking-table fixes? (y/n): ")
-            if confirm.lower() != "y":
-                log_i(mod, "Tracking-table fixes aborted by user")
-                raise RuntimeError("Tracking-table fixes not approved")
-
-        with self.rbac_db._engine.begin() as conn:
-            self.ensure_tracking_tables(conn)
-
     # ------------------------------------------------------------------
     # RUN (check → plan → validate → execute)
     # ------------------------------------------------------------------
@@ -603,26 +595,29 @@ class RbacSchemasProvisioner(BaseProvisioner):
         verbose: bool = True,
         **kwargs,
     ) -> None:
-        """Read-only: resolve the migration plan for core+rbac (and tracking tables)."""
+        """Read-only: resolve the migration plan for core+rbac (and tracking tables).
+
+        Analysis performs no mutation and never prompts. Tracking-table fixes are
+        detected (not created) here; creation happens in ``execute_plan()`` so that
+        a pure validation pass (no mutation / no confirmation) can run safely.
+        """
         auto_approve = self.auto_approve if auto_approve is None else auto_approve
         self._auto_approve = auto_approve
 
         # Phase 1 - analysis requirements (owner can read the schemas)
         self.check_analysis_requirements()
 
-        # Phase 0 - tracking tables (read-only check → confirmed creation when needed).
-        # Tracking tables are core+rbac-scope (table-level), not infra.
-        tracking_fixes = self.check_tracking_prerequisites()
-        if tracking_fixes:
-            self.ensure_tracking_prerequisites(tracking_fixes, auto_approve=auto_approve)
+        # Phase 0 - tracking tables: detect the fixes needed, do NOT create.
+        self._tracking_fixes = self.check_tracking_prerequisites()
 
-        # Pre-check (read stored state, detect drift)
+        # Pre-check (read stored state, detect drift). Tolerates missing tracking
+        # tables (first migration on a freshly provisioned schema).
         with self.rbac_db._engine.begin() as conn:
             self.pre_migration_check(conn)
 
         # Build the plan (no side effects)
         self._plan = self.build_plan()
-        self._has_work = bool(self._plan.operations)
+        self._has_work = bool(self._tracking_fixes or self._plan.operations)
         if not self._has_work:
             log_i(mod, "No changes detected — nothing to apply")
             # Re-record state if the hash computation changed (e.g. defaults excluded)
@@ -647,16 +642,21 @@ class RbacSchemasProvisioner(BaseProvisioner):
         if verbose:
             log_i(mod, f"Plan summary: {plan.summary()}")
 
+        if self._tracking_fixes:
+            log_w(mod, "The following tracking-table fixes are needed:")
+            for schema in self._tracking_fixes:
+                log_w(mod, f"  - [{schema}] create tracking tables")
+
         # Phase 2 - execution requirements (schemas owned, backup writable); fail fast.
         self.check_mutation_requirements()
 
         auto_approve = self._auto_approve
         should_prompt = not auto_approve and not (auto_approve_if_non_destructive and self._is_non_destructive(plan))
-        if should_prompt:
-            confirm = input("Review above migration plan.\n" "Proceed with backup + migration? (y/n): ")
-            if confirm.lower() != "y":
-                log_i(mod, "Migration aborted by user")
-                return False
+        if should_prompt and not self._confirm(
+            "Review above migration plan.\n" "Proceed with backup + migration? (y/n): "
+        ):
+            log_i(mod, "Migration aborted by user")
+            return False
         return True
 
     def backup(self) -> Path:
@@ -681,6 +681,11 @@ class RbacSchemasProvisioner(BaseProvisioner):
     def execute_plan(self, **kwargs) -> None:
         """Apply the validated plan's side effects (clean, apply, record)."""
         plan = self._plan
+
+        # Create the per-schema tracking tables if they were missing during analysis.
+        if getattr(self, "_tracking_fixes", None):
+            with self.rbac_db._engine.begin() as conn:
+                self.ensure_tracking_tables(conn)
 
         # Remove orphan rows in relationship tables that would break FK creation
         self.clean_orphans(plan)

@@ -25,6 +25,7 @@ convergence, so the exact same driver works for every provisioner.
 from __future__ import annotations
 
 import abc
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -167,3 +168,22 @@ class BaseProvisioner(abc.ABC):
             safety_level=getattr(self, "_safety", None),
             revision=getattr(self, "_revision", None),
         )
+
+    def _confirm(self, prompt: str) -> bool:
+        """Ask the operator to y/n, or raise when the run is not interactive.
+
+        Interactive CLIs (a TTY on stdin) prompt normally via ``input()``. In a
+        non-interactive context (production boot, Docker, CI, piped stdin) there is
+        no operator to answer, so instead of blocking forever on ``input()`` we fail
+        fast with an explicit error. The caller's `ask_validation()` presents the
+        complete analysis/report *before* invoking this, so the raised error always
+        accompanies the full report of the actions that would have been needed.
+        """
+        if not sys.stdin.isatty():
+            raise RuntimeError(
+                "Migration requires interactive confirmation but stdin is not a TTY "
+                "(non-interactive/production run). Review the full plan reported above, "
+                "then run the migration explicitly (e.g. the provisioner/orchestrator CLI "
+                "with auto-approve) after taking an appropriate backup."
+            )
+        return input(prompt).strip().lower() == "y"

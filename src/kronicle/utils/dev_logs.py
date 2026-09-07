@@ -321,7 +321,7 @@ def log_assert(cond: bool, ok_tag: str = "OK", ko_tag: str = "!! KO !!") -> str:
 @contextmanager
 def log_block(here, message):
     stacklevel = 5
-    log_d(here, f"Starting {message}...", stacklevel=stacklevel)
+    log_i(here, f"Starting {message}...", stacklevel=stacklevel)
     start_time = time()
     try:
         yield

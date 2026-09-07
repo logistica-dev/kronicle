@@ -259,11 +259,11 @@ class DataSchemaProvisioner(BaseProvisioner):
                 log_w(mod, f"  - [{DATA_NAMESPACE}] {drift.table}: " + "; ".join(issues))
 
         should_prompt = not auto_approve and not (auto_approve_if_non_destructive and self._is_non_destructive())
-        if should_prompt:
-            confirm = input("Review above data-schema plan.\nProceed with backup + reconcile? (y/n): ")
-            if confirm.lower() != "y":
-                log_i(mod, "Data-schema reconcile aborted by user")
-                return False
+        if should_prompt and not self._confirm(
+            "Review above data-schema plan.\nProceed with backup + reconcile? (y/n): "
+        ):
+            log_i(mod, "Data-schema reconcile aborted by user")
+            return False
         return True
 
     def backup(self) -> Path | str | None:

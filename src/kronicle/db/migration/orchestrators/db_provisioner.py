@@ -331,11 +331,11 @@ class DbProvisioner(BaseProvisioner):
             for item in items:
                 log_w(mod, f"  - [{kind}] {item}")
 
-        if not self._auto_approve:
-            confirm = input("Apply fixes for the missing database prerequisites (requires superuser)? (y/n): ")
-            if confirm.lower() != "y":
-                log_i(mod, "Database prerequisites fixes aborted by user")
-                return False
+        if not self._auto_approve and not self._confirm(
+            "Apply fixes for the missing database prerequisites (requires superuser)? (y/n): "
+        ):
+            log_i(mod, "Database prerequisites fixes aborted by user")
+            return False
         return True
 
     def restore_backup(self, backup_file: Path | str | None) -> None:
