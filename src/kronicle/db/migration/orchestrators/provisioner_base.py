@@ -155,11 +155,10 @@ class BaseProvisioner(abc.ABC):
         try:
             backup_file = self.backup()
             self.execute_plan(**kwargs)
+            converged = self.run_post_analysis()
         except Exception as e:
             self.restore_backup(backup_file)
             return ApplyResult(status="error", message=str(e))
-
-        converged = self.run_post_analysis()
 
         print()
         return ApplyResult(

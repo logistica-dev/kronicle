@@ -12,7 +12,7 @@ Pipeline (check → plan → validate → execute), same principle as MigrationM
   2. check_tracking_tables_exist  — state + history tables present per schema
   3. pre_migration_check          — read stored state, detect drift (read-only)
   4. build_plan                   — diff metadata vs DB, no side effects
-  5. check_mutation_requirements  — schemas owned (else dbsu ownership transfer), backup writable
+  5. check_mutation_requirements  — backup destination writable (ownership is DbProvisioner's duty)
   6. user gate                    — y/n before any mutation (skipped if auto_approve)
   7. execute                      — backup, clean orphans, apply plan (as owner), record state
 
@@ -199,10 +199,6 @@ class RbacSchemasProvisioner(BaseProvisioner):
     @property
     def rbac_url(self) -> str:
         return self._db_settings.rbac_connection_url
-
-    @property
-    def dbsu_url(self) -> str | None:
-        return self._db_settings.dbsu_connection_url
 
     # ------------------------------------------------------------------
     # BACKUP
@@ -490,52 +486,6 @@ class RbacSchemasProvisioner(BaseProvisioner):
 
                 log_i(mod, f"Migration state refreshed — revision {plan.revision}")
 
-    # ------------------------------------------------------------------
-    # OWNERSHIP + BACKUP requirements
-    # ------------------------------------------------------------------
-
-    def ensure_table_ownership(self, dbsu_url) -> None:
-        """Transfer ownership of tracked schema objects to the owning user so DDL can run."""
-        for schema in self.schemas:
-            owner = self.rbac_user
-            # Grant USAGE on schema (lost when pg_restore --clean recreates them)
-            subprocess.run(
-                ["psql", "-d", dbsu_url, "-c", f"GRANT USAGE ON SCHEMA {schema} TO {owner}"],
-                check=True,
-                capture_output=True,
-                text=True,
-            )
-
-            subprocess.run(
-                ["psql", "-d", dbsu_url, "-c", f"ALTER SCHEMA {schema} OWNER TO {owner}"],
-                check=True,
-                capture_output=True,
-                text=True,
-            )
-
-            # Transfer table/view ownership
-            cmd = [
-                "psql",
-                "-d",
-                dbsu_url,
-                "-c",
-                f"""
-                DO $$DECLARE
-                  r RECORD;
-                BEGIN
-                  FOR r IN SELECT tablename FROM pg_tables WHERE schemaname = '{schema}'
-                  LOOP
-                    EXECUTE format('ALTER TABLE %I.%I OWNER TO %I', '{schema}', r.tablename, '{owner}');
-                  END LOOP;
-                  FOR r IN SELECT viewname AS tablename FROM pg_views WHERE schemaname = '{schema}'
-                  LOOP
-                    EXECUTE format('ALTER VIEW %I.%I OWNER TO %I', '{schema}', r.tablename, '{owner}');
-                  END LOOP;
-                END$$;
-                """,
-            ]
-            subprocess.run(cmd, check=True, capture_output=True, text=True)
-
     def _table_exists(self, schema: str, table: str, url: str) -> bool:
         """Read-only: does the given table already exist in the DB?"""
         engine = create_engine(url)
@@ -600,50 +550,20 @@ class RbacSchemasProvisioner(BaseProvisioner):
             log_w(mod, f"Connectivity check failed for {label}: {e}")
             return False
 
-    def check_schema_ownership(self, schema: str, owner: str, url: str) -> bool:
-        """Read-only: does the given schema belong to its intended owner?"""
-        try:
-            engine = create_engine(url)
-            with engine.connect() as conn:
-                row = conn.execute(
-                    text("SELECT nspowner::regrole::text FROM pg_namespace WHERE nspname = :s"),
-                    {"s": schema},
-                ).first()
-            engine.dispose()
-            return row is not None and row[0] == owner
-        except Exception:
-            return False
-
-    def check_schemas_ownership(self) -> bool:
-        """Read-only: does each migrated schema belong to its intended owner?"""
-        for schema in self.schemas:
-            if not self.check_schema_ownership(schema, self.rbac_user, self.rbac_url):
-                return False
-        return True
-
     def check_backup_writable(self) -> None:
         backup_prefix = os.environ.get(KRONICLE_RBAC_BACKUP, "./backup/kronicle")
         backup_dir = backup_path(backup_prefix, "rbac").parent
         if not os.access(backup_dir, os.W_OK):
             raise RuntimeError(f"Backup directory is not writable: '{backup_dir}'")
 
-    def check_mutation_requirements(self, plan: MigrationPlan) -> None:
+    def check_mutation_requirements(self) -> None:
         """
         Validate all requirements of the concrete mutation actions, before the
         user gate and before any mutation. Read-only / non-destructive.
 
-        DDL runs as the owning user when it owns the schemas, so no superuser is
-        needed for routine changes. The DB superuser is only required when
-        ownership must be (re)established (e.g. after a restore or mismatch).
+        Schema ownership is DbProvisioner's concern; here only the backup
+        destination must be writable. All DDL runs as the owning rbac user.
         """
-        if not self.check_schemas_ownership():
-            if not self.dbsu_url:
-                raise RuntimeError(
-                    "The migrated schemas are not owned by their intended owners, so "
-                    "ownership transfer is required; dbsu_url is needed but not configured"
-                )
-            self.ensure_table_ownership(self.dbsu_url)
-
         self.check_backup_writable()
 
     def check_tracking_prerequisites(self) -> list[str]:
@@ -728,7 +648,7 @@ class RbacSchemasProvisioner(BaseProvisioner):
             log_i(mod, f"Plan summary: {plan.summary()}")
 
         # Phase 2 - execution requirements (schemas owned, backup writable); fail fast.
-        self.check_mutation_requirements(plan)
+        self.check_mutation_requirements()
 
         auto_approve = self._auto_approve
         should_prompt = not auto_approve and not (auto_approve_if_non_destructive and self._is_non_destructive(plan))

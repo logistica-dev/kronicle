@@ -38,6 +38,7 @@ class KronicleSettings(BaseSettings):
     jwt: JWTSettings
     auth: AuthSettings
     rbac: RbacSettings
+    autovalidate: bool = False
 
     model_config = SettingsConfigDict(
         env_prefix="KRONICLE_",

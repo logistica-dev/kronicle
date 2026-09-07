@@ -2,17 +2,19 @@
 """
 DataSchemaProvisioner: schema-level reconciliation for the `data` schema.
 
-The `data` schema is fully dynamic and created on-the-fly by the application:
-  - ``ChannelMetadata`` is created when the app registers a channel.
-  - Each ``data.channel_<hex>`` timeseries table is created by the app (now as a
-    TimescaleDB hypertable with a composite ``(time, row_id)`` primary key).
+The `data` schema holds two kinds of tables:
+  - a static ``ChannelMetadata`` table (created here via its idempotent DDL, no
+    longer requiring the external ``02_create_tables`` init script);
+  - per-channel ``data.channel_<hex>`` timeseries tables, created on-the-fly by the
+    application (now as TimescaleDB hypertables with a composite ``(time, row_id)``
+    primary key).
 
-So this provisioner does NOT create the data tables themselves. It ensures the
-`chan` (owner) user actually has a writable object in the schema — the migration
-tracking tables, mirroring core/rbac — and it reconciles the channel tables that
-already exist (created before the hypertable change): verifying the required
-system columns, the TimescaleDB-compatible composite primary key, and that each
-table is a hypertable, transforming any that are not.
+This provisioner ensures the `chan` (owner) user actually has a writable object in
+the schema — the migration tracking tables, mirroring core/rbac — creates the
+``ChannelMetadata`` table, and reconciles the channel tables that already exist
+(created before the hypertable change): verifying the required system columns, the
+TimescaleDB-compatible composite primary key, and that each table is a hypertable,
+transforming any that are not.
 
 It follows the shared BaseProvisioner contract (analyze -> ask_validation ->
 backup -> execute_plan -> run_post_analysis -> restore_backup on failure) and is
@@ -32,7 +34,7 @@ import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from kronicle.db.data.models._registry import DATA_NAMESPACE
+from kronicle.db.data.models._registry import DATA_NAMESPACE, ChannelMetadata
 from kronicle.db.migration.engine.operations import SafetyLevel
 from kronicle.db.migration.orchestrators.provisioner_base import ApplyResult, BaseProvisioner, backup_path
 from kronicle.deps.settings import KronicleSettings
@@ -42,7 +44,6 @@ from kronicle.utils.file_utils import load_env_file
 
 mod = "data_schema"
 
-CHANNEL_TABLE_PREFIX = "channel_"
 # System columns every channel timeseries table must carry, with their canonical types.
 SYSTEM_COLUMNS: dict[str, str] = {
     "time": "timestamp with time zone",
@@ -96,12 +97,8 @@ class DataSchemaProvisioner(BaseProvisioner):
     def data_url(self) -> str:
         return self.chan_url
 
-    @property
-    def dbsu_url(self) -> str | None:
-        return self._db_settings.dbsu_connection_url
-
     def _backup_connection_url(self) -> str:
-        return self.dbsu_url or self.data_url
+        return self.data_url
 
     def _psql(self, sql: str, *, url: str | None = None, tuples: bool = False) -> str:
         """Run a statement via psql and return its stdout (trailing newline stripped)."""
@@ -123,11 +120,16 @@ class DataSchemaProvisioner(BaseProvisioner):
     # ------------------------------------------------------------------
 
     def list_channel_tables(self) -> list[str]:
-        """Read-only: every table in the data schema named ``channel_<hex>``."""
-        pattern = CHANNEL_TABLE_PREFIX.replace("_", r"\_") + "%"
+        """Read-only: every timeseries table in the data schema (``channel_<32 hex>``).
+
+        Channel table names are ``channel_`` + the channel id as 32 lowercase hex chars
+        (``ChannelTimeseries.table()``). A plain ``LIKE 'channel\\_%'`` would also match the
+        static ``channel_metadata`` table, so match on the exact 32-hex shape to exclude it.
+        """
         out = self._psql(
             "SELECT tablename FROM pg_tables "
-            f"WHERE schemaname = '{DATA_NAMESPACE}' AND tablename LIKE '{pattern}' "
+            f"WHERE schemaname = '{DATA_NAMESPACE}' "
+            "AND tablename ~ '^channel_[0-9a-f]{32}$' "
             "ORDER BY tablename",
             tuples=True,
         )
@@ -142,6 +144,8 @@ class DataSchemaProvisioner(BaseProvisioner):
         cols: dict[str, str] = {}
         for line in out.splitlines():
             if not line:
+                continue
+            if "\t" not in line:
                 continue
             name, typ = line.split("\t", 1)
             cols[name] = typ
@@ -185,14 +189,24 @@ class DataSchemaProvisioner(BaseProvisioner):
         present = {line for line in out.splitlines() if line}
         return {"schema_migration_state", "schema_migration_history"} <= present
 
+    def check_channel_metadata_table_exists(self) -> bool:
+        """Read-only: does the static ChannelMetadata table exist in the data schema?"""
+        out = self._psql(
+            "SELECT 1 FROM information_schema.tables "
+            f"WHERE table_schema = '{DATA_NAMESPACE}' AND table_name = '{ChannelMetadata.tablename()}'",
+            tuples=True,
+        )
+        return out == "1"
+
     # ------------------------------------------------------------------
     # BaseProvisioner contract
     # ------------------------------------------------------------------
 
     def analyze(self, **kwargs) -> None:
-        """Read-only: catalogue channel tables and tracking-table gaps."""
+        """Read-only: catalogue channel tables, tracking tables, and metadata gaps."""
         self._has_work = False
         self._tracking_missing = not self.check_tracking_tables_exist()
+        self._metadata_missing = not self.check_channel_metadata_table_exists()
 
         self.channels = []
         for table in self.list_channel_tables():
@@ -212,7 +226,7 @@ class DataSchemaProvisioner(BaseProvisioner):
             if needs_transform:
                 self._has_work = True
 
-        if self._tracking_missing:
+        if self._tracking_missing or self._metadata_missing:
             self._has_work = True
 
         if not self._has_work:
@@ -230,6 +244,8 @@ class DataSchemaProvisioner(BaseProvisioner):
 
         if self._tracking_missing:
             log_w(mod, f"  - [{DATA_NAMESPACE}] {_TRACK_CREATION}")
+        if self._metadata_missing:
+            log_w(mod, f"  - [{DATA_NAMESPACE}] create ChannelMetadata table")
 
         for drift in self.channels:
             issues = []
@@ -251,7 +267,7 @@ class DataSchemaProvisioner(BaseProvisioner):
         return True
 
     def backup(self) -> Path | str | None:
-        """Safeguard pg_dump of the data schema (custom format) via dbsu-or-owner."""
+        """Safeguard pg_dump of the data schema (custom format) as the chan owner."""
         backup_prefix = os.environ.get(KRONICLE_DATA_BACKUP, "./backup/kronicle")
         backup_file = backup_path(backup_prefix, "data")
         backup_file.parent.mkdir(parents=True, exist_ok=True)
@@ -273,18 +289,23 @@ class DataSchemaProvisioner(BaseProvisioner):
             log_w(mod, "No backup to restore; leaving the database as-is")
             return
         log_i(mod, f"Restoring backup: {backup_file}")
-        restore_url = self.dbsu_url or self.data_url
+        restore_url = self.data_url
         subprocess.run(
             ["pg_restore", "--clean", "--if-exists", "--no-owner", "-d", restore_url, str(backup_file)],
             check=True,
         )
 
     def execute_plan(self, **kwargs) -> None:
-        """Apply the validated changes: tracking tables, then channel transforms."""
+        """Apply the validated changes: tracking, metadata, then channel transforms."""
         applied = 0
 
         if self._tracking_missing:
             self._ensure_tracking_tables()
+            applied += 1
+
+        if self._metadata_missing:
+            self._psql(ChannelMetadata.create_table_sql())
+            log_i(mod, f"Created table '{ChannelMetadata.table()}'")
             applied += 1
 
         for drift in self.channels:
@@ -402,6 +423,8 @@ if __name__ == "__main__":
         provisioner.analyze()
         if provisioner._tracking_missing:
             log_w(mod, f"[{DATA_NAMESPACE}] {_TRACK_CREATION}")
+        if provisioner._metadata_missing:
+            log_w(mod, f"[{DATA_NAMESPACE}] create ChannelMetadata table")
         for drift in provisioner.channels:
             log_d(mod, str(drift))
         if not provisioner._has_work:

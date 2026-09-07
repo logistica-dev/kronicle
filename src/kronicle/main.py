@@ -147,7 +147,18 @@ class KronicleApp:
             configure_mappers()
 
         with log_block(here, "RBAC tables validation"):
-            self.app.state.rbac_db.validate_tables()  # Add all RBAC models here
+            if self.conf.autovalidate:
+                from kronicle.db.migration.orchestrators.migration_orchestrator import MigrationOrchestrator
+
+                orchestrator = MigrationOrchestrator(self.conf.db)
+                try:
+                    orchestrator.run()
+                except Exception as e:
+                    log_e(here, "Startup DB auto-validation failed — database is not aligned with the app version")
+                    log_e(here, str(e))
+                    raise
+            else:
+                self.app.state.rbac_db.validate_tables()  # Add all RBAC models here
 
         with log_block(here, "Core service"):
             self.app.state.core_service = CoreService(self.app.state.rbac_db)
