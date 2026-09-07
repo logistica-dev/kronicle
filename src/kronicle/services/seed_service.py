@@ -1,11 +1,14 @@
 # kronicle/services/seed_service.py
 from kronicle.db.rbac.models.rbac_group import RbacGroup
 from kronicle.db.rbac.models.rbac_role import RbacRole
+from kronicle.db.rbac.models.rbac_user import RbacUser
 from kronicle.db.rbac.rbac_db_session import RbacDbSession
 from kronicle.deps.rbac_defaults import ANONYMOUS_NAME, DEFAULT_ROLES
+from kronicle.deps.settings_env import AppSuperuser
 from kronicle.repo.rbac.entities.rbac_group_repo import RbacGroupRepository
 from kronicle.repo.rbac.entities.rbac_role_repo import RbacRoleRepository
 from kronicle.repo.rbac.entities.rbac_subject_repo import RbacSubjectRepository
+from kronicle.repo.rbac.entities.rbac_user_repo import RbacUserRepository
 from kronicle.utils.dev_logs import log_i
 
 mod = "seed"
@@ -54,3 +57,27 @@ def seed_anonymous_group(rbac_db: RbacDbSession, allow_anonymous: bool = False) 
             return
         log_i(f"{mod}.{here}", f"Group '{ANONYMOUS_NAME}' doesn't exist, skipping")
         return
+
+
+def seed_app_superuser(rbac_db: RbacDbSession, su: AppSuperuser) -> None:
+    """Idempotent create/promote of the app superuser account, at INIT mode only."""
+    here = "app_su"
+    user_repo = RbacUserRepository()
+    with rbac_db.transaction() as db:
+        existing = user_repo.get_by_name(db, name=su.username, include_superusers=True)
+        if existing:
+            if existing.is_superuser:
+                log_i(f"{mod}.{here}", f"Superuser '{su.username}' already exists, skipping")
+                return
+            existing.is_superuser = True
+            log_i(f"{mod}.{here}", f"Promoted '{su.username}' to superuser")
+            return
+        user = RbacUser(
+            name=su.username,
+            password_hash=su.password_hash,
+            email=su.email,
+            is_active=True,
+            is_superuser=True,
+        )
+        user_repo.add(db, entity=user)
+        log_i(f"{mod}.{here}", f"Created app superuser '{su.username}'")

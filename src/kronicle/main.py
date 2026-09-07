@@ -32,6 +32,7 @@ from kronicle.db.data.channel_db_session import ChannelDbSession
 from kronicle.db.migration.orchestrators.migration_orchestrator import MigrationOrchestrator
 from kronicle.db.rbac.rbac_db_session import RbacDbSession
 from kronicle.deps.settings import KronicleSettings
+from kronicle.deps.settings_env import AppSuperuser
 from kronicle.errors.error_types import KronicleAppError, KronicleHTTPErrorPayload
 from kronicle.errors.exception_handlers import (
     app_error_adapter,
@@ -44,7 +45,7 @@ from kronicle.repo.data.channel_repository import ChannelRepository
 from kronicle.services.channel_service import ChannelService
 from kronicle.services.core_service import CoreService
 from kronicle.services.rbac_service import RbacService
-from kronicle.services.seed_service import seed_anonymous_group, seed_default_roles
+from kronicle.services.seed_service import seed_anonymous_group, seed_app_superuser, seed_default_roles
 from kronicle.utils.dev_logs import log_block, log_d, log_e, log_w, request_logger
 
 mod = "main"
@@ -153,6 +154,8 @@ class KronicleApp:
             if self.conf.autovalidate:
                 # INIT mode: first launch / full provisioning — any DB action is permitted.
                 orchestrator.run(auto_approve=True)
+                with log_block(here, "App superuser"):
+                    seed_app_superuser(self.app.state.rbac_db, su=AppSuperuser.from_env())
             else:
                 # PROD mode: read-only validation — fail startup if the DB is not aligned.
                 orchestrator.validate()

@@ -42,6 +42,8 @@ CHAN_CREDS = "KRONICLE_CHAN_CREDS"  # b64(chan_usr:chan_pwd)
 RBAC_CREDS = "KRONICLE_RBAC_CREDS"  # b64(rbac_usr:rbac_pwd)
 DBSU_CREDS = "KRONICLE_DB_SU_CREDS"  # (optional) b64(rbac_usr:rbac_pwd)
 
+APP_SU_INFO = "KRONICLE_SU_INFO"  # b64(username:email:argon2_hash)
+
 KRONICLE_CONF = "KRONICLE_CONF"
 KRONICLE_ENV = "KRONICLE_ENV"
 
@@ -129,6 +131,24 @@ class RbacDbCreds(EnvUserCreds):
 class DbSuCreds(EnvUserCreds):
     _env = DBSU_CREDS
     _how = "must be b64(rbac_usr:rbac_pwd)"
+
+
+@dataclass
+class AppSuperuser:
+    username: str
+    email: str
+    password_hash: str
+
+    @classmethod
+    def from_env(cls) -> AppSuperuser:
+        env_var = getenv(APP_SU_INFO)
+        if not env_var:
+            raise RuntimeError(f"Not found: {APP_SU_INFO} must be b64(username:email:argon2_hash)")
+        try:
+            username, email, password_hash = decode_b64url(env_var).split(":", 2)
+        except ValueError as e:
+            raise RuntimeError(f"Not found: {APP_SU_INFO} must be b64(username:email:argon2_hash)") from e
+        return cls(username=username, email=email, password_hash=password_hash)
 
 
 @dataclass
