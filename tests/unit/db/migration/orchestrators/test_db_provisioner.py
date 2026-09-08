@@ -330,6 +330,7 @@ def test_backup_dumps_managed_schemas():
     backup_file = Path("/tmp/kronicle_backup.dump")
     with (
         patch.object(DbProvisioner, "check_db_exists", return_value=True),
+        patch.object(DbProvisioner, "_any_managed_schema_exists", return_value=True),
         patch.object(dp, "get_env_var", return_value="/tmp/kronicle_backup"),
         patch.object(dp, "backup_path", return_value=backup_file),
         patch.object(dp, "subprocess") as sp,
@@ -348,6 +349,7 @@ def test_backup_propagates_failure():
     p = _provisioner()
     with (
         patch.object(DbProvisioner, "check_db_exists", return_value=True),
+        patch.object(DbProvisioner, "_any_managed_schema_exists", return_value=True),
         patch.object(dp, "get_env_var", return_value="/tmp/kronicle_backup"),
         patch.object(dp, "backup_path", return_value=Path("/tmp/kronicle_backup.dump")),
         patch(
@@ -577,6 +579,7 @@ def test_run_once_applies_and_converges():
     with (
         patch.object(DbProvisioner, "check_readiness", side_effect=[{"db": ["application database missing"]}, {}]),
         patch.object(DbProvisioner, "check_db_exists", return_value=True),
+        patch.object(DbProvisioner, "_any_managed_schema_exists", return_value=True),
         patch.object(DbProvisioner, "_ensure_users_exist"),
         patch.object(DbProvisioner, "_ensure_database_exists"),
         patch.object(DbProvisioner, "_ensure_db_create_privilege"),

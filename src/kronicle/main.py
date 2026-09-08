@@ -131,6 +131,17 @@ class KronicleApp:
         db_conf = self.conf.db
         log_d(here, "Connection url:", db_conf.masked_connection_url)
 
+        # --- DB structure ---
+        with log_block(here, "Schema alignment"):
+            orchestrator = MigrationOrchestrator(self.conf.db)
+            if self.conf.db_migration_auto:
+                # INIT mode: first launch / full provisioning — any DB action is permitted.
+                orchestrator.run(auto_approve=True)
+            else:
+                with log_block(here, "DB structure validation"):
+                    # PROD mode: read-only validation — fail startup if the DB is not aligned.
+                    orchestrator.validate()
+
         # --- Channel DB ---
         with log_block(here, "Channel DB"):
             channel_db = ChannelDbSession(db_url=db_conf.channel_connection_url)
@@ -148,18 +159,6 @@ class KronicleApp:
         with log_block(here, "RBAC mappers"):
             configure_mappers()
 
-        with log_block(here, "Schema alignment"):
-
-            orchestrator = MigrationOrchestrator(self.conf.db)
-            if self.conf.autovalidate:
-                # INIT mode: first launch / full provisioning — any DB action is permitted.
-                orchestrator.run(auto_approve=True)
-                with log_block(here, "App superuser"):
-                    seed_app_superuser(self.app.state.rbac_db, su=AppSuperuser.from_env())
-            else:
-                # PROD mode: read-only validation — fail startup if the DB is not aligned.
-                orchestrator.validate()
-
         with log_block(here, "Core service"):
             self.app.state.core_service = CoreService(self.app.state.rbac_db)
 
@@ -171,12 +170,18 @@ class KronicleApp:
             self.app.state.rbac_service = rbac_service
             self.app.state.allow_anonymous = self.conf.rbac.allow_anonymous
 
+        # --- Seeding ---
         with log_block(here, "Seeding default roles"):
             seed_default_roles(self.app.state.rbac_db)
 
         allow = self.conf.rbac.allow_anonymous
         with log_block(here, ("Seeding" if allow else "Removing") + " anonymous group"):
             seed_anonymous_group(self.app.state.rbac_db, allow_anonymous=allow)
+
+        # App superuser — INIT mode only, once the RBAC session exists.
+        if self.conf.db_migration_auto:
+            with log_block(here, "App superuser"):
+                seed_app_superuser(self.app.state.rbac_db, su=AppSuperuser.from_env())
 
         # --- Auth service ---
         with log_block(here, "AuthService"):

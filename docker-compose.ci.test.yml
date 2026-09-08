@@ -45,6 +45,7 @@ services:
       KRONICLE_HOST: 0.0.0.0
       KRONICLE_ENV: test
       KRONICLE_LOG_LEVEL: 3
+      KRONICLE_DB_AUTO_MIGRATION: "true"
     ports:
       - "8000:8000"
     healthcheck:

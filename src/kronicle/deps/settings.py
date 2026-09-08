@@ -38,7 +38,7 @@ class KronicleSettings(BaseSettings):
     jwt: JWTSettings
     auth: AuthSettings
     rbac: RbacSettings
-    autovalidate: bool = False
+    db_migration_auto: bool
 
     model_config = SettingsConfigDict(
         env_prefix="KRONICLE_",
@@ -74,6 +74,7 @@ class KronicleSettings(BaseSettings):
         values["jwt"] = JWTSettings.from_parser(parser)
         values["auth"] = AuthSettings.from_parser(parser)
         values["rbac"] = RbacSettings.from_parser(parser)
+        values["db_migration_auto"] = env_conf.db_migration_auto
 
         return values
 

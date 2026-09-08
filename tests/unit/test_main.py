@@ -34,7 +34,7 @@ def mock_settings():
     mock_settings.api_version = "v1"
     mock_settings.is_prod_env = False
     mock_settings.is_dev_env = True
-    mock_settings.autovalidate = False
+    mock_settings.db_migration_auto = False
 
     return mock_settings
 

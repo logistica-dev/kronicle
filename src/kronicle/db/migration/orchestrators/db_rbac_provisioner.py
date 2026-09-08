@@ -278,8 +278,23 @@ class RbacSchemasProvisioner(BaseProvisioner):
             self._sync_tracking_table(conn, history_cls)
 
     def _load_stored_state(self, conn, state_cls):
-        """Most recent stored migration row, or None if the tracking table is absent."""
+        """Most recent stored migration row, or None if the tracking table is absent.
+
+        The tracking table may not exist yet on a freshly provisioned schema. We probe
+        ``information_schema.tables`` first (safe — never aborts the transaction on a
+        missing table) and only run the SELECT if the table exists. Running the SELECT
+        against an absent table would raise, and swallowing that in psycopg2 leaves the
+        shared transaction aborted for every subsequent statement in the block. Any
+        other failure (e.g. a lost connection) is treated as "no stored state".
+        """
         try:
+            table = state_cls.__table__
+            exists = conn.execute(
+                text("SELECT 1 FROM information_schema.tables " "WHERE table_schema = :schema AND table_name = :table"),
+                {"schema": table.schema, "table": table.name},
+            ).first()
+            if not exists:
+                return None
             return conn.execute(select(state_cls).order_by(state_cls.created_at.desc()).limit(1)).first()
         except Exception:
             return None
@@ -683,9 +698,13 @@ class RbacSchemasProvisioner(BaseProvisioner):
         plan = self._plan
 
         # Create the per-schema tracking tables if they were missing during analysis.
+        # They are part of the metadata catalog, so the analyzed plan also proposed
+        # creating them; rebuild the plan once they exist to drop those stale ops.
         if getattr(self, "_tracking_fixes", None):
             with self.rbac_db._engine.begin() as conn:
                 self.ensure_tracking_tables(conn)
+            plan = self.build_plan()
+            self._plan = plan
 
         # Remove orphan rows in relationship tables that would break FK creation
         self.clean_orphans(plan)

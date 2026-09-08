@@ -11,7 +11,12 @@ from asyncpg import connect
 from pydantic import SecretStr
 
 from kronicle.utils.dev_logs import log_e, log_w
-from kronicle.utils.str_utils import decode_b64url, normalize_pg_identifier, obfuscate_pwd_in_connection_url
+from kronicle.utils.str_utils import (
+    decode_b64url,
+    is_str_truish,
+    normalize_pg_identifier,
+    obfuscate_pwd_in_connection_url,
+)
 
 """
 Read Kronicle configuration from environment variables.
@@ -51,6 +56,7 @@ KRONICLE_FULL_BACKUP = "KRONICLE_FULL_BACKUP"
 KRONICLE_RBAC_BACKUP = "KRONICLE_RBAC_BACKUP"
 KRONICLE_DATA_BACKUP = "KRONICLE_DATA_BACKUP"
 
+KRONICLE_DB_AUTO_MIGRATION = "KRONICLE_DB_AUTO_MIGRATION"
 
 # --------------------------------------------------------------------------------------------------
 # Helpers
@@ -259,6 +265,7 @@ class KronicleEnvConf:
     env: AppEnv
     conf_file: str | None
     dbsu_creds: DbSuCreds | None = None
+    db_migration_auto: bool = False
 
     @classmethod
     def from_env(cls) -> KronicleEnvConf:
@@ -273,6 +280,7 @@ class KronicleEnvConf:
         app_server = ConnectionSettings.from_env()
         app_env = AppEnv.from_env()
         conf_file: str | None = getenv(KRONICLE_CONF)
+        db_migration_auto = is_str_truish(getenv(KRONICLE_DB_AUTO_MIGRATION) or "")
         return cls(
             server=app_server,
             db=db_access_profile,
@@ -281,6 +289,7 @@ class KronicleEnvConf:
             dbsu_creds=dbsu_creds,
             env=app_env,
             conf_file=conf_file,
+            db_migration_auto=db_migration_auto,
         )
 
 

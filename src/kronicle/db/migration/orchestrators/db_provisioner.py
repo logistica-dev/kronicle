@@ -175,6 +175,20 @@ class DbProvisioner(BaseProvisioner):
         except Exception:
             return False
 
+    def _any_managed_schema_exists(self, url: str) -> bool:
+        """Read-only: does at least one of the managed schemas exist in the application DB?"""
+        try:
+            engine = create_engine(url)
+            with engine.connect() as conn:
+                row = conn.execute(
+                    text("SELECT 1 FROM pg_namespace WHERE nspname = ANY(:schemas) LIMIT 1"),
+                    {"schemas": list(self.schema_owners.keys())},
+                ).first()
+            engine.dispose()
+            return row is not None
+        except Exception:
+            return False
+
     def check_schema_ownership(self, schema: str, owner: str, url: str) -> bool:
         """Read-only: does the given schema exist and belong to its intended owner?"""
         try:
@@ -278,10 +292,13 @@ class DbProvisioner(BaseProvisioner):
     # Backup (safeguard before mutating an existing database)
     # ------------------------------------------------------------------
     def backup(self) -> Path | str | None:
-        """Safeguard pg_dump of the managed schemas — only when the DB already exists.
+        """Safeguard pg_dump of the managed schemas — only when schemas already exist.
 
-        Returns the backup file path, or None when the app DB does not exist yet
-        (nothing to preserve before creating it).
+        Returns the backup file path, or None when:
+        - the application DB does not exist yet (nothing to preserve)
+        - none of the managed schemas exist yet (fresh DB, no schemas to dump)
+
+        The backup only makes sense before mutating existing schemas.
         """
         maintenance_url = self.dbsu_maintenance_url
         if not (self.dbsu_url and maintenance_url):
@@ -291,6 +308,10 @@ class DbProvisioner(BaseProvisioner):
             )
         if not self.check_db_exists(maintenance_url):
             log_d(mod, "Application DB does not exist — skipping safeguard backup")
+            return None
+
+        if not self._any_managed_schema_exists(self.dbsu_url):
+            log_d(mod, "No managed schemas present — nothing to preserve, skipping safeguard backup")
             return None
 
         backup_prefix = get_env_var(KRONICLE_FULL_BACKUP, "./backup/kronicle")

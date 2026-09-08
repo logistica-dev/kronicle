@@ -91,6 +91,10 @@ def generate_uuid4() -> UUID:
     return uuid4()
 
 
+def is_str_truish(s: str) -> bool:
+    return s.lower() in ["true", "1", "yes", "on", "t", "y", "ok"]
+
+
 def strip_quotes(v: Any) -> Any:
     return v[1:-1] if isinstance(v, str) and len(v) >= 2 and v[0] == v[-1] and v[0] in ('"', "'") else v
 
