@@ -315,8 +315,6 @@ class TestDeleteChannel:
 
 class TestDeleteChannels:
     async def test_delete_multiple(self, service, mock_repo):
-        import asyncio
-
         ids = [uuid4(), uuid4()]
         mock_repo.delete_channel_with_id.return_value = AsyncMock()
 
@@ -324,13 +322,8 @@ class TestDeleteChannels:
             "kronicle.services.channel_service.ResponsePayload.from_channel_resource",
             return_value=AsyncMock(),
         ):
-            coro_list = await service.delete_channels(ids)
-            # delete_channels has a bug: it appends coroutines instead of awaiting them.
-            assert len(coro_list) == 2
-            mock_repo.delete_channel_with_id.assert_not_called()
-
-            resolved = await asyncio.gather(*coro_list)
-            assert len(resolved) == 2
+            results = await service.delete_channels(ids)
+            assert len(results) == 2
             assert mock_repo.delete_channel_with_id.await_count == 2
 
 

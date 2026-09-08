@@ -5,6 +5,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends
+from pydantic import BaseModel, Field
 
 from kronicle.api.shared_read_routes import shared_read_router
 from kronicle.api.shared_write_routes import shared_writer_router
@@ -109,6 +110,12 @@ async def delete_channel_rows(
     return await data_service.delete_rows_for_channel(channel_id, filter=request_filter)
 
 
+class ChannelBatchDeletePayload(BaseModel):
+    """Body for POST /setup/v1/channels/batch-delete."""
+
+    channel_ids: list[UUID] = Field(min_length=1)
+
+
 @setup_router.post(
     "/channels/batch-delete",
     summary="Delete multiple channels",
@@ -116,13 +123,13 @@ async def delete_channel_rows(
     dependencies=[Depends(require_permission(PermStr.CHANNEL_DELETE))],
 )
 async def batch_delete_channels(
-    payload: dict = Body(..., examples=[{"channel_ids": ["uuid1", "uuid2"]}]),  # noqa
+    payload: ChannelBatchDeletePayload = Body(...),  # noqa: B008
     data_service: ChannelService = Depends(channel_service),  # noqa: B008
     core: CoreService = Depends(core_service),  # noqa: B008
 ):
-    for cid in payload["channel_ids"]:
+    for cid in payload.channel_ids:
         core.delete_core_channel(cid)
-    return await data_service.delete_channels(payload["channel_ids"])
+    return await data_service.delete_channels(payload.channel_ids)
 
 
 @setup_router.get(

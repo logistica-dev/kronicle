@@ -93,7 +93,7 @@ def pydantic_exception_handler(request: Request, exc: RequestValidationError | V
     Logs details and returns a proper 422 response.
     """
     here = "pydantic_exc"
-    log_e(here, f"Validation error at {request.method} {request.url.path}: {exc.errors()}")
+    log_w(here, f"Validation error at {request.method} {request.url.path}: {exc.errors()}")
     if isinstance(exc, RequestValidationError):
         return KronicleHTTPErrorPayload.from_pydantic_validation(request=request, exc=exc).to_error_json()
     if isinstance(exc, ValidationError):

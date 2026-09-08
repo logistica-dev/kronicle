@@ -63,6 +63,7 @@ def test_psql_runs_psql_and_strips_output():
     assert cmd[2] == p.data_url
     assert cmd[cmd.index("-c") + 1] == "SELECT 1"
     assert "-t" in cmd and "-A" in cmd
+    assert cmd[cmd.index("-F") + 1] == "\t"
 
 
 def test_psql_defaults_to_data_url_without_tuple_flag():
@@ -135,8 +136,11 @@ def test_table_columns_skips_lines_without_tab():
 
 def test_primary_key_columns_returns_ordered_names():
     p = _provisioner()
-    with patch.object(p, "_psql", return_value="row_id\ntime\n"):
-        assert p._primary_key_columns("channel_x") == ["row_id", "time"]
+    with patch.object(p, "_psql", return_value="time\nrow_id\n") as psql:
+        assert p._primary_key_columns("channel_x") == ["time", "row_id"]
+    sql = str(psql.call_args.args[0])
+    assert "unnest(i.indkey) WITH ORDINALITY" in sql
+    assert sql.split("ORDER BY")[-1].strip() == "k.ord"
 
 
 def test_primary_key_columns_empty():

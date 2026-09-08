@@ -427,7 +427,7 @@ class ChannelTimeseries:
             log_w(here, f"Table '{self.table}' not found, cannot delete")
             raise NotFoundError(f"No timeseries stored for channel '{self.channel_id}'")
 
-        sql_fragment, params = context.to_sql()
+        sql_fragment, params = context.to_sql(include_sort=False, include_pagination=False)
 
         sql_req = f"DELETE FROM {self.table} {sql_fragment} RETURNING *"
         rows = await db.fetch(sql_req, *params)

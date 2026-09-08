@@ -131,7 +131,12 @@ class RowFetchContext(BaseModel):
                 log_w(here, e)
                 self._feedback.add_detail(str(e), "request.sort", col)
 
-    def to_sql(self) -> tuple[str, list]:
+    def to_sql(
+        self,
+        *,
+        include_sort: bool = True,
+        include_pagination: bool = True,
+    ) -> tuple[str, list]:
         """
         Generate full SQL fragment with WHERE, ORDER BY, LIMIT, OFFSET.
 
@@ -143,8 +148,8 @@ class RowFetchContext(BaseModel):
           - Type casting for min/max
 
         Args:
-            order_by: Optional column to order by
-            desc: True for DESC, False for ASC
+            include_sort: False to drop the ORDER BY clause (e.g. DELETE).
+            include_pagination: False to drop the LIMIT/OFFSET clauses (e.g. DELETE).
 
         Returns:
             Tuple of (SQL fragment string, list of parameters)
@@ -161,9 +166,9 @@ class RowFetchContext(BaseModel):
 
         # Assemble final SQL
         where_sql = f"WHERE {' AND '.join(clauses)}" if clauses else ""
-        order_sql = f"ORDER BY {' '.join(s.sql for s in self._sort)}" if self._sort else ""
-        limit_sql = f"LIMIT {self.limit}" if self.limit else ""
-        offset_sql = f"OFFSET {self.offset}" if self.offset else ""
+        order_sql = f"ORDER BY {' '.join(s.sql for s in self._sort)}" if (self._sort and include_sort) else ""
+        limit_sql = f"LIMIT {self.limit}" if (self.limit and include_pagination) else ""
+        offset_sql = f"OFFSET {self.offset}" if (self.offset and include_pagination) else ""
         sql_fragment = " ".join(filter(None, [where_sql, order_sql, limit_sql, offset_sql]))
         return sql_fragment, params
 

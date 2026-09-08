@@ -104,7 +104,7 @@ class DataSchemaProvisioner(BaseProvisioner):
         """Run a statement via psql and return its stdout (trailing newline stripped)."""
         cmd = ["psql", "-d", url or self.data_url, "-c", sql]
         if tuples:
-            cmd += ["-t", "-A"]
+            cmd += ["-t", "-A", "-F", "\t"]
         result = subprocess.run(cmd, check=True, capture_output=True, text=True)
         return result.stdout.strip()
 
@@ -154,10 +154,11 @@ class DataSchemaProvisioner(BaseProvisioner):
     def _primary_key_columns(self, table: str) -> list[str]:
         out = self._psql(
             "SELECT a.attname FROM pg_index i "
+            "CROSS JOIN LATERAL unnest(i.indkey) WITH ORDINALITY AS k(attnum, ord) "
             "JOIN pg_class c ON c.oid = i.indrelid "
-            "JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum = ANY(i.indkey) "
+            "JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum = k.attnum "
             f"WHERE c.relname = '{table}' AND c.relnamespace = '{DATA_NAMESPACE}'::regnamespace "
-            "AND i.indisprimary ORDER BY a.attnum",
+            "AND i.indisprimary ORDER BY k.ord",
             tuples=True,
         )
         return [line for line in out.splitlines() if line]
@@ -260,7 +261,7 @@ class DataSchemaProvisioner(BaseProvisioner):
 
         should_prompt = not auto_approve and not (auto_approve_if_non_destructive and self._is_non_destructive())
         if should_prompt and not self._confirm(
-            "Review above data-schema plan.\nProceed with backup + reconcile? (y/n): "
+            "Review above data-schema plan.\nProceed with backup + reconcile? (y/N): "
         ):
             log_i(mod, "Data-schema reconcile aborted by user")
             return False

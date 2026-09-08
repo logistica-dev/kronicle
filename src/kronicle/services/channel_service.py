@@ -133,7 +133,9 @@ class ChannelService:
     async def delete_channels(self, channel_ids: list[UUID]) -> list[ResponsePayload]:
         res = []
         for channel_id in channel_ids:
-            res.append(self.delete_channel(channel_id))
+            deleted = await self.delete_channel(channel_id)
+            if deleted:
+                res.append(deleted)
         return res
 
     # ----------------------------------------------------------------------------------------------
