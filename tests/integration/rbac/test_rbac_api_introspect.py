@@ -54,47 +54,27 @@ def su_jwt(base_url):
 
 
 @pytest.fixture(scope="module")
-def sample_user_id(base_url, su_jwt):
-    """Get or create a user to introspect."""
-    resp = _get(base_url, su_jwt, "rbac/v1/users")
-    resp.raise_for_status()
-    users = resp.json()
-    if users:
-        return users[0]["id"]
-    pytest.skip("No users found to introspect")
+def sample_user_id(test_user):
+    """A user guaranteed to exist so introspection endpoints have something to resolve."""
+    return test_user.id
 
 
 @pytest.fixture(scope="module")
-def sample_group_id(base_url, su_jwt):
-    """Get or create a group to introspect."""
-    resp = _get(base_url, su_jwt, "rbac/v1/groups")
-    resp.raise_for_status()
-    groups = resp.json()
-    if groups:
-        return groups[0]["id"]
-    pytest.skip("No groups found to introspect")
+def sample_group_id(test_group):
+    """A group guaranteed to exist so introspection endpoints have something to resolve."""
+    return test_group.id
 
 
 @pytest.fixture(scope="module")
-def sample_zone_id(base_url, su_jwt):
-    """Get a zone to introspect policies on."""
-    resp = _get(base_url, su_jwt, "core/v1/zones")
-    resp.raise_for_status()
-    zones = resp.json()
-    if zones:
-        return zones[0]["id"]
-    pytest.skip("No zones found to introspect")
+def sample_zone_id(test_zone):
+    """A zone guaranteed to exist so introspection endpoints have something to resolve."""
+    return test_zone.id
 
 
 @pytest.fixture(scope="module")
-def sample_channel_id(base_url, su_jwt):
-    """Get a channel to introspect policies on."""
-    resp = _get(base_url, su_jwt, "setup/v1/channels")
-    resp.raise_for_status()
-    channels = resp.json()
-    if channels:
-        return channels[0]["id"]
-    pytest.skip("No channels found to introspect")
+def sample_channel_id(test_channel):
+    """A channel guaranteed to exist so introspection endpoints have something to resolve."""
+    return test_channel.id
 
 
 # ==============================================================================

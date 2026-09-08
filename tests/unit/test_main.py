@@ -34,6 +34,7 @@ def mock_settings():
     mock_settings.api_version = "v1"
     mock_settings.is_prod_env = False
     mock_settings.is_dev_env = True
+    mock_settings.autovalidate = False
 
     return mock_settings
 
@@ -104,6 +105,7 @@ async def test_lifespan_calls_db_methods(mock_settings):
         patch("kronicle.main.ChannelService"),
         patch("kronicle.main.RbacService"),
         patch("kronicle.main.JWTService"),
+        patch("kronicle.main.MigrationOrchestrator") as MockOrchestrator,
     ):
 
         mock_channel_db = MockChannelDB.return_value
@@ -111,7 +113,6 @@ async def test_lifespan_calls_db_methods(mock_settings):
         mock_channel_db.close = AsyncMock()
 
         mock_rbac_db = MockRbacDB.return_value
-        mock_rbac_db.validate_tables = MagicMock()
         mock_rbac_db.close = MagicMock()
 
         factory = KronicleApp(mock_settings)
@@ -119,7 +120,8 @@ async def test_lifespan_calls_db_methods(mock_settings):
 
         async with app.router.lifespan_context(app):
             mock_channel_db.init_async.assert_awaited()
-            mock_rbac_db.validate_tables.assert_called()
+            MockOrchestrator.assert_called_once_with(mock_settings.db)
+            MockOrchestrator.return_value.validate.assert_called_once()
 
         mock_channel_db.close.assert_awaited()
         mock_rbac_db.close.assert_called()

@@ -274,7 +274,7 @@ class SchemaDiffEngine:
     # ==============================================================================================
 
     def _build_create_table_op(self, table: Table) -> CreateTableOp:
-        columns = tuple(col.copy() for col in table.columns)
+        columns = tuple(col._copy() for col in table.columns)
         # Strip unique=True from column copies – the constraint is emitted
         # separately as AddUniqueConstraintOp with the correct explicit name.
         for col in columns:
@@ -337,7 +337,7 @@ class SchemaDiffEngine:
         self._diff_primary_key(result, schema, target_table, db_table, table)
 
         for col_name in sorted(missing_columns):
-            col_def = metadata_columns[col_name].copy()
+            col_def = metadata_columns[col_name]._copy()
             # Strip unique=True from the column copy – the constraint is emitted
             # separately as AddUniqueConstraintOp with the correct explicit name.
             col_def.unique = False

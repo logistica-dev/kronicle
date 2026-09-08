@@ -85,13 +85,17 @@ def test_decorator_timer_calls_function_multiple_times():
 # ------------------------------------------------------
 # log_block
 # ------------------------------------------------------
-def test_log_block_calls_log_d():
-    with patch("kronicle.utils.dev_logs.log_d") as mock_log:
+def test_log_block_calls_log_start_and_end():
+    with (
+        patch("kronicle.utils.dev_logs.log_i") as mock_start,
+        patch("kronicle.utils.dev_logs.log_d") as mock_end,
+    ):
         with log_block("test", "something"):
             pass
 
-        # should be called twice: start + end
-        assert mock_log.call_count == 2
+        # start is logged at info level, end at debug level
+        mock_start.assert_called_once_with("test", "Starting something...", stacklevel=5)
+        mock_end.assert_called_once()
 
 
 # ------------------------------------------------------
