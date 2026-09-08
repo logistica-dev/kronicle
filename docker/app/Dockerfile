@@ -15,6 +15,7 @@ RUN apt-get update && \
         build-essential \
         curl \
         git \
+        postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 # -----------------------------
