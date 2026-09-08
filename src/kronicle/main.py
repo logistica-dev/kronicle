@@ -135,10 +135,11 @@ class KronicleApp:
         with log_block(here, "Schema alignment"):
             orchestrator = MigrationOrchestrator(self.conf.db)
             if self.conf.db_migration_auto:
-                # INIT mode: first launch / full provisioning — any DB action is permitted.
-                orchestrator.run(auto_approve=True)
+                with log_block(here, "DB structure auto-validation"):
+                    # INIT mode: first launch / full provisioning — any DB action is permitted.
+                    orchestrator.run(auto_approve=True)
             else:
-                with log_block(here, "DB structure validation"):
+                with log_block(here, "DB structure analysis"):
                     # PROD mode: read-only validation — fail startup if the DB is not aligned.
                     orchestrator.validate()
 
