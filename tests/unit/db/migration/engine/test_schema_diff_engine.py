@@ -601,6 +601,33 @@ def test_diff_drops_unique_constraint():
     assert [op.constraint_name for op in drops] == ["uq_users_email"]
 
 
+def test_diff_ignores_standalone_unique_index_that_shadows_uq_constraint():
+    """A unique INDEX (not a pg_constraint) must not yield a spurious add/drop."""
+    metadata = MetaData()
+    _users_table(metadata, with_email_constraint=True)  # metadata has uq_users_email
+    inspector = FakeInspector(schemas=["public"])
+    inspector.add_table(
+        "public",
+        "users",
+        columns=[_col("id", Integer(), nullable=False), _col("email", String(120))],
+        pk={"name": None, "constrained_columns": ["id"]},
+        # DB exposes it ONLY as a standalone unique index (no constraint row)
+        indexes=[
+            {
+                "name": "uq_users_email",
+                "unique": True,
+                "column_names": ["email"],
+                "duplicates_constraint": None,
+            }
+        ],
+    )
+
+    result = _diff(metadata, schemas={"public"}, inspector=inspector)
+    assert _ops(result, AddUniqueConstraintOp) == []
+    assert _ops(result, DropConstraintOp) == []
+    assert _ops(result, DropIndexOp) == []
+
+
 def test_diff_renames_unique_constraint():
     metadata = MetaData()
     Table(

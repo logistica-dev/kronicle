@@ -735,6 +735,18 @@ class RbacSchemasProvisioner(BaseProvisioner):
 
         log_i(mod, f"Restoring backup: {backup_file}")
         restore_url = self.backup_url
+
+        # Drop the per-schema tracking tables first: they were created in a separate
+        # committed transaction before the plan, so they are NOT in the backup dump.
+        # pg_restore --clean would otherwise fail to DROP SCHEMA (dependent objects)
+        # and then abort on the already-existing schema, leaving the restore partial.
+        for schema in self.schemas:
+            state_cls = _SCHEMA_STATE[schema]
+            history_cls = _SCHEMA_HISTORY[schema]
+            for cls in (state_cls, history_cls):
+                with create_engine(restore_url).begin() as conn:
+                    cls.__table__.drop(bind=conn, checkfirst=True)
+
         subprocess.run(
             ["pg_restore", "--clean", "--if-exists", "--no-owner", "-d", restore_url, str(backup_file)],
             check=True,

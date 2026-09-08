@@ -567,6 +567,38 @@ def test_restore_backup_runs_pg_restore_and_records_failure():
     record.assert_called_once_with(p._plan, success=False)
 
 
+def test_restore_backup_drops_tracking_tables_before_pg_restore():
+    """Tracking tables (absent from the dump) must be dropped before pg_restore --clean."""
+    from sqlalchemy.schema import Table
+
+    p = _provisioner()
+    backup_file = Path("/tmp/kronicle_rbac/rbac.dump")
+    p._plan = MigrationPlan.build([_add_col_op()])
+    p.rbac_db._engine = _exec_engine()
+
+    engine = _exec_engine()
+    conn = engine.begin.return_value.__enter__.return_value
+    dropped = []
+    orig_drop = Table.drop
+    Table.drop = lambda self, bind=None, checkfirst=True, **kw: dropped.append(bind)
+
+    try:
+        with (
+            patch.object(dpr, "subprocess") as sp,
+            patch.object(dpr, "create_engine", return_value=engine),
+            patch.object(p, "ensure_tracking_tables"),
+            patch.object(p, "record_migration_state"),
+        ):
+            p.restore_backup(backup_file)
+    finally:
+        Table.drop = orig_drop
+
+    # state+history × core+rbac = four Table.drop() calls, all on the restore connection
+    assert len(dropped) == 4
+    assert all(d is conn for d in dropped)
+    assert sp.run.call_args.args[0][0] == "pg_restore"
+
+
 def test_clean_orphans_noop_when_no_fk_checks():
     p = _provisioner()
     plan = MigrationPlan.build([])

@@ -7780,11 +7780,11 @@
             "temperature": "float",
             "time": "datetime"
           },
-          "id": "aabe5ec3-87ad-4c38-953b-0bddf0c1b0db",
+          "id": "0177610a-ffe9-4105-a325-b29a67535dd3",
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-26c0a",
+          "name": "thermo-0e525",
           "read_groups": [
             "analysts"
           ],

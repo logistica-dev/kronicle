@@ -528,6 +528,10 @@ class SchemaDiffEngine:
         db_table: str,
         target_table: str,
     ) -> None:
+        # Collect metadata unique-constraint names so we can exclude
+        # standalone unique indexes that shadow them (managed by
+        # _diff_unique_constraints, not here).
+        meta_uq_names = {str(c.name) for c in table.constraints if isinstance(c, UniqueConstraint) and c.name}
         db_indexes = {
             idx["name"]: idx
             for idx in self.inspector.get_indexes(db_table, schema=schema)
@@ -536,6 +540,9 @@ class SchemaDiffEngine:
                 and idx["name"]
                 and not idx["name"].endswith("_pkey")  # skip auto-generated PK indexes
                 and not idx.get("duplicates_constraint")  # managed by _diff_constraints
+                and not (
+                    idx.get("unique") and idx["name"] in meta_uq_names
+                )  # standalone unique index shadowing a metadata UniqueConstraint
             )
         }
         meta_indexes = {str(idx.name): idx for idx in table.indexes if idx.name is not None}
@@ -612,7 +619,18 @@ class SchemaDiffEngine:
                 name = str(c.name) if c.name else f"{table.name}_{'_'.join(col.name for col in c.columns)}_key"
                 meta_unique[name] = c
 
-        db_uniq_names = set(db_unique.keys())
+        # Standalone unique INDEXES (not backed by a pg_constraint) occupy the
+        # same name space as constraints.  get_unique_constraints() only sees
+        # pg_constraint rows, so a bare CREATE UNIQUE INDEX would be invisible
+        # and produce a false-positive AddUniqueConstraintOp that then fails
+        # with DuplicateTable.  Account for those index names when diffing.
+        db_uq_index_names: set[str] = set()
+        for idx in self.inspector.get_indexes(db_table, schema=schema):
+            name = idx.get("name")
+            if idx and idx.get("unique") and name is not None and not idx.get("duplicates_constraint"):
+                db_uq_index_names.add(name)
+
+        db_uniq_names = set(db_unique.keys()) | db_uq_index_names
         meta_uniq_names = set(meta_unique.keys())
 
         matched = self._detect_constraint_renames(meta_uniq_names - db_uniq_names, db_uniq_names - meta_uniq_names)
