@@ -24,7 +24,6 @@ class RbacSubject(RbacEntity):
     __table_args__ = (
         CheckConstraint(f"type IN ('{SubjectType.user.value}', '{SubjectType.group.value}')", name="chk_subject_type"),
         CheckConstraint("num_nonnulls(user_id, group_id) = 1", name="chk_subject_one_owner"),
-        UniqueConstraint("id", name="uq_subject_id"),
         UniqueConstraint("user_id", name="uq_subject_user_id"),
         UniqueConstraint("group_id", name="uq_subject_group_id"),
         Index("ix_subject_type", "type"),
