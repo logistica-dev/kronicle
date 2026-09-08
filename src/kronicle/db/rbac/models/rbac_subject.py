@@ -5,6 +5,7 @@ from uuid import UUID
 from sqlalchemy import CheckConstraint, ForeignKey, Index, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, backref, mapped_column, relationship
 
+from kronicle.db.rbac.links.rbac_link import RbacLink
 from kronicle.db.rbac.models.rbac_entity import RbacEntity
 from kronicle.db.rbac.models.rbac_group import RbacGroup
 from kronicle.db.rbac.models.rbac_user import RbacUser
@@ -20,12 +21,15 @@ class RbacSubject(RbacEntity):
     Exactly one of user_id or group_id must be set (exclusive arc).
     """
 
+    UQ_CONSTRAINT_USR = "uq_subject_user_id"
+    UQ_CONSTRAINT_GRP = "uq_subject_group_id"
+
     __tablename__ = "subjects"
     __table_args__ = (
         CheckConstraint(f"type IN ('{SubjectType.user.value}', '{SubjectType.group.value}')", name="chk_subject_type"),
         CheckConstraint("num_nonnulls(user_id, group_id) = 1", name="chk_subject_one_owner"),
-        UniqueConstraint("user_id", name="uq_subject_user_id"),
-        UniqueConstraint("group_id", name="uq_subject_group_id"),
+        UniqueConstraint(RbacLink.USER_ID, name=UQ_CONSTRAINT_USR),
+        UniqueConstraint(RbacLink.GROUP_ID, name=UQ_CONSTRAINT_GRP),
         Index("ix_subject_type", "type"),
         {"schema": RbacEntity.namespace(), "extend_existing": True},
     )
