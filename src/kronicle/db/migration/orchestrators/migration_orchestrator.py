@@ -128,7 +128,7 @@ class MigrationOrchestrator:
             return result
         result.infra_required_fixes = infra.applied_ops > 0
 
-        print()
+        print()  # For a small separation
         # --------------------------------------------------------------
         # 2. SCHEMA CONVERGENCE (core+rbac)
         # --------------------------------------------------------------
@@ -139,7 +139,7 @@ class MigrationOrchestrator:
             return result
         result.passes.extend(schema_result["passes"])
 
-        print()
+        print()  # For a small separation
         # --------------------------------------------------------------
         # 3. DATA CONVERGENCE (data schema: tracking tables + hypertables)
         # --------------------------------------------------------------
