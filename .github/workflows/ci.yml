@@ -40,7 +40,6 @@ jobs:
       KRONICLE_CHAN_CREDS: ${{ secrets.KRONICLE_CHAN_CREDS }}
       KRONICLE_RBAC_CREDS: ${{ secrets.KRONICLE_RBAC_CREDS }}
       KRONICLE_SU_INFO: ${{ secrets.KRONICLE_SU_INFO }}
-      KRONICLE_DB_AUTO_MIGRATION: true
     steps:
       - uses: actions/checkout@v6
 
@@ -73,6 +72,7 @@ jobs:
           KRONICLE_SU_PASS: ${{ secrets.KRONICLE_SU_PASS }}
           KRONICLE_USR_NAME: ${{ secrets.KRONICLE_USR_NAME }}
           KRONICLE_USR_PASS: ${{ secrets.KRONICLE_USR_PASS }}
+          KRONICLE_DB_SU_CREDS: ${{ secrets.KRONICLE_DB_SU_CREDS }}
           KRONICLE_DB_AUTO_MIGRATION: true
         run: |
           pip install -r requirements.txt -r requirements-dev.txt
