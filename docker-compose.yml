@@ -5,7 +5,7 @@ services:
   # TimescaleDB / PostgreSQL
   # --------------------------
   db:
-    image: timescale/timescaledb:latest-pg16 # Use latest TimescaleDB image (PostgreSQL 16)
+    image: timescale/timescaledb:latest-pg17 # Use latest TimescaleDB image (PostgreSQL 16)
     container_name: kronicle-db
     environment:
       # Set from env file or .env

@@ -5,7 +5,7 @@ services:
   # TimescaleDB / PostgreSQL
   # --------------------------
   db:
-    image: timescale/timescaledb:latest-pg16
+    image: timescale/timescaledb:latest-pg17
     container_name: kronicle-ci-test-db
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
