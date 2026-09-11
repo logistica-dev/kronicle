@@ -118,6 +118,7 @@ def test_db_settings(monkeypatch):
         server=se.ConnectionSettings.from_env(),
         env=se.AppEnv.from_env(),
         conf_file=None,
+        migration=se.MigrationSettings(),
     )
     settings = se.DBSettings(conf)
     assert "postgresql://" in settings.channel_connection_url

@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "TestApp",
-    "summary": "desc",
-    "version": "1.0"
+    "title": "Kronicle",
+    "summary": "FastAPI-powered TimescaleDB microservice for storing time-series measurements",
+    "version": "0.0.1"
   },
   "paths": {
     "/health/live": {
@@ -178,10 +178,17 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
               "description": "Optional tags as comma-separated key:value pairs, e.g., color:red",
               "title": "Tags"
             },
@@ -192,10 +199,17 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
               "description": "Optional tags as comma-separated key:value pairs, e.g., color:red",
               "title": "Metadata"
             },
@@ -654,10 +668,17 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
               "description": "Optional tags as comma-separated key:value pairs, e.g., color:red",
               "title": "Tags"
             },
@@ -668,10 +689,17 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
               "description": "Optional tags as comma-separated key:value pairs, e.g., color:red",
               "title": "Metadata"
             },
@@ -1384,10 +1412,17 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
               "description": "Optional tags as comma-separated key:value pairs, e.g., color:red",
               "title": "Tags"
             },
@@ -1398,10 +1433,17 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
               "description": "Optional tags as comma-separated key:value pairs, e.g., color:red",
               "title": "Metadata"
             },
@@ -7780,11 +7822,11 @@
             "temperature": "float",
             "time": "datetime"
           },
-          "id": "4da88f7f-4088-475f-8130-245bf11dfa97",
+          "id": "a731c4fd-3b3a-4959-8a41-a32161c68ff6",
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-4aee4",
+          "name": "thermo-cb42d",
           "read_groups": [
             "analysts"
           ],

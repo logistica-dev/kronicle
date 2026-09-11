@@ -5,13 +5,14 @@ services:
   # TimescaleDB / PostgreSQL
   # --------------------------
   db:
-    image: timescale/timescaledb:latest-pg17 # Use latest TimescaleDB image (PostgreSQL 16)
+    image: timescaledev/timescaledb:2.26.0-pg17 # Use latest TimescaleDB image (PostgreSQL 16)
     container_name: kronicle-db
     environment:
       # Set from env file or .env
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      KRONICLE_DB_NAME: ${KRONICLE_DB_NAME:-${POSTGRES_DB:-kronicle_db}}
+      POSTGRES_DB: ${POSTGRES_DB}
+      KRONICLE_DB_NAME: ${KRONICLE_DB_NAME}
     volumes:
       - ./kronicle-db-data:/var/lib/postgresql/data # Persist DB data
     healthcheck:
@@ -39,7 +40,8 @@ services:
     environment:
       KRONICLE_DB_HOST: db # <- directly reference the db service
       KRONICLE_DB_PORT: 5432 # fixed port inside network
-      KRONICLE_DB_NAME: ${KRONICLE_DB_NAME:-${POSTGRES_DB:-kronicle_db}}
+      POSTGRES_DB: ${POSTGRES_DB}
+      KRONICLE_DB_NAME: ${KRONICLE_DB_NAME}
 
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -47,7 +49,7 @@ services:
       KRONICLE_CHAN_CREDS: ${KRONICLE_CHAN_CREDS}
       KRONICLE_RBAC_CREDS: ${KRONICLE_RBAC_CREDS}
 
-      KRONICLE_PORT: 8000
+      KRONICLE_PORT: ${KRONICLE_PORT:-8000}
       KRONICLE_HOST: 0.0.0.0
 
       KRONICLE_SU_INFO: ${KRONICLE_SU_INFO}
@@ -56,7 +58,7 @@ services:
       KRONICLE_ENV: test
       KRONICLE_LOG_LEVEL: 3
     ports:
-      - "8000:8000"
+      - "8000:${KRONICLE_PORT:-8000}"
     networks:
       - kronicle-net # Same network as db
     restart: "no" # unless-stopped # Keep container running unless manually stopped

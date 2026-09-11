@@ -10,7 +10,7 @@ import pytest
 from kronicle.db.migration.orchestrators import db_provisioner as dp
 from kronicle.db.migration.orchestrators.db_provisioner import DbProvisioner
 
-from .conftest import make_db_settings
+from .conftest import make_db_settings, migration_settings
 
 # ==================================================================================================
 # Helpers
@@ -31,7 +31,7 @@ def _engine(row):
 
 
 def _provisioner(**settings_kwargs):
-    return DbProvisioner(db_settings=make_db_settings(**settings_kwargs))
+    return DbProvisioner(db_settings=make_db_settings(**settings_kwargs), migration_settings=migration_settings())
 
 
 # ==================================================================================================
@@ -331,8 +331,7 @@ def test_backup_dumps_managed_schemas():
     with (
         patch.object(DbProvisioner, "check_db_exists", return_value=True),
         patch.object(DbProvisioner, "_any_managed_schema_exists", return_value=True),
-        patch.object(dp, "get_env_var", return_value="/tmp/kronicle_backup"),
-        patch.object(dp, "backup_path", return_value=backup_file),
+        patch.object(DbProvisioner, "get_backup_path", return_value=backup_file),
         patch.object(dp, "subprocess") as sp,
     ):
         result = p.backup()
@@ -350,8 +349,7 @@ def test_backup_propagates_failure():
     with (
         patch.object(DbProvisioner, "check_db_exists", return_value=True),
         patch.object(DbProvisioner, "_any_managed_schema_exists", return_value=True),
-        patch.object(dp, "get_env_var", return_value="/tmp/kronicle_backup"),
-        patch.object(dp, "backup_path", return_value=Path("/tmp/kronicle_backup.dump")),
+        patch.object(DbProvisioner, "get_backup_path", return_value=Path("/tmp/kronicle_backup.dump")),
         patch(
             "kronicle.db.migration.orchestrators.db_provisioner.subprocess.run",
             side_effect=CalledProcessError(1, "pg_dump", stderr="disk full"),
@@ -585,8 +583,7 @@ def test_run_once_applies_and_converges():
         patch.object(DbProvisioner, "_ensure_db_create_privilege"),
         patch.object(DbProvisioner, "_ensure_schemas"),
         patch.object(DbProvisioner, "_ensure_extension"),
-        patch.object(dp, "get_env_var", return_value="/tmp/kronicle_backup"),
-        patch.object(dp, "backup_path", return_value=Path("/tmp/kronicle_backup.dump")),
+        patch.object(DbProvisioner, "get_backup_path", return_value=Path("/tmp/kronicle_backup.dump")),
         patch.object(dp, "subprocess") as sp,
     ):
         sp.run.return_value = _completed("1\n")
@@ -614,8 +611,7 @@ def test_run_once_error_restores_and_reports():
         patch.object(DbProvisioner, "check_readiness", return_value={"db": ["application database missing"]}),
         patch.object(DbProvisioner, "_confirm", return_value=True),
         patch.object(DbProvisioner, "check_db_exists") as db_exists,
-        patch.object(dp, "get_env_var", return_value="/tmp/kronicle_backup"),
-        patch.object(dp, "backup_path", return_value=Path("/tmp/kronicle_backup.dump")),
+        patch.object(DbProvisioner, "get_backup_path", return_value=Path("/tmp/kronicle_backup.dump")),
         patch.object(dp, "subprocess"),
         patch.object(DbProvisioner, "restore_backup") as restore,
     ):

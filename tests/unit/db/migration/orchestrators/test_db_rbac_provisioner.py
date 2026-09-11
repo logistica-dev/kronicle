@@ -30,9 +30,9 @@ from kronicle.db.migration.persistence.schema_migration_state import (
     RbacSchemaMigrationState,
 )
 from kronicle.db.rbac.models.rbac_subject import RbacSubject
-from kronicle.deps.settings_env import KRONICLE_RBAC_BACKUP
+from kronicle.deps.settings_env import KRONICLE_BACKUP_PREFIX
 
-from .conftest import make_db_settings
+from .conftest import make_db_settings, migration_settings
 
 # ==================================================================================================
 # Helpers
@@ -71,7 +71,9 @@ def _exec_engine():
 
 
 def _provisioner(**settings_kwargs):
-    return RbacSchemasProvisioner(db_settings=make_db_settings(**settings_kwargs))
+    return RbacSchemasProvisioner(
+        db_settings=make_db_settings(**settings_kwargs), migration_settings=migration_settings()
+    )
 
 
 def _add_col_op(schema="core"):
@@ -512,8 +514,8 @@ def test_backup_runs_pg_dump_for_each_schema():
     p = _provisioner()
     backup_file = Path("/tmp/kronicle_rbac/rbac.dump")
     with (
-        patch.dict(os.environ, {KRONICLE_RBAC_BACKUP: "/tmp/kronicle_rbac"}),
-        patch.object(dpr, "backup_path", return_value=backup_file),
+        patch.dict(os.environ, {KRONICLE_BACKUP_PREFIX: "/tmp/kronicle_rbac"}),
+        patch.object(RbacSchemasProvisioner, "get_backup_path", return_value=backup_file),
         patch.object(dpr, "subprocess") as sp,
     ):
         sp.run.return_value = _completed()
@@ -528,8 +530,8 @@ def test_backup_runs_pg_dump_for_each_schema():
 def test_backup_failure_raises_runtime_error():
     p = _provisioner()
     with (
-        patch.dict(os.environ, {KRONICLE_RBAC_BACKUP: "/tmp/kronicle_rbac"}),
-        patch.object(dpr, "backup_path", return_value=Path("/tmp/kronicle_rbac/rbac.dump")),
+        patch.dict(os.environ, {KRONICLE_BACKUP_PREFIX: "/tmp/kronicle_rbac"}),
+        patch.object(RbacSchemasProvisioner, "get_backup_path", return_value=Path("/tmp/kronicle_rbac/rbac.dump")),
         patch(
             "kronicle.db.migration.orchestrators.db_rbac_provisioner.subprocess.run",
             side_effect=CalledProcessError(2, "pg_dump", stderr="disk full"),
@@ -694,7 +696,7 @@ def test_check_mutation_requirements_wraps_backup_write_check():
 def test_check_backup_writable_ok():
     p = _provisioner()
     with (
-        patch.dict(os.environ, {KRONICLE_RBAC_BACKUP: "/tmp/kronicle_rbac"}),
+        patch.dict(os.environ, {KRONICLE_BACKUP_PREFIX: "/tmp/kronicle_rbac"}),
         patch.object(os, "access", return_value=True),
     ):
         p.check_backup_writable()
@@ -703,7 +705,7 @@ def test_check_backup_writable_ok():
 def test_check_backup_writable_not_writable_raises():
     p = _provisioner()
     with (
-        patch.dict(os.environ, {KRONICLE_RBAC_BACKUP: "/tmp/kronicle_rbac"}),
+        patch.dict(os.environ, {KRONICLE_BACKUP_PREFIX: "/tmp/kronicle_rbac"}),
         patch.object(os, "access", return_value=False),
     ):
         with pytest.raises(RuntimeError, match="not writable"):

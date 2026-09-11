@@ -134,7 +134,7 @@ class KronicleApp:
         # --- DB structure ---
         with log_block(here, "Schema alignment"):
             orchestrator = MigrationOrchestrator(self.conf.db)
-            if self.conf.db_migration_auto:
+            if self.conf.migration.auto:
                 with log_block(here, "DB structure auto-validation"):
                     # INIT mode: first launch / full provisioning — any DB action is permitted.
                     orchestrator.run(auto_approve=True)
@@ -180,7 +180,7 @@ class KronicleApp:
             seed_anonymous_group(self.app.state.rbac_db, allow_anonymous=allow)
 
         # App superuser — INIT mode only, once the RBAC session exists.
-        if self.conf.db_migration_auto:
+        if self.conf.migration.auto:
             with log_block(here, "App superuser"):
                 seed_app_superuser(self.app.state.rbac_db, su=AppSuperuser.from_env())
 

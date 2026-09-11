@@ -5,7 +5,7 @@ kronicle-sdk==0.4.0
 pip-upgrade-outdated==1.5
 pip==26.2.1
 pre-commit==4.6.2
-pyright==1.1.411
+pyright==1.1.414
 pytest-asyncio==1.4.0
 pytest-cov==7.1.0
 pytest==9.1.1

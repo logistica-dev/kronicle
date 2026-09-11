@@ -6,7 +6,7 @@ from typing import Any
 from pydantic import PrivateAttr, model_serializer, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from kronicle.deps.settings_env import ConnectionSettings, DBSettings, KronicleEnvConf
+from kronicle.deps.settings_env import ConnectionSettings, DBSettings, KronicleEnvConf, MigrationSettings
 from kronicle.deps.settings_ini import AppSettings, AuthSettings, JWTSettings, RbacSettings
 from kronicle.utils.file_utils import is_file, load_ini_file
 
@@ -38,7 +38,7 @@ class KronicleSettings(BaseSettings):
     jwt: JWTSettings
     auth: AuthSettings
     rbac: RbacSettings
-    db_migration_auto: bool
+    migration: MigrationSettings
 
     model_config = SettingsConfigDict(
         env_prefix="KRONICLE_",
@@ -68,13 +68,14 @@ class KronicleSettings(BaseSettings):
             raise RuntimeError("Conf file incorrect") from e
 
         values["server"] = env_conf.server
+        values["migration"] = env_conf.migration
+
         values["db"] = DBSettings(env_conf)
 
         values["app"] = AppSettings.from_parser(parser)
         values["jwt"] = JWTSettings.from_parser(parser)
         values["auth"] = AuthSettings.from_parser(parser)
         values["rbac"] = RbacSettings.from_parser(parser)
-        values["db_migration_auto"] = env_conf.db_migration_auto
 
         return values
 

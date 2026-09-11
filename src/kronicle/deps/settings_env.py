@@ -52,9 +52,7 @@ APP_SU_INFO = "KRONICLE_SU_INFO"  # b64(username:email:argon2_hash)
 KRONICLE_CONF = "KRONICLE_CONF"
 KRONICLE_ENV = "KRONICLE_ENV"
 
-KRONICLE_FULL_BACKUP = "KRONICLE_FULL_BACKUP"
-KRONICLE_RBAC_BACKUP = "KRONICLE_RBAC_BACKUP"
-KRONICLE_DATA_BACKUP = "KRONICLE_DATA_BACKUP"
+KRONICLE_BACKUP_PREFIX = "KRONICLE_BACKUP_PREFIX"
 
 KRONICLE_DB_AUTO_MIGRATION = "KRONICLE_DB_AUTO_MIGRATION"
 
@@ -257,39 +255,54 @@ class AppEnv:
 
 
 @dataclass
+class MigrationSettings:
+    auto: bool = False
+    backup_prefix: str = "./backup/kronicle"
+
+    @classmethod
+    def from_env(cls):
+        auto = is_str_truish(getenv(KRONICLE_DB_AUTO_MIGRATION, ""))
+        backup_prefix = getenv(KRONICLE_BACKUP_PREFIX, "./backup/kronicle")
+        return cls(auto, backup_prefix)
+
+
+@dataclass
 class KronicleEnvConf:
+    db: DbAccess
     chan_creds: ChanDbCreds
     rbac_creds: RbacDbCreds
-    db: DbAccess
+    migration: MigrationSettings
+
     server: ConnectionSettings
     env: AppEnv
+
     conf_file: str | None
     dbsu_creds: DbSuCreds | None = None
-    db_migration_auto: bool = False
 
     @classmethod
     def from_env(cls) -> KronicleEnvConf:
-        rbac_creds = RbacDbCreds.from_env()
         chan_creds = ChanDbCreds.from_env()
+        rbac_creds = RbacDbCreds.from_env()
         try:
             dbsu_creds = DbSuCreds.from_env()
         except (RuntimeError, ValueError):
             dbsu_creds = None
 
-        db_access_profile = DbAccess.from_env(default_creds=chan_creds)
+        db_access = DbAccess.from_env(default_creds=chan_creds)
+
         app_server = ConnectionSettings.from_env()
         app_env = AppEnv.from_env()
         conf_file: str | None = getenv(KRONICLE_CONF)
-        db_migration_auto = is_str_truish(getenv(KRONICLE_DB_AUTO_MIGRATION) or "")
+        migration = MigrationSettings.from_env()
         return cls(
             server=app_server,
-            db=db_access_profile,
+            db=db_access,
             rbac_creds=rbac_creds,
             chan_creds=chan_creds,
             dbsu_creds=dbsu_creds,
             env=app_env,
             conf_file=conf_file,
-            db_migration_auto=db_migration_auto,
+            migration=migration,
         )
 
 

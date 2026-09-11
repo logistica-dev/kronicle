@@ -42,7 +42,7 @@ from kronicle.db.migration.engine.db_catalog import DatabaseCatalogBuilder
 from kronicle.db.migration.engine.migration_plan import MigrationPlan
 from kronicle.db.migration.engine.migration_proposal import MigrationProposal
 from kronicle.db.migration.engine.operations import AddColumnOp, SafetyLevel
-from kronicle.db.migration.orchestrators.provisioner_base import BaseProvisioner, backup_path
+from kronicle.db.migration.orchestrators.provisioner_base import BaseProvisioner
 from kronicle.db.migration.persistence.schema_migration_history import (
     CoreSchemaMigrationHistory,
     RbacSchemaMigrationHistory,
@@ -55,7 +55,7 @@ from kronicle.db.rbac.models._registry import RBAC_NAMESPACE
 from kronicle.db.rbac.rbac_db_session import RbacDbSession
 from kronicle.db.registry import get_migration_schemas
 from kronicle.deps.settings import KronicleSettings
-from kronicle.deps.settings_env import KRONICLE_RBAC_BACKUP, DBSettings
+from kronicle.deps.settings_env import DBSettings, MigrationSettings
 from kronicle.utils.dev_logs import log_d, log_e, log_i, log_w
 from kronicle.utils.file_utils import load_env_file
 
@@ -174,7 +174,7 @@ class RbacSchemasProvisioner(BaseProvisioner):
         db_settings: DBSettings,
         alembic_cfg_path: str = "alembic.ini",
         *,
-        auto_approve: bool = False,
+        migration_settings: MigrationSettings | None = None,
         backup_url: str | None = None,
     ):
         self.cfg = Config(alembic_cfg_path)
@@ -186,7 +186,8 @@ class RbacSchemasProvisioner(BaseProvisioner):
 
         self.rbac_db = RbacDbSession(self.rbac_url)
 
-        self.auto_approve = auto_approve
+        self.migration_settings = migration_settings or MigrationSettings.from_env()
+        self.auto_approve = self.migration_settings.auto
 
         self.schemas = [CORE_NAMESPACE, RBAC_NAMESPACE]
 
@@ -573,8 +574,7 @@ class RbacSchemasProvisioner(BaseProvisioner):
             return False
 
     def check_backup_writable(self) -> None:
-        backup_prefix = os.environ.get(KRONICLE_RBAC_BACKUP, "./backup/kronicle")
-        backup_dir = backup_path(backup_prefix, "rbac").parent
+        backup_dir = Path(self.migration_settings.backup_prefix).parent
         if not os.access(backup_dir, os.W_OK):
             raise RuntimeError(f"Backup directory is not writable: '{backup_dir}'")
 
@@ -675,9 +675,7 @@ class RbacSchemasProvisioner(BaseProvisioner):
         return True
 
     def backup(self) -> Path:
-        backup_prefix = os.environ.get(KRONICLE_RBAC_BACKUP, "./backup/kronicle")
-        backup_file = backup_path(backup_prefix, "rbac")
-        backup_file.parent.mkdir(parents=True, exist_ok=True)
+        backup_file = self.get_backup_path("rbac")
 
         cmd = ["pg_dump", "-Fc", "-f", str(backup_file), self._backup_connection_url()]
 

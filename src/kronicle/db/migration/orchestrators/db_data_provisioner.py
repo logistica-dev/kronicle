@@ -36,9 +36,9 @@ from pathlib import Path
 
 from kronicle.db.data.models._registry import DATA_NAMESPACE, ChannelMetadata
 from kronicle.db.migration.engine.operations import SafetyLevel
-from kronicle.db.migration.orchestrators.provisioner_base import ApplyResult, BaseProvisioner, backup_path
+from kronicle.db.migration.orchestrators.provisioner_base import ApplyResult, BaseProvisioner
 from kronicle.deps.settings import KronicleSettings
-from kronicle.deps.settings_env import KRONICLE_DATA_BACKUP, DBSettings
+from kronicle.deps.settings_env import DBSettings, MigrationSettings
 from kronicle.utils.dev_logs import log_d, log_e, log_i, log_w
 from kronicle.utils.file_utils import load_env_file
 
@@ -73,11 +73,14 @@ class DataSchemaProvisioner(BaseProvisioner):
         self,
         db_settings: DBSettings,
         *,
-        auto_approve: bool = False,
+        migration_settings: MigrationSettings | None = None,
         backup_url: str | None = None,
     ):
         self._db_settings = db_settings
-        self.auto_approve = auto_approve
+
+        self.migration_settings = migration_settings or MigrationSettings.from_env()
+        self.auto_approve = self.migration_settings.auto
+
         self.channels: list[ChannelDrift] = []
         self.backup_url = backup_url or self.chan_url
 
@@ -269,9 +272,7 @@ class DataSchemaProvisioner(BaseProvisioner):
 
     def backup(self) -> Path | str | None:
         """Safeguard pg_dump of the data schema (custom format) as the chan owner."""
-        backup_prefix = os.environ.get(KRONICLE_DATA_BACKUP, "./backup/kronicle")
-        backup_file = backup_path(backup_prefix, "data")
-        backup_file.parent.mkdir(parents=True, exist_ok=True)
+        backup_file = self.get_backup_path("data")
 
         cmd = ["pg_dump", "-Fc", "-f", str(backup_file), self._backup_connection_url()]
         cmd += ["-n", DATA_NAMESPACE]
@@ -376,7 +377,8 @@ class DataSchemaProvisioner(BaseProvisioner):
         if not drift.is_hypertable:
             self._psql(
                 f"SELECT * FROM create_hypertable('{full}', 'time', "
-                "if_not_exists => TRUE, create_default_indexes => TRUE)"
+                "if_not_exists => TRUE, create_default_indexes => TRUE, "
+                "migrate_data => TRUE)"
             )
 
         log_i(mod, f"Transformed {full} into a hypertable (composite PK, time-leading)")

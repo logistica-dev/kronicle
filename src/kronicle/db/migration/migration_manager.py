@@ -33,7 +33,7 @@ from kronicle.db.rbac.models._registry import RBAC_NAMESPACE
 from kronicle.db.rbac.rbac_db_session import RbacDbSession
 from kronicle.db.registry import get_migration_schemas
 from kronicle.deps.settings import KronicleSettings
-from kronicle.deps.settings_env import KRONICLE_RBAC_BACKUP, DBSettings
+from kronicle.deps.settings_env import KRONICLE_BACKUP_PREFIX, DBSettings
 from kronicle.types.iso_datetime import IsoDateTime
 from kronicle.utils.dev_logs import log_d, log_e, log_i, log_w
 from kronicle.utils.file_utils import load_env_file
@@ -232,7 +232,7 @@ class MigrationManager:
         return self.dbsu_url or self.backup_url
 
     def backup(self) -> Path:
-        backup_prefix = os.environ.get(KRONICLE_RBAC_BACKUP, "./backup/kronicle")
+        backup_prefix = os.environ.get(KRONICLE_BACKUP_PREFIX, "./backup/kronicle")
         backup_prefix_path = Path(backup_prefix)
 
         ts = IsoDateTime.now_utc().strftime("%Y%m%d_%H%M%S")
@@ -691,7 +691,7 @@ class MigrationManager:
         self.check_backup_writable()
 
     def check_backup_writable(self) -> None:
-        backup_prefix = os.environ.get(KRONICLE_RBAC_BACKUP, "./backup/kronicle")
+        backup_prefix = os.environ.get(KRONICLE_BACKUP_PREFIX, "./backup/kronicle")
         backup_dir = Path(backup_prefix).parent
         if not os.access(backup_dir, os.W_OK):
             raise RuntimeError(f"Backup directory is not writable: {backup_dir}")

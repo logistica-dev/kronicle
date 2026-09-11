@@ -17,9 +17,9 @@ from kronicle.db.migration.orchestrators.db_data_provisioner import (
     ChannelDrift,
     DataSchemaProvisioner,
 )
-from kronicle.deps.settings_env import KRONICLE_DATA_BACKUP
+from kronicle.deps.settings_env import KRONICLE_BACKUP_PREFIX
 
-from .conftest import make_db_settings
+from .conftest import make_db_settings, migration_settings
 
 # ==================================================================================================
 # Helpers
@@ -31,7 +31,9 @@ def _completed(stdout: str = ""):
 
 
 def _provisioner(**settings_kwargs):
-    return DataSchemaProvisioner(db_settings=make_db_settings(**settings_kwargs))
+    return DataSchemaProvisioner(
+        db_settings=make_db_settings(**settings_kwargs), migration_settings=migration_settings()
+    )
 
 
 def _drift(
@@ -339,8 +341,8 @@ def test_backup_runs_pg_dump_for_data_schema():
     p = _provisioner()
     backup_file = Path("/tmp/kronicle_data/data.dump")
     with (
-        patch.dict(os.environ, {KRONICLE_DATA_BACKUP: "/tmp/kronicle_data"}),
-        patch.object(ddp, "backup_path", return_value=backup_file),
+        patch.dict(os.environ, {KRONICLE_BACKUP_PREFIX: "/tmp/kronicle_data"}),
+        patch.object(DataSchemaProvisioner, "get_backup_path", return_value=backup_file),
         patch.object(ddp, "subprocess") as sp,
     ):
         sp.run.return_value = _completed()
@@ -354,8 +356,8 @@ def test_backup_runs_pg_dump_for_data_schema():
 def test_backup_failure_raises_runtime_error():
     p = _provisioner()
     with (
-        patch.dict(os.environ, {KRONICLE_DATA_BACKUP: "/tmp/kronicle_data"}),
-        patch.object(ddp, "backup_path", return_value=Path("/tmp/kronicle_data/data.dump")),
+        patch.dict(os.environ, {KRONICLE_BACKUP_PREFIX: "/tmp/kronicle_data"}),
+        patch.object(DataSchemaProvisioner, "get_backup_path", return_value=Path("/tmp/kronicle_data/data.dump")),
         patch(
             "kronicle.db.migration.orchestrators.db_data_provisioner.subprocess.run",
             side_effect=CalledProcessError(2, "pg_dump", stderr="disk full"),

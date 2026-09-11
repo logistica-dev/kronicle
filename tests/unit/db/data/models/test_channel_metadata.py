@@ -4,13 +4,16 @@ from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
+from asyncpg import UniqueViolationError
 from pytest import raises
 
 from kronicle.db.data.models.channel_metadata import ChannelMetadata
 from kronicle.db.data.models.channel_schema import ChannelSchema
-from kronicle.errors.error_types import ConflictError
+from kronicle.errors.error_types import BadRequestError, ConflictError, DatabaseInstructionError
+from kronicle.schemas.payload.op_feedback import OpFeedback
 from kronicle.schemas.payload.processed_payload import ProcessedPayload
 from kronicle.types.iso_datetime import IsoDateTime
+from kronicle.utils.str_utils import uuid_to_str
 
 # --------------------------------------------------------------------------------------
 # Fixtures
@@ -287,3 +290,283 @@ async def test_fetch_all(mock_conn, sample_metadata):
 
     assert len(results) == 1
     assert isinstance(results[0], ChannelMetadata)
+
+
+def _full_row(meta):
+    return {
+        "channel_id": meta.channel_id,
+        "channel_schema": meta.channel_schema.to_db_json(),
+        "name": meta.name,
+        "user_metadata": meta.user_metadata,
+        "tags": meta.tags,
+        "received_at": meta.received_at,
+    }
+
+
+# --------------------------------------------------------------------------------------
+# to_json
+# --------------------------------------------------------------------------------------
+
+
+def test_to_json_returns_strings_and_filters_none(sample_metadata):
+    result = sample_metadata.to_json()
+    assert result["channel_id"] == uuid_to_str(sample_metadata.channel_id)
+    assert result["name"] == sample_metadata.name
+    assert result["user_metadata"] == sample_metadata.user_metadata
+
+
+def test_to_json_none_metadata_becomes_empty_dicts(sample_schema):
+    m = ChannelMetadata(
+        channel_id=uuid4(),
+        channel_schema=sample_schema,
+        name=None,
+        user_metadata=None,
+        tags=None,
+    )
+    result = m.to_json()
+    assert "name" not in result
+    assert result["user_metadata"] == {}
+    assert result["tags"] == {}
+
+
+def test_str_is_json_string(sample_metadata):
+    assert str(sample_metadata) == str(sample_metadata.to_json())
+
+
+# --------------------------------------------------------------------------------------
+# from_processed with channel_truth
+# --------------------------------------------------------------------------------------
+
+
+def test_from_processed_uses_channel_truth_when_schema_is_none(sample_schema):
+    processed = ProcessedPayload.model_construct(
+        channel_id=str(uuid4()),
+        channel_schema=None,
+        name="Test Name",
+        metadata={"a": 1},
+        tags={"b": 2},
+        received_at=IsoDateTime.now_local(),
+        rows=[],
+        op_feedback=OpFeedback(),
+    )
+    obj = ChannelMetadata.from_processed(processed, channel_truth=sample_schema)
+    assert obj.channel_schema is sample_schema
+    assert obj.name == "test_name"
+
+
+def test_from_processed_with_channel_truth_uses_truth(sample_schema):
+    other_schema = ChannelSchema.from_user_json({"other": "int"})
+    processed = ProcessedPayload(
+        channel_id=str(uuid4()),  # type: ignore
+        channel_schema=other_schema,
+        name=None,
+    )
+    obj = ChannelMetadata.from_processed(processed, channel_truth=sample_schema)
+    assert obj.channel_schema is sample_schema
+    assert obj.name is None
+
+
+def test_from_processed_equivalent_schema_raises(sample_schema):
+    processed = ProcessedPayload(
+        channel_id=str(uuid4()),  # type: ignore
+        channel_schema=sample_schema,
+        name=None,
+    )
+    with raises(BadRequestError):
+        ChannelMetadata.from_processed(processed, channel_truth=sample_schema)
+
+
+# --------------------------------------------------------------------------------------
+# fetch_by_id
+# --------------------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_fetch_by_id_returns_object(mock_conn, sample_metadata):
+    mock_conn.fetchrow.return_value = {
+        "channel_id": sample_metadata.channel_id,
+        "channel_schema": sample_metadata.channel_schema.to_db_json(),
+        "name": sample_metadata.name,
+        "metadata": sample_metadata.user_metadata,
+        "tags": sample_metadata.tags,
+        "received_at": sample_metadata.received_at,
+    }
+
+    result = await ChannelMetadata.fetch_by_id(mock_conn, sample_metadata.channel_id)
+    assert result is not None
+    assert result.channel_id == sample_metadata.channel_id
+
+
+# --------------------------------------------------------------------------------------
+# fetch_by_name
+# --------------------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_fetch_by_name_returns_none(mock_conn):
+    mock_conn.fetchrow.return_value = None
+    assert await ChannelMetadata.fetch_by_name(mock_conn, "My Name") is None
+
+
+@pytest.mark.asyncio
+async def test_fetch_by_name_returns_object(mock_conn, sample_metadata):
+    mock_conn.fetchrow.return_value = {
+        "channel_id": sample_metadata.channel_id,
+        "channel_schema": sample_metadata.channel_schema.to_db_json(),
+        "name": sample_metadata.name,
+        "metadata": sample_metadata.user_metadata,
+        "tags": sample_metadata.tags,
+        "received_at": sample_metadata.received_at,
+    }
+    result = await ChannelMetadata.fetch_by_name(mock_conn, "My Name")
+    assert result is not None
+    assert result.name == sample_metadata.name
+
+
+# --------------------------------------------------------------------------------------
+# fetch_by_tags / fetch_by_user_meta
+# --------------------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_fetch_by_tags_empty_returns_empty(mock_conn):
+    assert await ChannelMetadata.fetch_by_tags(mock_conn, {}) == []
+    mock_conn.fetch.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_fetch_by_tags_returns_list(mock_conn, sample_metadata):
+    row = {
+        "channel_id": sample_metadata.channel_id,
+        "channel_schema": sample_metadata.channel_schema.to_db_json(),
+        "name": sample_metadata.name,
+        "metadata": sample_metadata.user_metadata,
+        "tags": sample_metadata.tags,
+        "received_at": sample_metadata.received_at,
+    }
+    mock_conn.fetch.return_value = [row]
+    results = await ChannelMetadata.fetch_by_tags(mock_conn, {"room": "101"})
+    assert len(results) == 1
+
+
+@pytest.mark.asyncio
+async def test_fetch_by_user_meta_empty_returns_empty(mock_conn):
+    assert await ChannelMetadata.fetch_by_user_meta(mock_conn, {}) == []
+    mock_conn.fetch.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_fetch_by_user_meta_returns_list(mock_conn, sample_metadata):
+    row = {
+        "channel_id": sample_metadata.channel_id,
+        "channel_schema": sample_metadata.channel_schema.to_db_json(),
+        "name": sample_metadata.name,
+        "metadata": sample_metadata.user_metadata,
+        "tags": sample_metadata.tags,
+        "received_at": sample_metadata.received_at,
+    }
+    mock_conn.fetch.return_value = [row]
+    results = await ChannelMetadata.fetch_by_user_meta(mock_conn, {"location": "lab"})
+    assert len(results) == 1
+
+
+# --------------------------------------------------------------------------------------
+# exists / delete
+# --------------------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_exists_true(mock_conn, sample_metadata):
+    mock_conn.fetchrow.return_value = _full_row(sample_metadata)
+    assert await sample_metadata.exists(mock_conn) is True
+
+
+@pytest.mark.asyncio
+async def test_exists_false(mock_conn, sample_metadata):
+    mock_conn.fetchrow.return_value = None
+    assert await sample_metadata.exists(mock_conn) is False
+
+
+@pytest.mark.asyncio
+async def test_delete_missing_returns_none(mock_conn, sample_metadata):
+    mock_conn.fetchrow.return_value = None
+    assert await sample_metadata.delete(mock_conn) is None
+
+
+@pytest.mark.asyncio
+async def test_delete_success(mock_conn, sample_metadata):
+    mock_conn.fetchrow.side_effect = [
+        _full_row(sample_metadata),  # fetch_by_id
+        _full_row(sample_metadata),  # DELETE RETURNING
+    ]
+    result = await sample_metadata.delete(mock_conn)
+    assert result is not None
+    assert result.channel_id == sample_metadata.channel_id
+
+
+@pytest.mark.asyncio
+async def test_delete_row_disappeared_returns_none(mock_conn, sample_metadata):
+    mock_conn.fetchrow.side_effect = [
+        _full_row(sample_metadata),  # fetch_by_id
+        None,  # DELETE RETURNING - row already gone
+    ]
+    assert await sample_metadata.delete(mock_conn) is None
+
+
+# --------------------------------------------------------------------------------------
+# create / update unique constraint violations
+# --------------------------------------------------------------------------------------
+
+
+def _unique_violation(constraint_name):
+    violation = UniqueViolationError("duplicate key value violates unique constraint")
+    violation.constraint_name = constraint_name  # type: ignore[attr-defined]
+    return violation
+
+
+@pytest.mark.asyncio
+async def test_create_pkey_violation_raises_conflict(sample_metadata, mock_conn):
+    mock_conn.fetchrow.side_effect = [None, _unique_violation("channel_metadata_pkey")]
+    with raises(ConflictError):
+        await sample_metadata.create(mock_conn)
+
+
+@pytest.mark.asyncio
+async def test_create_name_violation_raises_conflict(sample_metadata, mock_conn):
+    mock_conn.fetchrow.side_effect = [None, _unique_violation("channel_metadata_name_key")]
+    with raises(ConflictError):
+        await sample_metadata.create(mock_conn)
+
+
+@pytest.mark.asyncio
+async def test_create_unknown_violation_raises_conflict(sample_metadata, mock_conn):
+    mock_conn.fetchrow.side_effect = [None, _unique_violation("some_other_constraint")]
+    with raises(ConflictError):
+        await sample_metadata.create(mock_conn)
+
+
+@pytest.mark.asyncio
+async def test_create_insert_returns_no_row(sample_metadata, mock_conn):
+    mock_conn.fetchrow.side_effect = [None, None]
+    with raises(DatabaseInstructionError):
+        await sample_metadata.create(mock_conn)
+
+
+@pytest.mark.asyncio
+async def test_update_name_violation_raises_conflict(sample_metadata, mock_conn):
+    mock_conn.fetchrow.side_effect = [
+        _full_row(sample_metadata),  # fetch_by_id
+        _unique_violation("channel_metadata_name_key"),
+    ]
+    with raises(ConflictError):
+        await sample_metadata.update(mock_conn)
+
+
+@pytest.mark.asyncio
+async def test_update_unknown_violation_raises_conflict(sample_metadata, mock_conn):
+    mock_conn.fetchrow.side_effect = [
+        _full_row(sample_metadata),  # fetch_by_id
+        _unique_violation("channel_metadata_something"),
+    ]
+    with raises(ConflictError):
+        await sample_metadata.update(mock_conn)

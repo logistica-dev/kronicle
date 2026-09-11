@@ -27,7 +27,11 @@ from __future__ import annotations
 import abc
 import sys
 from datetime import datetime, timezone
+from os import W_OK, access
 from pathlib import Path
+
+from kronicle.deps.settings_env import MigrationSettings
+from kronicle.utils.dev_logs import log_e
 
 STAMP_FMT = "%Y%m%d_%H%M%S"
 
@@ -44,7 +48,16 @@ def backup_path(prefix: str, variant: str, ts: str | None = None) -> Path:
     """
     p = Path(prefix)
     ts = ts or _now_stamp()
-    return p.parent / f"{p.name}_{variant}_{ts}.dump"
+    backup_dir = p.parent
+    try:
+        backup_dir.mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        log_e("backup_path", "Backup directory cannot be created", e)
+
+    if not access(backup_dir, W_OK):
+        raise RuntimeError(f"Backup directory is not writable: '{backup_dir}'")
+
+    return backup_dir / f"{p.name}_{variant}_{ts}.dump"
 
 
 class ApplyResult:
@@ -98,6 +111,7 @@ class ApplyResult:
 class BaseProvisioner(abc.ABC):
     """Contract + shared workflow driver for every provisioner."""
 
+    migration_settings: MigrationSettings
     # -- workflow steps (implemented by subclasses) ----------------------
 
     @abc.abstractmethod
@@ -112,7 +126,10 @@ class BaseProvisioner(abc.ABC):
         an ``auto_approve_if_non_destructive`` guard passes for a non-destructive
         plan)."""
 
-    @abc.abstractmethod
+    def get_backup_path(self, prefix: str) -> Path:
+        backup_prefix = self.migration_settings.backup_prefix
+        return backup_path(backup_prefix, prefix)
+
     @abc.abstractmethod
     def backup(self) -> Path | str | None:
         """Safeguard snapshot before mutating. Return the backup file path (None if n/a)."""

@@ -166,6 +166,11 @@ class DbAccess:
 
 @dataclass
 class KronicleConf:
+    """
+    Similar to deps/settings_env.py KronicleEnvConf
+    Used for init scripts only (not app).
+    """
+
     db_su: DbSuCreds
     chan_creds: ChanneDbCreds
     rbac_creds: RbacDbCreds

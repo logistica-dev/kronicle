@@ -7,6 +7,8 @@ bak
 .conf
 backup*
 kronicle-sdk
+data
+tmp/
 
 # Python
 **/__pycache__

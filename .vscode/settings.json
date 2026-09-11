@@ -23,7 +23,7 @@
   "black-formatter.showNotifications": "onError",
 
   // Python extension
-  "python.languageServer": "Pylance",
+  "python.languageServer": "Jedi",
   "python.terminal.activateEnvironment": true,
   "python.formatting.provider": "black",
 

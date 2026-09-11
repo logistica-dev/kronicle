@@ -31,10 +31,10 @@ from sqlalchemy import create_engine, text
 
 from kronicle.db.core.models._registry import CORE_NAMESPACE
 from kronicle.db.data.models._registry import DATA_NAMESPACE
-from kronicle.db.migration.orchestrators.provisioner_base import BaseProvisioner, backup_path
+from kronicle.db.migration.orchestrators.provisioner_base import BaseProvisioner
 from kronicle.db.rbac.models._registry import RBAC_NAMESPACE
 from kronicle.deps.settings import KronicleSettings
-from kronicle.deps.settings_env import KRONICLE_FULL_BACKUP, DBSettings, get_env_var
+from kronicle.deps.settings_env import DBSettings, MigrationSettings
 from kronicle.utils.dev_logs import log_d, log_e, log_i, log_w
 from kronicle.utils.file_utils import load_env_file
 
@@ -53,9 +53,15 @@ class DbProvisioner(BaseProvisioner):
     ``run_once()`` workflow.
     """
 
-    def __init__(self, db_settings: DBSettings, *, auto_approve: bool = False):
+    def __init__(
+        self,
+        db_settings: DBSettings,
+        *,
+        migration_settings: MigrationSettings | None = None,
+    ):
         self._db_settings = db_settings
-        self.auto_approve = auto_approve
+        self.migration_settings = migration_settings or MigrationSettings.from_env()
+        self.auto_approve = self.migration_settings.auto
 
     # ------------------------------------------------------------------
     # Config (resolved once; passed explicitly into the atomic checks)
@@ -314,15 +320,13 @@ class DbProvisioner(BaseProvisioner):
             log_d(mod, "No managed schemas present — nothing to preserve, skipping safeguard backup")
             return None
 
-        backup_prefix = get_env_var(KRONICLE_FULL_BACKUP, "./backup/kronicle")
-        backup_file = backup_path(backup_prefix, "full")
-        backup_file.parent.mkdir(parents=True, exist_ok=True)
+        backup_file = self.get_backup_path("full")
 
         cmd = ["pg_dump", "-Fc", "-f", str(backup_file), self.dbsu_url]
         for schema in self.schema_owners:
             cmd += ["-n", schema]
 
-        log_i(mod, f"Creating safeguard backup: {backup_file}")
+        log_i(mod, f"Creating safeguard backup: { backup_file}")
         try:
             subprocess.run(cmd, check=True, capture_output=True, text=True)
         except subprocess.CalledProcessError as e:
@@ -530,7 +534,7 @@ if __name__ == "__main__":
         log_d(here, "Secrets file not found", secrets_path)
 
     settings = KronicleSettings()
-    provisioner = DbProvisioner(db_settings=settings.db, auto_approve=args.auto_approve)
+    provisioner = DbProvisioner(db_settings=settings.db, migration_settings=settings.migration)
 
     if args.check_only:
         provisioner.analyze(auto_approve=args.auto_approve)

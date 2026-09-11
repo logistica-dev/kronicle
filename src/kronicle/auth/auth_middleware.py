@@ -3,7 +3,7 @@
 Authentication middleware for FastAPI
 """
 
-from typing import Callable
+from typing import Callable, Optional
 from uuid import UUID
 
 from fastapi import Depends, HTTPException, Request, Response
@@ -58,7 +58,7 @@ class ExcludedPaths:
 class AuthenticationMiddleware(BaseHTTPMiddleware):
     """Middleware to handle JWT authentication for protected routes"""
 
-    def __init__(self, app, jwt_service: JWTService, are_docs_public: bool = False):
+    def __init__(self, app, jwt_service: Optional[JWTService], are_docs_public: bool = False):
         if jwt_service is None:
             raise RuntimeError("[AuthService] JwtService not initialized. Call init() from main app first.")
 

@@ -54,11 +54,11 @@ shared_read_router = APIRouter(dependencies=[Depends(require_auth)])
 )
 async def fetch_all_channels_metadata(
     name: str | None = Query(None, description="Optional name to filter by"),
-    tags: list[str] = Query(  # noqa: B008
+    tags: list[str] | None = Query(  # noqa: B008
         None,
         description="Optional tags as comma-separated key:value pairs, e.g., color:red",
     ),
-    metadata: list[str] = Query(  # noqa: B008
+    metadata: list[str] | None = Query(  # noqa: B008
         None,
         description="Optional tags as comma-separated key:value pairs, e.g., color:red",
     ),

@@ -6,6 +6,11 @@ import pytest
 from kronicle.deps import settings_env as se
 
 
+def migration_settings() -> se.MigrationSettings:
+    """Deterministic migration settings (auto approve OFF), independent of the environment."""
+    return se.MigrationSettings()
+
+
 def make_db_settings(
     *,
     host: str = "localhost",
@@ -31,6 +36,7 @@ def make_db_settings(
         server=se.ConnectionSettings(host=host, port=port),
         env=se.AppEnv(_env="dev"),
         conf_file=None,
+        migration=se.MigrationSettings(),
     )
     return se.DBSettings(conf)
 

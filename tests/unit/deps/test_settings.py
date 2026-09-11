@@ -10,6 +10,7 @@ from kronicle.deps.settings_env import (
     ConnectionSettings,
     DbAccess,
     KronicleEnvConf,
+    MigrationSettings,
     RbacDbCreds,
 )
 
@@ -24,7 +25,13 @@ def real_env_conf():
     server = ConnectionSettings(host="127.0.0.1", port=8000)
     env = AppEnv(_env=AppEnv._ENV_DEV)
     return KronicleEnvConf(
-        chan_creds=chan_creds, rbac_creds=rbac_creds, db=db_access_profile, server=server, env=env, conf_file=None
+        chan_creds=chan_creds,
+        rbac_creds=rbac_creds,
+        db=db_access_profile,
+        server=server,
+        env=env,
+        conf_file=None,
+        migration=MigrationSettings(),
     )
 
 
