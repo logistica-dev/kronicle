@@ -46,7 +46,11 @@ def create_zone(
 @core_router.get(
     "/zones",
     summary="List all zones",
-    description="Returns all zones.",
+    description=(
+        "Returns all zones. Without a filter the response is a list of zones. "
+        "When the 'name' filter is used it returns a single zone (or None if "
+        "no zone matches the name) instead of the full list."
+    ),
     response_model=OutputZone | list[OutputZone] | None,
     dependencies=[Depends(require_permission(PermStr.ZONE_READ))],
 )
@@ -129,7 +133,11 @@ def list_zone_channels(
 @core_router.get(
     "/channels",
     summary="List all core channels",
-    description="Returns all CoreChannels.",
+    description=(
+        "Returns all core channels. Without a filter the response is a list of channels. "
+        "When the 'name' filter is used it returns a single core channel (or None if "
+        "no channel matches the name) instead of the full list."
+    ),
     response_model=OutputCoreChannel | list[OutputCoreChannel] | None,
     dependencies=[Depends(require_permission(PermStr.CHANNEL_READ))],
 )

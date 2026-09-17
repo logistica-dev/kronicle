@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Kronicle",
-    "summary": "FastAPI-powered TimescaleDB microservice for storing time-series measurements",
-    "version": "0.0.1"
+    "title": "KRONICLE",
+    "summary": "FastAPI x TimescaleDB \u00b5service for storing time-series measurements",
+    "version": "0.5.1"
   },
   "paths": {
     "/health/live": {
@@ -147,7 +147,7 @@
           "Read data"
         ],
         "summary": "list all available channels",
-        "description": "Fetches metadata for all registered channels.\nEach entry includes schema, metadata, tags, and the number of available rows.\nNo data rows are returned in this endpoint.\nOptionally, filter by a name or tag_key/tag_value pair.",
+        "description": "Fetches metadata for all registered channels.<br>\n        Each entry includes schema, metadata, tags, and the number of available rows.c\n        No data rows are returned in this endpoint.<br>\n        Optionally, filter by a name or tag_key/tag_value pair.\n        When filtering by 'name', a single metadata payload (or None if not found) is returned.,",
         "operationId": "fetch_all_channels_metadata_api_v1_channels_get",
         "security": [
           {
@@ -637,7 +637,7 @@
           "Input data"
         ],
         "summary": "list all available channels",
-        "description": "Fetches metadata for all registered channels.\nEach entry includes schema, metadata, tags, and the number of available rows.\nNo data rows are returned in this endpoint.\nOptionally, filter by a name or tag_key/tag_value pair.",
+        "description": "Fetches metadata for all registered channels.<br>\n        Each entry includes schema, metadata, tags, and the number of available rows.c\n        No data rows are returned in this endpoint.<br>\n        Optionally, filter by a name or tag_key/tag_value pair.\n        When filtering by 'name', a single metadata payload (or None if not found) is returned.,",
         "operationId": "fetch_all_channels_metadata_data_v1_channels_get",
         "security": [
           {
@@ -1381,7 +1381,7 @@
           "Setup data channels"
         ],
         "summary": "list all available channels",
-        "description": "Fetches metadata for all registered channels.\nEach entry includes schema, metadata, tags, and the number of available rows.\nNo data rows are returned in this endpoint.\nOptionally, filter by a name or tag_key/tag_value pair.",
+        "description": "Fetches metadata for all registered channels.<br>\n        Each entry includes schema, metadata, tags, and the number of available rows.c\n        No data rows are returned in this endpoint.<br>\n        Optionally, filter by a name or tag_key/tag_value pair.\n        When filtering by 'name', a single metadata payload (or None if not found) is returned.,",
         "operationId": "fetch_all_channels_metadata_setup_v1_channels_get",
         "security": [
           {
@@ -2403,7 +2403,7 @@
           "Core"
         ],
         "summary": "List all zones",
-        "description": "Returns all zones.",
+        "description": "Returns all zones. Without a filter the response is a list of zones. When the 'name' filter is used it returns a single zone (or None if no zone matches the name) instead of the full list.",
         "operationId": "list_zones_core_v1_zones_get",
         "security": [
           {
@@ -2680,7 +2680,7 @@
           "Core"
         ],
         "summary": "List all core channels",
-        "description": "Returns all CoreChannels.",
+        "description": "Returns all core channels. Without a filter the response is a list of channels. When the 'name' filter is used it returns a single core channel (or None if no channel matches the name) instead of the full list.",
         "operationId": "list_channels_core_v1_channels_get",
         "security": [
           {
@@ -2942,6 +2942,7 @@
           "RBAC"
         ],
         "summary": "List Users",
+        "description": "Returns a list of users. When a unique filter is used (email, name or orcid), a single user (or None if no user matches) is returned instead of the full list.",
         "operationId": "list_users_rbac_v1_users_get",
         "security": [
           {
@@ -3653,7 +3654,7 @@
           "RBAC"
         ],
         "summary": "List all groups",
-        "description": "Returns all RBAC groups.",
+        "description": "Returns all RBAC groups. Without a filter the response is a list of groups. When the 'name' filter is used it returns a single group (or None if no group matches the name) instead of the full list.",
         "operationId": "list_groups_rbac_v1_groups_get",
         "security": [
           {
@@ -3686,10 +3687,20 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/OutputGroup"
-                  },
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/OutputGroup"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/OutputGroup"
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
                   "title": "Response List Groups Rbac V1 Groups Get"
                 }
               }
@@ -4310,7 +4321,7 @@
           "RBAC"
         ],
         "summary": "List all roles",
-        "description": "Returns all RBAC roles.",
+        "description": "Returns all RBAC roles. Without a filter the response is a list of roles. When the 'name' filter is used it returns a single role (or None if no role matches the name) instead of the full list.",
         "operationId": "list_roles_rbac_v1_roles_get",
         "security": [
           {
@@ -7822,11 +7833,11 @@
             "temperature": "float",
             "time": "datetime"
           },
-          "id": "a731c4fd-3b3a-4959-8a41-a32161c68ff6",
+          "id": "5378a57f-e1b5-4081-9d5a-cbe9c7b7c33e",
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-cb42d",
+          "name": "thermo-02c2e",
           "read_groups": [
             "analysts"
           ],

@@ -43,12 +43,13 @@ shared_read_router = APIRouter(dependencies=[Depends(require_auth)])
 @shared_read_router.get(
     "/channels",
     summary="list all available channels",
-    description=(
-        "Fetches metadata for all registered channels.\n"
-        "Each entry includes schema, metadata, tags, and the number of available rows.\n"
-        "No data rows are returned in this endpoint.\n"
-        "Optionally, filter by a name or tag_key/tag_value pair."
-    ),
+    description=("""
+        Fetches metadata for all registered channels.<br>
+        Each entry includes schema, metadata, tags, and the number of available rows.c
+        No data rows are returned in this endpoint.<br>
+        Optionally, filter by a name or tag_key/tag_value pair.
+        When filtering by 'name', a single metadata payload (or None if not found) is returned.,
+        """),
     response_model=list[ResponsePayload] | ResponsePayload | None,
     dependencies=[Depends(require_permission(PermStr.CHANNEL_READ))],
 )

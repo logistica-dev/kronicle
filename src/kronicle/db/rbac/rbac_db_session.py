@@ -60,7 +60,8 @@ class RbacDbSession:
         try:
             yield session
             session.commit()
-        except Exception:
+        except Exception as e:
+            log_e(mod, "ERR transaction", e)
             session.rollback()
             raise
         finally:
@@ -93,13 +94,17 @@ class RbacDbSession:
         Check if the RBAC database is reachable.
         Returns True if a simple query succeeds, False otherwise.
         """
+        session = self._session_factory()
         try:
-            with self.transaction() as session:
-                session.execute(select(literal(1)))
+            session.execute(select(literal(1)))
+            session.commit()
             return True
         except Exception as e:
+            session.rollback()
             log_e("ping", f"Ping failed: {e}")
             return False
+        finally:
+            session.close()
 
     # ----------------------------------------------------------------------------------------------
     # Startup table validation

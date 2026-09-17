@@ -61,6 +61,10 @@ rbac_router = APIRouter(
 @rbac_router.get(
     "/users",
     summary="",
+    description=(
+        "Returns a list of users. When a unique filter is used (email, name or orcid), "
+        "a single user (or None if no user matches) is returned instead of the full list."
+    ),
     response_model=OutputUser | list[OutputUser] | None,
     dependencies=[Depends(require_permission(PermStr.USER_READ))],
 )
@@ -234,8 +238,12 @@ def create_group(
 @rbac_router.get(
     "/groups",
     summary="List all groups",
-    description="Returns all RBAC groups.",
-    response_model=list[OutputGroup],
+    description=(
+        "Returns all RBAC groups. Without a filter the response is a list of groups. "
+        "When the 'name' filter is used it returns a single group (or None if "
+        "no group matches the name) instead of the full list."
+    ),
+    response_model=OutputGroup | list[OutputGroup] | None,
     dependencies=[Depends(require_permission(PermStr.GROUP_READ))],
 )
 def list_groups(
@@ -412,7 +420,11 @@ def create_role(
 @rbac_router.get(
     "/roles",
     summary="List all roles",
-    description="Returns all RBAC roles.",
+    description=(
+        "Returns all RBAC roles. Without a filter the response is a list of roles. "
+        "When the 'name' filter is used it returns a single role (or None if "
+        "no role matches the name) instead of the full list."
+    ),
     response_model=OutputRole | list[OutputRole] | None,
     dependencies=[Depends(require_permission(PermStr.ROLE_READ))],
 )
