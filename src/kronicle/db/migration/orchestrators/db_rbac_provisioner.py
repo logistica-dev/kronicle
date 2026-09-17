@@ -41,7 +41,7 @@ from kronicle.db.core.models._registry import CORE_NAMESPACE
 from kronicle.db.migration.engine.db_catalog import DatabaseCatalogBuilder
 from kronicle.db.migration.engine.migration_plan import MigrationPlan
 from kronicle.db.migration.engine.migration_proposal import MigrationProposal
-from kronicle.db.migration.engine.operations import AddColumnOp, SafetyLevel
+from kronicle.db.migration.engine.operations import AddColumnOp, AlterColumnNullabilityOp, SafetyLevel
 from kronicle.db.migration.orchestrators.provisioner_base import BaseProvisioner
 from kronicle.db.migration.persistence.schema_migration_history import (
     CoreSchemaMigrationHistory,
@@ -56,6 +56,7 @@ from kronicle.db.rbac.rbac_db_session import RbacDbSession
 from kronicle.db.registry import get_migration_schemas
 from kronicle.deps.settings import KronicleSettings
 from kronicle.deps.settings_env import DBSettings, MigrationSettings
+from kronicle.services.core_service import DEFAULT_ZONE_NAME
 from kronicle.utils.dev_logs import log_d, log_e, log_i, log_w
 from kronicle.utils.file_utils import load_env_file
 
@@ -543,6 +544,37 @@ class RbacSchemasProvisioner(BaseProvisioner):
         log_i(mod, f"Cleaning orphan rows for {len(checks)} FK relationships")
         _delete_orphans(checks, conn_str)
 
+    def backfill_unzoned_channels(self, plan: MigrationPlan) -> None:
+        """Assign unzoned core.channels rows to the default zone before a zone_id NOT NULL tighten."""
+        tightens = any(
+            isinstance(op, AlterColumnNullabilityOp)
+            and op.schema == CORE_NAMESPACE
+            and op.table == "channels"
+            and op.column == "zone_id"
+            and op.nullable is False
+            for op in plan.operations
+        )
+        if not tightens:
+            return
+        with self.rbac_db._engine.begin() as conn:
+            null_count = conn.execute(text("SELECT COUNT(*) FROM core.channels WHERE zone_id IS NULL")).scalar()
+            if not null_count:
+                return
+            row = conn.execute(
+                text("SELECT id FROM core.zones WHERE name = :name LIMIT 1"),
+                {"name": DEFAULT_ZONE_NAME},
+            ).first()
+            if row is None:
+                raise RuntimeError(
+                    f"core.channels has {null_count} row(s) with NULL zone_id "
+                    f"but no '{DEFAULT_ZONE_NAME}' zone exists to backfill them into"
+                )
+            conn.execute(
+                text("UPDATE core.channels SET zone_id = :zid WHERE zone_id IS NULL"),
+                {"zid": row[0]},
+            )
+            log_i(mod, f"Backfilled {null_count} unzoned channel(s) into the default zone")
+
     # ------------------------------------------------------------------
     # REQUIREMENT CHECKS (read-only, run before any mutation)
     # ------------------------------------------------------------------
@@ -576,7 +608,7 @@ class RbacSchemasProvisioner(BaseProvisioner):
     def check_backup_writable(self) -> None:
         backup_dir = Path(self.migration_settings.backup_prefix).parent
         if not os.access(backup_dir, os.W_OK):
-            raise RuntimeError(f"Backup directory is not writable: '{backup_dir}'")
+            raise RuntimeError(f"Backup directory is not writable: '{backup_dir.absolute()}'")
 
     def check_mutation_requirements(self) -> None:
         """
@@ -706,6 +738,9 @@ class RbacSchemasProvisioner(BaseProvisioner):
 
         # Remove orphan rows in relationship tables that would break FK creation
         self.clean_orphans(plan)
+
+        # Assign legacy unzoned channels to the default zone before a zone_id NOT NULL alter
+        self.backfill_unzoned_channels(plan)
 
         # Run DDL as the app (owning) user: ownership was ensured during the
         # mutation-requirement check, so no superuser is needed for routine

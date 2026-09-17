@@ -7833,11 +7833,11 @@
             "temperature": "float",
             "time": "datetime"
           },
-          "id": "5378a57f-e1b5-4081-9d5a-cbe9c7b7c33e",
+          "id": "b11acbbe-c05c-41a7-9a90-dff447f917f2",
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-02c2e",
+          "name": "thermo-f59fd",
           "read_groups": [
             "analysts"
           ],
@@ -9750,6 +9750,18 @@
               }
             ],
             "title": "Name"
+          },
+          "zone_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Id"
           },
           "metadata": {
             "anyOf": [

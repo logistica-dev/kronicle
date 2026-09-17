@@ -45,8 +45,15 @@ async def create_channel_in_zone(
     data_service: ChannelService = Depends(channel_service),  # noqa: B008
     core: CoreService = Depends(core_service),  # noqa: B008
 ):
-    core.ensure_channel_in_zone(InputCoreChannel.from_payload(payload), zone_id)
-    return await data_service.create_channel(payload)
+    core_channel = InputCoreChannel.from_payload(payload)
+    created = core.ensure_channel_in_zone(core_channel, zone_id)
+    try:
+        channel = await data_service.create_channel(payload)
+        return channel
+    except Exception:
+        if created:
+            core.delete_core_channel(core_channel.id)
+        raise
 
 
 @shared_writer_router.patch(

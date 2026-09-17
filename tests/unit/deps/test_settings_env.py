@@ -1,10 +1,50 @@
 # tests/unit/deps/test_settings_env.py
 import base64
+from pathlib import Path
 
 import pytest
 
 from kronicle.deps import settings_env as se
 from kronicle.utils.str_utils import encode_b64url
+
+
+def test_resolve_project_root_finds_pyproject_from_nested_dir(tmp_path):
+    root = tmp_path / "proj"
+    root.mkdir()
+    (root / "pyproject.toml").write_text("")
+    nested = root / "src" / "sub"
+    nested.mkdir(parents=True)
+    assert se.resolve_project_root(nested) == root.resolve()
+
+
+def test_resolve_project_root_falls_back_to_start(tmp_path):
+    assert se.resolve_project_root(tmp_path) == tmp_path.resolve()
+
+
+def test_resolve_backup_prefix_absolute_passthrough():
+    assert se.resolve_backup_prefix("/tmp/kronicle_backups") == "/tmp/kronicle_backups"
+
+
+def test_resolve_backup_prefix_relative_uses_project_root(tmp_path, monkeypatch):
+    root = tmp_path / "proj"
+    root.mkdir()
+    (root / "pyproject.toml").write_text("")
+    (root / "backup").mkdir()
+    (root / "src").mkdir()
+    monkeypatch.chdir(root / "src")
+    assert se.resolve_backup_prefix("./backup/kronicle") == str(root / "backup" / "kronicle")
+
+
+def test_migration_settings_normalizes_relative_default(tmp_path, monkeypatch):
+    root = tmp_path / "proj"
+    root.mkdir()
+    (root / "pyproject.toml").write_text("")
+    (root / "backup").mkdir()
+    (root / "src").mkdir()
+    monkeypatch.chdir(root / "src")
+    assert Path(se.MigrationSettings().backup_prefix).parent == root / "backup"
+    assert Path(se.MigrationSettings.from_env().backup_prefix).parent == root / "backup"
+    assert se.MigrationSettings(backup_prefix="/abs/prefix").backup_prefix == "/abs/prefix"
 
 
 def test_get_env_var(monkeypatch):

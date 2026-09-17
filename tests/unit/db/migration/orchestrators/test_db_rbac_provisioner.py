@@ -14,6 +14,7 @@ from kronicle.db.migration.engine.migration_plan import MigrationPlan
 from kronicle.db.migration.engine.operations import (
     AddColumnOp,
     AddUniqueConstraintOp,
+    AlterColumnNullabilityOp,
     DropIndexOp,
     SafetyLevel,
 )
@@ -86,6 +87,10 @@ def _drop_idx_op():
 
 def _add_unique_op():
     return AddUniqueConstraintOp(schema="core", table="some_table", constraint_name="uq_col", columns=("col",))
+
+
+def _alter_nullable_op(schema="core", table="channels", column="zone_id", nullable=False):
+    return AlterColumnNullabilityOp(schema=schema, table=table, column=column, nullable=nullable)
 
 
 class _StateRow:
@@ -654,6 +659,71 @@ def test_table_exists_false():
 
 
 # ==================================================================================================
+# backfill_unzoned_channels
+# ==================================================================================================
+
+
+def test_backfill_unzoned_channels_noop_without_zone_id_tighten():
+    """No plan op tightening core.channels.zone_id -> no DB access at all."""
+    p = _provisioner()
+    p.rbac_db._engine = _exec_engine()
+    p.backfill_unzoned_channels(MigrationPlan.build([_add_col_op()]))
+    p.rbac_db._engine.begin.assert_not_called()
+
+
+def test_backfill_unzoned_channels_noop_for_non_not_null_alter():
+    p = _provisioner()
+    p.rbac_db._engine = _exec_engine()
+    p.backfill_unzoned_channels(MigrationPlan.build([_alter_nullable_op(nullable=True)]))
+    p.rbac_db._engine.begin.assert_not_called()
+
+
+def test_backfill_unzoned_channels_skips_when_no_nulls():
+    p = _provisioner()
+    plan = MigrationPlan.build([_alter_nullable_op()])
+    p.rbac_db._engine = _exec_engine()
+    conn = p.rbac_db._engine.begin.return_value.__enter__.return_value
+    conn.execute.return_value.scalar.return_value = 0
+
+    p.backfill_unzoned_channels(plan)
+
+    conn.execute.assert_called_once()
+    assert "COUNT(*)" in conn.execute.call_args_list[0].args[0].text
+
+
+def test_backfill_unzoned_channels_updates_nulls_to_default_zone():
+    p = _provisioner()
+    plan = MigrationPlan.build([_alter_nullable_op()])
+    p.rbac_db._engine = _exec_engine()
+    conn = p.rbac_db._engine.begin.return_value.__enter__.return_value
+    default_zone_id = "zone-uuid"
+    conn.execute.return_value.scalar.return_value = 3
+    conn.execute.return_value.first.return_value = (default_zone_id,)
+
+    p.backfill_unzoned_channels(plan)
+
+    calls = conn.execute.call_args_list
+    assert conn.execute.call_count == 3
+    assert "SELECT COUNT(*)" in calls[0].args[0].text and "zone_id IS NULL" in calls[0].args[0].text
+    assert "SELECT id FROM core.zones" in calls[1].args[0].text
+    assert calls[1].args[1] == {"name": dpr.DEFAULT_ZONE_NAME}
+    assert "UPDATE core.channels SET zone_id" in calls[2].args[0].text
+    assert calls[2].args[1] == {"zid": default_zone_id}
+
+
+def test_backfill_unzoned_channels_raises_when_no_default_zone():
+    p = _provisioner()
+    plan = MigrationPlan.build([_alter_nullable_op()])
+    p.rbac_db._engine = _exec_engine()
+    conn = p.rbac_db._engine.begin.return_value.__enter__.return_value
+    conn.execute.return_value.scalar.return_value = 1
+    conn.execute.return_value.first.return_value = None
+
+    with pytest.raises(RuntimeError, match="NULL zone_id"):
+        p.backfill_unzoned_channels(plan)
+
+
+# ==================================================================================================
 # Connectivity + requirement checks
 # ==================================================================================================
 
@@ -733,12 +803,14 @@ def test_execute_plan_safe_plan_records_and_sets_metadata():
         patch.object(dpr, "create_engine", return_value=_exec_engine()),
         patch.object(p, "ensure_tracking_tables") as ensure,
         patch.object(p, "clean_orphans") as clean,
+        patch.object(p, "backfill_unzoned_channels") as backfill,
         patch.object(p, "apply_plan") as apply_plan,
         patch.object(p, "record_migration_state") as record,
     ):
         p.execute_plan()
     ensure.assert_not_called()
     clean.assert_called_once()
+    backfill.assert_called_once_with(plan)
     assert apply_plan.call_args.args[0] is plan
     assert "connection" in apply_plan.call_args.kwargs
     record.assert_called_once_with(plan, success=True)

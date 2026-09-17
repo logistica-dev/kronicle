@@ -23,6 +23,7 @@ class TestCreateChannelInZone:
     @pytest.mark.asyncio
     async def test_ensures_channel_and_creates(self, mock_from_payload):
         core = MagicMock()
+        core.ensure_channel_in_zone.return_value = True
         data_service = AsyncMock()
         data_service.create_channel.return_value = "created"
         zone_id = uuid4()
@@ -34,6 +35,35 @@ class TestCreateChannelInZone:
         core.ensure_channel_in_zone.assert_called_once_with(expected_core, zone_id)
         data_service.create_channel.assert_awaited_once_with(payload)
         assert result == "created"
+
+    @patch("kronicle.api.shared_write_routes.InputCoreChannel.from_payload")
+    @pytest.mark.asyncio
+    async def test_deletes_core_channel_when_data_create_fails(self, mock_from_payload):
+        core = MagicMock()
+        core.ensure_channel_in_zone.return_value = True
+        data_service = AsyncMock()
+        data_service.create_channel.side_effect = RuntimeError("boom")
+        payload = MagicMock()
+        expected_core = MagicMock()
+        expected_core.id = uuid4()
+        mock_from_payload.return_value = expected_core
+        with pytest.raises(RuntimeError, match="boom"):
+            await create_channel_in_zone(zone_id=uuid4(), payload=payload, data_service=data_service, core=core)
+        core.delete_core_channel.assert_called_once_with(expected_core.id)
+
+    @patch("kronicle.api.shared_write_routes.InputCoreChannel.from_payload")
+    @pytest.mark.asyncio
+    async def test_keeps_core_channel_when_it_pre_existed_and_data_create_fails(self, mock_from_payload):
+        core = MagicMock()
+        core.ensure_channel_in_zone.return_value = False
+        data_service = AsyncMock()
+        data_service.create_channel.side_effect = RuntimeError("boom")
+        payload = MagicMock()
+        expected_core = MagicMock()
+        mock_from_payload.return_value = expected_core
+        with pytest.raises(RuntimeError, match="boom"):
+            await create_channel_in_zone(zone_id=uuid4(), payload=payload, data_service=data_service, core=core)
+        core.delete_core_channel.assert_not_called()
 
 
 class TestPatchChannel:

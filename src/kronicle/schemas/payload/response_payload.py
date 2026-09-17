@@ -26,6 +26,9 @@ class ResponsePayload(BaseModel):
     channel_schema: ChannelSchema
     name: str | None = None
 
+    # core schema zone binding (stamped on read, not part of the data schema)
+    zone_id: UUID | None = None
+
     # labels
     metadata: dict[str, Any] | None = None
     tags: dict[str, TagType] | None = None

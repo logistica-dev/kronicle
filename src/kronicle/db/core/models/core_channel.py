@@ -19,7 +19,7 @@ if TYPE_CHECKING:  # noqa: PLC0415 - TYPE_CHECKING import erased at runtime; no 
 
 class CoreChannel(CoreEntity):
     __tablename__ = "channels"
-    zone_id: Mapped[UUID] = mapped_column(ForeignKey(CoreZone.id), nullable=True)
+    zone_id: Mapped[UUID] = mapped_column(ForeignKey(CoreZone.id), nullable=False)
 
     # ORM convenience only (not ownership)
     zone: Mapped[CoreZone] = relationship(CoreZone, backref=__tablename__)

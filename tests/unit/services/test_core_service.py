@@ -11,7 +11,7 @@ from kronicle.errors.error_types import BadRequestError, ConflictError, NotFound
 from kronicle.repo.core.core_channel_repo import CoreChannelRepository
 from kronicle.repo.core.core_zone_repo import CoreZoneRepository
 from kronicle.schemas.core.input_ressource_schema import InputCoreChannel, InputZone
-from kronicle.schemas.core.safe_ressource_schema import OutputZone
+from kronicle.schemas.core.safe_ressource_schema import OutputCoreChannel, OutputZone
 from kronicle.services.core_service import CoreService
 
 
@@ -140,9 +140,10 @@ class TestGetZone:
 
 
 class TestDeleteZone:
-    def test_deletes_zone(self, service, mock_db, mock_db_session, mock_zone_repo):
+    def test_deletes_zone(self, service, mock_db, mock_db_session, mock_zone_repo, mock_channel_repo):
         zone = make_zone()
         mock_zone_repo.get_by_id.return_value = zone
+        mock_channel_repo.get_by_zone.return_value = []
 
         with patch("kronicle.services.core_service.OutputZone.from_db") as mock_from:
             mock_from.return_value = MagicMock(spec=OutputZone, id=zone.id)
@@ -152,11 +153,24 @@ class TestDeleteZone:
         mock_zone_repo.delete.assert_called_once()
         deleted = mock_zone_repo.delete.call_args[1]["entity"]
         assert deleted is zone
+        mock_channel_repo.get_by_zone.assert_called_once_with(mock_db_session, zone_id=zone.id)
 
     def test_raises_if_not_found(self, service, mock_db, mock_db_session, mock_zone_repo):
         mock_zone_repo.get_by_id.return_value = None
         with pytest.raises(NotFoundError, match="not found"):
             service.delete_zone(uuid4())
+
+    def test_raises_conflict_when_zone_still_has_channels(
+        self, service, mock_db, mock_db_session, mock_zone_repo, mock_channel_repo
+    ):
+        zone = make_zone()
+        mock_zone_repo.get_by_id.return_value = zone
+        mock_channel_repo.get_by_zone.return_value = [make_channel(), make_channel()]
+
+        with pytest.raises(ConflictError, match="still has 2 channel"):
+            service.delete_zone(zone.id)
+
+        mock_zone_repo.delete.assert_not_called()
 
 
 class TestPatchZone:
@@ -207,9 +221,10 @@ class TestListCoreChannelIds:
 
 
 class TestSyncCoreChannels:
-    def test_creates_missing_channels(self, service, mock_db, mock_db_session, mock_channel_repo):
+    def test_creates_missing_channels(self, service, mock_db, mock_db_session, mock_channel_repo, mock_zone_repo):
         existing_ids = {uuid4(), uuid4()}
         mock_channel_repo.fetch_all.return_value = [MagicMock(id=eid) for eid in existing_ids]
+        mock_zone_repo.get_by_name.return_value = make_zone(name="default")
 
         new_ids = [uuid4(), uuid4()]
         channels = [InputCoreChannel(id=eid) for eid in existing_ids] + [InputCoreChannel(id=nid) for nid in new_ids]
@@ -239,6 +254,20 @@ class TestSyncCoreChannels:
         mock_db_session.add.assert_called_once()
         added = mock_db_session.add.call_args[0][0]
         assert added.zone_id == zone_id
+
+    def test_self_resolves_default_zone_when_not_given(
+        self, service, mock_db, mock_db_session, mock_channel_repo, mock_zone_repo
+    ):
+        default_zone = make_zone(name="default")
+        mock_channel_repo.fetch_all.return_value = []
+        mock_zone_repo.get_by_name.return_value = default_zone
+
+        new_id = uuid4()
+        result = service.sync_core_channels([InputCoreChannel(id=new_id)])
+
+        assert result == [new_id]
+        added = mock_db_session.add.call_args[0][0]
+        assert added.zone_id == default_zone.id
 
 
 class TestEnsureDefaultZone:
@@ -339,11 +368,34 @@ class TestEnsureChannelInZone:
         channel = InputCoreChannel(id=uuid4())
         mock_channel_repo.get_by_id.return_value = None
 
-        with patch.object(service, "create_core_channel") as mock_create:
+        with (
+            patch.object(service, "get_core_channel_by_name") as mock_get_name,
+            patch.object(service, "create_core_channel") as mock_create,
+        ):
+            mock_get_name.return_value = None
             mock_create.return_value = MagicMock()
-            service.ensure_channel_in_zone(channel, zone.id)
+            created = service.ensure_channel_in_zone(channel, zone.id)
 
+        assert created is True
         mock_create.assert_called_once_with(InputCoreChannel(id=channel.id), zone_id=zone.id)
+
+    def test_raises_if_name_already_used(self, service, mock_db, mock_db_session, mock_zone_repo, mock_channel_repo):
+        zone = make_zone()
+        mock_zone_repo.get_by_id.return_value = zone
+        mock_channel_repo.get_by_id.return_value = None
+        existing = make_channel(zone_id=zone.id, name="jopins_exemple_1")
+
+        with (
+            patch.object(service, "get_core_channel_by_name") as mock_get_name,
+            patch.object(service, "create_core_channel") as mock_create,
+        ):
+            mock_get_name.return_value = OutputCoreChannel(
+                id=existing.id, name=existing.name, zone=OutputZone(id=zone.id)
+            )
+            with pytest.raises(ConflictError, match="already exists"):
+                service.ensure_channel_in_zone(InputCoreChannel(id=uuid4(), name="jopins_exemple_1"), zone.id)
+
+        mock_create.assert_not_called()
 
     def test_raises_if_channel_in_different_zone(
         self, service, mock_db, mock_db_session, mock_zone_repo, mock_channel_repo
@@ -363,7 +415,8 @@ class TestEnsureChannelInZone:
         mock_zone_repo.get_by_id.return_value = make_zone(id=zone_id)
         mock_channel_repo.get_by_id.return_value = make_channel(zone_id=zone_id)
 
-        service.ensure_channel_in_zone(InputCoreChannel(id=uuid4()), zone_id)
+        result = service.ensure_channel_in_zone(InputCoreChannel(id=uuid4()), zone_id)
+        assert result is False
         mock_db_session.add.assert_not_called()
 
     def test_raises_if_zone_not_found(self, service, mock_db, mock_db_session, mock_zone_repo):

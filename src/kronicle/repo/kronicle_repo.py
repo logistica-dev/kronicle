@@ -1,7 +1,7 @@
 # kronicle/repo/kronicle_repo.py
 import functools
 from collections.abc import Sequence
-from typing import Generic, Type, TypeVar
+from typing import Generic, TypeVar
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -36,7 +36,7 @@ class KronicleRepository(Generic[T]):
     Translate Python calls into SQL statements.
     """
 
-    model: Type[T]
+    model: type[T]
 
     # ----------------------------------------------------------------------------------------------
     # Fetch methods

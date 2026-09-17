@@ -13,6 +13,7 @@ from kronicle.auth.auth_middleware import require_auth, require_permission, requ
 from kronicle.db.data.models.schema_registry import SchemaRegistry
 from kronicle.deps.channel_deps import channel_service
 from kronicle.deps.rbac_deps import core_service
+from kronicle.schemas.core.input_ressource_schema import InputCoreChannel
 from kronicle.schemas.filters.row_query_filter import RowQueryFilter
 from kronicle.schemas.filters.row_request_filter import RowRequestFilter
 from kronicle.schemas.payload.input_payload import InputPayload
@@ -20,6 +21,7 @@ from kronicle.schemas.payload.response_payload import ResponsePayload
 from kronicle.schemas.permissions.permission import PermStr
 from kronicle.services.channel_service import ChannelService
 from kronicle.services.core_service import CoreService
+from kronicle.utils.str_utils import ensure_uuid4
 
 """
 Admin/setup routes:
@@ -67,8 +69,18 @@ setup_router.include_router(shared_writer_router)
 async def clone_channel(
     payload: InputPayload,
     data_service: ChannelService = Depends(channel_service),  # noqa: B008
+    core: CoreService = Depends(core_service),  # noqa: B008
 ):
-    return await data_service.clone_channel(payload)
+    cloned = await data_service.clone_channel(payload)
+    src = core.get_core_channel(ensure_uuid4(payload.id))
+    zone_id = src.zone.id if (src and src.zone) else core.ensure_default_zone().id
+    core_channel = InputCoreChannel.from_payload(cloned)
+    try:
+        core.ensure_channel_in_zone(core_channel, zone_id)
+    except Exception:
+        await data_service.delete_channel(cloned.id)
+        raise
+    return cloned
 
 
 # --------------------------------------------------------------------------------------------------

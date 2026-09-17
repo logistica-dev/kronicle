@@ -8,11 +8,13 @@ from fastapi import APIRouter, Depends, Query
 
 from kronicle.auth.auth_middleware import require_any_permission, require_auth, require_permission
 from kronicle.deps.channel_deps import channel_service
+from kronicle.deps.rbac_deps import core_service
 from kronicle.schemas.filters.row_query_filter import RowQueryFilter
 from kronicle.schemas.filters.row_request_filter import RowRequestFilter
 from kronicle.schemas.payload.response_payload import ResponsePayload
 from kronicle.schemas.permissions.permission import PermStr
 from kronicle.services.channel_service import ChannelService
+from kronicle.services.core_service import CoreService
 from kronicle.utils.dev_logs import log_d
 
 """
@@ -20,6 +22,14 @@ Routes available to users with read-only permissions.
 These endpoints allow safe retrieval of channel metadata and stored data.
 """
 shared_read_router = APIRouter(dependencies=[Depends(require_auth)])
+
+
+def _stamp_zone_id(payload: ResponsePayload, core: CoreService) -> ResponsePayload:
+    """Stamp a single metadata payload with the zone_id matching its core schema record."""
+    core_channel = core.get_core_channel(payload.id)
+    if core_channel:
+        payload.zone_id = core_channel.zone.id if core_channel.zone else None
+    return payload
 
 
 # def parse_from_date(
@@ -64,11 +74,13 @@ async def fetch_all_channels_metadata(
         description="Optional tags as comma-separated key:value pairs, e.g., color:red",
     ),
     data_service: ChannelService = Depends(channel_service),  # noqa: B008
+    core: CoreService = Depends(core_service),  # noqa: B008
 ) -> list[ResponsePayload] | ResponsePayload | None:
     here = "fetch_all_channels_metadata"
     # Name filter takes priority
     if name:
-        return await data_service.fetch_metadata_by_name(name=name)
+        by_name = await data_service.fetch_metadata_by_name(name=name)
+        return _stamp_zone_id(by_name, core) if by_name else None
     # Tags filter
     if tags:
         log_d(here, "tags:", tags)
@@ -93,8 +105,10 @@ async def fetch_all_channels_metadata(
 async def fetch_channel(
     channel_id: UUID,
     data_service: ChannelService = Depends(channel_service),  # noqa: B008
+    core: CoreService = Depends(core_service),  # noqa: B008
 ) -> ResponsePayload:
-    return await data_service.fetch_metadata(channel_id)
+    channel = await data_service.fetch_metadata(channel_id)
+    return _stamp_zone_id(channel, core)
 
 
 @shared_read_router.get(

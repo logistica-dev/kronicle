@@ -18,6 +18,9 @@ from kronicle.utils.dev_logs import log_d, log_i, log_w
 
 mod = "core_svc"
 
+# Name of the zone used when a channel has no explicit zone (sync + migration backfill).
+DEFAULT_ZONE_NAME = "default"
+
 
 class CoreService:
     def __init__(self, core_db_session: RbacDbSession):
@@ -66,6 +69,9 @@ class CoreService:
             zone = self._zone_repo.get_by_id(db, id=zone_id)
             if not zone:
                 raise NotFoundError(f"Zone '{zone_id}' not found")
+            channels = self._channel_repo.get_by_zone(db, zone_id=zone_id)
+            if channels:
+                raise ConflictError(f"Zone '{zone_id}' still has {len(channels)} channel(s); delete or move them first")
             zone = self._zone_repo.delete(db, entity=zone)
             return OutputZone.from_db(zone)
 
@@ -105,6 +111,9 @@ class CoreService:
             log_d(here, "All channels already synced")
             return []
 
+        if default_zone_id is None:
+            default_zone_id = self.ensure_default_zone().id
+
         created: list[UUID] = []
         with self._db.transaction() as db:
             for c in missing:
@@ -121,7 +130,7 @@ class CoreService:
         log_i(here, f"Created {len(created)} CoreChannels")
         return created
 
-    def ensure_default_zone(self, name: str = "default") -> CoreZone:
+    def ensure_default_zone(self, name: str = DEFAULT_ZONE_NAME) -> CoreZone:
         with self._db.get_db() as db:
             existing = self._zone_repo.get_by_name(db, name=name)
             if existing:
@@ -167,16 +176,24 @@ class CoreService:
             core_channel = self._channel_repo.add(db, entity=core_channel)
             return OutputCoreChannel.from_db(core_channel)
 
-    def ensure_channel_in_zone(self, channel: InputCoreChannel, zone_id: UUID) -> None:
+    def ensure_channel_in_zone(self, channel: InputCoreChannel, zone_id: UUID) -> bool:
         zone = self.get_zone(zone_id)
         if not zone:
             raise NotFoundError(f"Zone {zone_id} not found")
         existing = self.get_core_channel(channel.id)
-        if existing and existing.zone:
-            if existing.zone.id != zone_id:
+        if existing:
+            if existing.zone and existing.zone.id != zone_id:
                 raise ConflictError(f"Channel {channel.id} belongs to zone {existing.zone.id}, not {zone_id}")
-        else:
-            self.create_core_channel(channel, zone_id=zone.id)
+            return False
+        name = channel.name or f"Channel {channel.id.hex}"
+        existing_by_name = self.get_core_channel_by_name(name)
+        if existing_by_name:
+            zone_ref = existing_by_name.zone.id if existing_by_name.zone else "no zone"
+            raise ConflictError(
+                f"Channel name '{name}' already exists for channel {existing_by_name.id} in zone {zone_ref}"
+            )
+        self.create_core_channel(channel, zone_id=zone.id)
+        return True
 
     def delete_core_channel(self, channel_id: UUID) -> OutputCoreChannel | None:
         with self._db.transaction() as db:

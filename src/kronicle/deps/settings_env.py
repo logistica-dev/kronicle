@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from json import dumps
 from os import getenv
+from pathlib import Path
 from typing import Any
 
 from asyncpg import connect
@@ -80,6 +81,35 @@ def ensure_env_var(env_var: str):
     except Exception as e:
         log_e(here, f"Environment variable not set: {env_var}")
         raise RuntimeError(f"Environment variable not set: {env_var}") from e
+
+
+def resolve_project_root(start: Path | None = None) -> Path:
+    """Walk up from ``start`` (default: CWD) to the directory holding ``pyproject.toml``.
+
+    Used as the base for CWD-independent resolution of relative backup paths:
+    the process may be launched from the project root or any subfolder (e.g. ``src``).
+    Falls back to ``start`` itself when no ``pyproject.toml`` is found.
+    """
+    current = Path.cwd() if start is None else start
+    current = current.resolve()
+    for candidate in (current, *current.parents):
+        if (candidate / "pyproject.toml").is_file():
+            return candidate
+    return current
+
+
+def resolve_backup_prefix(prefix: str) -> str:
+    """Make ``backup_prefix`` independent of the process working directory.
+
+    Absolute prefixes pass through untouched. Relative prefixes are resolved
+    against the project root (found by walking up from the CWD for a
+    ``pyproject.toml``), so ``./backup/kronicle`` always points at the repo-level
+    ``backup`` directory no matter where the server was launched from.
+    """
+    p = Path(prefix)
+    if p.is_absolute():
+        return prefix
+    return str(resolve_project_root() / p)
 
 
 @dataclass
@@ -258,6 +288,9 @@ class AppEnv:
 class MigrationSettings:
     auto: bool = False
     backup_prefix: str = "./backup/kronicle"
+
+    def __post_init__(self):
+        self.backup_prefix = resolve_backup_prefix(self.backup_prefix)
 
     @classmethod
     def from_env(cls):
