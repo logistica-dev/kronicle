@@ -31,7 +31,7 @@ from kronicle.db.migration.persistence.schema_migration_state import (
     RbacSchemaMigrationState,
 )
 from kronicle.db.rbac.models.rbac_subject import RbacSubject
-from kronicle.deps.settings_env import KRONICLE_BACKUP_PREFIX
+from kronicle.deps.settings_env import KRONICLE_BACKUP_PREFIX, MigrationSettings
 
 from .conftest import make_db_settings, migration_settings
 
@@ -779,6 +779,24 @@ def test_check_backup_writable_not_writable_raises():
         patch.object(os, "access", return_value=False),
     ):
         with pytest.raises(RuntimeError, match="not writable"):
+            p.check_backup_writable()
+
+
+def test_check_backup_writable_creates_missing_dir(tmp_path):
+    p = _provisioner()
+    target = tmp_path / "nested" / "kronicle_rbac"
+    p.migration_settings = MigrationSettings(backup_prefix=str(target))
+    with patch.object(os, "access", return_value=True):
+        p.check_backup_writable()
+    assert target.parent.is_dir()
+
+
+def test_check_backup_writable_mkdir_failure_raises(tmp_path):
+    p = _provisioner()
+    target = tmp_path / "ro" / "kronicle_rbac"
+    p.migration_settings = MigrationSettings(backup_prefix=str(target))
+    with patch.object(Path, "mkdir", side_effect=PermissionError("denied")):
+        with pytest.raises(RuntimeError, match="cannot be created"):
             p.check_backup_writable()
 
 

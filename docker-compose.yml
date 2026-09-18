@@ -58,6 +58,16 @@ services:
       KRONICLE_CONF: /opt/kronicle/conf/default-conf.ini
       KRONICLE_ENV: test
       KRONICLE_LOG_LEVEL: 3
+
+      # Migration backup location: directory + file name prefix.
+      # KRONICLE_BACKUP_DIR is the mount target below; KRONICLE_BACKUP_PREFIX
+      # is just the file name prefix (defaults to "kronicle").
+      KRONICLE_BACKUP_DIR: ${KRONICLE_BACKUP_DIR:-/opt/kronicle/backup}
+    volumes:
+      # Persist migration backup dumps outside the container, on the host.
+      # Target must match KRONICLE_BACKUP_DIR; host source is relative to
+      # this compose file (change it for e.g. ~/kronicle-dev/backup).
+      - ${KRONICLE_BACKUP_HOST_DIR:-./backup}:${KRONICLE_BACKUP_DIR:-/opt/kronicle/backup}
     ports:
       - "8000:${KRONICLE_PORT:-8000}"
     networks:

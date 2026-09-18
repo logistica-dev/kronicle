@@ -25,6 +25,19 @@ def test_resolve_backup_prefix_absolute_passthrough():
     assert se.resolve_backup_prefix("/tmp/kronicle_backups") == "/tmp/kronicle_backups"
 
 
+def test_resolve_backup_prefix_bare_name_joins_host_dir():
+    assert se.resolve_backup_prefix("series", "/abs/dir") == "/abs/dir/series"
+
+
+def test_resolve_backup_prefix_bare_name_defaults_host_dir(tmp_path, monkeypatch):
+    root = tmp_path / "proj"
+    root.mkdir()
+    (root / "pyproject.toml").write_text("")
+    (root / "src").mkdir()
+    monkeypatch.chdir(root / "src")
+    assert se.resolve_backup_prefix("kronicle") == str(root / "backup" / "kronicle")
+
+
 def test_resolve_backup_prefix_relative_uses_project_root(tmp_path, monkeypatch):
     root = tmp_path / "proj"
     root.mkdir()
@@ -45,6 +58,9 @@ def test_migration_settings_normalizes_relative_default(tmp_path, monkeypatch):
     assert Path(se.MigrationSettings().backup_prefix).parent == root / "backup"
     assert Path(se.MigrationSettings.from_env().backup_prefix).parent == root / "backup"
     assert se.MigrationSettings(backup_prefix="/abs/prefix").backup_prefix == "/abs/prefix"
+    assert se.MigrationSettings(backup_prefix="kronicle", backup_dir="./bk").backup_prefix == str(
+        root / "bk" / "kronicle"
+    )
 
 
 def test_get_env_var(monkeypatch):

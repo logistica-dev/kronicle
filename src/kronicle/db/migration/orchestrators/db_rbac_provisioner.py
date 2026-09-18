@@ -607,6 +607,10 @@ class RbacSchemasProvisioner(BaseProvisioner):
 
     def check_backup_writable(self) -> None:
         backup_dir = Path(self.migration_settings.backup_prefix).parent
+        try:
+            backup_dir.mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            raise RuntimeError(f"Backup directory cannot be created: '{backup_dir.absolute()}': {e}") from e
         if not os.access(backup_dir, os.W_OK):
             raise RuntimeError(f"Backup directory is not writable: '{backup_dir.absolute()}'")
 

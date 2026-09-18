@@ -53,7 +53,8 @@ APP_SU_INFO = "KRONICLE_SU_INFO"  # b64(username:email:argon2_hash)
 KRONICLE_CONF = "KRONICLE_CONF"
 KRONICLE_ENV = "KRONICLE_ENV"
 
-KRONICLE_BACKUP_PREFIX = "KRONICLE_BACKUP_PREFIX"
+KRONICLE_BACKUP_DIR = "KRONICLE_BACKUP_DIR"  # directory receiving the dumps
+KRONICLE_BACKUP_PREFIX = "KRONICLE_BACKUP_PREFIX"  # file name prefix (default "kronicle")
 
 KRONICLE_DB_AUTO_MIGRATION = "KRONICLE_DB_AUTO_MIGRATION"
 
@@ -98,18 +99,34 @@ def resolve_project_root(start: Path | None = None) -> Path:
     return current
 
 
-def resolve_backup_prefix(prefix: str) -> str:
-    """Make ``backup_prefix`` independent of the process working directory.
+def resolve_backup_dir(dir_path: str) -> Path:
+    """Resolve a backup directory, independent of the process working directory.
 
-    Absolute prefixes pass through untouched. Relative prefixes are resolved
-    against the project root (found by walking up from the CWD for a
-    ``pyproject.toml``), so ``./backup/kronicle`` always points at the repo-level
-    ``backup`` directory no matter where the server was launched from.
+    Absolute paths pass through untouched. Relative paths are resolved against
+    the project root (found by walking up from the CWD for a ``pyproject.toml``).
+    """
+    p = Path(dir_path)
+    if p.is_absolute():
+        return p
+    return resolve_project_root() / p
+
+
+def resolve_backup_prefix(prefix: str, backup_dir: str | None = None) -> str:
+    """Build a CWD-independent full backup prefix.
+
+    ``prefix`` is normally just a file name (e.g. ``kronicle``); it is then
+    joined with ``backup_dir`` (default ``./backup``, anchored at the project root)
+    to form ``<backup_dir>/<prefix>``. For backward compatibility, a ``prefix``
+    that contains a directory component (or is absolute) is treated as a full
+    path: absolute passes through, relative is anchored at the project root.
     """
     p = Path(prefix)
     if p.is_absolute():
-        return prefix
-    return str(resolve_project_root() / p)
+        return str(p)
+    if p.parent == Path("."):
+        base = resolve_backup_dir(backup_dir or "./backup")
+        return str(base / p)
+    return str(resolve_backup_dir(prefix))
 
 
 @dataclass
@@ -287,16 +304,18 @@ class AppEnv:
 @dataclass
 class MigrationSettings:
     auto: bool = False
-    backup_prefix: str = "./backup/kronicle"
+    backup_prefix: str = "kronicle"  # file name prefix only (no path)
+    backup_dir: str = "./backup"  # directory receiving the dumps
 
     def __post_init__(self):
-        self.backup_prefix = resolve_backup_prefix(self.backup_prefix)
+        self.backup_prefix = resolve_backup_prefix(self.backup_prefix, self.backup_dir)
 
     @classmethod
     def from_env(cls):
         auto = is_str_truish(getenv(KRONICLE_DB_AUTO_MIGRATION, ""))
-        backup_prefix = getenv(KRONICLE_BACKUP_PREFIX, "./backup/kronicle")
-        return cls(auto, backup_prefix)
+        prefix = getenv(KRONICLE_BACKUP_PREFIX, "kronicle")
+        backup_dir = getenv(KRONICLE_BACKUP_DIR, "./backup")
+        return cls(auto, prefix, backup_dir)
 
 
 @dataclass
