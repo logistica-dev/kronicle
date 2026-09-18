@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "KRONICLE",
-    "summary": "FastAPI x TimescaleDB \u00b5service for storing time-series measurements",
-    "version": "0.5.1"
+    "title": "TestApp",
+    "summary": "desc",
+    "version": "1.0"
   },
   "paths": {
     "/health/live": {
@@ -4734,34 +4734,6 @@
       }
     },
     "/rbac/v1/access-profiles/zones": {
-      "get": {
-        "tags": [
-          "RBAC"
-        ],
-        "summary": "List all zone access profiles",
-        "operationId": "list_zone_access_profiles_rbac_v1_access_profiles_zones_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/OutputZoneAccessProfile"
-                  },
-                  "type": "array",
-                  "title": "Response List Zone Access Profiles Rbac V1 Access Profiles Zones Get"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      },
       "post": {
         "tags": [
           "RBAC"
@@ -4769,15 +4741,20 @@
         "summary": "Create a zone access profile",
         "description": "Creates a reusable scoped role (role + zone pair).",
         "operationId": "create_zone_access_profile_rbac_v1_access_profiles_zones_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/InputZoneAccessProfile"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -4800,12 +4777,76 @@
               }
             }
           }
-        },
+        }
+      },
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "List all zone access profiles",
+        "description": "Returns all zone access profiles. When the 'name' filter is used it returns a single profile (or None if no profile matches the name) instead of the full list.",
+        "operationId": "list_zone_access_profiles_rbac_v1_access_profiles_zones_get",
         "security": [
           {
             "HTTPBearer": []
           }
-        ]
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional name to filter by",
+              "title": "Name"
+            },
+            "description": "Optional name to filter by"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/OutputZoneAccessProfile"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/OutputZoneAccessProfile"
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response List Zone Access Profiles Rbac V1 Access Profiles Zones Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/rbac/v1/access-profiles/zones/{profile_id}": {
@@ -4967,34 +5008,6 @@
       }
     },
     "/rbac/v1/access-profiles/channels": {
-      "get": {
-        "tags": [
-          "RBAC"
-        ],
-        "summary": "List all channel access profiles",
-        "operationId": "list_channel_access_profiles_rbac_v1_access_profiles_channels_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/OutputChannelAccessProfile"
-                  },
-                  "type": "array",
-                  "title": "Response List Channel Access Profiles Rbac V1 Access Profiles Channels Get"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      },
       "post": {
         "tags": [
           "RBAC"
@@ -5002,15 +5015,20 @@
         "summary": "Create a channel access profile",
         "description": "Creates a reusable scoped role (role + channel pair).",
         "operationId": "create_channel_access_profile_rbac_v1_access_profiles_channels_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/InputChannelAccessProfile"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -5033,12 +5051,76 @@
               }
             }
           }
-        },
+        }
+      },
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "List all channel access profiles",
+        "description": "Returns all channel access profiles. When the 'name' filter is used it returns a single profile (or None if no profile matches the name) instead of the full list.",
+        "operationId": "list_channel_access_profiles_rbac_v1_access_profiles_channels_get",
         "security": [
           {
             "HTTPBearer": []
           }
-        ]
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional name to filter by",
+              "title": "Name"
+            },
+            "description": "Optional name to filter by"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/OutputChannelAccessProfile"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/OutputChannelAccessProfile"
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response List Channel Access Profiles Rbac V1 Access Profiles Channels Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/rbac/v1/access-profiles/channels/{profile_id}": {
@@ -5250,7 +5332,7 @@
           "RBAC"
         ],
         "summary": "List zone policies",
-        "description": "Returns all zone policies. Optionally filter by zone.",
+        "description": "Returns all zone policies. Optionally filter by zone. When the 'name' filter is used it returns a single policy (or None if no policy matches the name) instead of the full list.",
         "operationId": "list_zone_policies_rbac_v1_policies_zones_get",
         "security": [
           {
@@ -5276,6 +5358,24 @@
               "title": "Zone Id"
             },
             "description": "Filter by zone ID"
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional name to filter by",
+              "title": "Name"
+            },
+            "description": "Optional name to filter by"
           }
         ],
         "responses": {
@@ -5284,10 +5384,20 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/OutputZonePolicy"
-                  },
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/OutputZonePolicy"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/OutputZonePolicy"
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
                   "title": "Response List Zone Policies Rbac V1 Policies Zones Get"
                 }
               }
@@ -5517,7 +5627,7 @@
           "RBAC"
         ],
         "summary": "List channel policies",
-        "description": "Returns all channel policies. Optionally filter by channel.",
+        "description": "Returns all channel policies. Optionally filter by channel. When the 'name' filter is used it returns a single policy (or None if no policy matches the name) instead of the full list.",
         "operationId": "list_channel_policies_rbac_v1_policies_channels_get",
         "security": [
           {
@@ -5543,6 +5653,24 @@
               "title": "Channel Id"
             },
             "description": "Filter by channel ID"
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional name to filter by",
+              "title": "Name"
+            },
+            "description": "Optional name to filter by"
           }
         ],
         "responses": {
@@ -5551,10 +5679,20 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/OutputChannelPolicy"
-                  },
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/OutputChannelPolicy"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/OutputChannelPolicy"
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
                   "title": "Response List Channel Policies Rbac V1 Policies Channels Get"
                 }
               }
@@ -5734,34 +5872,6 @@
       }
     },
     "/rbac/v1/access-profiles/rows": {
-      "get": {
-        "tags": [
-          "RBAC"
-        ],
-        "summary": "List all row access profiles",
-        "operationId": "list_row_access_profiles_rbac_v1_access_profiles_rows_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/OutputRowAccessProfile"
-                  },
-                  "type": "array",
-                  "title": "Response List Row Access Profiles Rbac V1 Access Profiles Rows Get"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      },
       "post": {
         "tags": [
           "RBAC"
@@ -5769,15 +5879,20 @@
         "summary": "Create a row access profile",
         "description": "Creates a reusable scoped role (role + row pair).",
         "operationId": "create_row_access_profile_rbac_v1_access_profiles_rows_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/InputRowAccessProfile"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -5800,12 +5915,76 @@
               }
             }
           }
-        },
+        }
+      },
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "List all row access profiles",
+        "description": "Returns all row access profiles. When the 'name' filter is used it returns a single profile (or None if no profile matches the name) instead of the full list.",
+        "operationId": "list_row_access_profiles_rbac_v1_access_profiles_rows_get",
         "security": [
           {
             "HTTPBearer": []
           }
-        ]
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional name to filter by",
+              "title": "Name"
+            },
+            "description": "Optional name to filter by"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/OutputRowAccessProfile"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/OutputRowAccessProfile"
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response List Row Access Profiles Rbac V1 Access Profiles Rows Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/rbac/v1/access-profiles/rows/{profile_id}": {
@@ -6006,7 +6185,7 @@
           "RBAC"
         ],
         "summary": "List row policies",
-        "description": "Returns all row policies. Optionally filter by row.",
+        "description": "Returns all row policies. Optionally filter by row. When the 'name' filter is used it returns a single policy (or None if no policy matches the name) instead of the full list.",
         "operationId": "list_row_policies_rbac_v1_policies_rows_get",
         "security": [
           {
@@ -6032,6 +6211,24 @@
               "title": "Row Id"
             },
             "description": "Filter by row ID"
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional name to filter by",
+              "title": "Name"
+            },
+            "description": "Optional name to filter by"
           }
         ],
         "responses": {
@@ -6040,10 +6237,20 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/OutputRowPolicy"
-                  },
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/OutputRowPolicy"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/OutputRowPolicy"
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
                   "title": "Response List Row Policies Rbac V1 Policies Rows Get"
                 }
               }
@@ -7833,11 +8040,11 @@
             "temperature": "float",
             "time": "datetime"
           },
-          "id": "b11acbbe-c05c-41a7-9a90-dff447f917f2",
+          "id": "12345678-1234-4123-8123-123456789012",
           "metadata": {
             "unit": "C"
           },
-          "name": "thermo-f59fd",
+          "name": "thermo-demo01",
           "read_groups": [
             "analysts"
           ],

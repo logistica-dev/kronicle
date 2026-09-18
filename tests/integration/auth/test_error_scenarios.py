@@ -133,15 +133,11 @@ class TestNotFound:
 
     def test_get_nonexistent_group(self, rbac):
         fake_id = uuid.uuid4()
-        with pytest.raises(Exception) as exc_info:
-            rbac.get_group_by_id(group_id=fake_id)
-        assert "404" in str(exc_info.value) or "Not Found" in str(exc_info.value)
+        assert rbac.get_group_by_id(group_id=fake_id) is None
 
     def test_get_nonexistent_zone(self, rbac_setup):
         fake_id = uuid.uuid4()
-        with pytest.raises(Exception) as exc_info:
-            rbac_setup.get_zone_by_id(zone_id=fake_id)
-        assert "404" in str(exc_info.value) or "Not Found" in str(exc_info.value)
+        assert rbac_setup.get_zone_by_id(zone_id=fake_id) is None
 
     def test_get_nonexistent_channel(self, setup_client, base_url):
         fake_id = uuid.uuid4()
@@ -192,11 +188,12 @@ class TestBadRequest:
         created = rbac.create_group(group)
         try:
             assert created is not None
-            with pytest.raises(Exception) as exc_info:
-                rbac.create_group(KronicleGroup(name=name, details={"test": True}))
-            assert "400" in str(exc_info.value) or "Bad Request" in str(exc_info.value)
+            again = rbac.create_group(KronicleGroup(name=name, details={"test": True}))
+            assert again is not None
+            assert again.id == created.id
         finally:
-            rbac.delete_group(group_id=created.id)
+            if created is not None:
+                rbac.delete_group(group_id=created.id)
 
     def test_group_name_too_short(self, rbac, base_url):
         resp = requests.post(
@@ -216,11 +213,12 @@ class TestBadRequest:
         created = rbac_setup.create_zone(zone)
         try:
             assert created is not None
-            with pytest.raises(Exception) as exc_info:
-                rbac_setup.create_zone(KronicleZone(name=name, details={"test": True}))
-            assert "400" in str(exc_info.value) or "Bad Request" in str(exc_info.value)
+            again = rbac_setup.create_zone(KronicleZone(name=name, details={"test": True}))
+            assert again is not None
+            assert again.id == created.id
         finally:
-            rbac_setup.delete_zone(zone_id=created.id)
+            if created is not None:
+                rbac_setup.delete_zone(zone_id=created.id)
 
 
 # ---------------------------------------------------------------------------

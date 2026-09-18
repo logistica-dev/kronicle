@@ -3,8 +3,9 @@ from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 
-from kronicle.errors.error_types import NotFoundError
+from kronicle.errors.error_types import ConflictError, NotFoundError
 from kronicle.schemas.core.input_ressource_schema import InputRow, InputZonePatch
 from kronicle.schemas.payload.input_payload import InputPayload
 from kronicle.schemas.rbac.input_policy_schemas import (
@@ -95,6 +96,17 @@ class TestZonePolicy:
         with pytest.raises(NotFoundError):
             rbac_service.delete_zone_policy(uuid4())
 
+    def test_get_by_name(self, rbac_service):
+        policy = fake_zone_policy_mock(name="zp")
+        rbac_service._zone_policy_repo.get_by_name = MagicMock(return_value=policy)
+        result = rbac_service.get_zone_policy_by_name("zp")
+        assert isinstance(result, OutputZonePolicy)
+        assert result.name == "zp"
+
+    def test_get_by_name_none(self, rbac_service):
+        rbac_service._zone_policy_repo.get_by_name = MagicMock(return_value=None)
+        assert rbac_service.get_zone_policy_by_name("missing") is None
+
 
 class TestChannelPolicy:
     def test_create(self, rbac_service):
@@ -166,6 +178,17 @@ class TestChannelPolicy:
         with pytest.raises(NotFoundError):
             rbac_service.delete_channel_policy(uuid4())
 
+    def test_get_by_name(self, rbac_service):
+        policy = fake_channel_policy_mock(name="cp")
+        rbac_service._channel_policy_repo.get_by_name = MagicMock(return_value=policy)
+        result = rbac_service.get_channel_policy_by_name("cp")
+        assert isinstance(result, OutputChannelPolicy)
+        assert result.name == "cp"
+
+    def test_get_by_name_none(self, rbac_service):
+        rbac_service._channel_policy_repo.get_by_name = MagicMock(return_value=None)
+        assert rbac_service.get_channel_policy_by_name("missing") is None
+
 
 # ==================================================================================================
 # Relationship checks
@@ -235,6 +258,19 @@ class TestRowPolicy:
         rbac_service._row_policy_repo.get_by_id = MagicMock(return_value=None)
         with pytest.raises(NotFoundError):
             rbac_service.delete_row_policy(uuid4())
+
+    def test_get_by_name(self, rbac_service):
+        policy = MagicMock()
+        policy.id = uuid4()
+        policy.name = "rp"
+        rbac_service._row_policy_repo.get_by_name = MagicMock(return_value=policy)
+        with patch.object(OutputRowPolicy, "from_db", return_value=MagicMock(spec=OutputRowPolicy)):
+            result = rbac_service.get_row_policy_by_name("rp")
+        assert isinstance(result, OutputRowPolicy)
+
+    def test_get_by_name_none(self, rbac_service):
+        rbac_service._row_policy_repo.get_by_name = MagicMock(return_value=None)
+        assert rbac_service.get_row_policy_by_name("missing") is None
 
     def test_patch(self, rbac_service):
         pid = uuid4()
@@ -321,6 +357,31 @@ class TestCreatePolicyInternal:
         assert "Long Access Profile Name" in call_kwargs["name"]
         assert "test-subject" in call_kwargs["name"]
         assert result is OutputCls.from_db.return_value
+
+    def test_integrity_error_raises_conflict(self, rbac_service):
+        db = rbac_service._db.transaction.return_value.__enter__.return_value
+        subj = MagicMock()
+        subj.id = uuid4()
+        subj.name = "subj"
+        db_access = MagicMock()
+        db_access.id = uuid4()
+        db_access.name = "profile"
+
+        policy_repo = MagicMock()
+        policy_repo.get_by_subject_and_access_profile = MagicMock(return_value=None)
+        policy_repo.add = MagicMock(
+            side_effect=IntegrityError("INSERT INTO channel_policies", {}, Exception("duplicate key value"))
+        )
+
+        with pytest.raises(ConflictError, match="already exists"):
+            rbac_service._create_policy(
+                db,
+                subj=subj,
+                db_access=db_access,
+                policy_repo=policy_repo,
+                policy_cls=MagicMock(),
+                output_cls=MagicMock(),
+            )
 
 
 # ==================================================================================================

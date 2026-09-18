@@ -2,8 +2,9 @@
 
 from fastapi import APIRouter, Depends
 
-from kronicle._build import __build_date__, __commit__, __version__
+from kronicle._build import __build_date__, __commit__
 from kronicle.deps.channel_deps import channel_service
+from kronicle.deps.settings_ini import package_version
 from kronicle.services.channel_service import ChannelService
 from kronicle.types.iso_datetime import IsoDateTime
 
@@ -29,4 +30,4 @@ async def readiness(
 
 @health_check.get("/version", include_in_schema=True)
 def version():
-    return {"version": __version__, "commit": __commit__, "date": IsoDateTime(__build_date__)}
+    return {"version": package_version(), "commit": __commit__, "date": IsoDateTime(__build_date__)}

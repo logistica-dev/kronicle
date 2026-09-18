@@ -3,8 +3,9 @@ from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 
-from kronicle.errors.error_types import BadRequestError, ConflictError, NotFoundError
+from kronicle.errors.error_types import ConflictError, NotFoundError
 from kronicle.schemas.rbac.safe_role_schemas import OutputRole
 from tests.unit.services.conftest import fake_group, fake_group_role_link, fake_role, fake_user, fake_user_role_link
 
@@ -28,7 +29,15 @@ class TestRoles:
 
     def test_create_role_duplicate(self, rbac_service):
         rbac_service._role_repo.get_by_name = MagicMock(return_value=fake_role(name="dup"))
-        with pytest.raises(BadRequestError, match="already exists"):
+        with pytest.raises(ConflictError, match="already exists"):
+            rbac_service.create_role("dup")
+
+    def test_create_role_integrity_error(self, rbac_service):
+        rbac_service._role_repo.get_by_name = MagicMock(return_value=None)
+        rbac_service._role_repo.add = MagicMock(
+            side_effect=IntegrityError("INSERT INTO roles", {}, Exception("duplicate key value"))
+        )
+        with pytest.raises(ConflictError, match="already exists"):
             rbac_service.create_role("dup")
 
     def test_get_roles(self, rbac_service):

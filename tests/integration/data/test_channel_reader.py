@@ -29,7 +29,7 @@ def test_reader_channels(kronicle_reader, test_channel_id):
     assert isinstance(all_channels, list)
     assert len(all_channels) > 0, "Expected at least one channel"
 
-    channel = kronicle_reader.get_channel(test_channel_id)
+    channel = kronicle_reader.get_channel_by_id(test_channel_id)
     assert channel is not None
     rows = kronicle_reader.get_rows_for_channel(test_channel_id)
     assert isinstance(rows, list)

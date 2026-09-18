@@ -19,7 +19,7 @@ def test_list_channels(kronicle_setup, test_channel_id):
         assert isinstance(channel, KronicleChannel)
     log_d(here, "Channel list ^^^")
 
-    channel = kronicle_setup.get_channel(test_channel_id)
+    channel = kronicle_setup.get_channel_by_id(test_channel_id)
     assert channel is not None
     rows = kronicle_setup.get_rows_for_channel(test_channel_id)
     assert isinstance(rows, list)

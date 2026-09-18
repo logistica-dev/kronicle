@@ -3,8 +3,9 @@ from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 
-from kronicle.errors.error_types import BadRequestError, NotFoundError
+from kronicle.errors.error_types import BadRequestError, ConflictError, NotFoundError
 from kronicle.schemas.core.input_ressource_schema import InputRow, InputZonePatch
 from kronicle.schemas.payload.input_payload import InputPayload
 from kronicle.schemas.rbac.input_policy_schemas import (
@@ -64,6 +65,17 @@ class TestZoneAccessProfileCRUD:
     def test_get_none(self, rbac_service):
         rbac_service._zone_access_profile_repo.get_by_id = MagicMock(return_value=None)
         assert rbac_service.get_zone_access_profile(uuid4()) is None
+
+    def test_get_by_name(self, rbac_service):
+        pid = uuid4()
+        profile = self._profile_mock(id=pid, name="zap")
+        rbac_service._zone_access_profile_repo.get_by_name = MagicMock(return_value=profile)
+        result = rbac_service.get_zone_access_profile_by_name("zap")
+        assert isinstance(result, OutputZoneAccessProfile)
+
+    def test_get_by_name_none(self, rbac_service):
+        rbac_service._zone_access_profile_repo.get_by_name = MagicMock(return_value=None)
+        assert rbac_service.get_zone_access_profile_by_name("missing") is None
 
     def test_delete(self, rbac_service):
         pid = uuid4()
@@ -126,6 +138,17 @@ class TestChannelAccessProfileCRUD:
     def test_get_none(self, rbac_service):
         rbac_service._channel_access_profile_repo.get_by_id = MagicMock(return_value=None)
         assert rbac_service.get_channel_access_profile(uuid4()) is None
+
+    def test_get_by_name(self, rbac_service):
+        pid = uuid4()
+        profile = self._profile_mock(id=pid, name="cap")
+        rbac_service._channel_access_profile_repo.get_by_name = MagicMock(return_value=profile)
+        result = rbac_service.get_channel_access_profile_by_name("cap")
+        assert isinstance(result, OutputChannelAccessProfile)
+
+    def test_get_by_name_none(self, rbac_service):
+        rbac_service._channel_access_profile_repo.get_by_name = MagicMock(return_value=None)
+        assert rbac_service.get_channel_access_profile_by_name("missing") is None
 
     def test_delete(self, rbac_service):
         pid = uuid4()
@@ -235,6 +258,23 @@ class TestEnsureZoneAccessProfile:
             db, InputZoneAccessProfile(role=InputRole(id=rid), zone=InputZonePatch(id=zid))
         )
         assert result is existing
+
+    def test_create_integrity_error_raises_conflict(self, rbac_service):
+        db = rbac_service._db.transaction.return_value.__enter__.return_value
+        rid, zid = uuid4(), uuid4()
+        rbac_service._zone_access_profile_repo.get_by_id = MagicMock(return_value=None)
+        rbac_service._zone_access_profile_repo.get_by_name = MagicMock(return_value=None)
+        rbac_service._zone_access_profile_repo.get_by_role_and_zone = MagicMock(return_value=None)
+        rbac_service._role_repo.get_by_id = MagicMock(return_value=fake_role(id=rid, name="reader"))
+        rbac_service._zone_repo.get_by_id = MagicMock(return_value=_fake_zone(id=zid, name="my_zone"))
+        rbac_service._zone_access_profile_repo.create = MagicMock(
+            side_effect=IntegrityError("INSERT INTO zone_access_profiles", {}, Exception("duplicate key value"))
+        )
+
+        with pytest.raises(ConflictError, match="already exists"):
+            rbac_service._ensure_zone_access_profile(
+                db, InputZoneAccessProfile(role=InputRole(id=rid), zone=InputZonePatch(id=zid))
+            )
 
 
 # ==================================================================================================
@@ -479,6 +519,18 @@ class TestRowAccessProfileCRUD:
     def test_get_none(self, rbac_service):
         rbac_service._row_access_profile_repo.get_by_id = MagicMock(return_value=None)
         assert rbac_service.get_row_access_profile(uuid4()) is None
+
+    def test_get_by_name(self, rbac_service):
+        pid = uuid4()
+        profile = self._profile_mock(id=pid, name="rap")
+        rbac_service._row_access_profile_repo.get_by_name = MagicMock(return_value=profile)
+        with patch.object(OutputRowAccessProfile, "from_db", return_value=MagicMock(spec=OutputRowAccessProfile)):
+            result = rbac_service.get_row_access_profile_by_name("rap")
+        assert isinstance(result, OutputRowAccessProfile)
+
+    def test_get_by_name_none(self, rbac_service):
+        rbac_service._row_access_profile_repo.get_by_name = MagicMock(return_value=None)
+        assert rbac_service.get_row_access_profile_by_name("missing") is None
 
     def test_patch(self, rbac_service):
         pid = uuid4()

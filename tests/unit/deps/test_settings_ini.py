@@ -4,7 +4,7 @@ from uuid import UUID
 
 import pytest
 
-from kronicle.deps.settings_ini import AppSettings, AuthSettings, IniSection, JWTSettings
+from kronicle.deps.settings_ini import AppSettings, AuthSettings, IniSection, JWTSettings, package_version
 
 
 # ---------------------------------------------------------
@@ -56,7 +56,8 @@ def test_inisection_missing_section_raises():
 # ---------------------------------------------------------
 def test_appsettings_defaults_and_prefix():
     app = AppSettings()
-    assert app.version == "0.0.0"
+    assert app.version == package_version()
+    assert app.version  # resolved from pyproject.toml, never empty
     assert app.name == "Kronicle"
     assert isinstance(app.id, UUID)
     tinyid = app.tinyid

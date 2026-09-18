@@ -22,7 +22,7 @@ def test_writer_channels(kronicle_writer, test_channel_id):
     for channel in all_channels:
         assert isinstance(channel, KronicleChannel)
 
-    channel = kronicle_writer.get_channel(test_channel_id)
+    channel = kronicle_writer.get_channel_by_id(test_channel_id)
     assert channel is not None
     rows = kronicle_writer.get_rows_for_channel(test_channel_id, "list")
     assert isinstance(rows, list)

@@ -1,8 +1,9 @@
 # tests/unit/api/test_health_check.py
 from unittest.mock import AsyncMock
 
-from kronicle._build import __commit__, __version__
+from kronicle._build import __commit__
 from kronicle.api.health_check import liveness, readiness, version
+from kronicle.deps.settings_ini import package_version
 
 
 def test_liveness():
@@ -39,5 +40,5 @@ def test_readiness_raises_returns_error():
 
 def test_version():
     result = version()
-    assert result["version"] == __version__
+    assert result["version"] == package_version()
     assert result["commit"] == __commit__

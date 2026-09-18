@@ -133,3 +133,7 @@ def test_api_list_policies(kronicle_rbac):
     for resource in ["zone", "channel", "row"]:
         assert resource in policies
         assert isinstance(policies[resource], list)
+    for policy in policies["zone"] + policies["channel"] + policies["row"]:
+        assert isinstance(policy, dict)
+        assert {"id", "name", "subject", "is_delegation"} <= set(policy)
+        assert "type" in policy["subject"]

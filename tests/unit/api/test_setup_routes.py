@@ -35,8 +35,8 @@ async def test_delete_channel_rows_converts_filter(mock_from_query):
 
 @pytest.mark.asyncio
 async def test_clone_channel_binds_to_source_zone():
-    src_id = str(uuid4())
-    src_zone_id = str(uuid4())
+    src_id = uuid4()
+    src_zone_id = uuid4()
     payload = MagicMock()
     payload.id = src_id
     cloned = MagicMock()

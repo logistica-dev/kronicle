@@ -70,7 +70,8 @@ class TestApiZonePolicies:
         assert isinstance(created, KronicleZonePolicy)
         assert created.id is not None
         try:
-            fetched = kronicle_rbac.get_zone_policy(policy_id=created.id)
+            fetched = kronicle_rbac.get_zone_policy_by_id(policy_id=created.id)
+            assert fetched is not None
             assert fetched.id == created.id
         finally:
             kronicle_rbac.delete_zone_policy(policy_id=created.id)
@@ -153,7 +154,8 @@ class TestApiChannelPolicies:
         assert isinstance(created, KronicleChannelPolicy)
         assert created.id is not None
         try:
-            fetched = kronicle_rbac.get_channel_policy(policy_id=created.id)
+            fetched = kronicle_rbac.get_channel_policy_by_id(policy_id=created.id)
+            assert fetched is not None
             assert fetched.id == created.id
         finally:
             kronicle_rbac.delete_channel_policy(policy_id=created.id)
@@ -236,7 +238,8 @@ class TestApiRowPolicies:
         assert isinstance(created, KronicleRowPolicy)
         assert created.id is not None
         try:
-            fetched = kronicle_rbac.get_row_policy(policy_id=created.id)
+            fetched = kronicle_rbac.get_row_policy_by_id(policy_id=created.id)
+            assert fetched is not None
             assert fetched.id == created.id
         finally:
             kronicle_rbac.delete_row_policy(policy_id=created.id)
@@ -349,21 +352,12 @@ class TestApiPolicyInPermissions:
 class TestApiPolicyEdgeCases:
     def test_api_get_nonexistent_zone_policy(self, kronicle_rbac):
         fake_id = UUID("00000000-0000-0000-0000-000000000000")
-        try:
-            kronicle_rbac.get_zone_policy(policy_id=fake_id)
-        except Exception:
-            pass  # 404 is acceptable
+        assert kronicle_rbac.get_zone_policy_by_id(policy_id=fake_id) is None
 
     def test_api_get_nonexistent_channel_policy(self, kronicle_rbac):
         fake_id = UUID("00000000-0000-0000-0000-000000000000")
-        try:
-            kronicle_rbac.get_channel_policy(policy_id=fake_id)
-        except Exception:
-            pass
+        assert kronicle_rbac.get_channel_policy_by_id(policy_id=fake_id) is None
 
     def test_api_get_nonexistent_row_policy(self, kronicle_rbac):
         fake_id = UUID("00000000-0000-0000-0000-000000000000")
-        try:
-            kronicle_rbac.get_row_policy(policy_id=fake_id)
-        except Exception:
-            pass
+        assert kronicle_rbac.get_row_policy_by_id(policy_id=fake_id) is None

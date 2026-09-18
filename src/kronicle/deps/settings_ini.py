@@ -1,7 +1,10 @@
 # kronicle/deps/settings_ini.py
 from __future__ import annotations
 
+import importlib.metadata
+import tomllib
 from configparser import ConfigParser
+from importlib.metadata import PackageNotFoundError
 from json import dumps
 from typing import Any, ClassVar, TypeVar
 from uuid import UUID, uuid4
@@ -9,6 +12,7 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
 
 from kronicle.deps.rbac_defaults import RESERVED_NAMES
+from kronicle.deps.settings_env import resolve_project_root
 from kronicle.utils.dev_logs import log_d
 from kronicle.utils.str_utils import strip_quotes
 
@@ -16,6 +20,28 @@ from kronicle.utils.str_utils import strip_quotes
 # Constants
 # --------------------------------------------------------------------------------------------------
 T = TypeVar("T", bound="IniSection")
+
+UNKNOWN_VERSION = "0.0.0"
+
+
+def package_version() -> str:
+    """Resolve the application version.
+
+    Source of truth is the ``version`` field in ``pyproject.toml`` (kept in sync by commitizen);
+    falls back to the installed package metadata, then to ``UNKNOWN_VERSION``.
+    """
+    pyproject_path = resolve_project_root() / "pyproject.toml"
+    if pyproject_path.is_file():
+        try:
+            with pyproject_path.open("rb") as f:
+                return tomllib.load(f)["project"]["version"]
+        except (OSError, KeyError, tomllib.TOMLDecodeError):
+            pass
+
+    try:
+        return importlib.metadata.version("kronicle")
+    except PackageNotFoundError:
+        return UNKNOWN_VERSION
 
 
 # --------------------------------------------------------------------------------------------------
@@ -57,7 +83,7 @@ class IniSection(BaseModel):
 class AppSettings(IniSection):
     section = "app"
 
-    version: str = Field(default="0.0.0")
+    version: str = Field(default_factory=package_version)
     name: str = Field(default="Kronicle")
     id: UUID = Field(default_factory=lambda: UUID("ffffffff-62dd-490a-8f7e-b168c68da4a7"))
     description: str = Field(default="FastAPI-powered TimescaleDB microservice for storing time-series measurements")

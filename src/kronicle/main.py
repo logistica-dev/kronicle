@@ -33,6 +33,7 @@ from kronicle.db.migration.orchestrators.migration_orchestrator import Migration
 from kronicle.db.rbac.rbac_db_session import RbacDbSession
 from kronicle.deps.settings import KronicleSettings
 from kronicle.deps.settings_env import AppSuperuser
+from kronicle.deps.settings_ini import package_version
 from kronicle.errors.error_types import KronicleAppError, KronicleHTTPErrorPayload
 from kronicle.errors.exception_handlers import (
     app_error_adapter,
@@ -196,7 +197,7 @@ class KronicleApp:
 
         # --- Ready ---
         log_d(here, f"Swagger docs available at: http://{self.conf.server.host}:{self.conf.server.port}/docs")
-        log_d(here, "Kronicle server ready")
+        log_d(here, f"Kronicle server {package_version()} ready")
         print("------------------------------------------------------------------------------------------[ Init OK ]--")
 
         yield

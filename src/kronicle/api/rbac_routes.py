@@ -602,12 +602,19 @@ def create_zone_access_profile(
 @rbac_router.get(
     "/access-profiles/zones",
     summary="List all zone access profiles",
-    response_model=list[OutputZoneAccessProfile],
+    description=(
+        "Returns all zone access profiles. When the 'name' filter is used it returns a "
+        "single profile (or None if no profile matches the name) instead of the full list."
+    ),
+    response_model=OutputZoneAccessProfile | list[OutputZoneAccessProfile] | None,
     dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
 )
 def list_zone_access_profiles(
+    name: str | None = Query(None, description="Optional name to filter by"),
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
 ):
+    if name:
+        return rbac.get_zone_access_profile_by_name(name)
     return rbac.list_zone_access_profiles()
 
 
@@ -682,12 +689,19 @@ def create_channel_access_profile(
 @rbac_router.get(
     "/access-profiles/channels",
     summary="List all channel access profiles",
-    response_model=list[OutputChannelAccessProfile],
+    description=(
+        "Returns all channel access profiles. When the 'name' filter is used it returns a "
+        "single profile (or None if no profile matches the name) instead of the full list."
+    ),
+    response_model=OutputChannelAccessProfile | list[OutputChannelAccessProfile] | None,
     dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
 )
 def list_channel_access_profiles(
+    name: str | None = Query(None, description="Optional name to filter by"),
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
 ):
+    if name:
+        return rbac.get_channel_access_profile_by_name(name)
     return rbac.list_channel_access_profiles()
 
 
@@ -903,12 +917,19 @@ def create_row_access_profile(
 @rbac_router.get(
     "/access-profiles/rows",
     summary="List all row access profiles",
-    response_model=list[OutputRowAccessProfile],
+    description=(
+        "Returns all row access profiles. When the 'name' filter is used it returns a "
+        "single profile (or None if no profile matches the name) instead of the full list."
+    ),
+    response_model=OutputRowAccessProfile | list[OutputRowAccessProfile] | None,
     dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
 )
 def list_row_access_profiles(
+    name: str | None = Query(None, description="Optional name to filter by"),
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
 ):
+    if name:
+        return rbac.get_row_access_profile_by_name(name)
     return rbac.list_row_access_profiles()
 
 
@@ -987,14 +1008,20 @@ def list_policies(
 @rbac_router.get(
     "/policies/zones",
     summary="List zone policies",
-    description="Returns all zone policies. Optionally filter by zone.",
-    response_model=list[OutputZonePolicy],
+    description=(
+        "Returns all zone policies. Optionally filter by zone. When the 'name' filter is used "
+        "it returns a single policy (or None if no policy matches the name) instead of the full list."
+    ),
+    response_model=OutputZonePolicy | list[OutputZonePolicy] | None,
     dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
 )
 def list_zone_policies(
     zone_id: UUID | None = Query(None, description="Filter by zone ID"),  # noqa: B008
+    name: str | None = Query(None, description="Optional name to filter by"),
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
 ):
+    if name:
+        return rbac.get_zone_policy_by_name(name)
     if zone_id is not None:
         return rbac.list_policies_for_zone(zone_id)
     return rbac.list_zone_policies()
@@ -1003,14 +1030,20 @@ def list_zone_policies(
 @rbac_router.get(
     "/policies/channels",
     summary="List channel policies",
-    description="Returns all channel policies. Optionally filter by channel.",
-    response_model=list[OutputChannelPolicy],
+    description=(
+        "Returns all channel policies. Optionally filter by channel. When the 'name' filter is used "
+        "it returns a single policy (or None if no policy matches the name) instead of the full list."
+    ),
+    response_model=OutputChannelPolicy | list[OutputChannelPolicy] | None,
     dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
 )
 def list_channel_policies(
     channel_id: UUID | None = Query(None, description="Filter by channel ID"),  # noqa: B008
+    name: str | None = Query(None, description="Optional name to filter by"),
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
 ):
+    if name:
+        return rbac.get_channel_policy_by_name(name)
     if channel_id is not None:
         return rbac.list_policies_for_channel(channel_id)
     return rbac.list_channel_policies()
@@ -1019,14 +1052,20 @@ def list_channel_policies(
 @rbac_router.get(
     "/policies/rows",
     summary="List row policies",
-    description="Returns all row policies. Optionally filter by row.",
-    response_model=list[OutputRowPolicy],
+    description=(
+        "Returns all row policies. Optionally filter by row. When the 'name' filter is used "
+        "it returns a single policy (or None if no policy matches the name) instead of the full list."
+    ),
+    response_model=OutputRowPolicy | list[OutputRowPolicy] | None,
     dependencies=[Depends(require_permission(PermStr.POLICY_READ))],
 )
 def list_row_policies(
     row_id: UUID | None = Query(None, description="Filter by row ID"),  # noqa: B008
+    name: str | None = Query(None, description="Optional name to filter by"),
     rbac: RbacService = Depends(rbac_service),  # noqa: B008
 ):
+    if name:
+        return rbac.get_row_policy_by_name(name)
     if row_id is not None:
         return rbac.list_policies_for_row(row_id)
     return rbac.list_row_policies()

@@ -19,7 +19,7 @@ def test_api_patch_channel_metadata(kronicle_writer, test_channel_id):
     log_d(here, "patch result", result)
     assert result is not None
 
-    channel = kronicle_writer.get_channel(test_channel_id)
+    channel = kronicle_writer.get_channel_by_id(test_channel_id)
     assert channel is not None
     assert channel.metadata.get("patched_by") == "data-patch-test"
     assert channel.tags.get("source") == "patch-test"

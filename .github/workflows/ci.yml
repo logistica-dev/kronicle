@@ -114,7 +114,6 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           build-args: |
-            APP_VERSION=${{ github.ref }}
             GIT_COMMIT=${{ github.sha }}
             BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           tags: |

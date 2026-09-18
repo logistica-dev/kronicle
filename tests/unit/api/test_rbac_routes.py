@@ -667,8 +667,16 @@ class TestAccessProfileRoutes:
     def test_list_zone_access_profiles(self, mock_rbac):
         expected = [{"id": uuid4(), "name": "zap1"}]
         mock_rbac.list_zone_access_profiles.return_value = expected
-        result = list_zone_access_profiles(rbac=mock_rbac)
+        result = list_zone_access_profiles(name=None, rbac=mock_rbac)
         mock_rbac.list_zone_access_profiles.assert_called_once()
+        assert result == expected
+
+    def test_list_zone_access_profiles_with_name(self, mock_rbac):
+        expected = {"id": uuid4(), "name": "zap"}
+        mock_rbac.get_zone_access_profile_by_name.return_value = expected
+        result = list_zone_access_profiles(name="zap", rbac=mock_rbac)
+        mock_rbac.get_zone_access_profile_by_name.assert_called_once_with("zap")
+        mock_rbac.list_zone_access_profiles.assert_not_called()
         assert result == expected
 
     def test_get_zone_access_profile(self, mock_rbac, any_uuid):
@@ -728,8 +736,16 @@ class TestAccessProfileRoutes:
     def test_list_channel_access_profiles(self, mock_rbac):
         expected = [{"id": uuid4(), "name": "cap1"}]
         mock_rbac.list_channel_access_profiles.return_value = expected
-        result = list_channel_access_profiles(rbac=mock_rbac)
+        result = list_channel_access_profiles(name=None, rbac=mock_rbac)
         mock_rbac.list_channel_access_profiles.assert_called_once()
+        assert result == expected
+
+    def test_list_channel_access_profiles_with_name(self, mock_rbac):
+        expected = {"id": uuid4(), "name": "cap"}
+        mock_rbac.get_channel_access_profile_by_name.return_value = expected
+        result = list_channel_access_profiles(name="cap", rbac=mock_rbac)
+        mock_rbac.get_channel_access_profile_by_name.assert_called_once_with("cap")
+        mock_rbac.list_channel_access_profiles.assert_not_called()
         assert result == expected
 
     def test_get_channel_access_profile(self, mock_rbac, any_uuid):
@@ -789,8 +805,16 @@ class TestAccessProfileRoutes:
     def test_list_row_access_profiles(self, mock_rbac):
         expected = [{"id": uuid4(), "name": "rap1"}]
         mock_rbac.list_row_access_profiles.return_value = expected
-        result = list_row_access_profiles(rbac=mock_rbac)
+        result = list_row_access_profiles(name=None, rbac=mock_rbac)
         mock_rbac.list_row_access_profiles.assert_called_once()
+        assert result == expected
+
+    def test_list_row_access_profiles_with_name(self, mock_rbac):
+        expected = {"id": uuid4(), "name": "rap"}
+        mock_rbac.get_row_access_profile_by_name.return_value = expected
+        result = list_row_access_profiles(name="rap", rbac=mock_rbac)
+        mock_rbac.get_row_access_profile_by_name.assert_called_once_with("rap")
+        mock_rbac.list_row_access_profiles.assert_not_called()
         assert result == expected
 
     def test_get_row_access_profile(self, mock_rbac, any_uuid):
@@ -847,22 +871,46 @@ class TestListPoliciesGlobal:
     def test_list_zone_policies(self, mock_rbac):
         expected = [{"id": uuid4(), "name": "zp1"}]
         mock_rbac.list_zone_policies.return_value = expected
-        result = list_zone_policies(zone_id=None, rbac=mock_rbac)
+        result = list_zone_policies(zone_id=None, name=None, rbac=mock_rbac)
         mock_rbac.list_zone_policies.assert_called_once()
+        assert result == expected
+
+    def test_list_zone_policies_with_name(self, mock_rbac):
+        expected = {"id": uuid4(), "name": "zp"}
+        mock_rbac.get_zone_policy_by_name.return_value = expected
+        result = list_zone_policies(zone_id=None, name="zp", rbac=mock_rbac)
+        mock_rbac.get_zone_policy_by_name.assert_called_once_with("zp")
+        mock_rbac.list_zone_policies.assert_not_called()
         assert result == expected
 
     def test_list_channel_policies(self, mock_rbac):
         expected = [{"id": uuid4(), "name": "cp1"}]
         mock_rbac.list_channel_policies.return_value = expected
-        result = list_channel_policies(channel_id=None, rbac=mock_rbac)
+        result = list_channel_policies(channel_id=None, name=None, rbac=mock_rbac)
         mock_rbac.list_channel_policies.assert_called_once()
+        assert result == expected
+
+    def test_list_channel_policies_with_name(self, mock_rbac):
+        expected = {"id": uuid4(), "name": "cp"}
+        mock_rbac.get_channel_policy_by_name.return_value = expected
+        result = list_channel_policies(channel_id=None, name="cp", rbac=mock_rbac)
+        mock_rbac.get_channel_policy_by_name.assert_called_once_with("cp")
+        mock_rbac.list_channel_policies.assert_not_called()
         assert result == expected
 
     def test_list_row_policies(self, mock_rbac):
         expected = [{"id": uuid4(), "name": "rp1"}]
         mock_rbac.list_row_policies.return_value = expected
-        result = list_row_policies(row_id=None, rbac=mock_rbac)
+        result = list_row_policies(row_id=None, name=None, rbac=mock_rbac)
         mock_rbac.list_row_policies.assert_called_once()
+        assert result == expected
+
+    def test_list_row_policies_with_name(self, mock_rbac):
+        expected = {"id": uuid4(), "name": "rp"}
+        mock_rbac.get_row_policy_by_name.return_value = expected
+        result = list_row_policies(row_id=None, name="rp", rbac=mock_rbac)
+        mock_rbac.get_row_policy_by_name.assert_called_once_with("rp")
+        mock_rbac.list_row_policies.assert_not_called()
         assert result == expected
 
 

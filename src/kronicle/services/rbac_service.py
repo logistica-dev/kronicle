@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import functools
-from typing import Any, Sequence
+from typing import Any, Callable, Sequence, TypeVar
 from uuid import UUID
 
 from sqlalchemy import cast, func, select
@@ -80,6 +80,20 @@ from kronicle.schemas.rbac.safe_user_schemas import OutputUser, ProcessedUser
 from kronicle.utils.dev_logs import log_d, log_i, log_w
 
 mod = "rbacs"
+
+
+T = TypeVar("T")
+
+
+def _translate_integrity(action: Callable[[], T], message: str) -> T:
+    """
+    Execute a DB write, translating a unique-constraint IntegrityError into a ConflictError (409).
+    """
+    try:
+        return action()
+    except IntegrityError as e:
+        log_w("create", "IntegrityError", e)
+        raise ConflictError(message) from e
 
 
 def log_service_error(method):
@@ -318,7 +332,7 @@ class RbacService:
         here = "_del_usr"
         if not db_user:
             raise UnauthorizedError("User doesn't exists")
-        log_w(here, db_user.model_dump)
+        log_w(here, db_user.model_dump())
 
         # Clear role and group assignments explicitly — even with ondelete=CASCADE,
         # SQLAlchemy's unitofwork processor tries to NULL PK columns before
@@ -498,8 +512,8 @@ class RbacService:
         with self._db.transaction() as db:
             existing = self._role_repo.get_by_name(db, name=name)
             if existing:
-                raise BadRequestError(f"Role '{name}' already exists")
-            self._role_repo.add(db, entity=role)
+                raise ConflictError(f"Role '{name}' already exists")
+            _translate_integrity(lambda: self._role_repo.add(db, entity=role), f"Role '{name}' already exists")
             return OutputRole.from_db(role)
 
     def get_roles(self) -> list[OutputRole]:
@@ -652,7 +666,10 @@ class RbacService:
         name = access_profile.name or None
         if not name:
             name = f"Zone {db_zone.name[:15]} {db_role.name[:15]} access"
-        profile = self._zone_access_profile_repo.create(db, role_id=db_role.id, zone_id=db_zone.id, name=name)
+        profile = _translate_integrity(
+            lambda: self._zone_access_profile_repo.create(db, role_id=db_role.id, zone_id=db_zone.id, name=name),
+            f"Zone access profile for role '{db_role.name}' on zone '{db_zone.name}' already exists",
+        )
         if access_profile.description is not None:
             profile.description = access_profile.description
         if access_profile.details is not None:
@@ -685,7 +702,12 @@ class RbacService:
             if channel_name.startswith("channel_"):
                 channel_name = channel_name[8:]
             name = f"Channel {channel_name[:15]} {db_role.name[:15]} access"
-        profile = self._channel_access_profile_repo.create(db, role_id=db_role.id, channel_id=db_channel.id, name=name)
+        profile = _translate_integrity(
+            lambda: self._channel_access_profile_repo.create(
+                db, role_id=db_role.id, channel_id=db_channel.id, name=name
+            ),
+            f"Channel access profile for role '{db_role.name}' on channel '{db_channel.name}' already exists",
+        )
         if access_profile.description is not None:
             profile.description = access_profile.description
         if access_profile.details is not None:
@@ -734,7 +756,10 @@ class RbacService:
         if not name:
             row_id = db_row.id.hex
             name = f"Row {row_id[:15]} {db_role.name[:15]} access"
-        profile = self._row_access_profile_repo.create(db, role_id=db_role.id, row_id=db_row.id, name=name)
+        profile = _translate_integrity(
+            lambda: self._row_access_profile_repo.create(db, role_id=db_role.id, row_id=db_row.id, name=name),
+            f"Row access profile for role '{db_role.name}' on row '{db_row.id}' already exists",
+        )
         if access_profile.description is not None:
             profile.description = access_profile.description
         if access_profile.details is not None:
@@ -803,6 +828,11 @@ class RbacService:
             p = self._zone_access_profile_repo.get_by_id(db, id=profile_id)
             return OutputZoneAccessProfile.from_db(p) if p else None
 
+    def get_zone_access_profile_by_name(self, name: str) -> OutputZoneAccessProfile | None:
+        with self._db.get_db() as db:
+            p = self._zone_access_profile_repo.get_by_name(db, name=name)
+            return OutputZoneAccessProfile.from_db(p) if p else None
+
     def patch_zone_access_profile(
         self,
         profile_id: UUID,
@@ -850,6 +880,11 @@ class RbacService:
             profile = self._channel_access_profile_repo.get_by_id(db, id=profile_id)
             return OutputChannelAccessProfile.from_db(profile) if profile else None
 
+    def get_channel_access_profile_by_name(self, name: str) -> OutputChannelAccessProfile | None:
+        with self._db.get_db() as db:
+            profile = self._channel_access_profile_repo.get_by_name(db, name=name)
+            return OutputChannelAccessProfile.from_db(profile) if profile else None
+
     def patch_channel_access_profile(
         self,
         profile_id: UUID,
@@ -895,6 +930,11 @@ class RbacService:
     def get_row_access_profile(self, profile_id: UUID) -> OutputRowAccessProfile | None:
         with self._db.get_db() as db:
             profile = self._row_access_profile_repo.get_by_id(db, id=profile_id)
+            return OutputRowAccessProfile.from_db(profile) if profile else None
+
+    def get_row_access_profile_by_name(self, name: str) -> OutputRowAccessProfile | None:
+        with self._db.get_db() as db:
+            profile = self._row_access_profile_repo.get_by_name(db, name=name)
             return OutputRowAccessProfile.from_db(profile) if profile else None
 
     def patch_row_access_profile(
@@ -966,7 +1006,10 @@ class RbacService:
             name=name,
             details=details,
         )
-        policy = policy_repo.add(db, entity=policy)
+        policy = _translate_integrity(
+            lambda: policy_repo.add(db, entity=policy),
+            f"Policy for access profile '{db_access.name}' and subject '{subj.name}' already exists",
+        )
         return output_cls.from_db(policy)
 
     def create_zone_policy(
@@ -1255,6 +1298,21 @@ class RbacService:
             "channel": self.list_channel_policies(),
             "row": self.list_row_policies(),
         }
+
+    def get_zone_policy_by_name(self, name: str) -> OutputZonePolicy | None:
+        with self._db.get_db() as db:
+            p = self._zone_policy_repo.get_by_name(db, name=name)
+            return OutputZonePolicy.from_db(p) if p else None
+
+    def get_channel_policy_by_name(self, name: str) -> OutputChannelPolicy | None:
+        with self._db.get_db() as db:
+            p = self._channel_policy_repo.get_by_name(db, name=name)
+            return OutputChannelPolicy.from_db(p) if p else None
+
+    def get_row_policy_by_name(self, name: str) -> OutputRowPolicy | None:
+        with self._db.get_db() as db:
+            p = self._row_policy_repo.get_by_name(db, name=name)
+            return OutputRowPolicy.from_db(p) if p else None
 
     # ----------------------------------------------------------------------------------------------
     # Groups

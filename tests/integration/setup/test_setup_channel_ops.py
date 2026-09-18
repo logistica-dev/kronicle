@@ -29,7 +29,7 @@ def test_api_update_channel(kronicle_setup, test_channel):
     log_d(here, "update result", result)
     assert result is not None
 
-    channel: KronicleChannel | None = kronicle_setup.get_channel(test_channel)
+    channel: KronicleChannel | None = kronicle_setup.get_channel_by_id(test_channel)
     assert channel is not None
     assert channel.metadata is not None
     assert channel.metadata.get("patched_by") == "setup-update-test"
@@ -62,7 +62,7 @@ def test_api_delete_all_rows_setup(kronicle_setup, test_channel):
     assert rows in (None, [])
 
     # Metadata survives the row deletion
-    channel = kronicle_setup.get_channel(test_channel)
+    channel = kronicle_setup.get_channel_by_id(test_channel)
     assert channel is not None
 
 

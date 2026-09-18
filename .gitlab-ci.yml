@@ -127,7 +127,6 @@ publish_image:
         -t $IMAGE_NAME:latest \
         -t $IMAGE_NAME:$CI_COMMIT_SHA \
         -t $IMAGE_NAME:$CI_COMMIT_REF_NAME \
-        --build-arg APP_VERSION=$CI_COMMIT_REF_NAME \
         --build-arg GIT_COMMIT=$CI_COMMIT_SHA \
         --build-arg BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
         --push \

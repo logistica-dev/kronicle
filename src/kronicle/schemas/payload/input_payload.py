@@ -11,15 +11,15 @@ from kronicle.errors.error_types import BadRequestError
 from kronicle.types.iso_datetime import IsoDateTime
 from kronicle.types.tag_type import TagType
 from kronicle.utils.dict_utils import ensure_dict_or_none, remove_alt_field
-from kronicle.utils.str_utils import ensure_uuid4, normalize_name, tiny_id, uuid4_str
+from kronicle.utils.str_utils import ensure_uuid4, normalize_name
 
 
 def example_payload():
     return ConfigDict(
         json_schema_extra={
             "example": {
-                "id": uuid4_str(),
-                "name": f"thermo-{tiny_id(5)}",
+                "id": "12345678-1234-4123-8123-123456789012",
+                "name": "thermo-demo01",
                 "channel_schema": {"time": "datetime", "temperature": "float", "humidity": "float"},
                 "rows": [
                     {"time": "2025-01-01T00:00:00Z", "temperature": 20.5, "humidity": 55.1},
