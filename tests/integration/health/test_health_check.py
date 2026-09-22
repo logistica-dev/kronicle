@@ -34,9 +34,11 @@ def test_liveness_endpoint(base_url):
 
 @pytest.mark.integration
 def test_readiness_endpoint(base_url):
-    """GET /health/ready probes the DB and reports readiness."""
+    """GET /health/ready probes the DB; ready -> 200, not ready -> 503."""
     resp = requests.get(f"{base_url}/health/ready", timeout=5)
-    assert resp.status_code == 200
+    assert resp.status_code in (200, 503)
     body = resp.json()
     assert isinstance(body, dict)
     assert "status" in body
+    if resp.status_code == 503:
+        assert body["status"] == "not_ready"

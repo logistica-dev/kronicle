@@ -4,7 +4,13 @@ from asyncio import run, sleep
 from sys import exit, stderr
 
 import uvicorn
-from asyncpg import CannotConnectNowError, ConnectionDoesNotExistError, InvalidCatalogNameError, PostgresError
+from asyncpg import (
+    CannotConnectNowError,
+    ConnectionDoesNotExistError,
+    InvalidCatalogNameError,
+    PostgresError,
+    TooManyConnectionsError,
+)
 
 from kronicle.db.core.models.core_channel import CoreChannel
 from kronicle.db.core.models.core_entity import CoreEntity
@@ -46,6 +52,10 @@ async def wait_for_db_server(timeout: int = 60):
             CannotConnectNowError,
             ConnectionDoesNotExistError,
             InvalidCatalogNameError,
+            TooManyConnectionsError,
+            ConnectionRefusedError,
+            ConnectionResetError,
+            TimeoutError,
         ):
             await sleep(1)
             waited += 1

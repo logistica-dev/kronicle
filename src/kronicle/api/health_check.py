@@ -1,6 +1,7 @@
 # kronicle/api/health_check.py
 
 from fastapi import APIRouter, Depends
+from fastapi.responses import JSONResponse
 
 from kronicle._build import __build_date__, __commit__
 from kronicle.deps.channel_deps import channel_service
@@ -23,9 +24,11 @@ async def readiness(
     try:
         # Minimal DB probe
         is_ready: bool = await data_service.ping()  # type: ignore[attr-defined]
-        return {"status": "ready"} if is_ready else {"status": "not_ready"}
+        if is_ready:
+            return JSONResponse({"status": "ready"}, status_code=200)
+        return JSONResponse({"status": "not_ready"}, status_code=503)
     except Exception as e:
-        return {"status": "not_ready", "error": str(e)}
+        return JSONResponse({"status": "not_ready", "error": str(e)}, status_code=503)
 
 
 @health_check.get("/version", include_in_schema=True)

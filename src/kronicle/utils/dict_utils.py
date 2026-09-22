@@ -48,7 +48,10 @@ def remove_alt_field(d: dict, keep: str, alt: str):
         d.setdefault(keep, d.pop(alt))
 
 
-def sanitize_dict(
+_SCALAR_TYPES = (int, float, bool)
+
+
+def validate_dict(
     d: Any,
     max_depth: int = 5,
     max_keys: int = 100,
@@ -56,43 +59,63 @@ def sanitize_dict(
     current_depth: int = 0,
 ) -> Any:
     """
-    Recursively sanitize a dictionary to prevent DB pollution and DoS attacks.
+    Recursively validate a JSON-like structure to prevent DB pollution and DoS attacks.
+
+    Checks depth, collection size, key types/lengths, and supported value types.
+    Returns a copy of the input unchanged when valid.
     """
     if current_depth > max_depth:
         raise ValueError("Max depth exceeded")
 
     if isinstance(d, dict):
-        if len(d) > max_keys:
-            raise ValueError("Too many keys in dictionary")
+        return _validate_mapping(d, max_depth, max_keys, max_string_len, current_depth)
+    if isinstance(d, list):
+        return _validate_sequence(d, max_depth, max_keys, max_string_len, current_depth)
+    return _validate_scalar(d, max_string_len)
 
-        sanitized = {}
-        for k, v in d.items():
-            if not isinstance(k, str):
-                raise TypeError(f"Key must be a string, got {type(k)}")
-            if len(k) > max_string_len:
-                raise ValueError("Key string too long")
-            sanitized[k] = sanitize_dict(v, max_depth, max_keys, max_string_len, current_depth + 1)
-        return sanitized
 
-    elif isinstance(d, list):
-        if len(d) > max_keys:
-            raise ValueError("List too long")
-        return [sanitize_dict(v, max_depth, max_keys, max_string_len, current_depth + 1) for v in d]
+def _validate_mapping(
+    d: dict,
+    max_depth: int,
+    max_keys: int,
+    max_string_len: int,
+    current_depth: int,
+) -> dict:
+    if len(d) > max_keys:
+        raise ValueError("Too many keys in dictionary")
+    next_depth = current_depth + 1
+    return {
+        _validate_key(k, max_string_len): validate_dict(v, max_depth, max_keys, max_string_len, next_depth)
+        for k, v in d.items()
+    }
 
-    elif isinstance(d, str):
-        if len(d) > max_string_len:
+
+def _validate_key(k: Any, max_string_len: int) -> str:
+    if not isinstance(k, str):
+        raise TypeError(f"Key must be a string, got {type(k)}")
+    if len(k) > max_string_len:
+        raise ValueError("Key string too long")
+    return k
+
+
+def _validate_sequence(seq: list, max_depth: int, max_keys: int, max_string_len: int, current_depth: int) -> list:
+    if len(seq) > max_keys:
+        raise ValueError("List too long")
+    next_depth = current_depth + 1
+    return [validate_dict(v, max_depth, max_keys, max_string_len, next_depth) for v in seq]
+
+
+def _validate_scalar(v: Any, max_string_len: int) -> Any:
+    if isinstance(v, str):
+        if len(v) > max_string_len:
             raise ValueError("String too long")
-        return d
-
-    elif isinstance(d, (int, float, bool)) or d is None:
-        return d
-
-    else:
-        raise TypeError(f"Unsupported type: {type(d)}")
+        return v
+    if v is None or isinstance(v, _SCALAR_TYPES):
+        return v
+    raise TypeError(f"Unsupported type: {type(v)}")
 
 
 if __name__ == "__main__":  # pragma: no cover
-
     here = "dict_utils.tests"
     print(here, "strip_nulls list:", strip_nulls([3, 0, 5, None]))
     print(

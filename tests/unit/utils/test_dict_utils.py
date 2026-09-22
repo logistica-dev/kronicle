@@ -131,75 +131,81 @@ def test_remove_alt_field_keep_present_does_not_overwrite():
 
 
 # --------------------------------------------------------------------------------------
-# sanitize_dict
+# validate_dict
 # --------------------------------------------------------------------------------------
 
 
-def test_sanitize_dict_basic():
+def test_validate_dict_basic():
     d = {"a": 1, "b": "hello", "c": None, "d": True, "e": 3.14}
-    assert dict_utils.sanitize_dict(d) == d
+    assert dict_utils.validate_dict(d) == d
 
 
-def test_sanitize_dict_nested():
+def test_validate_dict_nested():
     d = {"a": {"b": {"c": 1}}}
-    assert dict_utils.sanitize_dict(d) == d
+    assert dict_utils.validate_dict(d) == d
 
 
-def test_sanitize_dict_list():
+def test_validate_dict_list():
     d = {"items": [1, "two", {"three": 3}]}
-    assert dict_utils.sanitize_dict(d) == d
+    assert dict_utils.validate_dict(d) == d
 
 
-def test_sanitize_dict_max_depth_exceeded():
+def test_validate_dict_max_depth_exceeded():
     d = {"a": {"b": {"c": {"d": {"e": {"f": 1}}}}}}
     with pytest.raises(ValueError, match="Max depth exceeded"):
-        dict_utils.sanitize_dict(d, max_depth=3)
+        dict_utils.validate_dict(d, max_depth=3)
 
 
-def test_sanitize_dict_too_many_keys():
+def test_validate_dict_too_many_keys():
     d = {str(i): i for i in range(150)}
     with pytest.raises(ValueError, match="Too many keys in dictionary"):
-        dict_utils.sanitize_dict(d, max_keys=100)
+        dict_utils.validate_dict(d, max_keys=100)
 
 
-def test_sanitize_dict_list_too_long():
+def test_validate_dict_list_too_long():
     d = {"x": list(range(150))}
     with pytest.raises(ValueError, match="List too long"):
-        dict_utils.sanitize_dict(d, max_keys=100)
+        dict_utils.validate_dict(d, max_keys=100)
 
 
-def test_sanitize_dict_key_not_string():
+def test_validate_dict_key_not_string():
     d = {1: "value"}
     with pytest.raises(TypeError, match="Key must be a string"):
-        dict_utils.sanitize_dict(d)
+        dict_utils.validate_dict(d)
 
 
-def test_sanitize_dict_key_string_too_long():
+def test_validate_dict_key_string_too_long():
     d = {"x" * 2000: "value"}
     with pytest.raises(ValueError, match="Key string too long"):
-        dict_utils.sanitize_dict(d, max_string_len=1000)
+        dict_utils.validate_dict(d, max_string_len=1000)
 
 
-def test_sanitize_dict_string_value_too_long():
+def test_validate_dict_string_value_too_long():
     d = {"a": "x" * 2000}
     with pytest.raises(ValueError, match="String too long"):
-        dict_utils.sanitize_dict(d, max_string_len=1000)
+        dict_utils.validate_dict(d, max_string_len=1000)
 
 
-def test_sanitize_dict_unsupported_type():
+def test_validate_dict_unsupported_type():
     d = {"a": b"bytes"}
     with pytest.raises(TypeError, match="Unsupported type"):
-        dict_utils.sanitize_dict(d)
+        dict_utils.validate_dict(d)
 
 
-def test_sanitize_dict_scalar_values():
-    assert dict_utils.sanitize_dict(42) == 42
-    assert dict_utils.sanitize_dict("hello") == "hello"
-    assert dict_utils.sanitize_dict(None) is None
-    assert dict_utils.sanitize_dict(True) is True
-    assert dict_utils.sanitize_dict(3.14) == 3.14
+def test_validate_dict_nested_bad_type():
+    d = {"a": {"b": [1, {2: "x"}]}}
+    with pytest.raises(TypeError, match="Key must be a string"):
+        dict_utils.validate_dict(d)
 
 
-def test_sanitize_dict_empty():
-    assert dict_utils.sanitize_dict({}) == {}
-    assert dict_utils.sanitize_dict([]) == []
+def test_validate_dict_scalar_values():
+    assert dict_utils.validate_dict(42) == 42
+    assert dict_utils.validate_dict("hello") == "hello"
+    assert dict_utils.validate_dict(None) is None
+    assert dict_utils.validate_dict(True) is True
+    assert dict_utils.validate_dict(3.14) == 3.14
+
+
+def test_validate_dict_empty():
+    assert dict_utils.validate_dict({}) == {}
+    assert dict_utils.validate_dict([]) == []

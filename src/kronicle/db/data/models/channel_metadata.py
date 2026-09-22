@@ -21,7 +21,6 @@ from kronicle.utils.str_utils import (
     ensure_uuid4,
     normalize_name,
     normalize_pg_identifier,
-    normalize_to_snake_case,
     uuid_to_str,
 )
 
@@ -83,7 +82,10 @@ class ChannelMetadata(BaseModel):
     def normalize_name(cls, s) -> str | None:
         if not s:
             return None
-        return normalize_to_snake_case(s)
+        try:
+            return normalize_name(s, prefix="channel_")
+        except ValueError:
+            return None
 
     @field_validator("user_metadata", "tags", mode="before")
     @classmethod
@@ -289,7 +291,11 @@ class ChannelMetadata(BaseModel):
             ChannelMetadata instance or None if not found
         """
         sql = f"SELECT * FROM {cls.table()} WHERE name = $1"
-        record = await db.fetchrow(sql, normalize_to_snake_case(name))
+        try:
+            norm_name = normalize_name(name, prefix="channel_")
+        except ValueError:
+            return None
+        record = await db.fetchrow(sql, norm_name)
         if not record:
             return None
         return cls.from_db(dict(record))

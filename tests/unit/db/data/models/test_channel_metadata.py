@@ -423,6 +423,26 @@ async def test_fetch_by_name_returns_object(mock_conn, sample_metadata):
     assert result.name == sample_metadata.name
 
 
+@pytest.mark.asyncio
+async def test_fetch_by_name_normalizes_strict(mock_conn):
+    mock_conn.fetchrow.return_value = None
+    assert await ChannelMetadata.fetch_by_name(mock_conn, "123abc") is None
+    mock_conn.fetchrow.assert_awaited_once()
+    sql, arg = mock_conn.fetchrow.await_args.args
+    assert arg == "channel_123abc"
+    mock_conn.fetchrow.reset_mock()
+    assert await ChannelMetadata.fetch_by_name(mock_conn, "my__chan") is None
+    mock_conn.fetchrow.assert_awaited_once()
+    _, arg = mock_conn.fetchrow.await_args.args
+    assert arg == "my_chan"
+
+
+@pytest.mark.asyncio
+async def test_fetch_by_name_returns_none_for_degenerate_name(mock_conn):
+    assert await ChannelMetadata.fetch_by_name(mock_conn, "___") is None
+    mock_conn.fetchrow.assert_not_awaited()
+
+
 # --------------------------------------------------------------------------------------
 # fetch_by_tags / fetch_by_user_meta
 # --------------------------------------------------------------------------------------

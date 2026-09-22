@@ -11,7 +11,7 @@ from kronicle.schemas.payload.input_payload import InputPayload
 from kronicle.schemas.payload.processed_payload import ProcessedPayload
 from kronicle.schemas.payload.response_payload import ResponsePayload
 from kronicle.utils.dev_logs import log_d
-from kronicle.utils.str_utils import ensure_uuid4, extract_tags, normalize_to_snake_case, uuid_to_str
+from kronicle.utils.str_utils import ensure_uuid4, extract_tags, normalize_name, uuid_to_str
 
 mod = "chan_srvc"
 
@@ -93,7 +93,10 @@ class ChannelService:
         """
         Fetch a metadata by name.
         """
-        norm_name = normalize_to_snake_case(name)
+        try:
+            norm_name = normalize_name(name, prefix="channel_")
+        except ValueError:
+            return None
         channel = await self._repo.fetch_metadata_by_name(name=norm_name)
         return ResponsePayload.from_channel_resource(channel) if channel else None
 

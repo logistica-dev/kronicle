@@ -12,6 +12,7 @@ from kronicle.schemas.payload.input_payload import InputPayload
 from kronicle.schemas.payload.op_feedback import OpFeedback
 from kronicle.types.iso_datetime import IsoDateTime
 from kronicle.types.tag_type import TagType
+from kronicle.utils.dict_utils import validate_dict
 from kronicle.utils.str_utils import ensure_uuid4, normalize_name, sanitize_dict, uuid_to_str
 
 
@@ -77,11 +78,20 @@ class ProcessedPayload(BaseModel):
 
     @classmethod
     def sanitize_metadata(cls, d) -> dict[str, Any]:
+        cls._validate_structure(d, "metadata")
         return sanitize_dict(d, "metadata", cast_values=False)
 
     @classmethod
     def sanitize_tags(cls, d) -> dict[str, TagType]:
+        cls._validate_structure(d, "tags")
         return sanitize_dict(d, "tags", cast_values=True)
+
+    @classmethod
+    def _validate_structure(cls, d, field_name: str) -> None:
+        try:
+            validate_dict(d)
+        except (TypeError, ValueError) as e:
+            raise BadRequestError(f"Invalid {field_name}: {e}", details={field_name: d}) from e
 
     # ----------------------------------------------------------------------------------
     # Factory

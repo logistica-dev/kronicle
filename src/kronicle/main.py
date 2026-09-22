@@ -130,7 +130,7 @@ class KronicleApp:
         """Application lifecycle management."""
         here = "app.launch"
         db_conf = self.conf.db
-        log_d(here, "Connection url:", db_conf.masked_connection_url)
+        # log_d(here, "Connection url", db_conf.masked_connection_url)
 
         # --- DB structure ---
         with log_block(here, "Schema alignment"):

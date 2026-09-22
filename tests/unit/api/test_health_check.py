@@ -1,4 +1,5 @@
 # tests/unit/api/test_health_check.py
+import json
 from unittest.mock import AsyncMock
 
 from kronicle._build import __commit__
@@ -13,11 +14,11 @@ def test_liveness():
 def test_readiness_ready():
     data_service = AsyncMock()
     data_service.ping.return_value = True
-    result = readiness(data_service=data_service)
-    # readiness is an async function
     import asyncio
 
-    assert asyncio.run(result) == {"status": "ready"}
+    resp = asyncio.run(readiness(data_service=data_service))
+    assert resp.status_code == 200
+    assert json.loads(bytes(resp.body)) == {"status": "ready"}
 
 
 def test_readiness_not_ready():
@@ -25,7 +26,9 @@ def test_readiness_not_ready():
     data_service.ping.return_value = False
     import asyncio
 
-    assert asyncio.run(readiness(data_service=data_service)) == {"status": "not_ready"}
+    resp = asyncio.run(readiness(data_service=data_service))
+    assert resp.status_code == 503
+    assert json.loads(bytes(resp.body)) == {"status": "not_ready"}
 
 
 def test_readiness_raises_returns_error():
@@ -33,9 +36,10 @@ def test_readiness_raises_returns_error():
     data_service.ping.side_effect = RuntimeError("db down")
     import asyncio
 
-    result = asyncio.run(readiness(data_service=data_service))
-    assert result["status"] == "not_ready"
-    assert result["error"] == "db down"
+    resp = asyncio.run(readiness(data_service=data_service))
+    assert resp.status_code == 503
+    assert json.loads(bytes(resp.body))["status"] == "not_ready"
+    assert json.loads(bytes(resp.body))["error"] == "db down"
 
 
 def test_version():
