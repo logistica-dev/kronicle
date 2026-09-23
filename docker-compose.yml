@@ -72,7 +72,9 @@ services:
       - "8000:${KRONICLE_PORT:-8000}"
     networks:
       - kronicle-net # Same network as db
-    restart: "no" # unless-stopped # Keep container running unless manually stopped
+    restart:
+      "unless-stopped" # "no" or "unless-stopped"
+      # Keep container running unless manually stopped
 
 # ------------------------------
 # Persisted volumes

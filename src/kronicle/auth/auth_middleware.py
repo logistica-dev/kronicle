@@ -42,6 +42,8 @@ class ExcludedPaths:
 
     @classmethod
     def normalize_path(cls, path: str) -> str:
+        if path in ("", "/"):
+            return "/"
         return path.rstrip("/")
 
     def is_excluded_path(self, path: str) -> bool:

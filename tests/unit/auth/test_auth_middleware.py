@@ -20,6 +20,7 @@ from kronicle.schemas.permissions.permission import PermStr
 class TestExcludedPaths:
     def test_default_excluded_paths(self):
         paths = ExcludedPaths()
+        assert paths.is_excluded_path("/")
         assert paths.is_excluded_path("/favicon.ico")
         assert paths.is_excluded_path("/health/live")
         assert paths.is_excluded_path("/static/style.css")
@@ -37,6 +38,7 @@ class TestExcludedPaths:
     def test_normalize_path_strips_trailing_slash(self):
         assert ExcludedPaths.normalize_path("/channels/") == "/channels"
         assert ExcludedPaths.normalize_path("/channels") == "/channels"
+        assert ExcludedPaths.normalize_path("/") == "/"
 
 
 @pytest.fixture
