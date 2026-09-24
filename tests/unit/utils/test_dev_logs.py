@@ -3,12 +3,16 @@ from logging import INFO, LogRecord
 from unittest.mock import patch
 
 from kronicle.utils.dev_logs import (
+    OneLetterRichHandler,
     SingleLetterFormatter,
+    attach_request_console_logger,
+    basic_logger,
     decorator_timer,
     format_input,
     log_assert,
     log_block,
     log_d_if,
+    request_logger,
 )
 
 
@@ -115,6 +119,44 @@ def test_log_d_if_does_not_log_when_false():
             log_d_if("here", False, "msg")
 
         mock_debug.assert_not_called()
+
+
+# ------------------------------------------------------
+# attach_request_console_logger
+# ------------------------------------------------------
+class TestAttachRequestConsoleLogger:
+    def teardown_method(self):
+        request_logger.handlers = [h for h in request_logger.handlers if not isinstance(h, OneLetterRichHandler)]
+
+    @patch("kronicle.utils.dev_logs._ensure_logging")
+    def test_attaches_rich_console_handler_when_enabled(self, mock_ensure):
+        mock_ensure.side_effect = None
+        h = OneLetterRichHandler()
+        basic_logger.addHandler(h)
+        try:
+            attach_request_console_logger(enabled=True)
+            assert any(isinstance(x, OneLetterRichHandler) for x in request_logger.handlers)
+        finally:
+            basic_logger.removeHandler(h)
+            request_logger.handlers = [x for x in request_logger.handlers if not isinstance(x, OneLetterRichHandler)]
+
+    def test_does_not_add_duplicate_handler(self):
+        h = OneLetterRichHandler()
+        basic_logger.addHandler(h)
+        try:
+            attach_request_console_logger(True)
+            before = [x for x in request_logger.handlers if isinstance(x, OneLetterRichHandler)]
+            attach_request_console_logger(True)
+            after = [x for x in request_logger.handlers if isinstance(x, OneLetterRichHandler)]
+            assert len(after) == len(before)
+        finally:
+            basic_logger.removeHandler(h)
+            request_logger.handlers = [x for x in request_logger.handlers if not isinstance(x, OneLetterRichHandler)]
+
+    @patch("kronicle.utils.dev_logs._ensure_logging")
+    def test_noop_when_disabled(self, mock_ensure):
+        attach_request_console_logger(enabled=False)
+        assert not any(isinstance(h, OneLetterRichHandler) for h in request_logger.handlers)
 
 
 # ------------------------------------------------------

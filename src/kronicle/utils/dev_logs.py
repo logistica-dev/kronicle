@@ -202,7 +202,7 @@ def setup_logging():
         print(f"[WARN] Failed to set up file logger at {log_file}", file=sys.stderr)
         traceback.print_exc()
     # ---------------------
-    # Request logger (file only; uvicorn handles console)
+    # Request logger (file is always enabled; console is opt-in)
     # ---------------------
     request_logger.setLevel(INFO)
     request_logger.propagate = False
@@ -227,6 +227,25 @@ def setup_logging():
 def _ensure_logging():
     if not _logging_initialized:
         setup_logging()
+
+
+def attach_request_console_logger(enabled: bool = True):
+    """Attach the Rich console handler to the request logger when enabled.
+
+    The request logger always writes to the log file; console output is gated
+    behind ``enabled`` (the ``app.should_log_request`` config flag).
+    """
+    if not enabled:
+        return
+    _ensure_logging()
+    if any(isinstance(h, OneLetterRichHandler) for h in request_logger.handlers):
+        return
+    console_handler = next(
+        (h for h in basic_logger.handlers if isinstance(h, OneLetterRichHandler)),
+        None,
+    )
+    if console_handler is not None:
+        request_logger.addHandler(console_handler)
 
 
 # ------------------------------------------------------

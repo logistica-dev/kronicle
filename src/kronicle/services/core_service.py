@@ -99,12 +99,12 @@ class CoreService:
             channels = self._channel_repo.fetch_all(db)
         return {c.id for c in channels}
 
-    def sync_core_channels(
+    def create_missing_core_channels(
         self,
         channels: Sequence[InputCoreChannel],
         default_zone_id: UUID | None = None,
     ) -> list[UUID]:
-        here = f"{mod}.sync_core_channels"
+        here = f"{mod}.create_missing_core_channels"
         existing = self.list_core_channel_ids()
         missing = [c for c in channels if c.id not in existing]
         if not missing:
@@ -129,6 +129,20 @@ class CoreService:
             db.flush()
         log_i(here, f"Created {len(created)} CoreChannels")
         return created
+
+    def delete_orphan_core_channels(self, wanted_ids: set[UUID]) -> list[UUID]:
+        """Delete CoreChannels whose id is not in ``wanted_ids`` (no ChannelMetadata anymore)."""
+        here = f"{mod}.delete_orphan_core_channels"
+        wanted = set(wanted_ids)
+        with self._db.transaction() as db:
+            orphans = {c.id for c in self._channel_repo.fetch_all(db)} - wanted
+            if not orphans:
+                log_d(here, "No orphan CoreChannels to delete")
+                return []
+            self._channel_repo.delete_by_ids(db, ids=orphans)
+            db.flush()
+        log_i(here, f"Deleted {len(orphans)} orphan CoreChannels")
+        return list(orphans)
 
     def ensure_default_zone(self, name: str = DEFAULT_ZONE_NAME) -> CoreZone:
         with self._db.get_db() as db:

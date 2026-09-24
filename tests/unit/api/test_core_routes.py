@@ -158,12 +158,15 @@ class TestSyncCoreChannels:
         data_service.fetch_all_metadata.return_value = data_channels
         core = MagicMock()
         core.ensure_default_zone.return_value = SimpleNamespace(id=zone_id)
-        core.sync_core_channels.return_value = [channel_id_2]
+        core.create_missing_core_channels.return_value = [channel_id_2]
+        core.delete_orphan_core_channels.return_value = [uuid4()]
 
         result = await sync_core_channels(data_service=data_service, core=core)
 
         assert result["total_data_channels"] == 2
         assert result["created_core_channels"] == 1
+        assert result["deleted_core_channels"] == 1
         assert result["default_zone_id"] == uuid_to_str(zone_id)
         assert "Synced 2 data channels" in result["detail"]
-        assert core.sync_core_channels.call_count == 1
+        assert core.create_missing_core_channels.call_count == 1
+        core.delete_orphan_core_channels.assert_called_once_with({channel_id_1, channel_id_2})

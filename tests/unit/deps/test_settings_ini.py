@@ -72,7 +72,7 @@ def test_appsettings_from_parser_override():
     assert app.name == "TestApp"
     assert (
         app.__str__()
-        == '{"version": "1.2.3", "name": "TestApp", "id": "ffffffff-62dd-490a-8f7e-b168c68da4a7", "description": "FastAPI-powered TimescaleDB microservice for storing time-series measurements", "openapi_url": "/openapi"}'
+        == '{"version": "1.2.3", "name": "TestApp", "id": "ffffffff-62dd-490a-8f7e-b168c68da4a7", "description": "FastAPI-powered TimescaleDB microservice for storing time-series measurements", "openapi_url": "/openapi", "should_log_request": true}'
     )
 
 

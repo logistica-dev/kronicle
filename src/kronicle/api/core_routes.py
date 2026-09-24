@@ -214,7 +214,8 @@ def delete_core_channel(
     summary="Sync data channels to CoreChannels",
     description=(
         "Scans all ChannelResources in the data DB and creates missing CoreChannel records "
-        "in the core RBAC schema. Also ensures a default zone exists."
+        "in the core RBAC schema. Also ensures a default zone exists and removes orphan "
+        "CoreChannels that no longer have a ChannelMetadata counterpart."
     ),
     response_model=dict[str, str | int],
     dependencies=[Depends(require_permission(PermStr.CHANNEL_SYNC))],
@@ -224,14 +225,17 @@ async def sync_core_channels(
     core: CoreService = Depends(core_service),  # noqa: B008
 ):
     data_channels = await data_service.fetch_all_metadata()
+    wanted_ids = {c.id for c in data_channels}
     channels_info = [InputCoreChannel(id=c.id, name=c.name) for c in data_channels]
 
     default_zone = core.ensure_default_zone()
-    created = core.sync_core_channels(channels_info, default_zone_id=default_zone.id)
+    created = core.create_missing_core_channels(channels_info, default_zone_id=default_zone.id)
+    deleted = core.delete_orphan_core_channels(wanted_ids)
 
     return {
         "detail": f"Synced {len(channels_info)} data channels",
         "total_data_channels": len(channels_info),
         "created_core_channels": len(created),
+        "deleted_core_channels": len(deleted),
         "default_zone_id": uuid_to_str(default_zone.id),
     }

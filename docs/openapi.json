@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "KRONICLE",
-    "summary": "FastAPI x TimescaleDB \u00b5service for storing time-series measurements",
-    "version": "0.6.5"
+    "title": "TestApp",
+    "summary": "desc",
+    "version": "1.0"
   },
   "paths": {
     "/health/live": {
@@ -2904,7 +2904,7 @@
           "Core"
         ],
         "summary": "Sync data channels to CoreChannels",
-        "description": "Scans all ChannelResources in the data DB and creates missing CoreChannel records in the core RBAC schema. Also ensures a default zone exists.",
+        "description": "Scans all ChannelResources in the data DB and creates missing CoreChannel records in the core RBAC schema. Also ensures a default zone exists and removes orphan CoreChannels that no longer have a ChannelMetadata counterpart.",
         "operationId": "sync_core_channels_core_v1_sync_post",
         "responses": {
           "200": {

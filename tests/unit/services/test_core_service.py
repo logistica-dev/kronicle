@@ -229,7 +229,7 @@ class TestSyncCoreChannels:
         new_ids = [uuid4(), uuid4()]
         channels = [InputCoreChannel(id=eid) for eid in existing_ids] + [InputCoreChannel(id=nid) for nid in new_ids]
 
-        result = service.sync_core_channels(channels)
+        result = service.create_missing_core_channels(channels)
 
         assert result == new_ids
         assert mock_db_session.add.call_count == 2
@@ -239,7 +239,7 @@ class TestSyncCoreChannels:
         mock_channel_repo.fetch_all.return_value = [MagicMock(id=eid) for eid in existing_ids]
 
         channels = [InputCoreChannel(id=eid) for eid in existing_ids]
-        result = service.sync_core_channels(channels)
+        result = service.create_missing_core_channels(channels)
 
         assert result == []
 
@@ -248,7 +248,7 @@ class TestSyncCoreChannels:
         mock_channel_repo.fetch_all.return_value = []
 
         new_id = uuid4()
-        result = service.sync_core_channels([InputCoreChannel(id=new_id)], default_zone_id=zone_id)
+        result = service.create_missing_core_channels([InputCoreChannel(id=new_id)], default_zone_id=zone_id)
 
         assert result == [new_id]
         mock_db_session.add.assert_called_once()
@@ -263,11 +263,33 @@ class TestSyncCoreChannels:
         mock_zone_repo.get_by_name.return_value = default_zone
 
         new_id = uuid4()
-        result = service.sync_core_channels([InputCoreChannel(id=new_id)])
+        result = service.create_missing_core_channels([InputCoreChannel(id=new_id)])
 
         assert result == [new_id]
         added = mock_db_session.add.call_args[0][0]
         assert added.zone_id == default_zone.id
+
+
+class TestDeleteOrphanCoreChannels:
+    def test_deletes_orphan_channels(self, service, mock_db, mock_db_session, mock_channel_repo):
+        wanted = {uuid4()}
+        orphan_id = uuid4()
+        mock_channel_repo.fetch_all.return_value = [MagicMock(id=eid) for eid in [*wanted, orphan_id]]
+
+        result = service.delete_orphan_core_channels(wanted)
+
+        assert result == [orphan_id]
+        mock_channel_repo.delete_by_ids.assert_called_once()
+        assert mock_channel_repo.delete_by_ids.call_args.kwargs["ids"] == {orphan_id}
+
+    def test_no_orphans_returns_empty(self, service, mock_db, mock_db_session, mock_channel_repo):
+        wanted = {uuid4()}
+        mock_channel_repo.fetch_all.return_value = [MagicMock(id=eid) for eid in wanted]
+
+        result = service.delete_orphan_core_channels(wanted)
+
+        assert result == []
+        mock_channel_repo.delete_by_ids.assert_not_called()
 
 
 class TestEnsureDefaultZone:

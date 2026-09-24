@@ -47,7 +47,14 @@ from kronicle.services.channel_service import ChannelService
 from kronicle.services.core_service import CoreService
 from kronicle.services.rbac_service import RbacService
 from kronicle.services.seed_service import seed_anonymous_group, seed_app_superuser, seed_default_roles
-from kronicle.utils.dev_logs import log_block, log_d, log_e, log_w, request_logger
+from kronicle.utils.dev_logs import (
+    attach_request_console_logger,
+    log_block,
+    log_d,
+    log_e,
+    log_w,
+    request_logger,
+)
 
 mod = "main"
 
@@ -276,11 +283,18 @@ class KronicleApp:
             allow_headers=["*"],
         )
 
-        # Add request logging middleware (file only; uvicorn handles console)
+        # Add request logging middleware (file always; console gated by app.should_log_request)
+        attach_request_console_logger(self.conf.app.should_log_request)
+
         @self.app.middleware("http")
         async def log_requests(request: Request, call_next):
             response = await call_next(request)
-            request_logger.info(f'"{request.method} {request.url.path} HTTP/1.1" {response.status_code}')
+            client = request.client
+            host = client.host if client else "-"
+            port = client.port if client else "-"
+            request_logger.info(
+                f'{host}:{port} - "{request.method} {request.url.path} HTTP/1.1" {response.status_code}'
+            )
             return response
 
         # Add trailing slash stripping middleware

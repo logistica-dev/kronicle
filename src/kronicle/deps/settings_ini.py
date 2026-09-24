@@ -88,6 +88,7 @@ class AppSettings(IniSection):
     id: UUID = Field(default_factory=lambda: UUID("ffffffff-62dd-490a-8f7e-b168c68da4a7"))
     description: str = Field(default="FastAPI-powered TimescaleDB microservice for storing time-series measurements")
     openapi_url: str = Field(default="/openapi")
+    should_log_request: bool = True
 
     @property
     def tinyid(self) -> str:

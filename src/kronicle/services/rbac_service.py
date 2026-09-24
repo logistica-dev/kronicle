@@ -163,8 +163,8 @@ class RbacService:
     def _fetch_user_by_login(self, login_input: InputUserLogin) -> RbacUser:
         with self._db.get_db() as db:  # read-only
             # TODO: remove this!
-            users = self._user_repo.fetch_all(db, include_superusers=True)
-            log_d(mod, "_fetch_user_by_login", "users:", users)
+            # users = self._user_repo.fetch_all(db, include_superusers=True)
+            # log_d(mod, "_fetch_user_by_login", "users:", users)
             if login_input.is_email:
                 email = f"{login_input.login}".lower()
                 db_user = self._user_repo.get_by_email(db, email=email, include_superusers=True)

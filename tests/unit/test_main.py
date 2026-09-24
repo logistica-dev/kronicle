@@ -85,6 +85,26 @@ def test_middleware_initialization_called(mock_settings):
         mock_middleware.assert_called_once()
 
 
+def test_request_console_logger_attached_when_enabled(mock_settings):
+    mock_settings.app.should_log_request = True
+    with (
+        patch.object(KronicleApp, "init_exception_handlers"),
+        patch("kronicle.main.attach_request_console_logger") as mock_attach,
+    ):
+        KronicleApp(mock_settings)
+        mock_attach.assert_called_once_with(True)
+
+
+def test_request_console_logger_not_attached_when_disabled(mock_settings):
+    mock_settings.app.should_log_request = False
+    with (
+        patch.object(KronicleApp, "init_exception_handlers"),
+        patch("kronicle.main.attach_request_console_logger") as mock_attach,
+    ):
+        KronicleApp(mock_settings)
+        mock_attach.assert_called_once_with(False)
+
+
 def test_exception_handlers_initialization_called(mock_settings):
     """Ensure init_exception_handlers is called during factory creation."""
     with patch.object(KronicleApp, "init_exception_handlers") as mock_handlers:
