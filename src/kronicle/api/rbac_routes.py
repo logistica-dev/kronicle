@@ -567,6 +567,21 @@ def check_user_group(
     return rbac.check_user_in_group(user_id=user_id, group_id=group_id, indirect=indirect)
 
 
+@rbac_router.get(
+    "/users/{user_id}/groups",
+    summary="Get groups for a user",
+    description="Returns all groups the user is assigned to (directly or via ancestor groups).",
+    response_model=list[OutputGroup],
+    dependencies=[Depends(require_permission(PermStr.GROUP_READ))],
+)
+def get_groups_for_user(
+    user_id: UUID,
+    indirect: bool = Query(False, description="Include indirect membership via sub-groups"),
+    rbac: RbacService = Depends(rbac_service),  # noqa: B008
+):
+    return rbac.get_groups_for_user(user_id=user_id, indirect=indirect)
+
+
 # --------------------------------------------------------------------------------------------------
 # Access Profiles – reusable scoped roles
 # --------------------------------------------------------------------------------------------------

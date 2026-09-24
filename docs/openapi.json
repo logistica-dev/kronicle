@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "TestApp",
-    "summary": "desc",
-    "version": "1.0"
+    "title": "KRONICLE",
+    "summary": "FastAPI x TimescaleDB \u00b5service for storing time-series measurements",
+    "version": "0.6.7"
   },
   "paths": {
     "/health/live": {
@@ -4688,6 +4688,71 @@
                     }
                   ],
                   "title": "Response Check User Group Rbac V1 Users  User Id  Groups  Group Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rbac/v1/users/{user_id}/groups": {
+      "get": {
+        "tags": [
+          "RBAC"
+        ],
+        "summary": "Get groups for a user",
+        "description": "Returns all groups the user is assigned to (directly or via ancestor groups).",
+        "operationId": "get_groups_for_user_rbac_v1_users__user_id__groups_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "indirect",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include indirect membership via sub-groups",
+              "default": false,
+              "title": "Indirect"
+            },
+            "description": "Include indirect membership via sub-groups"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OutputGroup"
+                  },
+                  "title": "Response Get Groups For User Rbac V1 Users  User Id  Groups Get"
                 }
               }
             }

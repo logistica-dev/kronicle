@@ -41,3 +41,11 @@ def test_model_dump_keeps_email():
 def test_repr():
     u = RbacUser(email="alice@example.com")
     assert repr(u) == "<User alice@example.com>"
+
+
+def test_snapshot_excludes_password_hash():
+    u = _user()
+    u.password_hash = "$argon2id$hunter2"
+    snap = u.snapshot
+    assert "password_hash" not in snap
+    assert snap["email"] == "test@example.com"

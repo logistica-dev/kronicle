@@ -27,7 +27,7 @@ class InputSchema(BaseModel):
     details: dict[str, Any] | None = Field(default=None, description="Optional JSONB metadata")
 
     @field_validator("name")
-    def validate_group_name_syntax(cls, v: str | None) -> str | None:
+    def validate_input_name_syntax(cls, v: str | None) -> str | None:
         if not v:
             return None
         try:

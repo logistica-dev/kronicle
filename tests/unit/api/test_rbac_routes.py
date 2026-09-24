@@ -36,6 +36,7 @@ from kronicle.api.rbac_routes import (
     get_group_resources,
     get_group_rows,
     get_group_zones,
+    get_groups_for_user,
     get_role,
     get_row_access_profile,
     get_user_by_id,
@@ -319,6 +320,22 @@ class TestGroupRoutes:
         mock_rbac.get_users_from_group.return_value = expected
         result = get_users_from_group(group_id=any_uuid, rbac=mock_rbac)
         mock_rbac.get_users_from_group.assert_called_once_with(group_id=any_uuid)
+        assert result == expected
+
+    def test_get_groups_for_user(self, mock_rbac, any_uuid):
+        user_id = uuid4()
+        expected = [{"id": uuid4(), "name": "group"}]
+        mock_rbac.get_groups_for_user.return_value = expected
+        result = get_groups_for_user(user_id=user_id, indirect=False, rbac=mock_rbac)
+        mock_rbac.get_groups_for_user.assert_called_once_with(user_id=user_id, indirect=False)
+        assert result == expected
+
+    def test_get_groups_for_user_indirect(self, mock_rbac, any_uuid):
+        user_id = uuid4()
+        expected = [{"id": uuid4(), "name": "group"}]
+        mock_rbac.get_groups_for_user.return_value = expected
+        result = get_groups_for_user(user_id=user_id, indirect=True, rbac=mock_rbac)
+        mock_rbac.get_groups_for_user.assert_called_once_with(user_id=user_id, indirect=True)
         assert result == expected
 
     def test_remove_user_from_group(self, mock_rbac, any_uuid):

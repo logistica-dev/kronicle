@@ -74,6 +74,39 @@ class TestGroups:
         rbac_service._user_repo.get_by_id = MagicMock(return_value=None)
         assert rbac_service.get_users_from_group(group_id=uuid4()) == []
 
+    def test_get_groups_for_user(self, rbac_service):
+        gid = uuid4()
+        rbac_service._user_groups_repo.get_group_ids_for_user = MagicMock(return_value={gid})
+        rbac_service._group_repo.get_by_id = MagicMock(return_value=fake_group(id=gid))
+        result = rbac_service.get_groups_for_user(user_id=uuid4())
+        assert len(result) == 1
+        assert result[0].id == gid
+
+    def test_get_groups_for_user_skips_missing(self, rbac_service):
+        rbac_service._user_groups_repo.get_group_ids_for_user = MagicMock(return_value={uuid4()})
+        rbac_service._group_repo.get_by_id = MagicMock(return_value=None)
+        assert rbac_service.get_groups_for_user(user_id=uuid4()) == []
+
+    def test_get_groups_for_user_indirect(self, rbac_service):
+        direct_gid = uuid4()
+        parent_gid = uuid4()
+        rbac_service._user_groups_repo.get_group_ids_for_user = MagicMock(return_value={direct_gid})
+        rbac_service._get_group_ancestor_ids = MagicMock(return_value={parent_gid})
+        rbac_service._group_repo.get_by_id = MagicMock(
+            side_effect=lambda db, id: fake_group(id=id) if id in (direct_gid, parent_gid) else None
+        )
+        result = rbac_service.get_groups_for_user(user_id=uuid4(), indirect=True)
+        assert {g.id for g in result} == {direct_gid, parent_gid}
+
+    def test_get_groups_for_user_direct_only(self, rbac_service):
+        direct_gid = uuid4()
+        rbac_service._user_groups_repo.get_group_ids_for_user = MagicMock(return_value={direct_gid})
+        rbac_service._get_group_ancestor_ids = MagicMock(return_value={uuid4()})
+        rbac_service._group_repo.get_by_id = MagicMock(side_effect=lambda db, id: fake_group(id=id))
+        result = rbac_service.get_groups_for_user(user_id=uuid4(), indirect=False)
+        assert {g.id for g in result} == {direct_gid}
+        rbac_service._get_group_ancestor_ids.assert_not_called()
+
     def test_patch_group(self, rbac_service):
         gid = uuid4()
         grp = fake_group(id=gid, name="old")

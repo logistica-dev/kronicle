@@ -322,7 +322,7 @@ class RbacService:
         here = "_deact_usr"
         if not db_user:
             raise UnauthorizedError("User doesn't exists")
-        log_i(here, db_user.model_dump)
+        log_i(here, db_user.snapshot)
         db_user.is_active = False
         db.commit()
         db.refresh(db_user)
@@ -332,7 +332,7 @@ class RbacService:
         here = "_del_usr"
         if not db_user:
             raise UnauthorizedError("User doesn't exists")
-        log_w(here, db_user.model_dump())
+        log_w(here, db_user.snapshot)
 
         # Clear role and group assignments explicitly — even with ondelete=CASCADE,
         # SQLAlchemy's unitofwork processor tries to NULL PK columns before
@@ -1343,6 +1343,20 @@ class RbacService:
         with self._db.get_db() as db:
             group = self._group_repo.get_by_name(db, name=name)
             return OutputGroup.from_db(group) if group else None
+
+    def get_groups_for_user(self, *, user_id: UUID, indirect: bool = False) -> list[OutputGroup]:
+        list_groups = []
+        with self._db.get_db() as db:
+            direct_ids = self._user_groups_repo.get_group_ids_for_user(db, user_id=user_id)
+            group_id_list = set(direct_ids)
+            if indirect:
+                for g_id in direct_ids:
+                    group_id_list.update(self._get_group_ancestor_ids(db, g_id))
+            for g_id in group_id_list:
+                grp = self._group_repo.get_by_id(db, id=g_id)
+                if grp:
+                    list_groups.append(OutputGroup.from_db(grp))
+        return list_groups
 
     def get_users_from_group(self, *, group_id: UUID) -> list[OutputUser]:
         list_users = []

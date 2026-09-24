@@ -33,6 +33,7 @@ class RbacUser(RbacEntity):
             d.pop("is_active", None)
         if not self.is_superuser:
             d.pop("is_superuser", None)
+        d.pop("password_hash", None)
         return d
 
     def __repr__(self) -> str:
