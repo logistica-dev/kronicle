@@ -114,11 +114,10 @@ class PermStr(StrEnum):
         PermStr.CHANNEL_READ.action     # → PermAction.READ
     """
 
-    ROLE_CREATE = perm(Tgt.ROLE, Act.CREATE)  # Create a role
-    ROLE_READ = perm(Tgt.ROLE, Act.READ)  #     List roles
-    ROLE_UPDATE = perm(Tgt.ROLE, Act.UPDATE)  # Update a role
-    ROLE_DELETE = perm(Tgt.ROLE, Act.DELETE)  # Delete a role
-    ROLE_ASSIGN = perm(Tgt.ROLE, Act.ASSIGN)  # Assign a role to a user or a group
+    USER_CREATE = perm(Tgt.USER, Act.CREATE)  # Create a user
+    USER_READ = perm(Tgt.USER, Act.READ)  #     List users
+    USER_UPDATE = perm(Tgt.USER, Act.UPDATE)  # Update a user's information
+    USER_DELETE = perm(Tgt.USER, Act.DELETE)  # Delete a user
 
     GROUP_CREATE = perm(Tgt.GROUP, Act.CREATE)  # Create a group
     GROUP_READ = perm(Tgt.GROUP, Act.READ)  #     List groups
@@ -126,10 +125,16 @@ class PermStr(StrEnum):
     GROUP_DELETE = perm(Tgt.GROUP, Act.DELETE)  # Delete a group
     GROUP_ASSIGN = perm(Tgt.GROUP, Act.ASSIGN)  # Assign a user to a group
 
-    USER_CREATE = perm(Tgt.USER, Act.CREATE)  # Create a user
-    USER_READ = perm(Tgt.USER, Act.READ)  #     List users
-    USER_UPDATE = perm(Tgt.USER, Act.UPDATE)  # Update a user's information
-    USER_DELETE = perm(Tgt.USER, Act.DELETE)  # Delete a user
+    ROLE_CREATE = perm(Tgt.ROLE, Act.CREATE)  # Create a role
+    ROLE_READ = perm(Tgt.ROLE, Act.READ)  #     List roles
+    ROLE_UPDATE = perm(Tgt.ROLE, Act.UPDATE)  # Update a role
+    ROLE_DELETE = perm(Tgt.ROLE, Act.DELETE)  # Delete a role
+    ROLE_ASSIGN = perm(Tgt.ROLE, Act.ASSIGN)  # Assign a role to a user or a group
+
+    POLICY_CREATE = perm(Tgt.POLICY, Act.CREATE)
+    POLICY_READ = perm(Tgt.POLICY, Act.READ)
+    POLICY_UPDATE = perm(Tgt.POLICY, Act.UPDATE)
+    POLICY_DELETE = perm(Tgt.POLICY, Act.DELETE)
 
     ZONE_CREATE = perm(Tgt.ZONE, Act.CREATE)  # Create a zone
     ZONE_READ = perm(Tgt.ZONE, Act.READ)  #     List zones
@@ -146,11 +151,6 @@ class PermStr(StrEnum):
     ROW_CREATE = perm(Tgt.ROW, Act.CREATE)
     ROW_UPDATE = perm(Tgt.ROW, Act.UPDATE)
     ROW_DELETE = perm(Tgt.ROW, Act.DELETE)
-
-    POLICY_CREATE = perm(Tgt.POLICY, Act.CREATE)
-    POLICY_READ = perm(Tgt.POLICY, Act.READ)
-    POLICY_UPDATE = perm(Tgt.POLICY, Act.UPDATE)
-    POLICY_DELETE = perm(Tgt.POLICY, Act.DELETE)
 
     RBAC_ACCESS = perm(Tgt.RBAC, Act.ACCESS)
     RBAC_READ = perm(Tgt.RBAC, Act.READ)

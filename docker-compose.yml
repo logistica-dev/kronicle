@@ -5,19 +5,24 @@ services:
   # TimescaleDB / PostgreSQL
   # --------------------------
   db:
-    image: timescale/timescaledb:latest-pg17 # Use latest TimescaleDB image (PostgreSQL 16)
-    # image: timescaledev/timescaledb:2.26.0-pg17 # Dev version
+    image: timescale/timescaledb:latest-pg17 # Use latest TimescaleDB image (v17)
     container_name: kronicle-db
     environment:
       # Set from env file or .env
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:-kronicle_pgsu}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-add1ddd6-0076-4021-b0bf-b00b0c25e24d}
+      POSTGRES_DB: ${POSTGRES_DB:-kronicle_db}
       KRONICLE_DB_NAME: ${KRONICLE_DB_NAME}
     volumes:
       - ./kronicle-db-data:/var/lib/postgresql/data # Persist DB data
+    command: >
+      postgres
+      -c log_statement=all
+      -c log_destination=stderr
+      -c logging_collector=off
+      -c log_line_prefix='%m [%p] %q%u@%d '
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kronicle_pgsu}"]
       interval: 2s
       timeout: 2s
       retries: 15
@@ -41,19 +46,32 @@ services:
     environment:
       KRONICLE_DB_HOST: db # <- directly reference the db service
       KRONICLE_DB_PORT: 5432 # fixed port inside network
-      POSTGRES_DB: ${POSTGRES_DB}
-      KRONICLE_DB_NAME: ${KRONICLE_DB_NAME}
+      POSTGRES_DB: ${POSTGRES_DB:-kronicle_db}
+      KRONICLE_DB_AUTO_MIGRATION: ${KRONICLE_DB_AUTO_MIGRATION:-1}
 
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      #--- DB super-user
+      # Should match the info provided for `db` container)
+      #
+      # To encode in base64 the usr:pwd pair, you can define a function like
+      #   b64() { echo -n "$1" | basenc --base64 -w 0 }
+      # Then use it like this:
+      #   b64 "kronicle:add1ddd6-0076-4021-b0bf-b00b0c25e24d"
+      KRONICLE_DB_SU_CREDS: ${KRONICLE_DB_SU_CREDS:-a3JvbmljbGVfcGdzdTphZGQxZGRkNi0wMDc2LTQwMjEtYjBiZi1iMDBiMGMyNWUyNGQ}
 
-      KRONICLE_CHAN_CREDS: ${KRONICLE_CHAN_CREDS}
-      KRONICLE_RBAC_CREDS: ${KRONICLE_RBAC_CREDS}
+      # DB user for accessing data (channels metadata + timeseries)
+      KRONICLE_CHAN_CREDS: ${KRONICLE_CHAN_CREDS:-Y2hhbjpDaGFuX3A0NTV3MFJkIQ}
+      # DB user for accessing RBAC definition
+      KRONICLE_RBAC_CREDS: ${KRONICLE_RBAC_CREDS:-cmJhYzpSYmFjX3A0NTV3MFJkIQ}
 
-      KRONICLE_PORT: ${KRONICLE_PORT:-8000}
+      KRONICLE_PORT: 8000
       KRONICLE_HOST: 0.0.0.0
 
-      KRONICLE_SU_INFO: ${KRONICLE_SU_INFO}
+      # App super-user credentials and email
+      # You may use the script to hash these:
+      #   python3 scripts/utils/hash_creds.py <username> <email> <password>
+      # Ex:
+      #   python3 ./scripts/utils/hash_creds.py kronicle_maintainer kronicle_maintainer@irisa.fr Feb58bc0-a40c-4e6f-a8d2-11d641876886
+      KRONICLE_SU_INFO: ${KRONICLE_SU_INFO:-a3JvbmljbGVfbWFpbnRhaW5lcjprcm9uaWNsZV9tYWludGFpbmVyQGlyaXNhLmZyOiRhcmdvbjJpZCR2PTE5JG09NjU1MzYsdD0zLHA9NCRyYkdpRHNxRnYwNVpNSmJBb0VLQTVnJHQwc0ZZV3FXaEwyTjJkWThvazNUNGZpQ3QrNkhVV2tzbW5DZ2pCRVI5dHM}
 
       KRONICLE_CONF: /opt/kronicle/conf/default-conf.ini
       KRONICLE_ENV: test
@@ -62,14 +80,14 @@ services:
       # Migration backup location: directory + file name prefix.
       # KRONICLE_BACKUP_DIR is the mount target below; KRONICLE_BACKUP_PREFIX
       # is just the file name prefix (defaults to "kronicle").
-      KRONICLE_BACKUP_DIR: ${KRONICLE_BACKUP_DIR:-/opt/kronicle/backup}
+      KRONICLE_BACKUP_DIR: /opt/kronicle/backup
     volumes:
       # Persist migration backup dumps outside the container, on the host.
       # Target must match KRONICLE_BACKUP_DIR; host source is relative to
       # this compose file (change it for e.g. ~/kronicle-dev/backup).
-      - ${KRONICLE_BACKUP_HOST_DIR:-./backup}:${KRONICLE_BACKUP_DIR:-/opt/kronicle/backup}
+      - ${KRONICLE_BACKUP_HOST_DIR:-./backup}:/opt/kronicle/backup
     ports:
-      - "8000:${KRONICLE_PORT:-8000}"
+      - ${KRONICLE_HOST_PORT:-8000}:8000
     networks:
       - kronicle-net # Same network as db
     restart:
