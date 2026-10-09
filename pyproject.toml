@@ -76,7 +76,7 @@ optional-dependencies = { dev = { file = ["requirements-dev.txt"] } }
 
 # ----- Tool: pyright
 [tool.pyright]
-exclude = ["**/__pycache__", "**/.env"]
+exclude = ["**/__pycache__", "**/.env", "**/.vscod*"]
 extraPaths = ["src", "../kronicle-sdk/src"]
 include = ["src", "tests", "kronicle-sdk"]
 pythonVersion = "3.12"

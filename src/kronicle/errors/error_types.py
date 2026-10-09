@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from typing import Any
+from uuid import uuid4
 
 from fastapi import HTTPException, Request, status
 from fastapi import HTTPException as FastApiHttpException
@@ -9,8 +10,6 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, ValidationError
 from starlette.exceptions import HTTPException as StarletteHttpException
-
-from kronicle.utils.str_utils import uuid4_str
 
 
 # ------------------------------------------------------------------------------
@@ -21,7 +20,7 @@ def new_request_id() -> str:
     Generate a new UUID4 string to uniquely identify a request.
     Useful for correlating logs and error responses.
     """
-    return uuid4_str()
+    return uuid4().hex
 
 
 # ------------------------------------------------------------------------------

@@ -159,7 +159,7 @@ def test_populate_name_with_alias():
     assert payload["name"] == "AliasName"
 
 
-def test_populate_name_with_name_preserved():
+def test_populate_name_by_name_preserved():
     values = {"name": "Original"}
     payload = InputPayload._populate_name(values)  # type: ignore
     assert payload["name"] == "Original"

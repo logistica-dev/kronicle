@@ -149,6 +149,9 @@ def test_ensure_uuid4_raises_on_invalid_or_wrong_version():
     # Invalid string
     with raises(ValueError):
         ensure_uuid4("not-a-uuid")
+    # Missing id (SDK no longer initializes UUIDs)
+    with raises(ValueError):
+        ensure_uuid4(None)
     # UUID v1
 
     with raises(ValueError):

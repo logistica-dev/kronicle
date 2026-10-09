@@ -673,28 +673,28 @@ async def test_create_channel_with_rows(repo, channel_schema_fixture):
         channel_mock.insert_rows.assert_awaited_once()
 
 
-async def test_delete_channel_with_id(repo):
+async def test_delete_channel_by_id(repo):
     channel_id = uuid4()
     fake_channel = AsyncMock(spec=ChannelResource)
 
     with patch(
-        "kronicle.repo.data.channel_repository.ChannelResource.delete_channel_with_id",
+        "kronicle.repo.data.channel_repository.ChannelResource.delete_channel_by_id",
         new_callable=AsyncMock,
         return_value=fake_channel,
     ):
-        result = await repo.delete_channel_with_id(channel_id)
+        result = await repo.delete_channel_by_id(channel_id)
         assert result == fake_channel
 
 
-async def test_delete_channel_with_id_not_found(repo):
+async def test_delete_channel_by_id_not_found(repo):
     channel_id = uuid4()
 
     with patch(
-        "kronicle.repo.data.channel_repository.ChannelResource.delete_channel_with_id",
+        "kronicle.repo.data.channel_repository.ChannelResource.delete_channel_by_id",
         new_callable=AsyncMock,
         return_value=None,
     ):
-        result = await repo.delete_channel_with_id(channel_id)
+        result = await repo.delete_channel_by_id(channel_id)
         assert result is None
 
 

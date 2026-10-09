@@ -291,7 +291,7 @@ class TestDeleteChannel:
         channel_id = uuid4()
         fake_channel = AsyncMock()
         fake_response = AsyncMock()
-        mock_repo.delete_channel_with_id.return_value = fake_channel
+        mock_repo.delete_channel_by_id.return_value = fake_channel
 
         with patch(
             "kronicle.services.channel_service.ResponsePayload.from_channel_resource",
@@ -299,11 +299,11 @@ class TestDeleteChannel:
         ):
             result = await service.delete_channel(channel_id)
             assert result == fake_response
-            mock_repo.delete_channel_with_id.assert_awaited_once_with(channel_id)
+            mock_repo.delete_channel_by_id.assert_awaited_once_with(channel_id)
 
     async def test_not_found(self, service, mock_repo):
         channel_id = uuid4()
-        mock_repo.delete_channel_with_id.return_value = None
+        mock_repo.delete_channel_by_id.return_value = None
         result = await service.delete_channel(channel_id)
         assert result is None
 
@@ -316,7 +316,7 @@ class TestDeleteChannel:
 class TestDeleteChannels:
     async def test_delete_multiple(self, service, mock_repo):
         ids = [uuid4(), uuid4()]
-        mock_repo.delete_channel_with_id.return_value = AsyncMock()
+        mock_repo.delete_channel_by_id.return_value = AsyncMock()
 
         with patch(
             "kronicle.services.channel_service.ResponsePayload.from_channel_resource",
@@ -324,7 +324,7 @@ class TestDeleteChannels:
         ):
             results = await service.delete_channels(ids)
             assert len(results) == 2
-            assert mock_repo.delete_channel_with_id.await_count == 2
+            assert mock_repo.delete_channel_by_id.await_count == 2
 
 
 # ==================================================================================================

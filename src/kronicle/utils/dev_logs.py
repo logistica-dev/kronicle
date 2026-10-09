@@ -18,7 +18,14 @@ from rich.markup import escape
 from rich.text import Text
 from rich.traceback import Traceback
 
-from kronicle.utils.str_utils import enforce_length
+
+# ------------------------------------------------------
+# Helper
+# ------------------------------------------------------
+def enforce_length(here: str, length=12) -> str:
+    here = str(here)
+    return here.ljust(length, " ") if len(here) < length else here[0:length]
+
 
 # ------------------------------------------------------
 # Configuration

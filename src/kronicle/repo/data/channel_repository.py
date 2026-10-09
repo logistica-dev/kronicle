@@ -245,9 +245,9 @@ class ChannelRepository:
                     raise
         return channel
 
-    async def delete_channel_with_id(self, channel_id: UUID) -> ChannelResource | None:
+    async def delete_channel_by_id(self, channel_id: UUID) -> ChannelResource | None:
         async with self._db.transaction() as db:
-            return await ChannelResource.delete_channel_with_id(db, channel_id)
+            return await ChannelResource.delete_channel_by_id(db, channel_id)
 
     # async def fetch_all_channel_rows(self, *, filter: RowRequestFilter | None = None) -> list[ChannelResource]:
     #     async with self._db.transaction() as db:

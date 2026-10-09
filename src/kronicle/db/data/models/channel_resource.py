@@ -256,6 +256,6 @@ class ChannelResource:
         return self
 
     @classmethod
-    async def delete_channel_with_id(cls, db: PoolConnectionProxy, channel_id: UUID) -> ChannelResource | None:
+    async def delete_channel_by_id(cls, db: PoolConnectionProxy, channel_id: UUID) -> ChannelResource | None:
         resource = await cls._fetch_metadata(db, channel_id)
         return await resource.delete(db)

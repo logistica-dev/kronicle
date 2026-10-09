@@ -120,6 +120,25 @@ def pydantic_exception_adapter(request: Request, exc: Exception) -> JSONResponse
     )
 
 
+def value_error_handler(request: Request, exc: ValueError) -> JSONResponse:
+    """
+    Map client-side ValueError failures (e.g. invalid/missing UUIDs raised by
+    ensure_uuid4) to a 400 BadRequest instead of a 500.
+
+    Note: ValidationError subclasses ValueError, but the more specific
+    RequestValidationError / ValidationError handlers are matched first via MRO,
+    so pydantic validation still returns 422.
+    """
+    log_w("value_error", f"{request.method.upper()} {request.url.path}: {exc}")
+    return KronicleHTTPErrorPayload.from_exception(
+        request=request,
+        exc=exc,
+        status=400,
+        error="BadRequest",
+        message=str(exc),
+    ).to_error_json()
+
+
 def generic_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     here = "Unhandled exception"
     tb = traceback.extract_tb(exc.__traceback__)

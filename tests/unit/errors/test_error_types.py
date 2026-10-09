@@ -1,5 +1,6 @@
 # tests/unit/errors/test_error_types.py
 from unittest.mock import MagicMock
+from uuid import UUID
 
 import pytest
 from fastapi import HTTPException, Request
@@ -32,11 +33,11 @@ def mock_request():
 
 
 class TestNewRequestId:
-    def test_returns_uuid4_string(self):
+    def test_returns_uuid4_hex_string(self):
         rid = new_request_id()
         assert isinstance(rid, str)
-        parts = rid.split("-")
-        assert len(parts) == 5
+        assert len(rid) == 32
+        assert UUID(rid).version == 4
 
 
 class TestKronicleHTTPErrorPayload:

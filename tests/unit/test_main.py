@@ -112,6 +112,14 @@ def test_exception_handlers_initialization_called(mock_settings):
         mock_handlers.assert_called_once()
 
 
+def test_value_error_handler_is_registered(mock_settings):
+    """ValueError must map to the 400 handler, not the generic 500 handler."""
+    from kronicle.errors.exception_handlers import value_error_handler
+
+    factory = KronicleApp(mock_settings)
+    assert factory.app.exception_handlers.get(ValueError) is value_error_handler
+
+
 # ------------------------------
 # Lifespan tests (async)
 # ------------------------------

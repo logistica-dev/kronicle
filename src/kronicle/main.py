@@ -40,6 +40,7 @@ from kronicle.errors.exception_handlers import (
     fastapi_exception_adapter,
     generic_exception_handler,
     pydantic_exception_adapter,
+    value_error_handler,
 )
 from kronicle.logging.log_bus.mid_sanitize import RequestSanitizerMiddleware
 from kronicle.repo.data.channel_repository import ChannelRepository
@@ -342,6 +343,7 @@ class KronicleApp:
         self.app.add_exception_handler(FastApiHttpException, fastapi_exception_adapter)
         self.app.add_exception_handler(RequestValidationError, pydantic_exception_adapter)
         self.app.add_exception_handler(ValidationError, pydantic_exception_adapter)
+        self.app.add_exception_handler(ValueError, value_error_handler)
         self.app.add_exception_handler(Exception, generic_exception_handler)
 
     def generate_doc(self):

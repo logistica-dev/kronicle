@@ -274,12 +274,12 @@ async def test_delete_not_found(mock_metadata, mock_timeseries, mock_conn):
 
 
 @pytest.mark.asyncio
-async def test_delete_channel_with_id(mock_conn):
+async def test_delete_channel_by_id(mock_conn):
     fake_resource = MagicMock(spec=ChannelResource)
     fake_resource.delete = AsyncMock(return_value="deleted")
 
     with patch.object(ChannelResource, "_fetch_metadata", new=AsyncMock(return_value=fake_resource)):
-        result = await ChannelResource.delete_channel_with_id(mock_conn, uuid4())
+        result = await ChannelResource.delete_channel_by_id(mock_conn, uuid4())
 
         fake_resource.delete.assert_awaited_once()
         assert result == "deleted"

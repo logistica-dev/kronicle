@@ -16,6 +16,7 @@ from kronicle.errors.exception_handlers import (
     generic_exception_handler,
     pydantic_exception_adapter,
     pydantic_exception_handler,
+    value_error_handler,
 )
 
 
@@ -132,3 +133,20 @@ class TestGenericExceptionHandler:
         with patch("kronicle.errors.exception_handlers.log_e") as mock_log:
             generic_exception_handler(mock_request, exc)
             assert mock_log.called
+
+
+class TestValueErrorHandler:
+    def test_returns_400_json_response(self, mock_request):
+        exc = ValueError("Invalid UUID format: None")
+        response = value_error_handler(mock_request, exc)
+
+        assert response.status_code == 400
+        body = bytes(response.body).decode()
+        assert "Invalid UUID format: None" in body
+        assert "BadRequest" in body
+
+    def test_logs_warning(self, mock_request):
+        exc = ValueError("Invalid UUID format: None")
+        with patch("kronicle.errors.exception_handlers.log_w") as mock_log:
+            value_error_handler(mock_request, exc)
+            mock_log.assert_called_once()

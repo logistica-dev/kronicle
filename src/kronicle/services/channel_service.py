@@ -128,7 +128,7 @@ class ChannelService:
         Delete a channel metadata and its data table.
         """
         channel_id = ensure_uuid4(channel_id)
-        channel = await self._repo.delete_channel_with_id(channel_id)
+        channel = await self._repo.delete_channel_by_id(channel_id)
         return ResponsePayload.from_channel_resource(channel) if channel else None
 
     async def delete_channels(self, channel_ids: list[UUID]) -> list[ResponsePayload]:
