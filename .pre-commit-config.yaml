@@ -39,6 +39,14 @@ repos:
       - id: end-of-file-fixer
         exclude: openapi\.json
       - id: trailing-whitespace
+  - repo: local
+    hooks:
+      - id: uv-lock-check
+        name: uv.lock is in sync with pyproject.toml
+        entry: uv lock --check
+        language: system
+        files: ^(pyproject\.toml|uv\.lock)$
+        pass_filenames: false
   # - repo: https://github.com/RobertCraigie/pyright-python
   #   rev: v1.1.367
   #   hooks:

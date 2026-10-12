@@ -95,9 +95,8 @@ KRONICLE_SU_INFO="a3JvbmljbGVfbWFpbnRhaW5lcjprcm9uaWNsZV9tYWludGFpbmVyQGlyaXNhLm
 ### Local development
 
 ```sh
-pip install -e ".[dev]"
-cd src
-uvicorn kronicle.main:app --reload --host 0.0.0.0 --port 8000
+uv sync
+uv run uvicorn kronicle.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 Requires a running PostgreSQL instance with TimescaleDB. See [Prerequisites](#prerequisites-local-development) below.
@@ -185,13 +184,13 @@ CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
 
 ```sh
 # Unit tests
-pytest
+uv run pytest
 
 # Integration tests (requires running server)
-source .conf/.integration.env && pytest -m integration
+source .conf/.integration.env && uv run pytest -m integration
 
 # Both
-source .conf/.integration.env && pytest --run-all
+source .conf/.integration.env && uv run pytest --run-all
 ```
 
 See [README.ipynb](README.ipynb) for a full dev testing walkthrough.

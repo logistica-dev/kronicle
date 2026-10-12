@@ -21,11 +21,21 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Read uv version
+        id: uv_version
+        run: echo "version=$(cat .uv-version)" >> "$GITHUB_OUTPUT"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10
+        with:
+          version: ${{ steps.uv_version.outputs.version }}
+          enable-cache: true
+
       - name: Install dependencies
-        run: pip install -r requirements.txt -r requirements-dev.txt
+        run: uv sync --frozen --no-dev --group test
 
       - name: Run unit tests
-        run: pytest
+        run: uv run --no-sync pytest
 
   # -------------------------------------------------------
   # 2. Integration tests — DB + App via Docker Compose
@@ -47,6 +57,16 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
+
+      - name: Read uv version
+        id: uv_version
+        run: echo "version=$(cat .uv-version)" >> "$GITHUB_OUTPUT"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10
+        with:
+          version: ${{ steps.uv_version.outputs.version }}
+          enable-cache: true
 
       - name: Start DB + App
         run: docker compose -f docker-compose.ci.test.yml up -d --build
@@ -76,8 +96,8 @@ jobs:
           KRONICLE_DB_SU_CREDS: ${{ secrets.KRONICLE_DB_SU_CREDS }}
           KRONICLE_DB_AUTO_MIGRATION: true
         run: |
-          pip install -r requirements.txt -r requirements-dev.txt
-          pytest -m integration
+          uv sync --frozen --no-dev --group test
+          uv run --no-sync pytest -m integration
 
       - name: Tear down
         if: always()

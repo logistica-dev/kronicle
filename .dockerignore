@@ -27,7 +27,6 @@ logs/
 backup/
 
 # Dev
-requirements-dev.txt
 prereq-install/
 .vscode
 *.code-workwpace

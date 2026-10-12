@@ -5,6 +5,7 @@
 # Multi-arch: amd64 + arm64
 # ------------------------------------------------------------------------------
 FROM --platform=$BUILDPLATFORM python:3.12-slim AS builder
+
 # -----------------------------
 # Build dependencies
 # -----------------------------
@@ -24,23 +25,30 @@ RUN apt-get update && \
 WORKDIR /opt/kronicle
 
 # -----------------------------
-# Copy requirements first (cache layer)
+# uv — version read from .uv-version (single source of truth)
 # -----------------------------
-COPY requirements.txt requirements-run.txt ./
+COPY .uv-version ./
+RUN pip install --no-cache-dir "uv==$(cat .uv-version)"
 
 # -----------------------------
-# Create venv and install dependencies
+# Install the locked runtime dependencies (cache layer)
 # -----------------------------
-RUN python -m venv .venv
+ENV UV_LINK_MODE=copy \
+    UV_COMPILE_BYTECODE=1
+COPY pyproject.toml uv.lock ./
+# --no-install-project: the app runs from source via PYTHONPATH (no wheel needed),
+# so the project metadata (README/LICENCE) is not required at this layer.
+RUN uv sync --frozen --no-install-project --no-dev
+
+# -----------------------------
+# Runtime paths
+# -----------------------------
 ENV PYTHONPATH="/opt/kronicle/src:/opt/kronicle"
 ENV PATH="/opt/kronicle/.venv/bin:$PATH"
-RUN . .venv/bin/activate \
-    && pip install --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt -r requirements-run.txt
 
 
 # ------------------------------------------------------------------------------
-# Copy init scripts
+# Copy application sources
 # ------------------------------------------------------------------------------
 COPY . .
 
@@ -52,7 +60,6 @@ ARG BUILD_DATE
 RUN /opt/kronicle/docker/app/generate_build_info.sh
 
 # ------------------------------------------------------------------------------
-# Entrypoint
+# Entrypoint (venv already on PATH, app imported from source via PYTHONPATH)
 # ------------------------------------------------------------------------------
-# Activate venv and run Python bootstrap script
 ENTRYPOINT ["python", "/opt/kronicle/docker/app/entrypoint.py"]
