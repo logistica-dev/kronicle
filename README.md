@@ -4,11 +4,38 @@ FastAPI × TimescaleDB microservice for storing time-series measurements.
 
 Kronicle organises data into **channels** (named streams with user-defined schemas), stores rows in append-only TimescaleDB hypertables, and enforces access control through a role-based system with **zones** as isolation boundaries.
 
+## Key Concepts
+
+| Concept     | What it is                                                                                                                                                           |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Channel** | A named stream of time-series data with a user-defined schema. Each channel maps to its own TimescaleDB hypertable (`channel_<uuid-hex>`).                           |
+| **Schema**  | Column definitions as `{name: type}`. Supported types: `str`, `int`, `float`, `bool`, `uuid`, `datetime`, `dict`, `list`. Types can be wrapped with `optional[...]`. |
+| **Zone**    | A workspace or project boundary. Zones act as RBAC domains — permissions assigned at the zone level apply to all channels created inside it.                         |
+| **Row**     | A single data point in a channel. Rows are append-only once inserted.                                                                                                |
+
+### Channel IDs
+
+A channel is identified by a UUID that is shared across both layers: the core RBAC record and the
+data metadata/hypertable all use the same id.
+
+When creating a channel (`POST /data/v1/zones/{zone_id}/channels`, or the `/setup/v1` equivalent),
+you may supply the `id` yourself, or omit it and let the **server generate** one — the id is returned
+in the response either way.
+
+Zones, users, groups and roles work differently: their ids are always **server-generated**, and any
+`id` sent on create is ignored.
+
+## Quick Start
+
+The fastest way to get started is the interactive notebook: **[README.ipynb](README.ipynb)**
+
+It walks through pulling the image, running the server, creating channels, writing data, and setting up RBAC — all with executable code cells.
+
 ## Installation
 
 ### Using docker/podman image (recommended)
 
-Copy the `./docker-compose.yml` file provided in a folder
+Copy the `./docker-compose.yml` file provided in a folder:
 
 ```sh
 wk_dir='~/dev/kronicle'
@@ -38,9 +65,9 @@ podman-compose down
 
 ### Optional .env file
 
-You may create an `.env` file if you need to set the env variables you'll find in the `docker-compose.yml` as `${VARIABLE:-default_val}`
+You may create an `.env` file if you need to override the variables referenced in `docker-compose.yml` as `${VARIABLE:-default_value}`.
 
-Place this .env file next to the `./docker-compose.yml` before launching it.
+Place this `.env` file next to the `./docker-compose.yml` before launching it.
 
 Note: these variables are provided with defaults in the `./docker-compose.yml` file, so it's not absolutely needed for a basic test.
 
@@ -56,76 +83,14 @@ KRONICLE_HOST_PORT=8888
 KRONICLE_BACKUP_HOST_DIR=".backup"
 
 #--- App super user
-# These is how you can act on the app!
+# This is how you can act on the app!
 # You'll need this to hash the app super-user's credentials and email:
 #   python3 ./scripts/utils/hash_creds.py kronicle_maintainer kronicle_maintainer@irisa.fr Feb58bc0-a40c-4e6f-a8d2-11d641876886
 KRONICLE_SU_INFO="a3JvbmljbGVfbWFpbnRhaW5lcjprcm9uaWNsZV9tYWludGFpbmVyQGlyaXNhLmZyOiRhcmdvbjJpZCR2PTE5JG09NjU1MzYsdD0zLHA9NCRyYkdpRHNxRnYwNVpNSmJBb0VLQTVnJHQwc0ZZV3FXaEwyTjJkWThvazNUNGZpQ3QrNkhVV2tzbW5DZ2pCRVI5dHM"
 ```
 
-## Key Concepts
-
-| Concept     | What it is                                                                                                                                                           |
-| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Channel** | A named stream of time-series data with a user-defined schema. Each channel maps to its own TimescaleDB hypertable (`channel_{uuid}`).                               |
-| **Schema**  | Column definitions as `{name: type}`. Supported types: `str`, `int`, `float`, `bool`, `uuid`, `datetime`, `dict`, `list`. Types can be wrapped with `optional[...]`. |
-| **Zone**    | A workspace or project boundary. Zones act as RBAC domains — permissions assigned at the zone level apply to all channels created inside it.                         |
-| **Row**     | A single data point in a channel. Rows are append-only once inserted.                                                                                                |
-
-### Channel IDs
-
-A channel is identified by a UUID that is shared across both layers: the core RBAC record and the
-data metadata/hypertable all use the same id.
-
-When creating a channel (`POST /data/v1/zones/{zone_id}/channels`, or the `/setup/v1` equivalent),
-you may supply the `id` yourself, or omit it and let the **server generate** one — the id is returned
-in the response either way.
-
-Zones, users, groups and roles work differently: their ids are always **server-generated**, and any
-`id` sent on create is ignored.
-
-## Quick Start
-
-The fastest way to get started is the interactive notebook: **[README.pynb](README.pynb)**
-
-It walks through pulling the image, running the server, creating channels, writing data, and setting up RBAC — all with executable code cells.
-
-## Installation
-
-### Using docker/podman image (recommended)
-
-(Optional) Create an `.env` file if you need to set the env variables.
-Note: these variables are provided with defaults in the `./docker-compose.yml` file, that is sufficient for testing purpose.
-
-```ini
-
-#--- DB info
-# If you need to reinit or do some tests, easiest is rename the DB
-POSTGRES_DB="kronicle_db"
-
-#--- App info
-# This is the port for incoming requests, outside the container
-KRONICLE_HOST_PORT=8888
-KRONICLE_BACKUP_HOST_DIR=".backup"
-
-#--- App super user
-# These is how you can act on the app!
-# You'll need this to hash the app super-user's credentials and email:
-#   python3 ./scripts/utils/hash_creds.py kronicle_maintainer kronicle_maintainer@irisa.fr Feb58bc0-a40c-4e6f-a8d2-11d641876886
-KRONICLE_SU_INFO="a3JvbmljbGVfbWFpbnRhaW5lcjprcm9uaWNsZV9tYWludGFpbmVyQGlyaXNhLmZyOiRhcmdvbjJpZCR2PTE5JG09NjU1MzYsdD0zLHA9NCRyYkdpRHNxRnYwNVpNSmJBb0VLQTVnJHQwc0ZZV3FXaEwyTjJkWThvazNUNGZpQ3QrNkhVV2tzbW5DZ2pCRVI5dHM"
-```
-
-Copy your .env file and the `./docker-compose.yml` file provided in a folder then launch the container:
-
-```sh
-# This will
-# - fetch the timescaledb image
-# - fetch the latest kronicle image
-# - create a `backup` dir
-# - create a `kronicle-db-data` dir
-# - launch th eapp
-podman-compose up -d
-podman logs kronicle-app
-```
+> ⚠️ The credentials above (and the defaults in `docker-compose.yml`) are for local testing only —
+> change every credential before exposing the service.
 
 ### Local development
 
@@ -135,11 +100,17 @@ cd src
 uvicorn kronicle.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Requires a running PostgreSQL instance with TimescaleDB. See [Prerequisites](#prerequisites) below.
+Requires a running PostgreSQL instance with TimescaleDB. See [Prerequisites](#prerequisites-local-development) below.
 
 ## Configuration
 
-Environment variables are the primary configuration method. The essential ones:
+Environment variables are the primary configuration method for the app.
+
+For a docker/podman deployment, host-side variables such as `POSTGRES_DB`, `KRONICLE_HOST_PORT` and
+`KRONICLE_BACKUP_HOST_DIR` are set in `.env`; the app-side variables below are passed through by
+`docker-compose.yml`.
+
+The essential ones:
 
 | Variable              | Purpose                                                            | Default              |
 | --------------------- | ------------------------------------------------------------------ | -------------------- |
@@ -163,13 +134,14 @@ python3 ./scripts/utils/hash_creds.py su_name su_email "SU_passw0rd"
 
 ## API at a Glance
 
-The API is split into four route groups (security lanes):
+The API is split into these route groups (security lanes):
 
 | Prefix      | Lane           | Purpose                        | Auth         |
 | ----------- | -------------- | ------------------------------ | ------------ |
 | `/api/v1`   | Consumption    | Read channels, rows, columns   | Reader token |
 | `/data/v1`  | Ingestion      | Append rows, upsert metadata   | Writer token |
 | `/setup/v1` | Resource admin | CRUD channels, clone, delete   | Admin token  |
+| `/core/v1`  | Core / zones   | Zones, core channels, sync     | Admin token  |
 | `/rbac/v1`  | Identity admin | Users, groups, roles, policies | Admin token  |
 | `/auth/v1`  | Authentication | Login, change password         | Public       |
 | `/health`   | Health         | Liveness, readiness, version   | Public       |
@@ -209,7 +181,7 @@ Enable TimescaleDB:
 CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
 ```
 
-### Testing
+## Testing
 
 ```sh
 # Unit tests
@@ -222,7 +194,7 @@ source .conf/.integration.env && pytest -m integration
 source .conf/.integration.env && pytest --run-all
 ```
 
-See [README.pynb §6](README.pynb) for a full dev testing walkthrough.
+See [README.ipynb](README.ipynb) for a full dev testing walkthrough.
 
 ## License
 

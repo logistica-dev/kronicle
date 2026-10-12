@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "TestApp",
-    "summary": "desc",
-    "version": "1.0"
+    "title": "KRONICLE",
+    "summary": "FastAPI x TimescaleDB \u00b5service for storing time-series measurements",
+    "version": "0.6.8"
   },
   "paths": {
     "/health/live": {
@@ -10130,6 +10130,7 @@
             "default": false
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "name"
