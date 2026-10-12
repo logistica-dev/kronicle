@@ -46,6 +46,18 @@ def reset_password_manager():
     PasswordManager._instance = None
 
 
+@pytest.fixture(autouse=True)
+def patch_generate_doc():
+    """No unit test may write the tracked docs/openapi.json artifact.
+
+    KronicleApp.__init__ calls generate_doc() in a dev env (main.py), which opens
+    and overwrites docs/openapi.json. With the mocked settings above that would
+    clobber the real spec with the fixture's TestApp/desc/1.0 values.
+    """
+    with patch.object(KronicleApp, "generate_doc"):
+        yield
+
+
 # ------------------------------
 # Tests
 # ------------------------------
