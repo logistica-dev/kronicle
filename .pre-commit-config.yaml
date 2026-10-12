@@ -43,7 +43,7 @@ repos:
     hooks:
       - id: uv-lock-check
         name: uv.lock is in sync with pyproject.toml
-        entry: uv lock --check
+        entry: .venv/bin/uv lock --check
         language: system
         files: ^(pyproject\.toml|uv\.lock)$
         pass_filenames: false

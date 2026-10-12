@@ -21,14 +21,11 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Read uv version
-        id: uv_version
-        run: echo "version=$(cat .uv-version)" >> "$GITHUB_OUTPUT"
-
       - name: Install uv
-        uses: astral-sh/setup-uv@v10
+        uses: astral-sh/setup-uv@v10.3.0
         with:
-          version: ${{ steps.uv_version.outputs.version }}
+          # Exact uv version, read from the locked `uv` dev dependency.
+          version-file: uv.lock
           enable-cache: true
 
       - name: Install dependencies
@@ -58,14 +55,11 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Read uv version
-        id: uv_version
-        run: echo "version=$(cat .uv-version)" >> "$GITHUB_OUTPUT"
-
       - name: Install uv
-        uses: astral-sh/setup-uv@v10
+        uses: astral-sh/setup-uv@v10.3.0
         with:
-          version: ${{ steps.uv_version.outputs.version }}
+          # Exact uv version, read from the locked `uv` dev dependency.
+          version-file: uv.lock
           enable-cache: true
 
       - name: Start DB + App
