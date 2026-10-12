@@ -33,8 +33,10 @@ class OutputSchema(BaseModel):
         data = {}
         for field_name, field_info in cls.model_fields.items():
             value = getattr(db_obj, field_name, None)
-            if (field_type := field_info.annotation) and hasattr(field_type, "from_db"):
-                value = field_type.from_db(value)
+            field_type = field_info.annotation
+            from_db = getattr(field_type, "from_db", None)
+            if from_db is not None:
+                value = from_db(value)
             data[field_name] = value
         return cls(**data)
 
