@@ -1,4 +1,10 @@
 # ./docker-compose.ci.test.yml
+#
+# Integration-test stack: TimescaleDB + the Kronicle app only.
+#
+# There is no separate "init" container anymore: the app provisions and
+# migrates the database itself at startup (KRONICLE_DB_AUTO_MIGRATION=true),
+# using the DB superuser credentials in KRONICLE_DB_SU_CREDS.
 
 services:
   # --------------------------

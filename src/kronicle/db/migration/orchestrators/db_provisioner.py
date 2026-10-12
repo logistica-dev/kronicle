@@ -14,10 +14,6 @@ Design:
   - ``ensure()``               : idempotent. Applies the read-only-raised fixes, but
     requires dbsu (creating the DB, roles, schemas and enabling an extension all
     need superuser privileges).
-
-The ``check_*`` methods are the ones that existed in MigrationManager, copied and
-refined to cover this object's larger scope (DB creation + TimescaleDB extension);
-MigrationManager is kept as a fallback/backup until it is retired.
 """
 
 from __future__ import annotations

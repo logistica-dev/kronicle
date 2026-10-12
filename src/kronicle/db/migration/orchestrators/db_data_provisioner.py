@@ -3,8 +3,7 @@
 DataSchemaProvisioner: schema-level reconciliation for the `data` schema.
 
 The `data` schema holds two kinds of tables:
-  - a static ``ChannelMetadata`` table (created here via its idempotent DDL, no
-    longer requiring the external ``02_create_tables`` init script);
+  - a static ``ChannelMetadata`` table (created here via its idempotent DDL);
   - per-channel ``data.channel_<hex>`` timeseries tables, created on-the-fly by the
     application (now as TimescaleDB hypertables with a composite ``(time, row_id)``
     primary key).
@@ -21,9 +20,6 @@ backup -> execute_plan -> run_post_analysis -> restore_backup on failure) and is
 fully synchronous, driven through the `psql` client as the `chan` owner — no
 asyncpg, no SQLAlchemy. Owner access suffices for all of its operations (schema
 ownership for the tracking tables, table ownership for the PK + hypertable DDL).
-
-MigrationManager is intentionally NOT used here; it is kept as a fallback until
-it is retired.
 """
 
 from __future__ import annotations

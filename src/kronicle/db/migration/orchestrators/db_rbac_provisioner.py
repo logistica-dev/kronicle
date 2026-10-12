@@ -7,7 +7,7 @@ This object owns the migration lifecycle for the two SQLAlchemy-backed, RBAC-own
 schemas (`core` + `rbac`): analysis, plan, user gate, backup, apply, state recording,
 and the per-schema tracking tables (schema_migration_state / schema_migration_history).
 
-Pipeline (check → plan → validate → execute), same principle as MigrationManager:
+Pipeline (check → plan → validate → execute):
   1. check_analysis_requirements  — rbac owner connection can read the schemas
   2. check_tracking_tables_exist  — state + history tables present per schema
   3. pre_migration_check          — read stored state, detect drift (read-only)
@@ -16,9 +16,8 @@ Pipeline (check → plan → validate → execute), same principle as MigrationM
   6. user gate                    — y/n before any mutation (skipped if auto_approve)
   7. execute                      — backup, clean orphans, apply plan (as owner), record state
 
-Most of the migration-core here is copied from MigrationManager, scoped to core+rbac
-(it also carried the `data` schema). MigrationManager is kept as a fallback/backup until
-it is retired; the DataMigrationManager (asyncpg) will take over `data`.
+This provisioner covers the two SQLAlchemy-backed, RBAC-owned schemas (`core` + `rbac`);
+the `data` schema is handled separately by DataSchemaProvisioner (psql/asyncpg).
 """
 
 from __future__ import annotations
@@ -31,7 +30,6 @@ from datetime import datetime, timezone
 from json import dumps
 from pathlib import Path
 
-from alembic.config import Config
 from alembic.migration import MigrationContext
 from alembic.operations import Operations
 from sqlalchemy import create_engine, inspect, select, text
@@ -173,12 +171,10 @@ class RbacSchemasProvisioner(BaseProvisioner):
     def __init__(
         self,
         db_settings: DBSettings,
-        alembic_cfg_path: str = "alembic.ini",
         *,
         migration_settings: MigrationSettings | None = None,
         backup_url: str | None = None,
     ):
-        self.cfg = Config(alembic_cfg_path)
         self._db_settings = db_settings
         self.backup_url = backup_url or self.rbac_url
 

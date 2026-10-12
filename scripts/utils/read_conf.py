@@ -167,8 +167,8 @@ class DbAccess:
 @dataclass
 class KronicleConf:
     """
-    Similar to deps/settings_env.py KronicleEnvConf
-    Used for init scripts only (not app).
+    Similar to deps/settings_env.py KronicleEnvConf.
+    Used by the container entrypoint (docker/app/entrypoint.py) for the DB-readiness wait.
     """
 
     db_su: DbSuCreds

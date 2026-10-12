@@ -31,9 +31,6 @@ Convergence policy:
   column/table in the models); the non-destructive guard means a convergence round can never
   silently drop anything — if one unexpectedly did, the runner falls back to prompting
   instead of auto-applying.
-
-MigrationManager is intentionally NOT used here; it is kept as a fallback until it is
-retired.
 """
 
 from __future__ import annotations

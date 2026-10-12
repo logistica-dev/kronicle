@@ -1,4 +1,11 @@
 # docker/app/entrypoint.py
+"""Container entrypoint: wait for PostgreSQL, then serve the FastAPI app.
+
+DB provisioning and migration are handled by the application itself at startup
+(see ``KronicleApp.lifespan`` / ``MigrationOrchestrator``), so this entrypoint
+only waits for the database to accept connections before launching uvicorn.
+"""
+
 import os
 from asyncio import run, sleep
 from sys import exit, stderr
@@ -8,32 +15,15 @@ from asyncpg import (
     CannotConnectNowError,
     ConnectionDoesNotExistError,
     InvalidCatalogNameError,
-    PostgresError,
     TooManyConnectionsError,
 )
 
-from kronicle.db.core.models.core_channel import CoreChannel
-from kronicle.db.core.models.core_entity import CoreEntity
-from kronicle.db.core.models.core_zone import CoreZone
-from kronicle.db.data.models.channel_metadata import ChannelMetadata
-from kronicle.db.rbac.models.rbac_entity import RbacEntity
-from kronicle.db.rbac.models.rbac_user import RbacUser
-from scripts.init.init import main as init_script  # type: ignore
-from scripts.migration import run_migration  # type: ignore
 from scripts.utils.read_conf import KronicleConf  # type: ignore
 
 # --------------------------------------------------------------------------------------------------
 # Config
 # --------------------------------------------------------------------------------------------------
 conf = KronicleConf.read_conf()
-DB_NAME = conf.db.name
-
-
-SCHEMAS_TO_CHECK = {
-    CoreEntity.namespace(): [CoreChannel.tablename(), CoreZone.tablename()],  # example key tables in core schema
-    RbacEntity.namespace(): [RbacUser.tablename()],  # example key tables in rbac schema
-    ChannelMetadata.namespace(): [ChannelMetadata.tablename()],  # example key tables in data schema
-}
 
 
 # --------------------------------------------------------------------------------------------------
@@ -64,82 +54,11 @@ async def wait_for_db_server(timeout: int = 60):
     exit(1)
 
 
-# --------------------------------------------------------------------------------------------------
-# Check if target DB exists
-# --------------------------------------------------------------------------------------------------
-async def db_exists() -> bool:
-    try:
-        async with conf.db.session(db_name="postgres") as conn:
-            exists = await conn.fetchval("SELECT 1 FROM pg_database WHERE datname = $1", DB_NAME)
-            return exists is not None
-    except PostgresError as e:
-        print(f"[entry] Error checking database existence: {e}")
-        return False
-
-
-# --------------------------------------------------------------------------------------------------
-# Check if required tables exist
-# --------------------------------------------------------------------------------------------------
-async def tables_exists():
-    """Return True if the DB is already initialized (example: channel metadata table exists)."""
-    try:
-        async with conf.db.session() as conn:
-            for schema, tables in SCHEMAS_TO_CHECK.items():
-                for table in tables:
-                    qualified = f"{schema}.{table}"
-                    exists = await conn.fetchval("SELECT to_regclass($1)", qualified)
-                    if exists is None:
-                        print(f"[entry] Missing table: {qualified}")
-                        return False
-
-    except PostgresError as e:
-        print(f"[entry] Error checking schema objects: {e}")
-        return False
-
-    return True
-
-
-# --------------------------------------------------------------------------------------------------
-# Entrypoint
-# --------------------------------------------------------------------------------------------------
-async def wait_and_init():
-    print("[entry] Waiting for Postrgesql...")
-    await wait_for_db_server()
-
-    print("[entry] Initialize DB if needed (synchronous scripts)")
-    init_needed = False
-    if not await db_exists():
-        print("[entry] DB does not exist.")
-        init_needed = True
-    elif not await tables_exists():
-        print("[entry] DB not initialized.")
-        init_needed = True
-    if init_needed:
-        print(" [entry] Running init script...")
-        try:
-            init_script()
-        except Exception as e:
-            print(f"[entry] DB init script failed: {e}", file=stderr)
-            exit(1)
-    else:
-        print(f"[entry] Database '{DB_NAME}' already exists. Skipping init.")
-
-    if os.environ.get("ALLOW_MIGRATION"):
-        print("[entry] Checking DB migration...")
-        try:
-            run_migration()
-        except Exception as e:
-            print(f"[entry] DB migration failed: {e}", file=stderr)
-            exit(1)
-    else:
-        print("[entry] ALLOW_MIGRATION not set — skipping DB migration")
-
-
 if __name__ == "__main__":  # pragma: no-cover
-    run(wait_and_init())
+    run(wait_for_db_server())
 
     print("[entry] Launching Uvicorn/FastAPI server...")
-    from kronicle.main import app  # your FastAPI instance
+    from kronicle.main import app  # FastAPI app factory
 
     uvicorn.run(
         app,
