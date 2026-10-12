@@ -372,7 +372,10 @@ class DbProvisioner(BaseProvisioner):
                 "(the DB superuser connection) but it is not configured"
             )
 
-        self._ensure_users_exist(dbsu_url)
+        # Roles are cluster-level: create them against the 'postgres' maintenance DB.
+        # The application DB may not exist yet (first launch), so dbsu_url (which points
+        # at the app DB) cannot be used here — psql would fail to connect (exit 2).
+        self._ensure_users_exist(maintenance_url)
 
         if not self.check_db_exists(maintenance_url):
             self._ensure_database_exists(maintenance_url)
@@ -399,15 +402,19 @@ class DbProvisioner(BaseProvisioner):
     # ------------------------------------------------------------------
     # Individual ensure helpers (idempotent)
     # ------------------------------------------------------------------
-    def _ensure_users_exist(self, dbsu_url: str) -> None:
-        """Ensure the owner roles exist (cluster-level)."""
-        maintenance_url = self.dbsu_maintenance_url
+    def _ensure_users_exist(self, maintenance_url: str) -> None:
+        """Ensure the owner roles exist (cluster-level, via the maintenance DB).
+
+        Roles are cluster-level objects, so this runs against the ``postgres``
+        maintenance DB: on a first launch the application DB does not exist yet,
+        and a ``CREATE ROLE`` issued against it would fail to connect.
+        """
         for user, password in self.owner_passwords.items():
             if self.check_psql_user_exists(user, maintenance_url):
                 log_i(mod, f"Role '{user}' already exists")
                 continue
             subprocess.run(
-                ["psql", "-d", dbsu_url, "-c", f"CREATE ROLE \"{user}\" LOGIN PASSWORD '{password}'"],
+                ["psql", "-d", maintenance_url, "-c", f"CREATE ROLE \"{user}\" LOGIN PASSWORD '{password}'"],
                 check=True,
                 capture_output=True,
                 text=True,

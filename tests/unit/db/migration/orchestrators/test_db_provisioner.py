@@ -434,7 +434,7 @@ def test_execute_plan_runs_ensures_and_counts_ops():
         patch.object(DbProvisioner, "_ensure_extension") as ext,
     ):
         p.execute_plan()
-    users.assert_called_once()
+    users.assert_called_once_with("postgresql://postgres:postgres@localhost:5432/postgres")
     db.assert_not_called()
     priv.assert_called_once()
     schemas.assert_called_once()
@@ -459,14 +459,18 @@ def test_execute_plan_creates_database_when_missing():
 
 def test_ensure_users_exist_creates_missing_role():
     p = _provisioner()
+    maintenance_url = "postgresql://postgres:postgres@localhost:5432/postgres"
     with (
         patch.object(DbProvisioner, "check_psql_user_exists", side_effect=[False, True]),
         patch.object(dp, "subprocess") as sp,
     ):
-        p._ensure_users_exist("postgresql://postgres:postgres@localhost:5432/kronicle_unit_test")
+        p._ensure_users_exist(maintenance_url)
     assert sp.run.call_count == 1
     cmd = sp.run.call_args.args[0]
     assert "CREATE ROLE \"kronicle_rbac\" LOGIN PASSWORD 'rbac_pwd'" in cmd
+    # Cluster-level role creation must target the maintenance DB, not the app DB
+    # (the app DB may not exist yet on first launch).
+    assert cmd[cmd.index("-d") + 1] == maintenance_url
 
 
 def test_ensure_database_exists_creates():
