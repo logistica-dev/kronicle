@@ -262,7 +262,7 @@ class TestGroupRoutes:
         mock_rbac.get_groups.assert_called_once()
         assert result == expected
 
-    def test_list_groups_with_name(self, mock_rbac):
+    def test_list_groups_by_name(self, mock_rbac):
         expected = {"id": uuid4(), "name": "specific-group"}
         mock_rbac.get_group_by_name.return_value = expected
         result = list_groups(name="specific-group", rbac=mock_rbac)
@@ -589,7 +589,7 @@ class TestPolicyRoutes:
 
 
 class TestListRolesByName:
-    def test_list_roles_with_name(self, mock_rbac):
+    def test_list_roles_by_name(self, mock_rbac):
         expected = {"id": uuid4(), "name": "admin"}
         mock_rbac.get_role_by_name.return_value = expected
         result = list_roles(name="admin", rbac=mock_rbac)
@@ -688,7 +688,7 @@ class TestAccessProfileRoutes:
         mock_rbac.list_zone_access_profiles.assert_called_once()
         assert result == expected
 
-    def test_list_zone_access_profiles_with_name(self, mock_rbac):
+    def test_list_zone_access_profiles_by_name(self, mock_rbac):
         expected = {"id": uuid4(), "name": "zap"}
         mock_rbac.get_zone_access_profile_by_name.return_value = expected
         result = list_zone_access_profiles(name="zap", rbac=mock_rbac)
@@ -757,7 +757,7 @@ class TestAccessProfileRoutes:
         mock_rbac.list_channel_access_profiles.assert_called_once()
         assert result == expected
 
-    def test_list_channel_access_profiles_with_name(self, mock_rbac):
+    def test_list_channel_access_profiles_by_name(self, mock_rbac):
         expected = {"id": uuid4(), "name": "cap"}
         mock_rbac.get_channel_access_profile_by_name.return_value = expected
         result = list_channel_access_profiles(name="cap", rbac=mock_rbac)
@@ -826,7 +826,7 @@ class TestAccessProfileRoutes:
         mock_rbac.list_row_access_profiles.assert_called_once()
         assert result == expected
 
-    def test_list_row_access_profiles_with_name(self, mock_rbac):
+    def test_list_row_access_profiles_by_name(self, mock_rbac):
         expected = {"id": uuid4(), "name": "rap"}
         mock_rbac.get_row_access_profile_by_name.return_value = expected
         result = list_row_access_profiles(name="rap", rbac=mock_rbac)
@@ -892,7 +892,7 @@ class TestListPoliciesGlobal:
         mock_rbac.list_zone_policies.assert_called_once()
         assert result == expected
 
-    def test_list_zone_policies_with_name(self, mock_rbac):
+    def test_list_zone_policies_by_name(self, mock_rbac):
         expected = {"id": uuid4(), "name": "zp"}
         mock_rbac.get_zone_policy_by_name.return_value = expected
         result = list_zone_policies(zone_id=None, name="zp", rbac=mock_rbac)
@@ -907,7 +907,7 @@ class TestListPoliciesGlobal:
         mock_rbac.list_channel_policies.assert_called_once()
         assert result == expected
 
-    def test_list_channel_policies_with_name(self, mock_rbac):
+    def test_list_channel_policies_by_name(self, mock_rbac):
         expected = {"id": uuid4(), "name": "cp"}
         mock_rbac.get_channel_policy_by_name.return_value = expected
         result = list_channel_policies(channel_id=None, name="cp", rbac=mock_rbac)
@@ -922,7 +922,7 @@ class TestListPoliciesGlobal:
         mock_rbac.list_row_policies.assert_called_once()
         assert result == expected
 
-    def test_list_row_policies_with_name(self, mock_rbac):
+    def test_list_row_policies_by_name(self, mock_rbac):
         expected = {"id": uuid4(), "name": "rp"}
         mock_rbac.get_row_policy_by_name.return_value = expected
         result = list_row_policies(row_id=None, name="rp", rbac=mock_rbac)

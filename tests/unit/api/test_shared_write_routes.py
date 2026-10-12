@@ -7,6 +7,7 @@ from fastapi import HTTPException
 
 from kronicle.api.shared_write_routes import create_channel_in_zone, insert_rows, patch_channel
 from kronicle.db.data.models.channel_schema import ChannelSchema
+from kronicle.schemas.payload.input_payload import InputPayload
 from kronicle.schemas.payload.response_payload import ResponsePayload
 
 
@@ -35,6 +36,41 @@ class TestCreateChannelInZone:
         core.ensure_channel_in_zone.assert_called_once_with(expected_core, zone_id)
         data_service.create_channel.assert_awaited_once_with(payload)
         assert result == "created"
+
+    @patch("kronicle.api.shared_write_routes.InputCoreChannel.from_payload")
+    @pytest.mark.asyncio
+    async def test_generates_id_when_missing(self, mock_from_payload):
+        core = MagicMock()
+        core.ensure_channel_in_zone.return_value = True
+        data_service = AsyncMock()
+        data_service.create_channel.return_value = "created"
+        mock_from_payload.return_value = MagicMock(id=uuid4())
+        payload = InputPayload(name="no_id_channel")
+        assert payload.id is None
+
+        result = await create_channel_in_zone(zone_id=uuid4(), payload=payload, data_service=data_service, core=core)
+
+        assert result == "created"
+        assert payload.id is not None
+        assert payload.id.version == 4
+        # the very same payload (now carrying the generated id) goes to both layers
+        mock_from_payload.assert_called_once_with(payload)
+        data_service.create_channel.assert_awaited_once_with(payload)
+
+    @patch("kronicle.api.shared_write_routes.InputCoreChannel.from_payload")
+    @pytest.mark.asyncio
+    async def test_keeps_provided_id(self, mock_from_payload):
+        core = MagicMock()
+        core.ensure_channel_in_zone.return_value = True
+        data_service = AsyncMock()
+        data_service.create_channel.return_value = "created"
+        mock_from_payload.return_value = MagicMock(id=uuid4())
+        provided = uuid4()
+        payload = InputPayload(id=provided, name="with_id_channel")
+
+        await create_channel_in_zone(zone_id=uuid4(), payload=payload, data_service=data_service, core=core)
+
+        assert payload.id == provided
 
     @patch("kronicle.api.shared_write_routes.InputCoreChannel.from_payload")
     @pytest.mark.asyncio

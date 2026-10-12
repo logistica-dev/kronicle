@@ -120,10 +120,14 @@ def pydantic_exception_adapter(request: Request, exc: Exception) -> JSONResponse
     )
 
 
-def value_error_handler(request: Request, exc: ValueError) -> JSONResponse:
+def value_error_handler(request: Request, exc: Exception) -> JSONResponse:
     """
     Map client-side ValueError failures (e.g. invalid/missing UUIDs raised by
     ensure_uuid4) to a 400 BadRequest instead of a 500.
+
+    The parameter is typed ``Exception`` (not ``ValueError``) because Starlette's
+    ``ExceptionHandler`` signature is contravariant; the handler is only ever
+    invoked with a ``ValueError`` via ``add_exception_handler(ValueError, ...)``.
 
     Note: ValidationError subclasses ValueError, but the more specific
     RequestValidationError / ValidationError handlers are matched first via MRO,

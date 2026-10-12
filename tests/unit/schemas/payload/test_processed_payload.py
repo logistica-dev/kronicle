@@ -1,9 +1,29 @@
 # tests/unit/schemas/payload/test_processed_payload.py
 
+from uuid import uuid4
+
 import pytest
 
+from kronicle.db.data.models.channel_schema import ChannelSchema
 from kronicle.errors.error_types import BadRequestError
+from kronicle.schemas.payload.input_payload import InputPayload
 from kronicle.schemas.payload.processed_payload import ProcessedPayload
+
+
+def _schema() -> ChannelSchema:
+    return ChannelSchema.from_user_json({"time": "time"})
+
+
+def test_from_input_generates_channel_id_when_missing():
+    processed = ProcessedPayload.from_input(InputPayload(name="my channel"), _schema())
+    assert processed.channel_id is not None
+    assert processed.channel_id.version == 4
+
+
+def test_from_input_honors_provided_channel_id():
+    channel_id = uuid4()
+    processed = ProcessedPayload.from_input(InputPayload(id=channel_id, name="my channel"), _schema())
+    assert processed.channel_id == channel_id
 
 
 # ------------------------------------------------------

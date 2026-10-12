@@ -1,7 +1,7 @@
 # kronicle/api/shared_write_routes.py
 from __future__ import annotations
 
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
@@ -45,6 +45,10 @@ async def create_channel_in_zone(
     data_service: ChannelService = Depends(channel_service),  # noqa: B008
     core: CoreService = Depends(core_service),  # noqa: B008
 ):
+    # Resolve the channel id once, up front: when the client omits it the server generates one,
+    # and both the CoreChannel and the data ChannelMetadata must share that same id.
+    if payload.id is None:
+        payload.id = uuid4()
     core_channel = InputCoreChannel.from_payload(payload)
     created = core.ensure_channel_in_zone(core_channel, zone_id)
     try:

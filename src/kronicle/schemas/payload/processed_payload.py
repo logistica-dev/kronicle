@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
 
@@ -130,7 +130,7 @@ class ProcessedPayload(BaseModel):
                 - If no valid rows remain after validation.
         """
         processed = cls(
-            channel_id=ensure_uuid4(payload.id),
+            channel_id=ensure_uuid4(payload.id) if payload.id is not None else uuid4(),
             channel_schema=channel_schema if channel_schema else payload.ensure_channel_schema(),
             name=normalize_name(payload.name, prefix="channel_") if payload.name else None,
             metadata=cls.sanitize_metadata(payload.metadata),

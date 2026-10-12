@@ -71,6 +71,18 @@ KRONICLE_SU_INFO="a3JvbmljbGVfbWFpbnRhaW5lcjprcm9uaWNsZV9tYWludGFpbmVyQGlyaXNhLm
 | **Zone**    | A workspace or project boundary. Zones act as RBAC domains — permissions assigned at the zone level apply to all channels created inside it.                         |
 | **Row**     | A single data point in a channel. Rows are append-only once inserted.                                                                                                |
 
+### Channel IDs
+
+A channel is identified by a UUID that is shared across both layers: the core RBAC record and the
+data metadata/hypertable all use the same id.
+
+When creating a channel (`POST /data/v1/zones/{zone_id}/channels`, or the `/setup/v1` equivalent),
+you may supply the `id` yourself, or omit it and let the **server generate** one — the id is returned
+in the response either way.
+
+Zones, users, groups and roles work differently: their ids are always **server-generated**, and any
+`id` sent on create is ignored.
+
 ## Quick Start
 
 The fastest way to get started is the interactive notebook: **[README.pynb](README.pynb)**

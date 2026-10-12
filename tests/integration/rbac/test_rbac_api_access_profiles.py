@@ -60,7 +60,7 @@ class TestApiZoneAccessProfiles:
         assert isinstance(created, KronicleZoneAccess)
         assert created.id is not None
         try:
-            fetched = kronicle_rbac.get_zone_access_profile(profile_id=created.id)
+            fetched = kronicle_rbac.get_zone_access_profile_by_id(profile_id=created.id)
             assert fetched.id == created.id
         finally:
             kronicle_rbac.delete_zone_access_profile(profile_id=created.id)
@@ -127,7 +127,7 @@ class TestApiChannelAccessProfiles:
         assert isinstance(created, KronicleChannelAccess)
         assert created.id is not None
         try:
-            fetched = kronicle_rbac.get_channel_access_profile(profile_id=created.id)
+            fetched = kronicle_rbac.get_channel_access_profile_by_id(profile_id=created.id)
             assert fetched.id == created.id
         finally:
             kronicle_rbac.delete_channel_access_profile(profile_id=created.id)
@@ -194,7 +194,7 @@ class TestApiRowAccessProfiles:
         assert isinstance(created, KronicleRowAccess)
         assert created.id is not None
         try:
-            fetched = kronicle_rbac.get_row_access_profile(profile_id=created.id)
+            fetched = kronicle_rbac.get_row_access_profile_by_id(profile_id=created.id)
             assert fetched.id == created.id
         finally:
             kronicle_rbac.delete_row_access_profile(profile_id=created.id)
@@ -287,20 +287,20 @@ class TestApiAccessProfileEdgeCases:
     def test_api_get_nonexistent_zone_access_profile(self, kronicle_rbac):
         fake_id = UUID("00000000-0000-0000-0000-000000000000")
         try:
-            kronicle_rbac.get_zone_access_profile(profile_id=fake_id)
+            kronicle_rbac.get_zone_access_profile_by_id(profile_id=fake_id)
         except Exception:
             pass
 
     def test_api_get_nonexistent_channel_access_profile(self, kronicle_rbac):
         fake_id = UUID("00000000-0000-0000-0000-000000000000")
         try:
-            kronicle_rbac.get_channel_access_profile(profile_id=fake_id)
+            kronicle_rbac.get_channel_access_profile_by_id(profile_id=fake_id)
         except Exception:
             pass
 
     def test_api_get_nonexistent_row_access_profile(self, kronicle_rbac):
         fake_id = UUID("00000000-0000-0000-0000-000000000000")
         try:
-            kronicle_rbac.get_row_access_profile(profile_id=fake_id)
+            kronicle_rbac.get_row_access_profile_by_id(profile_id=fake_id)
         except Exception:
             pass
