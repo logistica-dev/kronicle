@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field, ValidationInfo, field_serializer, field_v
 
 from kronicle.db.data.models.channel_resource import ChannelResource
 from kronicle.db.data.models.channel_schema import ChannelSchema
+from kronicle.db.data.models.column_metadata import ColumnMetadataMap
 from kronicle.types.tag_type import TagType
 from kronicle.utils.dict_utils import ensure_dict_or_none, rows_to_columns, strip_nulls
 
@@ -32,6 +33,7 @@ class ResponsePayload(BaseModel):
     # labels
     metadata: dict[str, Any] | None = None
     tags: dict[str, TagType] | None = None
+    column_metadata: ColumnMetadataMap | None = None
 
     # data
     rows: list[dict[str, Any]] | None = None
@@ -40,7 +42,7 @@ class ResponsePayload(BaseModel):
     # operation metadata
     op_details: dict = Field(default_factory=dict)
 
-    @field_validator("metadata", "tags", mode="before")
+    @field_validator("metadata", "tags", "column_metadata", mode="before")
     @classmethod
     def ensure_dict_or_none(cls, d, info: ValidationInfo) -> dict:
         return ensure_dict_or_none(d, info.field_name)
@@ -91,6 +93,7 @@ class ResponsePayload(BaseModel):
             name=channel_metadata.name,
             metadata=channel_metadata.user_metadata,
             tags=channel_metadata.tags,
+            column_metadata=channel_metadata.column_metadata,
             rows=rows,
             op_details={
                 "provided_rows": provided_rows,
@@ -123,6 +126,13 @@ class ResponsePayload(BaseModel):
     @field_serializer("name", "metadata", "tags", "rows", "columns")
     def skip_empty_fields(self, value, _info):
         return None if not value else value
+
+    @field_serializer("column_metadata")
+    def serialize_column_metadata(self, value: ColumnMetadataMap | None, _info):
+        """Omit when empty; otherwise map each ColumnMetadata to its JSON form (extras kept, None known keys dropped)."""
+        if not value:
+            return None
+        return {col: meta.to_json() for col, meta in value.items()}
 
     # @field_serializer("columns")
     # def serialize_cols(self, cols: dict[str, list] | None):

@@ -7,9 +7,10 @@ from uuid import UUID, uuid4
 
 from asyncpg import Record, UniqueViolationError
 from asyncpg.pool import PoolConnectionProxy
-from pydantic import BaseModel, Field, PrivateAttr, ValidationInfo, field_validator
+from pydantic import BaseModel, Field, PrivateAttr, ValidationInfo, field_validator, model_validator
 
 from kronicle.db.data.models.channel_schema import ChannelSchema
+from kronicle.db.data.models.column_metadata import ColumnMetadataMap, normalize_column_metadata
 from kronicle.errors.error_types import BadRequestError, ConflictError, DatabaseInstructionError, NotFoundError
 from kronicle.schemas.payload.op_feedback import OpFeedback
 from kronicle.schemas.payload.processed_payload import ProcessedPayload
@@ -42,6 +43,9 @@ class ChannelMetadata(BaseModel):
         It is immutable (once created, it will not be updated)
     Optional `metadata` and `tag` are user-defined fields that can be used to add further
         information on the data.
+    `column_metadata` maps each table column to a structured, mutable `ColumnMetadata`
+        (unit, description, ontology + any extra descriptors). Keys are the normalized
+        DB column names (NOT user column names).
 
     """
 
@@ -50,6 +54,7 @@ class ChannelMetadata(BaseModel):
     name: str | None = None
     user_metadata: dict[str, Any] | None = Field(default_factory=dict)
     tags: dict[str, TagType] | None = Field(default_factory=dict)
+    column_metadata: ColumnMetadataMap | None = Field(default_factory=dict)
     received_at: IsoDateTime = Field(default_factory=lambda: IsoDateTime.now_local())
 
     _NAMESPACE: ClassVar[str] = normalize_pg_identifier("data")
@@ -60,6 +65,7 @@ class ChannelMetadata(BaseModel):
         "name": "TEXT UNIQUE",
         "user_metadata": "JSONB",
         "tags": "JSONB",
+        "column_metadata": "JSONB",
         "received_at": "TIMESTAMPTZ NOT NULL DEFAULT now()",
     }  # column names should always be in [a-z_]+ !!!
 
@@ -98,6 +104,24 @@ class ChannelMetadata(BaseModel):
             if not key.strip():
                 raise ValueError("Tag key cannot be empty")
         return v
+
+    @model_validator(mode="after")
+    def _normalize_column_metadata(self) -> ChannelMetadata:
+        """
+        Normalize `column_metadata`: coerce values to ColumnMetadata, drop empty
+        entries, and reject keys that are not real columns of the channel schema.
+
+        Raises:
+            BadRequestError: if a key is not a known DB column.
+        """
+        if not self.column_metadata:
+            self.column_metadata = {}
+            return self
+        self.column_metadata = normalize_column_metadata(
+            self.column_metadata,
+            allowed_columns=self.channel_schema.column_types.keys(),
+        )
+        return self
 
     # ----------------------------------------------------------------------------------------------
     # Field accessors
@@ -145,12 +169,17 @@ class ChannelMetadata(BaseModel):
             "name": self.name,
             "user_metadata": self.user_metadata,
             "tags": self.tags,
+            "column_metadata": self.column_metadata_json() or None,
             "received_at": str(self.received_at),
         }
         return {k: v for k, v in meta.items() if v is not None}
 
     def __str__(self) -> str:
         return str(self.to_json())
+
+    def column_metadata_json(self) -> dict[str, dict[str, Any]]:
+        """JSON-serializable form of `column_metadata` (asyncpg/JSONB-ready)."""
+        return {name: cm.to_json() for name, cm in (self.column_metadata or {}).items()}
 
     # ----------------------------------------------------------------------------------------------
     # DB row helpers
@@ -166,6 +195,7 @@ class ChannelMetadata(BaseModel):
             self.name or None,
             self.user_metadata or {},  # dict for JSONB
             self.tags or {},  # dict for JSONB
+            self.column_metadata_json() or {},  # dict for JSONB
             self.received_at,
         ]
 
@@ -176,6 +206,7 @@ class ChannelMetadata(BaseModel):
         name = record.get("name") or ""
         metadata = record.get("user_metadata") or {}
         tags = record.get("tags") or {}
+        column_metadata = record.get("column_metadata") or {}
         received = record.get("received_at")
         received_iso = IsoDateTime.to_iso_datetime(received) if received is not None else IsoDateTime.now_local()
         channel_schema = ChannelSchema.from_user_json(
@@ -187,6 +218,7 @@ class ChannelMetadata(BaseModel):
             name=name,
             user_metadata=metadata if isinstance(metadata, dict) else loads(metadata),
             tags=tags if isinstance(tags, dict) else loads(tags),
+            column_metadata=column_metadata if isinstance(column_metadata, dict) else loads(column_metadata),
             received_at=received_iso,
         )
 
@@ -198,7 +230,7 @@ class ChannelMetadata(BaseModel):
     ) -> ChannelMetadata:
         """
         Create a ChannelMetadata object from ProcessedPayload.
-        Handles normalization and validation of metadata, tags, name, and schema.
+        Handles normalization and validation of metadata, tags, name, schema and column_metadata.
         """
         channel_id = ensure_uuid4(processed.channel_id)
         if channel_truth:
@@ -225,6 +257,7 @@ class ChannelMetadata(BaseModel):
             channel_schema=channel_schema,
             user_metadata=processed.metadata or {},
             tags=processed.tags or {},
+            column_metadata=processed.column_metadata or {},
         )
 
     def update_with_db(self, record: Record):
@@ -420,7 +453,7 @@ class ChannelMetadata(BaseModel):
         """
         Update mutable fields of an existing ChannelMetadata.
         Immutable fields: channel_id, channel_schema
-        Mutable fields: name, user_metadata, tags
+        Mutable fields: name, user_metadata, tags, column_metadata
         """
         # ChannelMetadata table is supposed to exist (checked at bootstrap)
 
@@ -429,7 +462,7 @@ class ChannelMetadata(BaseModel):
         if not existing:
             raise ValueError(f"No ChannelMetadata found for id {self.channel_id}")
 
-        updatable_columns = ["name", "user_metadata", "tags"]
+        updatable_columns = ["name", "user_metadata", "tags", "column_metadata"]
         placeholders = [f"${i + 1}" for i in range(len(updatable_columns) + 1)]  # +1 for WHERE
 
         sql = f"""
@@ -438,7 +471,14 @@ class ChannelMetadata(BaseModel):
             WHERE channel_id = {placeholders[-1]}
             RETURNING *;
             """
-        values = [getattr(self, col) if col == "name" else getattr(self, col) or {} for col in updatable_columns]
+        values = []
+        for col in updatable_columns:
+            if col == "name":
+                values.append(self.name)
+            elif col == "column_metadata":
+                values.append(self.column_metadata_json())
+            else:
+                values.append(getattr(self, col) or {})
         values.append(self.channel_id)
 
         try:
@@ -509,10 +549,24 @@ if __name__ == "__main__":  # pragma: no cover
         name="meta1",
         user_metadata={"location": "lab"},
         tags={"room": 101},
+        column_metadata={
+            "temperature": {"unit": "Cel", "description": "Air temperature"},
+            "humidity": {"unit": "%"},
+        },  # type: ignore[reportArgumentType]  (raw dicts coerced by model validator)
     )
 
     log_d(here, "metadata", metadata)
+    log_d(here, "column_metadata JSON", metadata.column_metadata_json())
     log_d(here, "DB ready values", metadata.db_ready_values())
+
+    try:
+        ChannelMetadata(
+            channel_id=uuid4(),
+            channel_schema=channel_schema,
+            column_metadata={"not_a_column": {"unit": "C"}},  # type: ignore[reportArgumentType]
+        )
+    except BadRequestError as e:
+        log_d(here, "unknown column rejected", e.message, e.details)
 
     sample_meta = {
         "time": IsoDateTime.now_local(),

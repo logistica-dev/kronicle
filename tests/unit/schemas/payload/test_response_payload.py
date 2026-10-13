@@ -4,6 +4,7 @@ from uuid import uuid4
 import pytest
 
 from kronicle.db.data.models.channel_schema import ChannelSchema
+from kronicle.db.data.models.column_metadata import ColumnMetadata
 from kronicle.schemas.payload.response_payload import ResponsePayload
 from kronicle.types.iso_datetime import IsoDateTime
 
@@ -52,6 +53,7 @@ class MockChannelResourceMetadata:
         self.name = "test_channel"
         self.user_metadata = {"meta": 1}
         self.tags = {"tag": "tag1"}  # simple string tag
+        self.column_metadata = {"a": ColumnMetadata(unit="Cel", precision=2)}  # type: ignore[reportCallIssue]
         self.received_at = IsoDateTime()
 
 
@@ -101,6 +103,13 @@ def test_from_channel_resource_strict_removes_rows():
     assert payload.columns == {"a": [1]}
 
 
+def test_from_channel_resource_carries_column_metadata():
+    rows = [{"a": 1}]
+    resource = MockChannelResource(rows=rows)
+    payload = ResponsePayload.from_channel_resource(resource)  # type: ignore
+    assert payload.column_metadata == {"a": ColumnMetadata(unit="Cel", precision=2)}  # type: ignore[reportCallIssue]
+
+
 # # --- with_op_status ---
 # def test_with_op_status_updates(channel_schema_fixture):
 #     payload = ResponsePayload(id=uuid4(), channel_schema=channel_schema_fixture)
@@ -148,3 +157,26 @@ def test_serializers_strip_nulls(channel_schema_fixture):
     assert "tags" not in d
     assert "rows" not in d
     assert "columns" not in d
+
+
+def test_column_metadata_serialization_shape(channel_schema_fixture):
+    payload = ResponsePayload(
+        id=uuid4(),
+        channel_schema=channel_schema_fixture,
+        column_metadata={"a": ColumnMetadata(unit="Cel", precision=2)},  # type: ignore[reportCallIssue]
+    )
+    d = payload.model_dump()
+    # extras kept, None known keys omitted (via ColumnMetadata.to_json)
+    assert d["column_metadata"] == {"a": {"unit": "Cel", "precision": 2}}
+    # json round-trip keeps the same shape
+    assert payload.model_dump_json()  # smoke: serializes without error
+
+
+def test_empty_column_metadata_omitted_from_dump(channel_schema_fixture):
+    payload = ResponsePayload(
+        id=uuid4(),
+        channel_schema=channel_schema_fixture,
+        column_metadata={},
+    )
+    d = payload.model_dump()
+    assert "column_metadata" not in d

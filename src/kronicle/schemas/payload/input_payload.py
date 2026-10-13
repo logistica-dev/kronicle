@@ -29,6 +29,10 @@ def example_payload():
                 ],
                 "metadata": {"unit": "C"},
                 "tags": {"location": "lab", "floor": 3},
+                "column_metadata": {
+                    "temperature": {"unit": "Cel", "description": "Air temperature"},
+                    "humidity": {"unit": "%"},
+                },
                 "read_users": ["alice", "bob"],
                 "read_groups": ["analysts"],
             }
@@ -46,8 +50,9 @@ class InputPayload(BaseModel):
     """
 
     id: UUID | None = None
-    channel_schema: dict[str, str] | None = None
     name: str | None = None
+    channel_schema: dict[str, str] | None = None
+    column_metadata: dict[str, Any] | None = None
     metadata: dict[str, Any] | None = None
     tags: dict[str, TagType] | None = None
     rows: list[dict[str, Any]] | None = None
@@ -66,7 +71,7 @@ class InputPayload(BaseModel):
     # --------------------------------------------------------------------------
     # Ensure dict fields
     # --------------------------------------------------------------------------
-    @field_validator("channel_schema", "metadata", "tags", mode="before")
+    @field_validator("channel_schema", "metadata", "tags", "column_metadata", mode="before")
     @classmethod
     def ensure_dict_or_none(cls, d, info: ValidationInfo) -> dict:
         try:

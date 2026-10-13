@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kronicle.db.data.models._registry import DATA_NAMESPACE
+from kronicle.db.data.models._registry import DATA_NAMESPACE, ChannelMetadata
 from kronicle.db.migration.engine.operations import SafetyLevel
 from kronicle.db.migration.orchestrators import db_data_provisioner as ddp
 from kronicle.db.migration.orchestrators.db_data_provisioner import (
@@ -212,6 +212,29 @@ def test_check_channel_metadata_table_exists_false():
         assert p.check_channel_metadata_table_exists() is False
 
 
+def test_check_channel_metadata_missing_columns_empty_when_table_absent():
+    p = _provisioner()
+    with patch.object(p, "check_channel_metadata_table_exists", return_value=False) as exists:
+        assert p.check_channel_metadata_missing_columns() == []
+    exists.assert_called_once()
+
+
+def test_check_channel_metadata_missing_columns_reports_gap():
+    p = _provisioner()
+    existing = {
+        "channel_id": "uuid",
+        "channel_schema": "jsonb",
+        "received_at": "timestamp with time zone",
+    }
+    with (
+        patch.object(p, "check_channel_metadata_table_exists", return_value=True),
+        patch.object(p, "_table_columns", return_value=existing) as cols,
+    ):
+        missing = p.check_channel_metadata_missing_columns()
+    cols.assert_called_once_with(ChannelMetadata.tablename())
+    assert missing == ["name", "user_metadata", "tags", "column_metadata"]
+
+
 # ==================================================================================================
 # analyze
 # ==================================================================================================
@@ -222,12 +245,14 @@ def test_analyze_no_work_when_converged():
     with (
         patch.object(p, "check_tracking_tables_exist", return_value=True),
         patch.object(p, "check_channel_metadata_table_exists", return_value=True),
+        patch.object(p, "check_channel_metadata_missing_columns", return_value=[]),
         patch.object(p, "list_channel_tables", return_value=[]),
     ):
         p.analyze()
     assert p._has_work is False
     assert p._tracking_missing is False
     assert p._metadata_missing is False
+    assert p._metadata_missing_cols == []
     assert p.channels == []
 
 
@@ -242,6 +267,21 @@ def test_analyze_reports_tracking_and_metadata_gaps():
     assert p._has_work is True
     assert p._tracking_missing is True
     assert p._metadata_missing is True
+    assert p._metadata_missing_cols == []
+
+
+def test_analyze_detects_missing_metadata_columns():
+    p = _provisioner()
+    with (
+        patch.object(p, "check_tracking_tables_exist", return_value=True),
+        patch.object(p, "check_channel_metadata_table_exists", return_value=True),
+        patch.object(p, "check_channel_metadata_missing_columns", return_value=["column_metadata"]),
+        patch.object(p, "list_channel_tables", return_value=[]),
+    ):
+        p.analyze()
+    assert p._metadata_missing is False
+    assert p._metadata_missing_cols == ["column_metadata"]
+    assert p._has_work is True
 
 
 def test_analyze_detects_channel_drift():
@@ -249,6 +289,7 @@ def test_analyze_detects_channel_drift():
     with (
         patch.object(p, "check_tracking_tables_exist", return_value=True),
         patch.object(p, "check_channel_metadata_table_exists", return_value=True),
+        patch.object(p, "check_channel_metadata_missing_columns", return_value=[]),
         patch.object(p, "list_channel_tables", return_value=["channel_x"]),
         patch.object(p, "_table_columns", return_value={"time": "timestamp with time zone"}),
         patch.object(p, "_primary_key_columns", return_value=["time"]),
@@ -269,6 +310,7 @@ def test_analyze_channel_in_compliance_has_no_work():
     with (
         patch.object(p, "check_tracking_tables_exist", return_value=True),
         patch.object(p, "check_channel_metadata_table_exists", return_value=True),
+        patch.object(p, "check_channel_metadata_missing_columns", return_value=[]),
         patch.object(p, "list_channel_tables", return_value=["channel_x"]),
         patch.object(p, "_table_columns", return_value=dict.fromkeys(SYSTEM_COLUMNS, "t")),
         patch.object(p, "_primary_key_columns", return_value=list(TARGET_PK_COLUMNS)),
@@ -423,6 +465,24 @@ def test_execute_plan_safe_when_nothing_applied():
     psql.assert_not_called()
     assert p._applied_ops == 0
     assert p._safety == SafetyLevel.SAFE
+
+
+def test_execute_plan_adds_missing_metadata_columns():
+    p = _provisioner()
+    p._tracking_missing = False
+    p._metadata_missing = False
+    p._metadata_missing_cols = ["column_metadata"]
+    p.channels = []
+    with (
+        patch.object(p, "_psql") as psql,
+        patch.object(p, "_transform_channel", side_effect=lambda _: False),
+    ):
+        p.execute_plan()
+    alt = str(psql.call_args.args[0])
+    assert "ALTER TABLE" in alt
+    assert "ADD COLUMN IF NOT EXISTS column_metadata JSONB" in alt
+    assert p._applied_ops == 1
+    assert p._safety == SafetyLevel.DESTRUCTIVE
 
 
 def test_run_post_analysis_true_when_converged():
