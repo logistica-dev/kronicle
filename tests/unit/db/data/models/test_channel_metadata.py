@@ -9,6 +9,7 @@ from pytest import raises
 
 from kronicle.db.data.models.channel_metadata import ChannelMetadata
 from kronicle.db.data.models.channel_schema import ChannelSchema
+from kronicle.db.data.models.column_metadata import ColumnMetadata
 from kronicle.errors.error_types import BadRequestError, ConflictError, DatabaseInstructionError
 from kronicle.schemas.payload.op_feedback import OpFeedback
 from kronicle.schemas.payload.processed_payload import ProcessedPayload
@@ -92,6 +93,68 @@ def test_empty_tag_key_raises(sample_schema):
         )
 
 
+# --------------------------------------------------------------------------------------
+# Column metadata
+# --------------------------------------------------------------------------------------
+
+
+def test_column_metadata_raw_dicts_normalized(sample_metadata):
+    m = ChannelMetadata(
+        channel_id=uuid4(),
+        channel_schema=sample_metadata.channel_schema,
+        column_metadata={
+            "temperature": {"unit": "Cel", "description": "Air temperature"},
+            "time": {},
+        },
+    )
+    assert m.column_metadata is not None
+    assert isinstance(m.column_metadata["temperature"], ColumnMetadata)
+    assert m.column_metadata["temperature"].unit == "Cel"
+    assert "time" not in m.column_metadata  # empty entries are dropped
+
+
+def test_column_metadata_none_defaults_to_empty(sample_schema):
+    m = ChannelMetadata(channel_id=uuid4(), channel_schema=sample_schema)
+    assert m.column_metadata == {}
+
+
+def test_column_metadata_unknown_column_rejected(sample_metadata):
+    with raises(BadRequestError):
+        ChannelMetadata(
+            channel_id=uuid4(),
+            channel_schema=sample_metadata.channel_schema,
+            column_metadata={"temperatureC": {"unit": "C"}},  # typo
+        )
+
+
+def test_column_metadata_json_round_trip(sample_metadata):
+    m = ChannelMetadata(
+        channel_id=uuid4(),
+        channel_schema=sample_metadata.channel_schema,
+        column_metadata={"temperature": {"unit": "Cel", "precision": 2}},
+    )
+    payload = m.column_metadata_json()
+    assert payload == {"temperature": {"unit": "Cel", "precision": 2}}
+
+    rebuilt = ChannelMetadata.from_db(
+        {
+            "channel_id": m.channel_id,
+            "channel_schema": m.channel_schema.to_user_json(),
+            "name": m.name,
+            "user_metadata": {},
+            "tags": {},
+            "column_metadata": payload,
+            "received_at": m.received_at,
+        }
+    )
+    assert rebuilt.column_metadata is not None
+    assert rebuilt.column_metadata["temperature"].to_json() == {"unit": "Cel", "precision": 2}
+
+
+def test_to_json_omits_empty_column_metadata(sample_metadata):
+    assert "column_metadata" not in sample_metadata.to_json()
+
+
 def test_received_at_tzinfo(sample_metadata):
     row = {
         "channel_id": sample_metadata.channel_id,
@@ -142,7 +205,8 @@ def test_db_ready_values(sample_metadata):
     assert values[2] == sample_metadata.name
     assert values[3] == sample_metadata.user_metadata
     assert values[4] == sample_metadata.tags
-    assert isinstance(values[5], IsoDateTime)
+    assert values[5] == sample_metadata.column_metadata_json()
+    assert isinstance(values[6], IsoDateTime)
 
 
 # --------------------------------------------------------------------------------------

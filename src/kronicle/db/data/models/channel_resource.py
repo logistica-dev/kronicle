@@ -122,6 +122,10 @@ class ChannelResource:
         return self.metadata.user_metadata
 
     @property
+    def column_metadata(self) -> dict | None:
+        return self.metadata.column_metadata
+
+    @property
     def tags(self) -> dict | None:
         return self.metadata.tags
 
