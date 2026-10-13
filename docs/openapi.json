@@ -3,7 +3,7 @@
   "info": {
     "title": "KRONICLE",
     "summary": "FastAPI x TimescaleDB \u00b5service for storing time-series measurements",
-    "version": "0.6.9"
+    "version": "0.7.0"
   },
   "paths": {
     "/health/live": {

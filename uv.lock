@@ -872,7 +872,7 @@ dev = [
     { name = "uv-bump", specifier = ">=0.6.0" },
 ]
 test = [
-    { name = "kronicle-sdk", specifier = ">=0.4.4" },
+    { name = "kronicle-sdk", specifier = ">=0.5.0" },
     { name = "pytest", specifier = ">=9.1.1" },
     { name = "pytest-asyncio", specifier = ">=1.4.0" },
     { name = "pytest-cov", specifier = ">=7.1.0" },
@@ -881,15 +881,15 @@ test = [
 
 [[package]]
 name = "kronicle-sdk"
-version = "0.4.4"
+version = "0.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic", extra = ["email"] },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/05/31/00d59137ac6f8a0602a22d0835335b680582b967a66b5939646112e24b6a/kronicle_sdk-0.4.4.tar.gz", hash = "sha256:c528605339f83feadf5b49eb666015170e8f13e985b658874cc843cd7bd616ee", size = 57638, upload-time = "2026-10-12T13:19:01.723Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/32/2d/122e7faea064c36975d36137171a45d36f8b1efb4aeec015fdf18ce47f48/kronicle_sdk-0.5.0.tar.gz", hash = "sha256:b1d55d05d5a6a267bec48e94f401a01834e3fd64283de576fa0f7373295cd56a", size = 58899, upload-time = "2026-10-13T21:23:05.581Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a0/a6/dcfc69c4062c3c9be2a555cd1795047f13cfc7232c6d5ec4d4c6adc3f5e1/kronicle_sdk-0.4.4-py3-none-any.whl", hash = "sha256:79fd59191d294191d2d99f05bfb2c17e555153a451875e24385377f7b9956285", size = 71623, upload-time = "2026-10-12T13:19:00.566Z" },
+    { url = "https://files.pythonhosted.org/packages/c4/47/54b0c3931ae5826706ede0cdef2ac54434b7de759b6617ff8fb6ce026446/kronicle_sdk-0.5.0-py3-none-any.whl", hash = "sha256:b2ab1c370a2b57d2fc6350c950f8d17c1edc3e19a49a570a8e35da0eb42df032", size = 73349, upload-time = "2026-10-13T21:23:04.268Z" },
 ]
 
 [[package]]
