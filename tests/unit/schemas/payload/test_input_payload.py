@@ -31,6 +31,7 @@ def test_input_payload_with_all_fields():
         name="MyChannel",
         metadata={"unit": "C"},
         tags={"room": 101},
+        column_metadata={"temperature": {"unit": "Cel"}},
         rows=[{"time": "2025-01-01T00:00:00Z", "temperature": 20.5}],
     )
     assert channel.id == cid
@@ -39,6 +40,7 @@ def test_input_payload_with_all_fields():
     assert channel.name == "mychannel"
     assert channel.metadata == {"unit": "C"}
     assert channel.tags == {"room": 101}
+    assert channel.column_metadata == {"temperature": {"unit": "Cel"}}
     assert channel.rows
     assert len(channel.rows) == 1
 
@@ -47,10 +49,11 @@ def test_input_payload_with_all_fields():
 # Field validation: ensure dict
 # ------------------------------------------------------
 def test_metadata_tags_channel_schema_dict_or_none():
-    payload = InputPayload(metadata=None, tags=None, channel_schema=None)
+    payload = InputPayload(metadata=None, tags=None, channel_schema=None, column_metadata=None)
     assert payload.metadata == {}
     assert payload.tags == {}
     assert payload.channel_schema == {}
+    assert payload.column_metadata == {}
 
 
 def test_metadata_invalid_type_raises():
@@ -61,6 +64,16 @@ def test_metadata_invalid_type_raises():
 def test_tags_invalid_type_raises():
     with pytest.raises(BadRequestError):
         InputPayload(tags=["not", "a", "dict"])  # type: ignore
+
+
+def test_column_metadata_invalid_type_raises():
+    with pytest.raises(BadRequestError):
+        InputPayload(column_metadata=["not", "a", "dict"])  # type: ignore
+
+
+def test_column_metadata_empty_key_raises():
+    with pytest.raises(ValueError):
+        InputPayload(column_metadata={"  ": {"unit": "Cel"}})
 
 
 def test_channel_schema_invalid_type_raises():

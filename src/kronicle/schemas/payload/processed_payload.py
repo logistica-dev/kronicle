@@ -49,6 +49,7 @@ class ProcessedPayload(BaseModel):
     name: str | None = None
     metadata: dict[str, Any] | None = None
     tags: dict[str, TagType] | None = None
+    column_metadata: dict[str, Any] | None = None
     received_at: IsoDateTime = Field(default_factory=lambda: IsoDateTime.now_local())
 
     # ----------------------------------------------------------------------------------
@@ -85,6 +86,11 @@ class ProcessedPayload(BaseModel):
     def sanitize_tags(cls, d) -> dict[str, TagType]:
         cls._validate_structure(d, "tags")
         return sanitize_dict(d, "tags", cast_values=True)
+
+    @classmethod
+    def sanitize_column_metadata(cls, d) -> dict[str, Any]:
+        cls._validate_structure(d, "column_metadata")
+        return sanitize_dict(d, "column_metadata", cast_values=False)
 
     @classmethod
     def _validate_structure(cls, d, field_name: str) -> None:
@@ -135,6 +141,7 @@ class ProcessedPayload(BaseModel):
             name=normalize_name(payload.name, prefix="channel_") if payload.name else None,
             metadata=cls.sanitize_metadata(payload.metadata),
             tags=cls.sanitize_tags(payload.tags),
+            column_metadata=cls.sanitize_column_metadata(payload.column_metadata),
             rows=payload.rows or [],
             op_feedback=OpFeedback(),
         )

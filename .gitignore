@@ -7,7 +7,7 @@ bak
 .conf
 backup*
 kronicle-sdk
-data
+/data/
 tmp/
 
 # Python
