@@ -3,7 +3,7 @@
   "info": {
     "title": "KRONICLE",
     "summary": "FastAPI x TimescaleDB \u00b5service for storing time-series measurements",
-    "version": "0.6.9"
+    "version": "0.7.0"
   },
   "paths": {
     "/health/live": {
@@ -7667,6 +7667,53 @@
         "title": "ChannelSchema",
         "description": "ChannelSchema is a pure structural definition of a channel's timeseries layout.\n\nResponsibilities:\n- Define user-facing column names and their types.\n- Provide validation rules for rows.\n- Provide deterministic user\u2194internal column normalization.\n- Offer structural comparison (e.g. for migration/versioning).\n\nIt is:\n- Storage-agnostic (no table name, no SQL, no DB types).\n- Immutable (once created, structure does not change).\n- Safe to serialize and embed in API payloads (part of ChannelMetadata).\n\nIt does NOT:\n- Know about channel_id.\n- Generate SQL.\n- Know about row id or received_at.\n- Compare itself to a live database table.\n\nDatabase materialization is handled by ChannelTimeseries."
       },
+      "ColumnMetadata": {
+        "properties": {
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit",
+            "description": "Physical unit, e.g. 'Cel' (UCUM) or 'C'"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4096
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "description": "Free-text description"
+          },
+          "ontology": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 512
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ontology",
+            "description": "URI/IRI to an external ontology term"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "ColumnMetadata",
+        "description": "Structured, mutable, per-column annotations for a channel's columns.\n\nStored in `ChannelMetadata.column_metadata` as `dict[<db_col_name>, ColumnMetadata]`.\nIt is intentionally NOT part of `ChannelSchema`: the schema keeps the immutable\nstructure (db column name + type), while this carries the mutable labels:\n- `unit`: physical unit, e.g. 'Cel' (UCUM) or 'C'\n- `description`: free text\n- `ontology`: URI/IRI towards an external ontology term (not URI-validated)\n\nUnknown descriptors are accepted (`extra=\"allow\"`) so the wire format can grow\ndescriptive fields without a breaking change."
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -7980,6 +8027,17 @@
             ],
             "title": "Id"
           },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
           "channel_schema": {
             "anyOf": [
               {
@@ -7994,16 +8052,17 @@
             ],
             "title": "Channel Schema"
           },
-          "name": {
+          "column_metadata": {
             "anyOf": [
               {
-                "type": "string"
+                "additionalProperties": true,
+                "type": "object"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Name"
+            "title": "Column Metadata"
           },
           "metadata": {
             "anyOf": [
@@ -8104,6 +8163,15 @@
             "humidity": "float",
             "temperature": "float",
             "time": "datetime"
+          },
+          "column_metadata": {
+            "humidity": {
+              "unit": "%"
+            },
+            "temperature": {
+              "description": "Air temperature",
+              "unit": "Cel"
+            }
           },
           "id": "12345678-1234-4123-8123-123456789012",
           "metadata": {
@@ -10073,6 +10141,20 @@
               }
             ],
             "title": "Tags"
+          },
+          "column_metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/ColumnMetadata"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column Metadata"
           },
           "rows": {
             "anyOf": [

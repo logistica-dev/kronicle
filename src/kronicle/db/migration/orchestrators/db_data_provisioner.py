@@ -10,7 +10,8 @@ The `data` schema holds two kinds of tables:
 
 This provisioner ensures the `chan` (owner) user actually has a writable object in
 the schema — the migration tracking tables, mirroring core/rbac — creates the
-``ChannelMetadata`` table, and reconciles the channel tables that already exist
+``ChannelMetadata`` table (and reconciles its columns on pre-existing tables, e.g.
+adding newly introduced ones), and reconciles the channel tables that already exist
 (created before the hypertable change): verifying the required system columns, the
 TimescaleDB-compatible composite primary key, and that each table is a hypertable,
 transforming any that are not.
@@ -37,6 +38,7 @@ from kronicle.deps.settings import KronicleSettings
 from kronicle.deps.settings_env import DBSettings, MigrationSettings
 from kronicle.utils.dev_logs import log_d, log_e, log_i, log_w
 from kronicle.utils.file_utils import load_env_file
+from kronicle.utils.str_utils import normalize_pg_identifier
 
 mod = "data_schema"
 
@@ -79,6 +81,7 @@ class DataSchemaProvisioner(BaseProvisioner):
 
         self.channels: list[ChannelDrift] = []
         self.backup_url = backup_url or self.chan_url
+        self._metadata_missing_cols: list[str] = []
 
     # ------------------------------------------------------------------
     # Connection helpers
@@ -198,6 +201,17 @@ class DataSchemaProvisioner(BaseProvisioner):
         )
         return out == "1"
 
+    def check_channel_metadata_missing_columns(self) -> list[str]:
+        """Read-only: columns declared in ChannelMetadata._TABLE_SCHEMA missing from the live table.
+
+        Returns [] when the table itself does not exist yet (it will be created
+        with the full schema, so no column is "missing").
+        """
+        if not self.check_channel_metadata_table_exists():
+            return []
+        existing = self._table_columns(ChannelMetadata.tablename())
+        return [col for col in ChannelMetadata.table_schema() if col not in existing]
+
     # ------------------------------------------------------------------
     # BaseProvisioner contract
     # ------------------------------------------------------------------
@@ -207,6 +221,7 @@ class DataSchemaProvisioner(BaseProvisioner):
         self._has_work = False
         self._tracking_missing = not self.check_tracking_tables_exist()
         self._metadata_missing = not self.check_channel_metadata_table_exists()
+        self._metadata_missing_cols = self.check_channel_metadata_missing_columns()
 
         self.channels = []
         for table in self.list_channel_tables():
@@ -226,7 +241,7 @@ class DataSchemaProvisioner(BaseProvisioner):
             if needs_transform:
                 self._has_work = True
 
-        if self._tracking_missing or self._metadata_missing:
+        if self._tracking_missing or self._metadata_missing or self._metadata_missing_cols:
             self._has_work = True
 
         if not self._has_work:
@@ -246,6 +261,11 @@ class DataSchemaProvisioner(BaseProvisioner):
             log_w(mod, f"  - [{DATA_NAMESPACE}] {_TRACK_CREATION}")
         if self._metadata_missing:
             log_w(mod, f"  - [{DATA_NAMESPACE}] create ChannelMetadata table")
+        if self._metadata_missing_cols:
+            log_w(
+                mod,
+                f"  - [{DATA_NAMESPACE}] add ChannelMetadata column(s): {', '.join(self._metadata_missing_cols)}",
+            )
 
         for drift in self.channels:
             issues = []
@@ -305,6 +325,17 @@ class DataSchemaProvisioner(BaseProvisioner):
             self._psql(ChannelMetadata.create_table_sql())
             log_i(mod, f"Created table '{ChannelMetadata.table()}'")
             applied += 1
+
+        if self._metadata_missing_cols:
+            # Reconcile columns on a pre-existing table (idempotent per column).
+            for col_name in self._metadata_missing_cols:
+                col_type = ChannelMetadata.table_schema()[col_name].split()[0]
+                self._psql(
+                    f"ALTER TABLE {ChannelMetadata.table()} "
+                    f"ADD COLUMN IF NOT EXISTS {normalize_pg_identifier(col_name)} {col_type}"
+                )
+            log_i(mod, f"Added ChannelMetadata column(s): {', '.join(self._metadata_missing_cols)}")
+            applied += len(self._metadata_missing_cols)
 
         for drift in self.channels:
             if self._transform_channel(drift):
@@ -424,6 +455,11 @@ if __name__ == "__main__":
             log_w(mod, f"[{DATA_NAMESPACE}] {_TRACK_CREATION}")
         if provisioner._metadata_missing:
             log_w(mod, f"[{DATA_NAMESPACE}] create ChannelMetadata table")
+        if provisioner._metadata_missing_cols:
+            log_w(
+                mod,
+                f"[{DATA_NAMESPACE}] add ChannelMetadata column(s): {', '.join(provisioner._metadata_missing_cols)}",
+            )
         for drift in provisioner.channels:
             log_d(mod, str(drift))
         if not provisioner._has_work:
