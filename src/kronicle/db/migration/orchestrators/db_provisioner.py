@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import argparse
 import os
-import subprocess
+import subprocess  # intentionally drives the psql/pg_dump/pg_restore clients # nosec B404
 from pathlib import Path
 
 from sqlalchemy import create_engine, text
@@ -37,6 +37,11 @@ from kronicle.utils.file_utils import load_env_file
 mod = "db_provisioner"
 
 _TIMESCALEDB_EXT = "timescaledb"
+
+# ``db_name`` and the owner role names come from ``DBSettings``, which normalizes them
+# via ``normalize_pg_identifier`` (``[a-zA-Z_]\w+``, lowercased). Interpolating them into
+# these ``psql -c`` string literals therefore cannot break out of the quotes; the B608
+# warnings below are false positives.
 
 
 class DbProvisioner(BaseProvisioner):
@@ -108,7 +113,7 @@ class DbProvisioner(BaseProvisioner):
     # ------------------------------------------------------------------
     def check_db_exists(self, dbsu_maintenance_url: str) -> bool:
         """Read-only: does the application database exist?"""
-        result = subprocess.run(
+        result = subprocess.run(  # argv list, no shell; binary from image PATH # nosec B603 B607
             [
                 "psql",
                 "-d",
@@ -116,7 +121,7 @@ class DbProvisioner(BaseProvisioner):
                 "-t",
                 "-A",
                 "-c",
-                f"SELECT 1 FROM pg_database WHERE datname = '{self.db_name}'",
+                f"SELECT 1 FROM pg_database WHERE datname = '{self.db_name}'",  # nosec B608
             ],
             check=True,
             capture_output=True,
@@ -136,8 +141,8 @@ class DbProvisioner(BaseProvisioner):
             )
         else:
             log_d(mod, f"Checking if PSQL user '{user}' exists")
-            result = subprocess.run(
-                ["psql", "-d", url, "-t", "-A", "-c", f"SELECT 1 FROM pg_roles WHERE rolname = '{user}'"],
+            result = subprocess.run(  # argv list, no shell; binary from image PATH # nosec B603 B607
+                ["psql", "-d", url, "-t", "-A", "-c", f"SELECT 1 FROM pg_roles WHERE rolname = '{user}'"],  # nosec B608
                 check=True,
                 capture_output=True,
                 text=True,
@@ -324,7 +329,7 @@ class DbProvisioner(BaseProvisioner):
 
         log_i(mod, f"Creating safeguard backup: { backup_file}")
         try:
-            subprocess.run(cmd, check=True, capture_output=True, text=True)
+            subprocess.run(cmd, check=True, capture_output=True, text=True)  # argv list, no shell # nosec B603
         except subprocess.CalledProcessError as e:
             log_e(mod, f"Backup failed: {e.stderr}")
             raise RuntimeError(f"Backup failed — aborting Database provision: {e.stderr}") from e
@@ -413,7 +418,7 @@ class DbProvisioner(BaseProvisioner):
             if self.check_psql_user_exists(user, maintenance_url):
                 log_i(mod, f"Role '{user}' already exists")
                 continue
-            subprocess.run(
+            subprocess.run(  # argv list, no shell; binary from image PATH # nosec B603 B607
                 ["psql", "-d", maintenance_url, "-c", f"CREATE ROLE \"{user}\" LOGIN PASSWORD '{password}'"],
                 check=True,
                 capture_output=True,
@@ -426,7 +431,7 @@ class DbProvisioner(BaseProvisioner):
         if self.check_db_exists(maintenance_url):
             log_i(mod, f"Database '{self.db_name}' already exists")
             return
-        subprocess.run(
+        subprocess.run(  # argv list, no shell; binary from image PATH # nosec B603 B607
             ["psql", "-d", maintenance_url, "-c", f'CREATE DATABASE "{self.db_name}"'],
             check=True,
             capture_output=True,
@@ -441,7 +446,7 @@ class DbProvisioner(BaseProvisioner):
         during a dbsu-free ``pg_restore`` (restore-as-owner).
         """
         for user in sorted(set(self.schema_owners.values())):
-            subprocess.run(
+            subprocess.run(  # argv list, no shell; binary from image PATH # nosec B603 B607
                 [
                     "psql",
                     "-d",
@@ -460,7 +465,7 @@ class DbProvisioner(BaseProvisioner):
         for schema, owner in self.schema_owners.items():
             exists, current_owner = self._schema_info(schema, dbsu_url)
             if not exists:
-                subprocess.run(
+                subprocess.run(  # argv list, no shell; binary from image PATH # nosec B603 B607
                     ["psql", "-d", dbsu_url, "-c", f'CREATE SCHEMA "{schema}" AUTHORIZATION "{owner}"'],
                     check=True,
                     capture_output=True,
@@ -468,7 +473,7 @@ class DbProvisioner(BaseProvisioner):
                 )
                 log_i(mod, f"Created schema '{schema}' owned by '{owner}'")
             elif current_owner != owner:
-                subprocess.run(
+                subprocess.run(  # argv list, no shell; binary from image PATH # nosec B603 B607
                     ["psql", "-d", dbsu_url, "-c", f'ALTER SCHEMA "{schema}" OWNER TO "{owner}"'],
                     check=True,
                     capture_output=True,
@@ -483,7 +488,7 @@ class DbProvisioner(BaseProvisioner):
         if self.check_timescaledb_extension(dbsu_url):
             log_i(mod, f"Extension '{_TIMESCALEDB_EXT}' already installed")
             return
-        subprocess.run(
+        subprocess.run(  # argv list, no shell; binary from image PATH # nosec B603 B607
             ["psql", "-d", dbsu_url, "-c", f"CREATE EXTENSION IF NOT EXISTS {_TIMESCALEDB_EXT};"],
             check=True,
             capture_output=True,

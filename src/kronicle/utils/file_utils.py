@@ -139,7 +139,8 @@ def get_file_hash(file_local_path: str, hash_algo: str = "md5") -> str:
     if not isinstance(hash_algo, str) or (upper_algo := hash_algo.upper()) not in ACCEPTED_HASH_ALGOS:
         raise ValueError(f"Hash algorithm should be MD5, SHA-256 or SHA-512, got: '{hash_algo}'")
     if upper_algo == "MD5":
-        return md5(file_content).hexdigest()
+        # MD5 is a content checksum here, never a security primitive.
+        return md5(file_content, usedforsecurity=False).hexdigest()
     if upper_algo in ("SHA256", "SHA-256"):
         return sha256(file_content).hexdigest()
     # if upper_algo not in ("SHA512", "SHA-512"):

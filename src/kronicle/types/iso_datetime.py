@@ -223,22 +223,22 @@ if __name__ == "__main__":  # pragma: no cover
     # naive string input
     e1 = Event(timestamp="2025-09-17T20:00:00")  # type: ignore
     log_d(here, "Pydantic naive input parsed", e1.timestamp, repr(e1.timestamp))
-    assert isinstance(e1.timestamp, IsoDateTime)
-    assert e1.timestamp.tzinfo is not None
+    assert isinstance(e1.timestamp, IsoDateTime)  # nosec B101
+    assert e1.timestamp.tzinfo is not None  # nosec B101
 
     # aware string input
     e2 = Event(timestamp="2025-09-17T20:00:00+02:00")  # type: ignore
     log_d(here, "Pydantic aware input parsed", e2.timestamp, repr(e2.timestamp))
-    assert isinstance(e2.timestamp, IsoDateTime)
-    assert e2.timestamp.tzinfo is not None
+    assert isinstance(e2.timestamp, IsoDateTime)  # nosec B101
+    assert e2.timestamp.tzinfo is not None  # nosec B101
 
     # datetime object input
     import datetime as dt_mod
 
     e3 = Event(timestamp=dt_mod.datetime(2025, 9, 17, 20, 0, 0))  # type: ignore
     log_d(here, "Pydantic datetime object input", e3.timestamp, repr(e3.timestamp))
-    assert isinstance(e3.timestamp, IsoDateTime)
-    assert e3.timestamp.tzinfo is not None
+    assert isinstance(e3.timestamp, IsoDateTime)  # nosec B101
+    assert e3.timestamp.tzinfo is not None  # nosec B101
 
     # JSON serialization
     json_out = e1.model_dump_json()

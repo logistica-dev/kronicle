@@ -16,11 +16,7 @@ from collections.abc import Generator
 
 import pytest
 import requests as req
-from kronicle_sdk.conf.read_conf import Settings
-from kronicle_sdk.connectors.channel.channel_setup import KronicleSetup
-from kronicle_sdk.connectors.rbac.core_setup import KronicleCore
-from kronicle_sdk.connectors.rbac.rbac_setup import KronicleRbac
-from kronicle_sdk.models.rbac.kronicle_zone import KronicleZone
+from kronicle_sdk import KronicleCore, KronicleRbac, KronicleSetup, KronicleZone, Settings
 from kronicle_sdk.utils.str_utils import slash_join, tiny_id, uuid4_str
 
 pytestmark = pytest.mark.integration

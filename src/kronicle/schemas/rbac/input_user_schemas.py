@@ -1,6 +1,7 @@
 # kronicle/schemas/rbac/input_user_schemas.py
 from __future__ import annotations
 
+from contextlib import suppress
 from typing import Annotated
 
 from email_validator import validate_email
@@ -40,13 +41,11 @@ class InputUserLogin(BaseModel):
     def validate_login(cls, v: str | None, info) -> str:
         if v is None:
             raise BadRequestError("Input login must be provided")
-        try:
+        with suppress(Exception):  # not an email: fall through to username validation
             validate_email(v)
             # Mark that this is an email
             info.data["_is_email"] = True
             return v.lower()
-        except Exception:
-            pass
         try:
             validate_name_syntax(v, extra_chars="_ .@-", min_length=4, max_length=64)
         except ValueError as e:

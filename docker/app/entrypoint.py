@@ -63,7 +63,7 @@ if __name__ == "__main__":  # pragma: no-cover
     uvicorn.run(
         app,
         factory=True,
-        host="0.0.0.0",
+        host="0.0.0.0",  # bind-all is required inside the container # nosec B104
         port=int(os.environ.get("KRONICLE_PORT", 8000)),
         log_level="error",
     )

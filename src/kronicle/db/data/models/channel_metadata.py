@@ -142,6 +142,7 @@ class ChannelMetadata(BaseModel):
 
     @classmethod
     def table(cls):
+        """Fully-qualified table name; a constant (``data.channel_metadata``), safe to interpolate."""
         return f"{cls._NAMESPACE}.{cls._TABLE_NAME}"
 
     @classmethod
@@ -305,7 +306,7 @@ class ChannelMetadata(BaseModel):
         Returns:
             ChannelMetadata instance or None if not found
         """
-        sql = f"SELECT * FROM {cls.table()} WHERE channel_id = $1"
+        sql = f"SELECT * FROM {cls.table()} WHERE channel_id = $1"  # constant table # nosec B608
         record = await db.fetchrow(sql, ensure_uuid4(channel_id))
         if not record:
             return None
@@ -323,7 +324,7 @@ class ChannelMetadata(BaseModel):
         Returns:
             ChannelMetadata instance or None if not found
         """
-        sql = f"SELECT * FROM {cls.table()} WHERE name = $1"
+        sql = f"SELECT * FROM {cls.table()} WHERE name = $1"  # constant table # nosec B608
         try:
             norm_name = normalize_name(name, prefix="channel_")
         except ValueError:
@@ -352,7 +353,7 @@ class ChannelMetadata(BaseModel):
         SELECT * FROM {cls.table()}
         WHERE tags @> $1
         ORDER BY received_at DESC
-        """
+        """  # constant table # nosec B608
         record_list = await db.fetch(sql, tags)
         return [cls.from_db(dict(r)) for r in record_list]
 
@@ -376,7 +377,7 @@ class ChannelMetadata(BaseModel):
         SELECT * FROM {cls.table()}
         WHERE user_metadata @> $1
         ORDER BY received_at DESC
-        """
+        """  # constant table # nosec B608
         log_d(here, "user_meta:", user_meta)
         record_list = await db.fetch(sql, user_meta)
         log_d(here, "record_list:", record_list)
@@ -394,7 +395,7 @@ class ChannelMetadata(BaseModel):
         Returns:
             List of ChannelMetadata objects
         """
-        sql = f"SELECT * FROM {cls.table()} ORDER BY received_at DESC"
+        sql = f"SELECT * FROM {cls.table()} ORDER BY received_at DESC"  # constant table # nosec B608
         record_list = await db.fetch(sql)
         return [cls.from_db(dict(r)) for r in record_list]
 
@@ -418,7 +419,7 @@ class ChannelMetadata(BaseModel):
         INSERT INTO {self.table()} ({", ".join(columns)})
         VALUES ({", ".join(placeholders)})
         RETURNING *;
-        """
+        """  # constant table; constant column names # nosec B608
         # log_d(here, "sql", sql)
         # log_d(here, "db_ready_values", self.db_ready_values())
         try:
@@ -470,7 +471,7 @@ class ChannelMetadata(BaseModel):
             SET {", ".join(f"{col} = {placeholders[idx]}" for idx, col in enumerate(updatable_columns))}
             WHERE channel_id = {placeholders[-1]}
             RETURNING *;
-            """
+            """  # constant table; constant column names # nosec B608
         values = []
         for col in updatable_columns:
             if col == "name":
@@ -516,7 +517,7 @@ class ChannelMetadata(BaseModel):
         DELETE FROM {self.table()}
         WHERE channel_id = $1
         RETURNING *;
-        """
+        """  # constant table # nosec B608
         record = await db.fetchrow(sql, self.channel_id)
         if not record:
             return None  # row didn't exist

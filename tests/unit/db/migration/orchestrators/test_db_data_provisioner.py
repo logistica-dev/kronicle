@@ -36,8 +36,13 @@ def _provisioner(**settings_kwargs):
     )
 
 
+# Real channel table names are ``channel_`` + 32 lowercase hex chars.
+CHANNEL_TABLE = "channel_" + "a" * 32
+CHANNEL_TABLE_C = "channel_" + "c" * 32
+
+
 def _drift(
-    table="channel_x",
+    table=CHANNEL_TABLE,
     missing: list[str] | None = None,
     pk: list[str] | None = None,
     hyper: bool = True,
@@ -112,14 +117,30 @@ def test_list_channel_tables_filters_empty_lines():
 
 def test_list_channel_tables_parses_single_table():
     p = _provisioner()
-    with patch.object(p, "_psql", return_value="channel_c" + "c" * 32 + "\n"):
-        assert p.list_channel_tables() == ["channel_c" + "c" * 32]
+    with patch.object(p, "_psql", return_value=CHANNEL_TABLE_C + "\n"):
+        assert p.list_channel_tables() == [CHANNEL_TABLE_C]
+
+
+def test_list_channel_tables_rejects_non_channel_names():
+    p = _provisioner()
+    rogue = "channel_" + "z" * 32  # wrong alphabet: not hex
+    too_long = "channel_" + "a" * 33  # wrong length
+    with patch.object(p, "_psql", return_value=f"{rogue}\n{too_long}\n{CHANNEL_TABLE_C}\n"):
+        assert p.list_channel_tables() == [CHANNEL_TABLE_C]
 
 
 def test_list_channel_tables_empty():
     p = _provisioner()
     with patch.object(p, "_psql", return_value=""):
         assert p.list_channel_tables() == []
+
+
+def test_list_unfitted_channel_tables_returns_catalog_rows():
+    p = _provisioner()
+    rogue = "channel_" + "z" * 32
+    too_long = "channel_" + "a" * 33
+    with patch.object(p, "_psql", return_value=f"{rogue}\n{too_long}\n\n"):
+        assert p.list_unfitted_channel_tables() == [rogue, too_long]
 
 
 def test_table_columns_parses_name_and_type():
@@ -247,6 +268,7 @@ def test_analyze_no_work_when_converged():
         patch.object(p, "check_channel_metadata_table_exists", return_value=True),
         patch.object(p, "check_channel_metadata_missing_columns", return_value=[]),
         patch.object(p, "list_channel_tables", return_value=[]),
+        patch.object(p, "list_unfitted_channel_tables", return_value=[]),
     ):
         p.analyze()
     assert p._has_work is False
@@ -262,6 +284,7 @@ def test_analyze_reports_tracking_and_metadata_gaps():
         patch.object(p, "check_tracking_tables_exist", return_value=False),
         patch.object(p, "check_channel_metadata_table_exists", return_value=False),
         patch.object(p, "list_channel_tables", return_value=[]),
+        patch.object(p, "list_unfitted_channel_tables", return_value=[]),
     ):
         p.analyze()
     assert p._has_work is True
@@ -277,6 +300,7 @@ def test_analyze_detects_missing_metadata_columns():
         patch.object(p, "check_channel_metadata_table_exists", return_value=True),
         patch.object(p, "check_channel_metadata_missing_columns", return_value=["column_metadata"]),
         patch.object(p, "list_channel_tables", return_value=[]),
+        patch.object(p, "list_unfitted_channel_tables", return_value=[]),
     ):
         p.analyze()
     assert p._metadata_missing is False
@@ -291,6 +315,7 @@ def test_analyze_detects_channel_drift():
         patch.object(p, "check_channel_metadata_table_exists", return_value=True),
         patch.object(p, "check_channel_metadata_missing_columns", return_value=[]),
         patch.object(p, "list_channel_tables", return_value=["channel_x"]),
+        patch.object(p, "list_unfitted_channel_tables", return_value=[]),
         patch.object(p, "_table_columns", return_value={"time": "timestamp with time zone"}),
         patch.object(p, "_primary_key_columns", return_value=["time"]),
         patch.object(p, "_is_hypertable", return_value=True),
@@ -312,12 +337,28 @@ def test_analyze_channel_in_compliance_has_no_work():
         patch.object(p, "check_channel_metadata_table_exists", return_value=True),
         patch.object(p, "check_channel_metadata_missing_columns", return_value=[]),
         patch.object(p, "list_channel_tables", return_value=["channel_x"]),
+        patch.object(p, "list_unfitted_channel_tables", return_value=[]),
         patch.object(p, "_table_columns", return_value=dict.fromkeys(SYSTEM_COLUMNS, "t")),
         patch.object(p, "_primary_key_columns", return_value=list(TARGET_PK_COLUMNS)),
         patch.object(p, "_is_hypertable", return_value=True),
     ):
         p.analyze()
     assert p._has_work is False
+
+
+def test_analyze_records_unfitted_channel_tables():
+    p = _provisioner()
+    rogue = "channel_" + "z" * 32  # non-canonical: not hex
+    with (
+        patch.object(p, "check_tracking_tables_exist", return_value=True),
+        patch.object(p, "check_channel_metadata_table_exists", return_value=True),
+        patch.object(p, "check_channel_metadata_missing_columns", return_value=[]),
+        patch.object(p, "list_channel_tables", return_value=[]),
+        patch.object(p, "list_unfitted_channel_tables", return_value=[rogue]),
+    ):
+        p.analyze()
+    assert p.unfitted_channel_tables == [rogue]
+    assert p._has_work is False  # untreatable names are reported, not transformed
 
 
 # ==================================================================================================
@@ -343,6 +384,17 @@ def test_ask_validation_prompts_when_not_auto_approved():
     with patch.object(p, "_confirm", return_value=True) as confirm:
         assert p.ask_validation(auto_approve=False) is True
     confirm.assert_called_once()
+
+
+def test_ask_validation_warns_about_unfitted_channel_tables():
+    p = _provisioner()
+    p._tracking_missing = False
+    p._metadata_missing = False
+    p.channels = []
+    p.unfitted_channel_tables = ["channel_rogue"]
+    with patch.object(ddp, "log_w") as log_w, patch.object(p, "_confirm", return_value=True):
+        assert p.ask_validation(auto_approve=False) is True
+    assert any("channel_rogue" in str(c.args) for c in log_w.call_args_list)
 
 
 def test_ask_validation_returns_false_when_user_declines():
@@ -525,14 +577,15 @@ def test_transform_channel_noop_when_already_hypertable():
 def test_transform_channel_drops_and_readds_primary_key():
     p = _provisioner()
     drift = _drift(pk=["time"], hyper=True)
+    pk_name = f"{CHANNEL_TABLE}_pkey"
     with (
-        patch.object(p, "_primary_key_name", return_value="channel_x_pkey"),
+        patch.object(p, "_primary_key_name", return_value=pk_name),
         patch.object(p, "_psql") as psql,
     ):
         assert p._transform_channel(drift) is True
     sqls = [str(c.args[0]) for c in psql.call_args_list]
-    assert f"ALTER TABLE {DATA_NAMESPACE}.channel_x DROP CONSTRAINT channel_x_pkey" in sqls
-    assert f"ALTER TABLE {DATA_NAMESPACE}.channel_x ADD PRIMARY KEY (time, row_id)" in sqls
+    assert f"ALTER TABLE {DATA_NAMESPACE}.{CHANNEL_TABLE} DROP CONSTRAINT {pk_name}" in sqls
+    assert f"ALTER TABLE {DATA_NAMESPACE}.{CHANNEL_TABLE} ADD PRIMARY KEY (time, row_id)" in sqls
 
 
 def test_transform_channel_adds_pk_when_no_existing_constraint():
@@ -553,7 +606,7 @@ def test_transform_channel_creates_hypertable_when_missing():
     with patch.object(p, "_psql") as psql:
         assert p._transform_channel(drift) is True
     sql = str(psql.call_args.args[0])
-    assert f"create_hypertable('{DATA_NAMESPACE}.channel_x', 'time'" in sql
+    assert f"create_hypertable('{DATA_NAMESPACE}.{CHANNEL_TABLE}', 'time'" in sql
     assert "create_default_indexes => TRUE" in sql
 
 
@@ -561,11 +614,20 @@ def test_transform_channel_full_reconcile():
     p = _provisioner()
     drift = _drift(missing=["received_at"], pk=["time"], hyper=False)
     with (
-        patch.object(p, "_primary_key_name", return_value="channel_x_pkey"),
+        patch.object(p, "_primary_key_name", return_value=f"{CHANNEL_TABLE}_pkey"),
         patch.object(p, "_psql") as psql,
     ):
         assert p._transform_channel(drift) is True
     assert psql.call_count == 3
+
+
+def test_transform_channel_rejects_non_channel_table():
+    p = _provisioner()
+    drift = _drift(table="channel_x", pk=["time"], hyper=True)
+    with patch.object(p, "_psql") as psql:
+        with pytest.raises(ValueError, match="non-channel table"):
+            p._transform_channel(drift)
+    psql.assert_not_called()
 
 
 def test_transform_channel_missing_columns_only_still_returns_true():

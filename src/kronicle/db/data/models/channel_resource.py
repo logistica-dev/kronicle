@@ -38,8 +38,13 @@ class ChannelResource:
     ):
         self.metadata = metadata
         if timeseries is not None:
-            assert isinstance(timeseries, ChannelTimeseries)
-            assert timeseries.channel_id == metadata.channel_id
+            if not isinstance(timeseries, ChannelTimeseries):
+                raise TypeError(f"timeseries must be a ChannelTimeseries, got {type(timeseries).__name__}")
+            if timeseries.channel_id != metadata.channel_id:
+                raise ValueError(
+                    f"timeseries.channel_id ({timeseries.channel_id}) does not match "
+                    f"metadata.channel_id ({metadata.channel_id})"
+                )
             self.timeseries = timeseries
         else:
             self.timeseries = ChannelTimeseries(

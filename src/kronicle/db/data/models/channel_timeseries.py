@@ -307,8 +307,9 @@ class ChannelTimeseries:
         """Convert the table to a TimescaleDB hypertable if not already one (for later use)."""
         if await self._is_hypertable(db):
             return
+        # ``self.table`` is ``<constant namespace>.channel_<UUID hex>``: no user input reaches it.
         await db.execute(
-            f"SELECT * FROM create_hypertable("
+            f"SELECT * FROM create_hypertable("  # nosec B608
             f"'{self.table}', 'time', "
             f"if_not_exists => TRUE, "
             f"create_default_indexes => TRUE"
@@ -321,7 +322,7 @@ class ChannelTimeseries:
         """
         if not await self.table_exists(db):
             return 0
-        query = f"SELECT COUNT(*) FROM {self.table}"
+        query = f"SELECT COUNT(*) FROM {self.table}"  # nosec B608
         result = await db.fetchval(query)
         return result or 0
 
@@ -349,7 +350,8 @@ class ChannelTimeseries:
             return self
 
         sql_fragment, params = context.to_sql()
-        sql_req = f"SELECT * FROM {self.table} {sql_fragment}"
+        # ``sql_fragment`` is parameterized ($N) with whitelisted columns; ``self.table`` is from a UUID.
+        sql_req = f"SELECT * FROM {self.table} {sql_fragment}"  # nosec B608
         rows = await db.fetch(sql_req, *params)
         self.set_rows([dict(r) for r in rows])
         return self
@@ -381,11 +383,13 @@ class ChannelTimeseries:
         cols = self._sql_insert_columns
         placeholders = [f"${i + 1}" for i in range(len(cols))]
 
-        sql = f"""
-        INSERT INTO {self.table} ({", ".join(cols)})
-        VALUES ({", ".join(placeholders)})
-        RETURNING row_id;
-        """
+        # ``self.table`` is from a UUID; ``cols`` are ``[a-z0-9_]`` identifiers validated by
+        # ChannelSchema (``normalize_pg_identifier``); values are bound placeholders ($N).
+        sql = (
+            f"INSERT INTO {self.table} ({', '.join(cols)}) "  # nosec B608
+            f"VALUES ({', '.join(placeholders)}) "
+            "RETURNING row_id"
+        )
 
         await self.ensure_table(db)
 
@@ -429,7 +433,8 @@ class ChannelTimeseries:
 
         sql_fragment, params = context.to_sql(include_sort=False, include_pagination=False)
 
-        sql_req = f"DELETE FROM {self.table} {sql_fragment} RETURNING *"
+        # ``sql_fragment`` is parameterized ($N) with whitelisted columns; ``self.table`` is from a UUID.
+        sql_req = f"DELETE FROM {self.table} {sql_fragment} RETURNING *"  # nosec B608
         rows = await db.fetch(sql_req, *params)
         self.set_rows([dict(r) for r in rows])
         return self
@@ -445,7 +450,7 @@ class ChannelTimeseries:
         if not await self.table_exists(db):
             log_w(here, f"Table '{self.table}' not found, nothing to drop")
             return
-        sql_fetch = f"SELECT * FROM {self.table}"
+        sql_fetch = f"SELECT * FROM {self.table}"  # nosec B608
         rows = await db.fetch(sql_fetch)
         rows_data = [dict(r) for r in rows]
 

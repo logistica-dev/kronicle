@@ -209,7 +209,7 @@ class ConnectionSettings:
 
     @classmethod
     def from_env(cls, host_var: str = APP_HOST, port_var: str = APP_PORT, *args, **kwargs) -> ConnectionSettings:
-        host = get_env_var(host_var, "0.0.0.0")
+        host = get_env_var(host_var, "0.0.0.0")  # bind-all default intended for containers # nosec B104
         port = int(get_env_var(port_var, 8000))
         return cls(host=host, port=port)
 

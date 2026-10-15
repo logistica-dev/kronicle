@@ -5,13 +5,9 @@ import uuid
 
 import pytest
 import requests
-from kronicle_sdk.conf.read_conf import Settings
+from kronicle_sdk import KronicleCore, KronicleRbac, KronicleSetup, KronicleZone, Settings
 from kronicle_sdk.connectors.auth.kronicle_auth import KronicleUsrLogin
-from kronicle_sdk.connectors.channel.channel_setup import KronicleSetup
-from kronicle_sdk.connectors.rbac.core_setup import KronicleCore
-from kronicle_sdk.connectors.rbac.rbac_setup import KronicleRbac
 from kronicle_sdk.models.rbac.kronicle_group import KronicleGroup
-from kronicle_sdk.models.rbac.kronicle_zone import KronicleZone
 from kronicle_sdk.utils.str_utils import tiny_id
 
 

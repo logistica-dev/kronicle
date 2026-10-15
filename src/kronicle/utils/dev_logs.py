@@ -73,26 +73,26 @@ class OneLetterRichHandler(RichHandler):
         message = self.format(record)
         traceback_renderable = None
 
-        if self.rich_tracebacks and record.exc_info not in (None, (None, None, None)):
-            exc_type, exc_value, exc_tb = record.exc_info
-            assert exc_type is not None
-            assert exc_value is not None
-            # Pyright-safe: always pass correct types
-            traceback_renderable = Traceback.from_exception(
-                exc_type,
-                exc_value,
-                exc_tb,
-                width=self.tracebacks_width,
-                code_width=self.tracebacks_code_width,
-                extra_lines=self.tracebacks_extra_lines,
-                theme=self.tracebacks_theme,
-                word_wrap=self.tracebacks_word_wrap,
-                show_locals=self.tracebacks_show_locals,
-                locals_max_length=self.locals_max_length,
-                locals_max_string=self.locals_max_string,
-                suppress=self.tracebacks_suppress,
-                max_frames=self.tracebacks_max_frames,
-            )
+        exc_info = record.exc_info
+        if self.rich_tracebacks and exc_info is not None:
+            exc_type, exc_value, exc_tb = exc_info
+            if exc_type is not None and exc_value is not None:
+                # Pyright-safe: always pass correct types
+                traceback_renderable = Traceback.from_exception(
+                    exc_type,
+                    exc_value,
+                    exc_tb,
+                    width=self.tracebacks_width,
+                    code_width=self.tracebacks_code_width,
+                    extra_lines=self.tracebacks_extra_lines,
+                    theme=self.tracebacks_theme,
+                    word_wrap=self.tracebacks_word_wrap,
+                    show_locals=self.tracebacks_show_locals,
+                    locals_max_length=self.locals_max_length,
+                    locals_max_string=self.locals_max_string,
+                    suppress=self.tracebacks_suppress,
+                    max_frames=self.tracebacks_max_frames,
+                )
 
         # Render message with optional traceback
         message_renderable = self.render_message(record, message)
@@ -380,4 +380,4 @@ if __name__ == "__main__":  # pragma: no cover
     output = formatter.format(record)
     log_d(here, "output", output)
 
-    assert "I" in output  # INFO -> I
+    assert "I" in output  # INFO -> I # nosec B101

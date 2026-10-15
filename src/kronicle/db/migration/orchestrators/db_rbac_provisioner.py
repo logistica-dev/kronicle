@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import argparse
 import os
-import subprocess
+import subprocess  # intentionally drives the psql/pg_dump/pg_restore clients # nosec B404
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from json import dumps
@@ -119,7 +119,7 @@ def _delete_orphans(checks: list[_FkCheck], conn_str: str) -> None:
         total = 0
         for c in checks:
             sql = _build_orphan_delete_sql(c)
-            result = subprocess.run(
+            result = subprocess.run(  # argv list, no shell; binary from image PATH # nosec B603 B607
                 ["psql", "-d", conn_str, "-c", sql],
                 check=True,
                 capture_output=True,
@@ -139,13 +139,17 @@ def _delete_orphans(checks: list[_FkCheck], conn_str: str) -> None:
 
 
 def _build_orphan_delete_sql(c: _FkCheck) -> str:
-    """Build a DELETE query that removes rows referencing non-existent parent rows."""
+    """Build a DELETE query that removes rows referencing non-existent parent rows.
+
+    Every interpolated identifier (schema/table/column) comes from SQLAlchemy
+    ``Base.metadata`` (the model definitions in code), never from user input.
+    """
     where_parts = [
-        f"NOT EXISTS (SELECT 1 FROM {c.ref_schema}.{c.ref_table} AS ref WHERE src.{src} = ref.{ref})"
+        f"NOT EXISTS (SELECT 1 FROM {c.ref_schema}.{c.ref_table} AS ref WHERE src.{src} = ref.{ref})"  # nosec B608
         for src, ref in zip(c.src_cols, c.ref_cols, strict=True)
     ]
     return (
-        f"DELETE FROM {c.src_schema}.{c.src_table} AS src"
+        f"DELETE FROM {c.src_schema}.{c.src_table} AS src"  # nosec B608
         f" WHERE {' OR '.join(f'src.{col} IS NOT NULL' for col in c.src_cols)}"
         f" AND ({' AND '.join(where_parts)})"
     )
@@ -716,7 +720,7 @@ class RbacSchemasProvisioner(BaseProvisioner):
 
         log_i(mod, f"Creating backup: {backup_file}")
         try:
-            subprocess.run(cmd, check=True, capture_output=True, text=True)
+            subprocess.run(cmd, check=True, capture_output=True, text=True)  # argv list, no shell # nosec B603
         except subprocess.CalledProcessError as e:
             log_e(mod, f"Backup failed: {e.stderr}")
             raise RuntimeError(f"Backup failed — aborting migration: {e.stderr}") from e
@@ -780,7 +784,7 @@ class RbacSchemasProvisioner(BaseProvisioner):
                 with create_engine(restore_url).begin() as conn:
                     cls.__table__.drop(bind=conn, checkfirst=True)
 
-        subprocess.run(
+        subprocess.run(  # argv list, no shell; binary from image PATH # nosec B603 B607
             ["pg_restore", "--clean", "--if-exists", "--no-owner", "-d", restore_url, str(backup_file)],
             check=True,
         )

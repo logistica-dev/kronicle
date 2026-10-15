@@ -4,7 +4,8 @@ from kronicle_sdk.conf.read_conf import Settings
 from kronicle_sdk.connectors.rbac.rbac_setup import KronicleRbac
 
 co = Settings().connection_su
-assert co
+if co is None:
+    raise RuntimeError("Settings().connection_su is not configured")
 kronicle_rbac = KronicleRbac.from_connection_info(co)
 
 usr_list = kronicle_rbac.list_users(include_inactive=True)

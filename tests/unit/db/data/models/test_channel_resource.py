@@ -79,6 +79,17 @@ def test_init_with_timeseries(mock_metadata, mock_timeseries):
     assert resource.timeseries is mock_timeseries
 
 
+def test_init_rejects_wrong_timeseries_type(mock_metadata):
+    with raises(TypeError):
+        ChannelResource(mock_metadata, object())  # type: ignore[arg-type]
+
+
+def test_init_rejects_channel_id_mismatch(mock_metadata, mock_timeseries):
+    mock_timeseries.channel_id = uuid4()
+    with raises(ValueError):
+        ChannelResource(mock_metadata, mock_timeseries)
+
+
 def test_init_creates_timeseries_if_missing(mock_metadata):
     with patch("kronicle.db.data.models.channel_resource.ChannelTimeseries") as ts_cls:
         ts_instance = MagicMock()

@@ -2,12 +2,7 @@
 from collections.abc import Generator
 
 import pytest
-from kronicle_sdk.conf.read_conf import Settings
-from kronicle_sdk.connectors.abc_connector import KronicleChannel
-from kronicle_sdk.connectors.channel.channel_setup import KronicleSetup
-from kronicle_sdk.connectors.channel.channel_writer import KronicleWriter
-from kronicle_sdk.connectors.rbac.core_setup import KronicleCore
-from kronicle_sdk.models.rbac.kronicle_zone import KronicleZone
+from kronicle_sdk import KronicleChannel, KronicleCore, KronicleSetup, KronicleWriter, KronicleZone, Settings
 from kronicle_sdk.utils.str_utils import tiny_id, uuid4_str
 
 

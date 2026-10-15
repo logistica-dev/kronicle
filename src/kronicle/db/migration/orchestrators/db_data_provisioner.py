@@ -27,7 +27,8 @@ from __future__ import annotations
 
 import argparse
 import os
-import subprocess
+import re
+import subprocess  # intentionally drives the psql/pg_dump/pg_restore clients # nosec B404
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -52,6 +53,11 @@ SYSTEM_COLUMNS: dict[str, str] = {
 TARGET_PK_COLUMNS = ("time", "row_id")
 
 _TRACK_CREATION = "creation of the tracking tables for schema"
+
+# Authoritative shape of a channel timeseries table: ``channel_`` + the channel id as
+# 32 lowercase hex chars. The DB catalog is untrusted (legacy/manual/rogue tables), so
+# any table name interpolated into DDL is validated against this before use.
+_CHANNEL_TABLE_RE = re.compile(r"^channel_[0-9a-f]{32}$")
 
 
 @dataclass
@@ -80,6 +86,7 @@ class DataSchemaProvisioner(BaseProvisioner):
         self.auto_approve = self.migration_settings.auto
 
         self.channels: list[ChannelDrift] = []
+        self.unfitted_channel_tables: list[str] = []
         self.backup_url = backup_url or self.chan_url
         self._metadata_missing_cols: list[str] = []
 
@@ -107,7 +114,7 @@ class DataSchemaProvisioner(BaseProvisioner):
         cmd = ["psql", "-d", url or self.data_url, "-c", sql]
         if tuples:
             cmd += ["-t", "-A", "-F", "\t"]
-        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True)  # argv list, no shell # nosec B603
         return result.stdout.strip()
 
     def _require_tables(self) -> bool:
@@ -127,11 +134,31 @@ class DataSchemaProvisioner(BaseProvisioner):
         Channel table names are ``channel_`` + the channel id as 32 lowercase hex chars
         (``ChannelTimeseries.table()``). A plain ``LIKE 'channel\\_%'`` would also match the
         static ``channel_metadata`` table, so match on the exact 32-hex shape to exclude it.
+
+        These are the tables the reconciler is allowed to transform. Channel-prefixed
+        tables that do NOT fit this shape are surfaced separately (never silently
+        ignored) by :meth:`list_unfitted_channel_tables`.
         """
         out = self._psql(
-            "SELECT tablename FROM pg_tables "
-            f"WHERE schemaname = '{DATA_NAMESPACE}' "
+            f"SELECT tablename FROM pg_tables WHERE schemaname = '{DATA_NAMESPACE}' "  # DATA_NAMESPACE is a constant namespace # nosec B608
             "AND tablename ~ '^channel_[0-9a-f]{32}$' "
+            "ORDER BY tablename",
+            tuples=True,
+        )
+        return [line for line in out.splitlines() if _CHANNEL_TABLE_RE.fullmatch(line)]
+
+    def list_unfitted_channel_tables(self) -> list[str]:
+        """Read-only: ``channel_*`` tables whose name does NOT fit ``channel_<32 hex>``.
+
+        The catalog is untrusted (legacy/manual/rogue DDL), so a channel-prefixed name
+        that cannot be mapped to a channel id is reported for operator review rather
+        than silently ignored. The static ``channel_metadata`` table is excluded.
+        """
+        out = self._psql(
+            f"SELECT tablename FROM pg_tables WHERE schemaname = '{DATA_NAMESPACE}' "  # DATA_NAMESPACE is a constant namespace # nosec B608
+            "AND tablename LIKE 'channel\\_%' "
+            "AND tablename !~ '^channel_[0-9a-f]{32}$' "
+            f"AND tablename <> '{ChannelMetadata.tablename()}' "
             "ORDER BY tablename",
             tuples=True,
         )
@@ -139,8 +166,8 @@ class DataSchemaProvisioner(BaseProvisioner):
 
     def _table_columns(self, table: str) -> dict[str, str]:
         out = self._psql(
-            "SELECT column_name, data_type FROM information_schema.columns "
-            f"WHERE table_schema = '{DATA_NAMESPACE}' AND table_name = '{table}'",
+            # ``table`` is from the validated channel list or the ``channel_metadata`` constant.
+            f"SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = '{DATA_NAMESPACE}' AND table_name = '{table}'",  # nosec B608
             tuples=True,
         )
         cols: dict[str, str] = {}
@@ -155,28 +182,21 @@ class DataSchemaProvisioner(BaseProvisioner):
 
     def _primary_key_columns(self, table: str) -> list[str]:
         out = self._psql(
-            "SELECT a.attname FROM pg_index i "
-            "CROSS JOIN LATERAL unnest(i.indkey) WITH ORDINALITY AS k(attnum, ord) "
-            "JOIN pg_class c ON c.oid = i.indrelid "
-            "JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum = k.attnum "
-            f"WHERE c.relname = '{table}' AND c.relnamespace = '{DATA_NAMESPACE}'::regnamespace "
-            "AND i.indisprimary ORDER BY k.ord",
+            f"SELECT a.attname FROM pg_index i CROSS JOIN LATERAL unnest(i.indkey) WITH ORDINALITY AS k(attnum, ord) JOIN pg_class c ON c.oid = i.indrelid JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum = k.attnum WHERE c.relname = '{table}' AND c.relnamespace = '{DATA_NAMESPACE}'::regnamespace AND i.indisprimary ORDER BY k.ord",  # ``table`` from the validated channel list # nosec B608
             tuples=True,
         )
         return [line for line in out.splitlines() if line]
 
     def _primary_key_name(self, table: str) -> str | None:
         out = self._psql(
-            "SELECT conname FROM pg_constraint "
-            f"WHERE conrelid = '{DATA_NAMESPACE}.{table}'::regclass AND contype = 'p'",
+            f"SELECT conname FROM pg_constraint WHERE conrelid = '{DATA_NAMESPACE}.{table}'::regclass AND contype = 'p'",  # ``table`` from the validated channel list # nosec B608
             tuples=True,
         )
         return out or None
 
     def _is_hypertable(self, table: str) -> bool:
         out = self._psql(
-            "SELECT 1 FROM timescaledb_information.hypertables "
-            f"WHERE hypertable_schema = '{DATA_NAMESPACE}' AND hypertable_name = '{table}'",
+            f"SELECT 1 FROM timescaledb_information.hypertables WHERE hypertable_schema = '{DATA_NAMESPACE}' AND hypertable_name = '{table}'",  # validated table list # nosec B608
             tuples=True,
         )
         return out == "1"
@@ -184,9 +204,7 @@ class DataSchemaProvisioner(BaseProvisioner):
     def check_tracking_tables_exist(self) -> bool:
         """Read-only: do the data migration tracking tables exist?"""
         out = self._psql(
-            "SELECT table_name FROM information_schema.tables "
-            f"WHERE table_schema = '{DATA_NAMESPACE}' "
-            "AND table_name IN ('schema_migration_state', 'schema_migration_history')",
+            f"SELECT table_name FROM information_schema.tables WHERE table_schema = '{DATA_NAMESPACE}' AND table_name IN ('schema_migration_state', 'schema_migration_history')",  # constant namespace/names # nosec B608
             tuples=True,
         )
         present = {line for line in out.splitlines() if line}
@@ -195,8 +213,7 @@ class DataSchemaProvisioner(BaseProvisioner):
     def check_channel_metadata_table_exists(self) -> bool:
         """Read-only: does the static ChannelMetadata table exist in the data schema?"""
         out = self._psql(
-            "SELECT 1 FROM information_schema.tables "
-            f"WHERE table_schema = '{DATA_NAMESPACE}' AND table_name = '{ChannelMetadata.tablename()}'",
+            f"SELECT 1 FROM information_schema.tables WHERE table_schema = '{DATA_NAMESPACE}' AND table_name = '{ChannelMetadata.tablename()}'",  # constant namespace/metadata name # nosec B608
             tuples=True,
         )
         return out == "1"
@@ -223,6 +240,8 @@ class DataSchemaProvisioner(BaseProvisioner):
         self._metadata_missing = not self.check_channel_metadata_table_exists()
         self._metadata_missing_cols = self.check_channel_metadata_missing_columns()
 
+        self.unfitted_channel_tables = self.list_unfitted_channel_tables()
+
         self.channels = []
         for table in self.list_channel_tables():
             columns = self._table_columns(table)
@@ -247,6 +266,16 @@ class DataSchemaProvisioner(BaseProvisioner):
         if not self._has_work:
             log_i(mod, "Data schema is already converged (tracking tables + channel hypertables).")
 
+    def _warn_unfitted_channel_tables(self) -> None:
+        """Report channel-prefixed tables that do not fit ``channel_<32 hex>`` (never transformed)."""
+        if not self.unfitted_channel_tables:
+            return
+        log_w(
+            mod,
+            f"  - [{DATA_NAMESPACE}] channel-prefixed table(s) with a non-canonical name, "
+            "left untouched (operator review needed): " + ", ".join(self.unfitted_channel_tables),
+        )
+
     def ask_validation(
         self,
         *,
@@ -256,6 +285,8 @@ class DataSchemaProvisioner(BaseProvisioner):
     ) -> bool:
         """Present the plan and confirm before any mutation."""
         auto_approve = self.auto_approve if auto_approve is None else auto_approve
+
+        self._warn_unfitted_channel_tables()
 
         if self._tracking_missing:
             log_w(mod, f"  - [{DATA_NAMESPACE}] {_TRACK_CREATION}")
@@ -295,7 +326,7 @@ class DataSchemaProvisioner(BaseProvisioner):
 
         log_i(mod, f"Creating safeguard backup: {backup_file}")
         try:
-            subprocess.run(cmd, check=True, capture_output=True, text=True)
+            subprocess.run(cmd, check=True, capture_output=True, text=True)  # argv list, no shell # nosec B603
         except subprocess.CalledProcessError as e:
             log_e(mod, f"Backup failed: {e.stderr}")
             raise RuntimeError(f"Backup failed — aborting data reconcile: {e.stderr}") from e
@@ -308,7 +339,7 @@ class DataSchemaProvisioner(BaseProvisioner):
             return
         log_i(mod, f"Restoring backup: {backup_file}")
         restore_url = self.data_url
-        subprocess.run(
+        subprocess.run(  # argv list, no shell; binary from image PATH # nosec B603 B607
             ["pg_restore", "--clean", "--if-exists", "--no-owner", "-d", restore_url, str(backup_file)],
             check=True,
         )
@@ -392,6 +423,10 @@ class DataSchemaProvisioner(BaseProvisioner):
             return False
 
         table = drift.table
+        if not _CHANNEL_TABLE_RE.fullmatch(table):
+            # Fail closed: never interpolate a catalog name into DDL unless it is exactly
+            # ``channel_<32 hex>``. Reached only via a non-``channel_`` table (legacy/rogue).
+            raise ValueError(f"Refusing to transform non-channel table {table!r}")
         full = f"{DATA_NAMESPACE}.{table}"
 
         if tuple(drift.pk_columns) != TARGET_PK_COLUMNS:
@@ -403,9 +438,9 @@ class DataSchemaProvisioner(BaseProvisioner):
 
         if not drift.is_hypertable:
             self._psql(
-                f"SELECT * FROM create_hypertable('{full}', 'time', "
-                "if_not_exists => TRUE, create_default_indexes => TRUE, "
-                "migrate_data => TRUE)"
+                # ``table`` passed the ``_CHANNEL_TABLE_RE`` guard above and ``DATA_NAMESPACE``
+                # is a constant, so ``full`` cannot carry SQL metacharacters.
+                f"SELECT * FROM create_hypertable('{full}', 'time', if_not_exists => TRUE, create_default_indexes => TRUE, migrate_data => TRUE)"  # nosec B608
             )
 
         log_i(mod, f"Transformed {full} into a hypertable (composite PK, time-leading)")

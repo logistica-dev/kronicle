@@ -29,7 +29,7 @@ Expected environment variables:
 
 DB_SU_CREDS = "KRONICLE_DB_SU_CREDS"  # b64(db_su_usr:db_su_pwd)
 DB_SU_NAME = "POSTGRES_USER"
-DB_SU_PASS = "POSTGRES_PASSWORD"
+DB_SU_PASS = "POSTGRES_PASSWORD"  # name of an env var, not a password # nosec B105
 
 APP_SU_INFO = "KRONICLE_SU_INFO"  # b64(admin_user:admin_mail@kronicle.org:encrypted_pwd)
 

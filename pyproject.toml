@@ -32,10 +32,10 @@ dependencies = [
     "argon2-cffi>=25.1.0",
     "asyncpg>=0.32.0",
     "email-validator>=2.3.0",
-    "fastapi>=0.143.0",
+    "fastapi>=0.143.1",
     "pydantic>=2.14.1",
     "pydantic-core>=2.50.1",
-    "pydantic-settings>=2.15.0",
+    "pydantic-settings>=2.16.0",
     "python-jose>=3.5.0",
     "rich>=15.0.0",
     "secure>=2.0.1",
@@ -52,15 +52,18 @@ dev = [
     "pre-commit>=4.7.0",
     "pyright>=1.1.414",
     "ruff>=0.17.0",
-    "uv>=0.13.0",
+    "uv>=0.13.1",
     "uv-bump>=0.6.0",
 ]
 test = [
-    "kronicle-sdk>=0.7.0",
+    "bandit>=1.9.4",
+    "kronicle-sdk>=0.7.1",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
     "pytest-cov>=7.1.0",
     "requests>=2.34.2",
+    "tox>=4.65.5",
+    "tox-uv>=1.37.0",
 ]
 
 

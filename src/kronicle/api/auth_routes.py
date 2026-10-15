@@ -15,7 +15,7 @@ def login(
     auth: AuthService = Depends(auth_service),  # noqa: B008
 ):
     token = auth.login(creds)
-    return {"access_token": token, "token_type": "bearer"}
+    return {"access_token": token, "token_type": "bearer"}  # OAuth token type, not a password # nosec B105
 
 
 OAuth2PasswordBearer(tokenUrl="/auth/v1/login")
@@ -27,4 +27,4 @@ def update_password(
     auth: AuthService = Depends(auth_service),  # noqa: B008
 ):
     token = auth.change_password(creds)
-    return {"access_token": token, "token_type": "bearer"}
+    return {"access_token": token, "token_type": "bearer"}  # OAuth token type, not a password # nosec B105

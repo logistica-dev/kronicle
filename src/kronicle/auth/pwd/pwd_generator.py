@@ -1,8 +1,11 @@
 # kronicle/auth/pwd/pwd_generator.py
-import random
+import secrets
 import string
 
 from kronicle.auth.pwd.pwd_manager import PasswordPolicy
+
+# Cryptographically secure RNG (``random`` is explicitly not suitable for secrets).
+_rng = secrets.SystemRandom()
 
 
 class PasswordGenerator:
@@ -43,14 +46,14 @@ class PasswordGenerator:
         chars = []
 
         # Always include lowercase (basic requirement)
-        chars.append(random.choice(self.LOWERCASE))
+        chars.append(_rng.choice(self.LOWERCASE))
 
         if self.policy.require_uppercase:
-            chars.append(random.choice(self.UPPERCASE))
+            chars.append(_rng.choice(self.UPPERCASE))
         if self.policy.require_digits:
-            chars.append(random.choice(self.DIGITS))
+            chars.append(_rng.choice(self.DIGITS))
         if self.policy.require_special:
-            chars.append(random.choice(self.ALLOWED_SPECIAL))
+            chars.append(_rng.choice(self.ALLOWED_SPECIAL))
 
         return chars
 
@@ -71,7 +74,7 @@ class PasswordGenerator:
 
         # Determine password length
         if length is None:
-            length = random.randint(self.min_length, self.min_length + 8)
+            length = _rng.randint(self.min_length, self.min_length + 8)
         else:
             length = max(self.min_length, length, nb_required_chars)
 
@@ -80,11 +83,11 @@ class PasswordGenerator:
         if remaining_length < 0:
             raise ValueError(f"Password length must be at least {nb_required_chars}")  # pragma: no cover
 
-        remaining_chars = [random.choice(self._allowed_chars) for _ in range(remaining_length)]
+        remaining_chars = [_rng.choice(self._allowed_chars) for _ in range(remaining_length)]
 
         # Combine and shuffle all characters
         all_chars = required_chars + remaining_chars
-        random.shuffle(all_chars)
+        _rng.shuffle(all_chars)
 
         # Convert to string and validate
         password = "".join(all_chars)
