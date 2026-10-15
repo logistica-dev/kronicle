@@ -18,7 +18,7 @@ class AuthService:
         if rbac_service is None:
             raise RuntimeError("[AuthService] RbacService not initialized. Call init() from main app first.")
         self._jwt_service = jwt_service
-        self._pwd_manager = PasswordManager.get_instance()
+        self._pwd_manager = PasswordManager()
 
         self._rbac_service = rbac_service
 

@@ -3,29 +3,31 @@
 import pytest
 from pydantic import ValidationError
 
+from kronicle.auth.pwd.pwd_manager import PasswordManager
 from kronicle.errors.error_types import BadRequestError
 from kronicle.schemas.rbac.input_user_schemas import (
     InputUser,
     InputUserChangePwd,
     InputUserLogin,
 )
+from kronicle.utils.singleton import Singleton
 
 
 # --- Mock PasswordManager for testing ---
 class MockPasswordManager:
     def validate_password(self, pwd: str):
         if len(pwd) < 4:
-            raise ValueError("Too short")
+            raise BadRequestError("Too short")
         return True
 
     def hash_password(self, pwd: str) -> str:
         return f"hashed-{pwd}"
 
 
-# Patch the PasswordManager in the module
+# Inject a fake PasswordManager into the singleton registry
 @pytest.fixture(autouse=True)
 def patch_pwd_manager(monkeypatch):
-    monkeypatch.setattr("kronicle.auth.pwd.pwd_manager.PasswordManager", lambda: MockPasswordManager())
+    monkeypatch.setitem(Singleton._instances, PasswordManager, MockPasswordManager())
 
 
 # --- InputUserLogin tests ---

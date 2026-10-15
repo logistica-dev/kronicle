@@ -62,7 +62,7 @@ class InputUserChangePwd(InputUserLogin):
     def validate_new_password(cls, v: str) -> str:
         try:
             PasswordManager().validate_password(v)
-        except ValueError as e:
+        except BadRequestError as e:
             raise BadRequestError(f"Invalid password: {e}") from e
         return v
 
@@ -90,7 +90,7 @@ class InputUser(InputSchema):
         """Validate raw password if present for local users."""
         try:
             PasswordManager().validate_password(v)  # password validation takes place there.
-        except ValueError as e:
+        except BadRequestError as e:
             raise BadRequestError(f"Invalid password: {e}") from e
         return v
 

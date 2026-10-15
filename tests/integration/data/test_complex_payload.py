@@ -29,7 +29,7 @@ class DataDimensions(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def validate_time_order(self) -> "DataDimensions":
+    def validate_time_order(self) -> DataDimensions:
         if self.time_end_utc <= self.time_start_utc:
             raise ValueError("time_end_utc must be after time_start_utc")
         return self

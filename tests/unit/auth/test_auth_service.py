@@ -1,11 +1,13 @@
 # tests/unit/auth/test_auth_service.py
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
 
 from kronicle.auth.auth_service import AuthService
+from kronicle.auth.pwd.pwd_manager import PasswordManager
 from kronicle.errors.error_types import NotFoundError, UnauthorizedError
+from kronicle.utils.singleton import Singleton
 
 
 @pytest.fixture
@@ -31,10 +33,9 @@ def mock_pwd_manager():
 
 
 @pytest.fixture
-def service(mock_jwt_service, mock_rbac_service, mock_pwd_manager):
-    with patch("kronicle.auth.auth_service.PasswordManager.get_instance", return_value=mock_pwd_manager):
-        svc = AuthService(jwt_service=mock_jwt_service, rbac_service=mock_rbac_service)
-    return svc
+def service(mock_jwt_service, mock_rbac_service, mock_pwd_manager, monkeypatch):
+    monkeypatch.setitem(Singleton._instances, PasswordManager, mock_pwd_manager)
+    return AuthService(jwt_service=mock_jwt_service, rbac_service=mock_rbac_service)
 
 
 @pytest.fixture
@@ -74,9 +75,9 @@ class TestInit:
         with pytest.raises(RuntimeError, match="RbacService not initialized"):
             AuthService(jwt_service=mock_jwt_service, rbac_service=None)  # type: ignore[arg-type]
 
-    def test_initializes_successfully(self, mock_jwt_service, mock_rbac_service, mock_pwd_manager):
-        with patch("kronicle.auth.auth_service.PasswordManager.get_instance", return_value=mock_pwd_manager):
-            svc = AuthService(jwt_service=mock_jwt_service, rbac_service=mock_rbac_service)
+    def test_initializes_successfully(self, mock_jwt_service, mock_rbac_service, mock_pwd_manager, monkeypatch):
+        monkeypatch.setitem(Singleton._instances, PasswordManager, mock_pwd_manager)
+        svc = AuthService(jwt_service=mock_jwt_service, rbac_service=mock_rbac_service)
         assert svc._jwt_service is mock_jwt_service
         assert svc._rbac_service is mock_rbac_service
         assert svc._pwd_manager is mock_pwd_manager

@@ -134,12 +134,11 @@ class PasswordPolicy(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     min_length: int = 10
-    max_length: int = 128
     require_uppercase: bool = True
     require_lowercase: bool = True
     require_digits: bool = True
     require_special: bool = True
-    special_chars: str = "!@%^*()_+-=[]{}|:,.?"
+    special_chars: str = "!@%^*()_+-=[]{}:,.?"
 
     @property
     def checks(self) -> list[PasswordCheck]:

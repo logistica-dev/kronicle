@@ -8,6 +8,7 @@ from argon2.exceptions import InvalidHash, VerificationError, VerifyMismatchErro
 
 from kronicle.auth.pwd.pwd_policy import PasswordPolicy, ValidationResult
 from kronicle.errors.error_types import BadRequestError
+from kronicle.utils.singleton import Singleton
 
 # Default Argon2id parameters (adjust based on your security requirements)
 _DEFAULT_PARAMS = {
@@ -19,46 +20,27 @@ _DEFAULT_PARAMS = {
 }
 
 
-class PasswordManager:
+class PasswordManager(metaclass=Singleton):
     """
     Secure password management using Argon2id.
     Handles password hashing, verification, and rehashing.
-    Implements a class instance approach (stateless, configured once).
+
+    Singleton: configure it once with ``PasswordManager.initialize(...)``; ``PasswordManager()``
+    then returns that instance (and raises if it was never configured).
     """
-
-    _instance: PasswordManager | None = None
-
-    def __new__(cls, *args, **kwargs) -> "PasswordManager":
-        # If singleton already exists, return it
-        if cls._instance is not None:
-            return cls._instance
-        # Otherwise, create a new instance (will be initialized via init_async)
-        return super().__new__(cls)
 
     def __init__(self, policy: PasswordPolicy | None = None, **argon_params):
         """
-        Initialize with Argon2id parameters and password policy.
+        Configure the manager. Called exactly once, by ``PasswordManager.initialize(...)``.
 
         Args:
+            policy: Password policy to enforce. Defaults to ``PasswordPolicy()``
             argon_params: Dictionary of Argon2 parameters (time_cost, memory_cost, etc.)
                        Defaults to _DEFAULT_PARAMS if not provided
         """
         self.policy = policy or PasswordPolicy()
         self.pwd_hasher = PasswordHasher(**{**_DEFAULT_PARAMS, **argon_params})
         self.logger = logging.getLogger(__name__)
-
-    @classmethod
-    def initialize(cls, policy, **argon_params) -> "PasswordManager":
-        if cls._instance is not None:
-            raise RuntimeError("PasswordManager already initialized")
-        cls._instance = cls(policy, **argon_params)
-        return cls._instance
-
-    @classmethod
-    def get_instance(cls) -> "PasswordManager":
-        if cls._instance is None:
-            raise RuntimeError("Not initialized. Call PasswordManager.initialize() first")
-        return cls._instance
 
     def validate_password(self, password: str) -> bool:
         """Check if password meets minimum requirements."""

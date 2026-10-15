@@ -34,7 +34,7 @@ class MigrationPlan:
     # Build entry point
     # --------------------------------------------------------------------------
     @classmethod
-    def build(cls, ops: Iterable[DbStructureOperation]) -> "MigrationPlan":
+    def build(cls, ops: Iterable[DbStructureOperation]) -> MigrationPlan:
         plan = cls(list(ops))
         plan._resolve()
         plan._classify()

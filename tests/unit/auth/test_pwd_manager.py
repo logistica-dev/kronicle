@@ -16,7 +16,9 @@ def manager():
         require_special=True,
         special_chars="!@%^*()_+-=[]{}|:,.?",
     )
-    return PasswordManager(policy)
+    PasswordManager.reset()
+    yield PasswordManager.initialize(policy)
+    PasswordManager.reset()
 
 
 def test_validate_password_success(manager):

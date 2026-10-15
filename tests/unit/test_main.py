@@ -43,7 +43,7 @@ def mock_settings():
 def reset_password_manager():
     """Ensure PasswordManager singleton is reset between tests."""
     yield
-    PasswordManager._instance = None
+    PasswordManager.reset()
 
 
 @pytest.fixture(autouse=True)
