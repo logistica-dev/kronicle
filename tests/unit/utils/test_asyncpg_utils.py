@@ -105,7 +105,9 @@ async def test_table_exists_false():
 @pytest.mark.asyncio
 async def test_table_exists_with_pool_connection_proxy():
     db = AsyncMock(spec=PoolConnectionProxy)
-    db.fetchval.return_value = True
+    # Set the async method explicitly: on 3.11 `iscoroutinefunction` does not see
+    # through asyncpg's proxy wrapper, so spec-detection would yield a sync Mock.
+    db.fetchval = AsyncMock(return_value=True)
     result = await asyncpg_utils.table_exists(db, "public", "mytable")
     assert result is True
     db.fetchval.assert_awaited_once()

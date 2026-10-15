@@ -11,8 +11,8 @@ kronicle_rbac = KronicleRbac.from_connection_info(co)
 usr_list = kronicle_rbac.list_users(include_inactive=True)
 count = 0
 for u in usr_list:
-    if u.email.startswith("perm_test_") and u.email.endswith("@kronicle.app"):
-        del_u = kronicle_rbac.remove_user(u)
+    if u.email.startswith("perm_test_") and u.email.endswith("@kronicle.app") and u.id:
+        del_u = kronicle_rbac.delete_user(user_id=u.id)
         count += 1
         print(f"Deleted {del_u.email} (id={del_u.id})")
 

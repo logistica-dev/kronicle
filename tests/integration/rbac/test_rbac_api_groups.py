@@ -37,6 +37,7 @@ def test_api_create_group(kronicle_rbac):
         assert isinstance(created, KronicleGroup)
         assert created.name == group.name
     finally:
+        assert created is not None
         kronicle_rbac.delete_group(group_id=created.id)
 
 

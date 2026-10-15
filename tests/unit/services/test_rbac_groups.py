@@ -212,7 +212,6 @@ class TestUserInGroup:
 
     def test_via_descendant(self, rbac_service):
         uid, gid, did = uuid4(), uuid4(), uuid4()
-        db = rbac_service._db.get_db.return_value.__enter__.return_value
         rbac_service._user_repo.get_by_id = MagicMock(return_value=fake_user(id=uid))
         rbac_service._group_repo.get_by_id = MagicMock(side_effect=lambda db, id: fake_group(id=id))
         rbac_service._user_groups_repo.get_membership_link = MagicMock(
@@ -229,7 +228,6 @@ class TestUserInGroup:
 
     def test_not_found_indirect(self, rbac_service):
         uid, gid = uuid4(), uuid4()
-        db = rbac_service._db.get_db.return_value.__enter__.return_value
         rbac_service._user_repo.get_by_id = MagicMock(return_value=fake_user(id=uid))
         rbac_service._group_repo.get_by_id = MagicMock(return_value=fake_group(id=gid))
         rbac_service._user_groups_repo.get_membership_link = MagicMock(return_value=None)
@@ -240,7 +238,6 @@ class TestUserInGroup:
 
     def test_via_descendant_no_membership(self, rbac_service):
         uid, gid, did = uuid4(), uuid4(), uuid4()
-        db = rbac_service._db.get_db.return_value.__enter__.return_value
         rbac_service._user_repo.get_by_id = MagicMock(return_value=fake_user(id=uid))
         rbac_service._group_repo.get_by_id = MagicMock(return_value=fake_group(id=gid))
         rbac_service._user_groups_repo.get_membership_link = MagicMock(return_value=None)

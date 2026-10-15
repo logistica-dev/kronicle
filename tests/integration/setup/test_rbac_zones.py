@@ -49,6 +49,7 @@ def test_create_zone(kronicle_rbac_setup):
         assert isinstance(created, KronicleZone)
         assert created.name == zone.name
     finally:
+        assert created is not None
         kronicle_rbac_setup.delete_zone(zone_id=created.id)
 
 

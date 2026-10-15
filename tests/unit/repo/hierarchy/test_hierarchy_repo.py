@@ -62,8 +62,10 @@ def test_list_children_returns_link_children(repo, mock_db):
 def test_list_parents_empty(repo, mock_db):
     with patch.object(KronicleHierarchyRepo, "list_links", return_value=[]) as list_links:
         assert repo.list_parents(mock_db, MagicMock(id="x")) == []
+    list_links.assert_called_once_with(mock_db, filters={"child_id": "x"})
 
 
 def test_list_children_empty(repo, mock_db):
     with patch.object(KronicleHierarchyRepo, "list_links", return_value=[]) as list_links:
         assert repo.list_children(mock_db, MagicMock(id="x")) == []
+    list_links.assert_called_once_with(mock_db, filters={"parent_id": "x"})

@@ -1,5 +1,7 @@
 """Clean up leftover perm_test_* groups from old test runs."""
 
+from uuid import UUID
+
 from kronicle_sdk.conf.read_conf import Settings
 from kronicle_sdk.connectors.rbac.rbac_setup import KronicleGroup, KronicleRbac
 
@@ -13,7 +15,7 @@ count = 0
 for g in group_list:
     if not isinstance(g, KronicleGroup):
         raise TypeError(f"Expected KronicleGroup, got {type(g).__name__}")
-    if g.name and g.name.startswith("perm_test_"):
+    if g.name and g.name.startswith("perm_test_") and isinstance(g.id, UUID):
         del_g = kronicle_rbac.delete_group(group_id=g.id)
         if not isinstance(del_g, KronicleGroup):
             raise TypeError(f"Expected KronicleGroup, got {type(del_g).__name__}")
