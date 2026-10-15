@@ -154,7 +154,7 @@ class KronicleApp:
 
         # --- Channel DB ---
         with log_block(here, "Channel DB"):
-            channel_db = ChannelDbSession(db_url=db_conf.channel_connection_url)
+            channel_db = ChannelDbSession.initialize(db_url=db_conf.channel_connection_url)
             await channel_db.init_async()
             self.app.state.channel_db = channel_db
 

@@ -6,6 +6,7 @@ from asyncpg.exceptions import PostgresError
 
 from kronicle.db.data.channel_db_session import ChannelDbSession
 from kronicle.errors.error_types import DatabaseConnectionError
+from kronicle.utils.singleton import Singleton
 
 pytestmark = pytest.mark.asyncio
 
@@ -14,11 +15,9 @@ TEST_DB_URL = "postgresql://user:pass@localhost:5432/testdb"
 
 @pytest.fixture(autouse=True)
 def reset_singleton():
-    ChannelDbSession._instance = None
-    ChannelDbSession._initialized = False
+    ChannelDbSession.reset()
     yield
-    ChannelDbSession._instance = None
-    ChannelDbSession._initialized = False
+    ChannelDbSession.reset()
 
 
 @pytest.fixture
@@ -38,52 +37,51 @@ def mock_pool(mock_conn):
 
 @pytest.fixture
 def session():
-    return ChannelDbSession(db_url=TEST_DB_URL)
+    ChannelDbSession.reset()
+    return ChannelDbSession.initialize(db_url=TEST_DB_URL)
 
 
 class TestSingleton:
-    async def test_new_returns_same_instance(self):
-        s1 = ChannelDbSession(db_url=TEST_DB_URL)
-        s2 = ChannelDbSession(db_url=TEST_DB_URL)
-        assert s1 is s2
+    async def test_fetch_before_initialize_raises(self):
+        with pytest.raises(RuntimeError, match="ChannelDbSession is not initialized"):
+            ChannelDbSession()
 
-    async def test_new_reuses_instance_with_different_db_url(self):
-        s1 = ChannelDbSession(db_url=TEST_DB_URL)
-        s2 = ChannelDbSession(db_url="postgresql://other:pass@localhost:5432/otherdb")
-        assert s1 is s2
+    async def test_fetch_returns_the_initialized_instance(self):
+        s1 = ChannelDbSession.initialize(db_url=TEST_DB_URL)
+        assert ChannelDbSession() is s1
+
+    async def test_second_initialize_raises_and_keeps_the_first_config(self):
+        s1 = ChannelDbSession.initialize(db_url=TEST_DB_URL)
+        with pytest.raises(RuntimeError, match="ChannelDbSession is already initialized"):
+            ChannelDbSession.initialize(db_url="postgresql://other:pass@localhost:5432/otherdb")
+        assert ChannelDbSession() is s1
         assert s1.db_url == TEST_DB_URL
 
 
 class TestInit:
     async def test_raises_value_error_without_db_url(self):
         with pytest.raises(ValueError, match="DBSession must be initialized with a db_url"):
-            ChannelDbSession(db_url=None)
+            ChannelDbSession.initialize(db_url=None)
+        # a failed initialize must not leave a half-built instance behind
+        assert ChannelDbSession not in Singleton._instances
 
     async def test_sets_attributes_correctly(self):
         logger = MagicMock()
-        s = object.__new__(ChannelDbSession)
-        ChannelDbSession.__init__(s, db_url=TEST_DB_URL, min_size=2, max_size=5, intercept_errors=False, logger=logger)
+        s = ChannelDbSession.initialize(
+            db_url=TEST_DB_URL, min_size=2, max_size=5, intercept_errors=False, logger=logger
+        )
         assert s.db_url == TEST_DB_URL
         assert s.min_size == 2
         assert s.max_size == 5
         assert s.intercept_errors is False
         assert s.logger is logger
         assert s._pool is None
-        assert s._initialized is True
 
     async def test_uses_defaults(self, session):
         assert session.min_size == 1
         assert session.max_size == 10
         assert session.intercept_errors is True
         assert session.logger is not None
-
-    async def test_returns_early_if_already_initialized(self):
-        s1 = object.__new__(ChannelDbSession)
-        ChannelDbSession.__init__(s1, db_url=TEST_DB_URL, min_size=5)
-        ChannelDbSession._instance = s1
-        s2 = ChannelDbSession(db_url=TEST_DB_URL)
-        assert s2 is s1
-        assert s2.min_size == 5
 
 
 class TestInitAsync:

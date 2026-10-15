@@ -11,13 +11,20 @@ from asyncpg.pool import PoolConnectionProxy
 
 from kronicle.errors.error_types import DatabaseConnectionError
 from kronicle.utils.dev_logs import log_d, log_e, log_w
+from kronicle.utils.singleton import Singleton
 
 mod = "db_session"
 
 
-class ChannelDbSession:
+class ChannelDbSession(metaclass=Singleton):
     """
     Singleton DB session manager with async init, error interception, and transactions.
+
+    Configure it once with ``ChannelDbSession.initialize(db_url=...)``; ``ChannelDbSession()``
+    then returns that instance. Opening the pool is a separate async step::
+
+        ChannelDbSession.initialize(db_url=db_conf.channel_connection_url)
+        await ChannelDbSession().init_async()
 
     Responsibilities:
     - Connection pooling
@@ -26,14 +33,6 @@ class ChannelDbSession:
     - Transaction context manager
     - Optional automatic error interception/logging
     """
-
-    _instance: ChannelDbSession | None = None
-    _initialized: bool = False
-
-    def __new__(cls, db_url: str | None = None):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
 
     def __init__(
         self,
@@ -45,7 +44,7 @@ class ChannelDbSession:
         logger: Callable[[str, str], None] | None = None,
     ):
         """
-        Initialize the singleton DB session manager.
+        Configure the manager. Called exactly once, by ``ChannelDbSession.initialize(...)``.
 
         Args:
             db_url: Database URL (postgresql://user:pass@host/db)
@@ -54,20 +53,15 @@ class ChannelDbSession:
             intercept_errors: Whether to catch and log DB errors automatically
             logger: Optional logging callable (module, message)
         """
-        if getattr(self, "_initialized", False):
-            return
-
-        self.db_url = db_url or getattr(self, "_db_url", None)
-        if not self.db_url:
+        if not db_url:
             raise ValueError("DBSession must be initialized with a db_url")
 
+        self.db_url = db_url
         self.min_size = min_size
         self.max_size = max_size
         self.intercept_errors = intercept_errors
         self.logger = logger or log_w
-
         self._pool: Pool | None = None
-        self._initialized = True
 
     # ----------------------------------------------------------------------------------------------
     # Async init / connection setup

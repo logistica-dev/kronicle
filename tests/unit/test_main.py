@@ -148,7 +148,7 @@ async def test_lifespan_calls_db_methods(mock_settings):
         patch("kronicle.main.MigrationOrchestrator") as MockOrchestrator,
     ):
 
-        mock_channel_db = MockChannelDB.return_value
+        mock_channel_db = MockChannelDB.initialize.return_value
         mock_channel_db.init_async = AsyncMock()
         mock_channel_db.close = AsyncMock()
 
