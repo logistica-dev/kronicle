@@ -60,9 +60,21 @@ Not on a variable-free prefix:
     f"WHERE schemaname = '{DATA_NAMESPACE}' "
 ```
 
-For a multi-line triple-quoted f-string, bandit accepts a nosec anywhere inside the node's
-span (e.g. the closing `"""`), but prefer restructuring to implicit concatenation so the
-nosec sits beside the interpolation.
+For a **single triple-quoted literal** the variable's line has no comment slot, so the nosec
+goes on the closing `"""` line — bandit accepts a nosec anywhere in the node's span. This is
+the project convention: do **not** reformat the SQL into concatenated fragments just to move
+the comment.
+
+```python
+sql = f"""
+SELECT * FROM {cls.table()}
+WHERE tags @> $1
+ORDER BY received_at DESC
+"""  # constant table # nosec B608
+```
+
+The rule in short: if the SQL is already split into fragments, put the nosec on the fragment
+carrying the interpolation; if it is one triple-quoted literal, put it on the closing `"""`.
 
 ## f-string brace pitfall (silent bug)
 

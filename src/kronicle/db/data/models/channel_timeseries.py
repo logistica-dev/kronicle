@@ -309,8 +309,7 @@ class ChannelTimeseries:
             return
         # ``self.table`` is ``<constant namespace>.channel_<UUID hex>``: no user input reaches it.
         await db.execute(
-            f"SELECT * FROM create_hypertable("  # nosec B608
-            f"'{self.table}', 'time', "
+            f"SELECT * FROM create_hypertable('{self.table}', 'time', "  # ``self.table`` is constant # nosec B608
             f"if_not_exists => TRUE, "
             f"create_default_indexes => TRUE"
             f")"
