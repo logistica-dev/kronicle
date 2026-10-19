@@ -1,6 +1,6 @@
 [project]
 name = "kronicle"
-version = "0.7.0"
+version = "0.7.1"
 authors = [{ name = "Olivier Martineau", email = "olivier.martineau@irisa.fr" }]
 maintainers = [
     { name = "Olivier Martineau", email = "olivier.martineau@irisa.fr" },
@@ -84,8 +84,9 @@ target-version = ['py312']
 # ----- Tool: commitizen
 [tool.commitizen]
 name = "cz_conventional_commits"
-version_provider = "pep621"
 version_files = ["pyproject.toml:project.version"]
+version_provider = "pep621"
+pre_bump_hooks = ["scripts/commit/commitizen_pre_bump_hook.sh"]
 
 # ----- Tool: pytest
 [tool.pytest.ini_options]
