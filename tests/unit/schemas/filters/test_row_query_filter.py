@@ -184,3 +184,78 @@ def test_model_post_init_calls_normalization(monkeypatch):
     assert f.has["tags"] == ["c", "d"]
     assert f.sort == ["x", "-y"]
     assert f.columns == ["col1", "col2"]
+
+
+# ------------------------------------------------------
+# Remaining branches: cap_offset / non-dict filters /
+# sort & columns error paths / _is_key
+# ------------------------------------------------------
+def test_cap_offset_explicit_none():
+    f = RowQueryFilter(offset=None)
+    assert f.offset is None
+
+
+def test_cap_offset_non_intable_returns_none():
+    f = RowQueryFilter(offset={"a": 1})  # type: ignore[arg-type]
+    assert f.offset is None
+
+
+def test_normalize_single_value_non_dict_returns_empty():
+    f = RowQueryFilter()
+    assert f.normalize_single_value("not_a_dict", str.lower, "col") == {}  # type: ignore[arg-type]
+    assert f.feedback.details[0].message == "Expected dict"
+
+
+def test_normalize_multi_value_non_dict_returns_empty():
+    f = RowQueryFilter()
+    assert f.normalize_multi_value(["not_a_dict"], str.lower, "any") == {}  # type: ignore[arg-type]
+    assert f.feedback.details[0].message == "Expected dict"
+
+
+def test_normalize_multi_value_scalar_value_is_split():
+    f = RowQueryFilter()
+    result = f.normalize_multi_value({"tags": "a,b"}, str.lower, "any")
+    assert result == {"tags": ["a", "b"]}
+
+
+def test_normalize_sort_invalid_string_warns():
+    f = RowQueryFilter(sort="!@#")
+    assert f.sort is None
+    assert f.feedback.details
+    assert f.feedback.details[0].message == "Invalid column name"
+
+
+def test_normalize_sort_fallback_for_unexpected_type():
+    f = RowQueryFilter()
+    f.sort = 123  # type: ignore[assignment]
+    assert f.normalize_sort() is None
+
+
+def test_split_column_selection_invalid_string_warns():
+    f = RowQueryFilter(columns="!@#")
+    assert f.columns is None
+    assert f.feedback.details
+    assert "Invalid column name" in f.feedback.details[0].message
+
+
+def test_split_column_selection_invalid_list_element_warns():
+    f = RowQueryFilter()
+    f.columns = ["!@#"]  # type: ignore[assignment]
+    assert f.split_column_selection() is None
+    assert f.feedback.details
+    assert "Invalid column name" in f.feedback.details[0].message
+
+
+def test_split_column_selection_unexpected_type_returns_none():
+    f = RowQueryFilter()
+    f.columns = 123  # type: ignore[assignment]
+    assert f.split_column_selection() is None
+
+
+def test_is_key_matches_bracketed_prefix():
+    out = {}
+    RowQueryFilter._is_key("col[name]", "Alice", "col", out)
+    assert out == {"name": "Alice"}
+
+    RowQueryFilter._is_key("other[name]", "Alice", "col", out)
+    assert out == {"name": "Alice"}

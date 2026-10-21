@@ -180,3 +180,10 @@ def test_empty_column_metadata_omitted_from_dump(channel_schema_fixture):
     )
     d = payload.model_dump()
     assert "column_metadata" not in d
+
+
+def test_str_returns_indented_json(channel_schema_fixture):
+    payload = ResponsePayload(id=uuid4(), channel_schema=channel_schema_fixture)
+    text = str(payload)
+    assert text == payload.model_dump_json(indent=2)
+    assert "\n  " in text  # indented

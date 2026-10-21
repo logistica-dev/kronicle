@@ -686,3 +686,15 @@ class TestPatchMetadata:
             assert result == fake_response
             mock_repo.fetch_metadata.assert_awaited_once_with(channel_id)
             mock_repo.patch_metadata.assert_awaited_once()
+
+
+# ==================================================================================================
+# Fetch metadata by name (invalid input)
+# ==================================================================================================
+
+
+class TestFetchMetadataByNameInvalid:
+    async def test_invalid_name_returns_none(self, service, mock_repo):
+        result = await service.fetch_metadata_by_name("")
+        assert result is None
+        mock_repo.fetch_metadata_by_name.assert_not_awaited()

@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy.orm import Session
 
 from kronicle.db.base.kronicle_entity import KronicleEntity
-from kronicle.repo.kronicle_repo import KronicleRepository
+from kronicle.repo.kronicle_repo import KronicleRepository, log_repo_error
 
 
 class RepoTestEntity(KronicleEntity):
@@ -196,3 +196,15 @@ class TestLogRepoError:
                 repo.fetch_all(mock_db)
 
         mock_log_w.assert_called_once()
+
+    def test_logs_without_model_name_when_model_missing(self, mock_db):
+        class NoModelRepo:
+            @log_repo_error
+            def boom(self, db):
+                raise RuntimeError("kaboom")
+
+        with patch("kronicle.repo.kronicle_repo.log_w") as mock_log_w:
+            with pytest.raises(RuntimeError, match="kaboom"):
+                NoModelRepo().boom(mock_db)
+
+        mock_log_w.assert_called_once_with("boom", "RuntimeError", "kaboom")

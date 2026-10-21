@@ -174,3 +174,21 @@ class TestPermissionAllStrings:
             assert p.target == expected_target, f"Target mismatch for {raw_str}"
             assert p.action == expected_action, f"Action mismatch for {raw_str}"
             assert str(p) == raw_str, f"Roundtrip failed for {raw_str}"
+
+
+class TestPermissionStrings:
+    def test_to_str(self):
+        p = Permission(PermTarget.CHANNEL, PermAction.READ)
+        assert p.to_str() == "channel:read"
+        assert p.to_str() == str(p)
+
+    def test_repr(self):
+        p = Permission(PermTarget.ZONE, PermAction.CREATE)
+        assert repr(p) == "Permission('zone', 'create')"
+
+
+class TestPermStrParse:
+    def test_parse_returns_matching_member(self):
+        from kronicle.schemas.permissions.permission import PermStr
+
+        assert PermStr.parse("channel:read") is PermStr.CHANNEL_READ

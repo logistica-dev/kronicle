@@ -43,6 +43,46 @@ class TestInitSubclass:
 
         assert ValidLink.UQ_CONSTRAINT == "uq_valid_link"
 
+    def test_non_abstract_valid_subclass_passes_table_check(self):
+        """A non-abstract subclass with a UQ_CONSTRAINT and PK columns passes validation."""
+        from sqlalchemy import PrimaryKeyConstraint
+
+        class CheckedLink(KronicleLink):
+            __tablename__ = "checked_links"
+            __abstract__ = False
+            UQ_CONSTRAINT = "uq_checked_link"
+            parent_id = Column(String, primary_key=True)
+            child_id = Column(String, primary_key=True)
+
+            @classmethod
+            def namespace(cls):
+                return "test"
+
+        assert CheckedLink.__table__ is not None
+        assert CheckedLink.__table__.primary_key.columns
+        assert isinstance(CheckedLink.__table__.primary_key, PrimaryKeyConstraint)
+
+    def test_non_abstract_subclass_without_primary_key_raises(self):
+        """An explicit __table__ without PK columns is rejected."""
+        from sqlalchemy import Table
+
+        no_pk_table = Table(
+            "link_no_pk",
+            KronicleLink.metadata,  # type: ignore[attr-defined]
+            Column("payload", String),
+        )
+
+        with pytest.raises(TypeError, match="has no primary key columns"):
+
+            class NoPkLink(KronicleLink):
+                __table__ = no_pk_table
+                __abstract__ = False
+                UQ_CONSTRAINT = "uq_no_pk"
+
+                @classmethod
+                def namespace(cls):
+                    return "test"
+
 
 class TestUqConstraint:
     def test_returns_constraint_when_defined(self):

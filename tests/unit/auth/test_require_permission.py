@@ -46,6 +46,20 @@ def test_permission_granted(mock_request):
     mock_request.app.state.rbac_service.user_has_permission.assert_called_once_with(user_id, expected_perm)
 
 
+def test_permission_object_passthrough(mock_request):
+    """require_permission accepts an already-built Permission object (used as-is)."""
+    user_id = uuid4()
+    user = {"sub": str(user_id), "is_superuser": False}
+    mock_request.app.state.rbac_service.user_has_permission.return_value = True
+
+    perm_obj = Permission(PermTarget.ZONE, PermAction.CREATE)
+    dep = require_permission(perm_obj)
+    result = dep(request=mock_request, user=user)
+
+    assert result == user
+    mock_request.app.state.rbac_service.user_has_permission.assert_called_once_with(user_id, perm_obj)
+
+
 def test_permission_denied(mock_request):
     user = {"sub": str(uuid4()), "is_superuser": False}
     mock_request.app.state.rbac_service.user_has_permission.return_value = False

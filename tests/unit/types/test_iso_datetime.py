@@ -150,3 +150,53 @@ def test_pydantic_parsing():
 
     with raises(ValueError):
         IsoDateTime("2025ç0917T20:00:00+02:00")
+
+
+# ------------------------------------------------------------------
+# Remaining edge-case branches
+# ------------------------------------------------------------------
+def test_json_dunder_returns_iso_string():
+    dt = IsoDateTime(2025, 1, 2, 3, 4, 5)
+    assert dt.__json__() == dt.iso_str()
+
+
+def test_to_iso_datetime_none_returns_now():
+    dt = IsoDateTime.to_iso_datetime(None)  # type: ignore
+    assert isinstance(dt, IsoDateTime)
+    assert dt.tzinfo is not None
+
+
+def test_normalize_str_naive_result_gets_local_tz():
+    """A subclass bypassing IsoDateTime.__new__ normalization yields a naive value
+    from fromisoformat; _normalize_str then applies the local tz (the `dt.tzinfo is None` branch)."""
+
+    class NaiveIsoDateTime(IsoDateTime):
+        def __new__(cls, *args, **kwargs):
+            return datetime.__new__(cls, *args, **kwargs)
+
+    dt = NaiveIsoDateTime._normalize_str("2025-01-01T12:00:00")
+    assert isinstance(dt, IsoDateTime)
+    assert dt.tzinfo is not None
+
+
+def test_normalize_value_int_in_range():
+    dt = IsoDateTime.normalize_value(1700000000)  # 2023-11-14, within allowed bounds
+    assert isinstance(dt, IsoDateTime)
+    assert dt.year == 2023
+    assert dt.tzinfo is not None
+
+
+def test_str_and_repr():
+    dt = IsoDateTime(2025, 1, 2, 3, 4, 5)
+    assert str(dt) == dt.iso_str()
+    assert repr(dt) == f"{dt.iso_str()!r}"
+
+
+def test_normalize_value_int_before_min_raises():
+    with raises(ValueError, match="before allowed minimum"):
+        IsoDateTime.normalize_value(999999999)
+
+
+def test_normalize_value_int_after_max_raises():
+    with raises(ValueError, match="after allowed maximum"):
+        IsoDateTime.normalize_value(2524604401)

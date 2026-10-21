@@ -174,10 +174,7 @@ class AnyFilter(ColumnFilter):
             log_d(here, "splitted values:", values)
 
         elif isinstance(value, (list, tuple)):
-            if not resolved_col.is_collection:
-                values = [norm_val for v in value if (norm_val := resolved_col.col_type.normalize_value(v))]
-            else:
-                values = [str(v) for v in value]
+            values = [norm_val for v in value if (norm_val := resolved_col.col_type.normalize_value(v))]
         else:
             raise ValueError("AnyFilter expects a list or tuple of values")
         super().__init__(resolved_col, values)

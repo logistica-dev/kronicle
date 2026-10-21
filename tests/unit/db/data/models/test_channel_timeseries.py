@@ -69,6 +69,12 @@ def test_table_name_format(ts):
     assert "-" not in ts.table_name
 
 
+def test_to_json(ts):
+    assert ts.to_json() == {"row_nb": 0}
+    ts._rows = [{"a": 1}]
+    assert ts.to_json() == {"row_nb": 1}
+
+
 def test_len_and_clear(ts):
     ts._rows = [{"a": 1}]
     assert len(ts) == 1
@@ -115,6 +121,16 @@ def test_add_rows_all_invalid_raises(ts):
     rows = [{"time": "t2"}]
     with raises(BadRequestError):
         ts.add_rows(rows, strict=True)
+
+
+def test_add_rows_all_invalid_when_rows_exist_raises(ts):
+    ts.add_rows([{"time": "t1", "temperature": 10}])
+    assert len(ts.rows) == 1
+
+    with raises(BadRequestError, match="No valid rows to insert"):
+        ts.add_rows([{"time": "t2"}], strict=False)
+
+    assert len(ts.rows) == 1  # existing rows are kept
 
 
 # --------------------------------------------------------------------------------------
@@ -232,6 +248,20 @@ async def test_ensure_table_creates_when_missing(ts, mock_conn):
 
 
 @pytest.mark.asyncio
+async def test_ensure_table_converts_to_hypertable(ts, mock_conn):
+    mock_conn.fetchval.return_value = None  # not a hypertable yet
+    with patch(
+        "kronicle.db.data.models.channel_timeseries.table_exists",
+        new=AsyncMock(return_value=False),
+    ):
+        await ts.ensure_table(mock_conn)
+
+    # CREATE TABLE + create_hypertable(...)
+    assert mock_conn.execute.await_count == 2
+    assert "create_hypertable" in mock_conn.execute.await_args_list[1].args[0]
+
+
+@pytest.mark.asyncio
 async def test_ensure_table_skips_when_exists(ts, mock_conn):
     with patch(
         "kronicle.db.data.models.channel_timeseries.table_exists",
@@ -239,6 +269,29 @@ async def test_ensure_table_skips_when_exists(ts, mock_conn):
     ):
         await ts.ensure_table(mock_conn)
         mock_conn.execute.assert_not_called()
+
+
+# --------------------------------------------------------------------------------------
+# count_rows
+# --------------------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_count_rows_table_missing_returns_zero(ts, mock_conn):
+    with patch.object(ts, "table_exists", new=AsyncMock(return_value=False)):
+        assert await ts.count_rows(mock_conn) == 0
+    mock_conn.fetchval.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_count_rows_returns_count(ts, mock_conn):
+    with patch.object(ts, "table_exists", new=AsyncMock(return_value=True)):
+        mock_conn.fetchval.return_value = 42
+        assert await ts.count_rows(mock_conn) == 42
+
+    with patch.object(ts, "table_exists", new=AsyncMock(return_value=True)):
+        mock_conn.fetchval.return_value = None
+        assert await ts.count_rows(mock_conn) == 0
 
 
 # --------------------------------------------------------------------------------------
@@ -348,3 +401,51 @@ async def test_delete_success(ts, mock_conn, mock_context):
 
         assert result is ts
         assert len(ts.rows) == 1
+
+
+# --------------------------------------------------------------------------------------
+# drop
+# --------------------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_drop_table_missing_returns_none(ts, mock_conn):
+    with patch.object(ts, "table_exists", new=AsyncMock(return_value=False)):
+        result = await ts.drop(mock_conn)
+
+    assert result is None
+    mock_conn.fetch.assert_not_called()
+    mock_conn.execute.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_drop_with_rows_keeps_rows_in_memory(ts, mock_conn):
+    fake_row = {
+        "time": "t1",
+        "temperature": 10,
+        "humidity": 20,
+        "received_at": "now",
+    }
+
+    with patch.object(ts, "table_exists", new=AsyncMock(return_value=True)):
+        mock_conn.fetch.return_value = [fake_row]
+        result = await ts.drop(mock_conn)
+
+    assert result is ts
+    mock_conn.execute.assert_called_once()
+    assert "DROP TABLE" in mock_conn.execute.call_args[0][0]
+    # rows snapshot is restored in memory after the drop
+    assert len(ts.rows) == 1
+    assert ts.rows[0]["temperature"] == 10
+
+
+@pytest.mark.asyncio
+async def test_drop_without_rows_clears_buffer(ts, mock_conn):
+    ts._rows = [{"time": "t1", "temperature": 10, "humidity": 20, "received_at": "now"}]
+
+    with patch.object(ts, "table_exists", new=AsyncMock(return_value=True)):
+        mock_conn.fetch.return_value = []
+        result = await ts.drop(mock_conn)
+
+    assert result is ts
+    assert len(ts.rows) == 0

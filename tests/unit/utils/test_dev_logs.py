@@ -1,7 +1,13 @@
 # tests/unit/utils/test_dev_logs.py
+import io
+import sys
 from logging import INFO, LogRecord
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
+import pytest
+from rich.console import Console
+
+from kronicle.utils import dev_logs
 from kronicle.utils.dev_logs import (
     OneLetterRichHandler,
     SingleLetterFormatter,
@@ -12,7 +18,11 @@ from kronicle.utils.dev_logs import (
     log_assert,
     log_block,
     log_d_if,
+    log_i,
+    log_t,
+    log_w,
     request_logger,
+    setup_logging,
 )
 
 
@@ -102,6 +112,17 @@ def test_log_block_calls_log_start_and_end():
         mock_end.assert_called_once()
 
 
+def test_log_block_reraises_and_logs_failure():
+    with (
+        patch("kronicle.utils.dev_logs.log_e") as mock_err,
+        patch("kronicle.utils.dev_logs.log_d"),
+    ):
+        with pytest.raises(RuntimeError, match="boom"):
+            with log_block("test", "failing step"):
+                raise RuntimeError("boom")
+        mock_err.assert_called_once()
+
+
 # ------------------------------------------------------
 # log_d_if
 # ------------------------------------------------------
@@ -119,6 +140,14 @@ def test_log_d_if_does_not_log_when_false():
             log_d_if("here", False, "msg")
 
         mock_debug.assert_not_called()
+
+
+def test_log_i_logs_at_info():
+    with patch("kronicle.utils.dev_logs.basic_logger.info") as mock_info:
+        with patch("kronicle.utils.dev_logs.LOG_LEVEL", 3):
+            log_i("here", "info msg")
+
+        mock_info.assert_called_once()
 
 
 # ------------------------------------------------------
@@ -180,3 +209,74 @@ def test_single_letter_formatter_changes_levelname():
     output = formatter.format(record)
 
     assert output == "I"
+
+
+# ------------------------------------------------------
+# OneLetterRichHandler.emit
+# ------------------------------------------------------
+class TestOneLetterRichHandlerEmit:
+    def test_emit_with_exc_info_renders_rich_traceback(self):
+        buf = io.StringIO()
+        console = Console(file=buf, width=100)
+        handler = OneLetterRichHandler(console=console, rich_tracebacks=True, show_time=False)
+        record = LogRecord("t", INFO, __file__, 1, "boom", (), None)
+        try:
+            raise ValueError("kaboom")
+        except ValueError:
+            record.exc_info = sys.exc_info()
+        handler.emit(record)
+        out = buf.getvalue()
+        assert "boom" in out  # plain message rendered
+        assert "kaboom" in out  # rich traceback rendered
+
+    def test_emit_console_failure_calls_handleError(self, monkeypatch):
+        handler = OneLetterRichHandler(console=Console(file=io.StringIO(), width=100), rich_tracebacks=False)
+        handler.console.print = MagicMock(side_effect=RuntimeError("print failed"))
+        mock_handle_error = MagicMock()
+        monkeypatch.setattr(handler, "handleError", mock_handle_error)
+        record = LogRecord("t", INFO, __file__, 1, "hello", (), None)
+        handler.emit(record)
+        mock_handle_error.assert_called_once_with(record)
+
+
+# ------------------------------------------------------
+# setup_logging
+# ------------------------------------------------------
+class TestSetupLogging:
+    def test_noop_when_already_initialized(self, monkeypatch):
+        monkeypatch.setattr(dev_logs, "_logging_initialized", True)
+        monkeypatch.setattr(dev_logs, "makedirs", MagicMock(side_effect=AssertionError("must not run")))
+        assert setup_logging() is None
+
+    def test_file_logger_failure_warns_and_continues(self, monkeypatch, capsys):
+        monkeypatch.setattr(dev_logs, "_logging_initialized", False)
+        monkeypatch.setattr(dev_logs, "makedirs", MagicMock(side_effect=OSError("nope")))
+        setup_logging()
+        captured = capsys.readouterr()
+        assert "Failed to set up file logger" in captured.err
+        assert dev_logs._logging_initialized is True
+
+
+# ------------------------------------------------------
+# _log file logger failure / log_t
+# ------------------------------------------------------
+def test_log_w_survives_file_logger_failure(monkeypatch, capsys):
+    monkeypatch.setattr(dev_logs.file_logger, "log", MagicMock(side_effect=RuntimeError("file logger down")))
+    with patch("kronicle.utils.dev_logs.LOG_LEVEL", 3):
+        log_w("here", "still logging")
+    out = capsys.readouterr().out
+    assert "file logger down" in out
+
+
+def test_log_t_logs_when_level_allows():
+    with patch("kronicle.utils.dev_logs.basic_logger.debug") as mock_debug:
+        with patch("kronicle.utils.dev_logs.LOG_LEVEL", 4):
+            log_t("here", "trace msg")
+    mock_debug.assert_called_once()
+
+
+def test_log_t_silent_when_level_too_low():
+    with patch("kronicle.utils.dev_logs.basic_logger.debug") as mock_debug:
+        with patch("kronicle.utils.dev_logs.LOG_LEVEL", 3):
+            log_t("here", "trace msg")
+    mock_debug.assert_not_called()

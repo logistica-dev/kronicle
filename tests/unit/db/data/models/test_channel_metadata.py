@@ -93,6 +93,16 @@ def test_empty_tag_key_raises(sample_schema):
         )
 
 
+def test_name_unnormalizable_becomes_none(sample_schema):
+    """A name that cannot be normalized is silently dropped (-> None)."""
+    m = ChannelMetadata(
+        channel_id=uuid4(),
+        channel_schema=sample_schema,
+        name="___",
+    )
+    assert m.name is None
+
+
 # --------------------------------------------------------------------------------------
 # Column metadata
 # --------------------------------------------------------------------------------------
@@ -190,6 +200,18 @@ def test_create_table_sql_contains_expected_parts():
     sql = ChannelMetadata.create_table_sql()
     assert "CREATE TABLE IF NOT EXISTS data.channel_metadata" in sql
     assert "channel_id UUID PRIMARY KEY" in sql
+
+
+def test_get_schema_columns_is_ordered_tuples():
+    cols = ChannelMetadata.get_schema_columns()
+    assert cols == list(ChannelMetadata.table_schema().items())
+    assert cols[0] == ("channel_id", "UUID PRIMARY KEY")
+
+
+def test_feedback_property_is_op_feedback(sample_metadata):
+    assert isinstance(sample_metadata.feedback, OpFeedback)
+    # private attr: same instance on every access
+    assert sample_metadata.feedback is sample_metadata.feedback
 
 
 # --------------------------------------------------------------------------------------
@@ -653,4 +675,50 @@ async def test_update_unknown_violation_raises_conflict(sample_metadata, mock_co
         _unique_violation("channel_metadata_something"),
     ]
     with raises(ConflictError):
+        await sample_metadata.update(mock_conn)
+
+
+# --------------------------------------------------------------------------------------
+# table_exists / ensure_table / update-not-found
+# --------------------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_table_exists_delegates_to_asyncpg_utils(mock_conn):
+    async def fake_table_exists(db, *, namespace, table_name):
+        assert namespace == "data"
+        assert table_name == "channel_metadata"
+        return True
+
+    with patch("kronicle.db.data.models.channel_metadata.table_exists", side_effect=fake_table_exists):
+        assert await ChannelMetadata.table_exists(mock_conn) is True
+
+
+@pytest.mark.asyncio
+async def test_ensure_table_creates_when_missing(mock_conn):
+    with patch.object(ChannelMetadata, "table_exists", new=AsyncMock(return_value=False)):
+        await ChannelMetadata.ensure_table(mock_conn)
+
+    mock_conn.execute.assert_awaited_once()
+    sql = mock_conn.execute.await_args.args[0]
+    assert sql.startswith("CREATE TABLE IF NOT EXISTS data.channel_metadata")
+
+
+@pytest.mark.asyncio
+async def test_ensure_table_noop_when_present(mock_conn):
+    with patch.object(ChannelMetadata, "table_exists", new=AsyncMock(return_value=True)):
+        await ChannelMetadata.ensure_table(mock_conn)
+
+    mock_conn.execute.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_update_row_vanished_raises_not_found(sample_metadata, mock_conn):
+    from kronicle.errors.error_types import NotFoundError
+
+    mock_conn.fetchrow.side_effect = [
+        _full_row(sample_metadata),  # fetch_by_id finds it
+        None,  # UPDATE RETURNING finds nothing
+    ]
+    with raises(NotFoundError):
         await sample_metadata.update(mock_conn)

@@ -144,3 +144,23 @@ class TestDescendantClosure:
         service.descendant_closure(session, [a])
 
         assert all(call[0] is session for call in repo.calls)
+
+
+class TestListNeighbors:
+    def test_list_parents_delegates_to_repo(self):
+        session = MagicMock()
+        a, b = make_node(), make_node()
+        repo: Any = FakeRepo(parents={b.id: [a]})
+        service = HierarchyService(repo=repo)
+
+        assert service.list_parents(session, b) == [a]
+        assert (session, "list_parents", b.id) in repo.calls
+
+    def test_list_children_delegates_to_repo(self):
+        session = MagicMock()
+        a, b = make_node(), make_node()
+        repo: Any = FakeRepo(children={a.id: [b]})
+        service = HierarchyService(repo=repo)
+
+        assert service.list_children(session, a) == [b]
+        assert (session, "list_children", a.id) in repo.calls

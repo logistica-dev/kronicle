@@ -189,6 +189,41 @@ def test_run_data_non_convergence_raises():
         orchestrator.run()
 
 
+def test_run_returns_early_when_schema_stage_reports_not_converged_without_abort():
+    infra, schema, data = MagicMock(), MagicMock(), MagicMock()
+    infra.run_once.return_value = _ok()
+    orchestrator = _orchestrator(infra, schema, data, auto_approve=True)
+    not_converged = {"passes": [], "converged": False, "aborted": False}
+
+    with patch.object(orchestrator, "_converge", return_value=not_converged) as converge:
+        result = orchestrator.run()
+
+    assert result.converged is False
+    assert result.verified is False
+    assert result.passes == []
+    converge.assert_called_once()
+
+
+def test_run_returns_early_when_data_stage_reports_not_converged_without_abort():
+    infra, schema, data = MagicMock(), MagicMock(), MagicMock()
+    infra.run_once.return_value = _ok()
+    orchestrator = _orchestrator(infra, schema, data, auto_approve=True)
+    schema_ok = {
+        "passes": [PassOutcome(round=1, applied_ops=1, safety_level=None, aborted=False)],
+        "converged": True,
+        "aborted": False,
+    }
+    data_not_converged = {"passes": [], "converged": False, "aborted": False}
+
+    with patch.object(orchestrator, "_converge", side_effect=[schema_ok, data_not_converged]):
+        result = orchestrator.run()
+
+    assert result.converged is False
+    assert result.verified is False
+    # Only the converged schema-stage passes are recorded; the data stage adds none.
+    assert result.passes == schema_ok["passes"]
+
+
 # ==================================================================================================
 # _converge
 # ==================================================================================================

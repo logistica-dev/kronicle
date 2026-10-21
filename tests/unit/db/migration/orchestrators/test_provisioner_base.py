@@ -1,6 +1,6 @@
 # tests/unit/db/migration/orchestrators/test_provisioner_base.py
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -109,3 +109,34 @@ class TestGetBackupPath:
         ) as mock_bp:
             assert p.get_backup_path("infra") == Path("x.dump")
         mock_bp.assert_called_once_with("/tmp/kronicle_backups", "infra")
+
+
+class TestConfirm:
+    def test_raises_when_stdin_is_not_a_tty(self):
+        p = FakeProvisioner()
+        stdin = MagicMock()
+        stdin.isatty.return_value = False
+        with patch("sys.stdin", stdin):
+            with pytest.raises(RuntimeError, match="stdin is not a TTY"):
+                p._confirm("Proceed? (y/n): ")
+
+    def test_prompts_via_input_on_a_tty(self):
+        p = FakeProvisioner()
+        stdin = MagicMock()
+        stdin.isatty.return_value = True
+        with (
+            patch("sys.stdin", stdin),
+            patch("builtins.input", return_value="Y\n") as mock_input,
+        ):
+            assert p._confirm("Proceed? (y/n): ") is True
+        mock_input.assert_called_once_with("Proceed? (y/n): ")
+
+    def test_returns_false_on_non_y_answer(self):
+        p = FakeProvisioner()
+        stdin = MagicMock()
+        stdin.isatty.return_value = True
+        with (
+            patch("sys.stdin", stdin),
+            patch("builtins.input", return_value="n\n"),
+        ):
+            assert p._confirm("Proceed? (y/n): ") is False

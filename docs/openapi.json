@@ -3,7 +3,7 @@
   "info": {
     "title": "KRONICLE",
     "summary": "FastAPI x TimescaleDB \u00b5service for storing time-series measurements",
-    "version": "0.7.0"
+    "version": "0.7.1"
   },
   "paths": {
     "/health/live": {
@@ -2604,6 +2604,342 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/OutputZone"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/core/v1/zones/{child_id}/parent": {
+      "post": {
+        "tags": [
+          "Core"
+        ],
+        "summary": "Attach a zone to a parent",
+        "description": "Attach child zone under parent zone. Each zone can have at most one parent.",
+        "operationId": "attach_zone_parent_core_v1_zones__child_id__parent_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "child_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Child Id"
+            }
+          },
+          {
+            "name": "parent_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Parent zone ID",
+              "title": "Parent Id"
+            },
+            "description": "Parent zone ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Attach Zone Parent Core V1 Zones  Child Id  Parent Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Core"
+        ],
+        "summary": "Detach a zone from its parent",
+        "description": "Remove parent-child relationship between zones.",
+        "operationId": "detach_zone_parent_core_v1_zones__child_id__parent_delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "child_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Child Id"
+            }
+          },
+          {
+            "name": "parent_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Parent zone ID",
+              "title": "Parent Id"
+            },
+            "description": "Parent zone ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Detach Zone Parent Core V1 Zones  Child Id  Parent Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/core/v1/zones/{zone_id}/parents": {
+      "get": {
+        "tags": [
+          "Core"
+        ],
+        "summary": "List parents of a zone",
+        "operationId": "list_zone_parents_core_v1_zones__zone_id__parents_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "zone_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Zone Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OutputZone"
+                  },
+                  "title": "Response List Zone Parents Core V1 Zones  Zone Id  Parents Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/core/v1/zones/{zone_id}/children": {
+      "get": {
+        "tags": [
+          "Core"
+        ],
+        "summary": "List children of a zone",
+        "operationId": "list_zone_children_core_v1_zones__zone_id__children_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "zone_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Zone Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OutputZone"
+                  },
+                  "title": "Response List Zone Children Core V1 Zones  Zone Id  Children Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/core/v1/zones/{zone_id}/ancestors": {
+      "get": {
+        "tags": [
+          "Core"
+        ],
+        "summary": "List ancestors of a zone",
+        "operationId": "list_zone_ancestors_core_v1_zones__zone_id__ancestors_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "zone_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Zone Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OutputZone"
+                  },
+                  "title": "Response List Zone Ancestors Core V1 Zones  Zone Id  Ancestors Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/core/v1/zones/{zone_id}/descendants": {
+      "get": {
+        "tags": [
+          "Core"
+        ],
+        "summary": "List descendants of a zone",
+        "operationId": "list_zone_descendants_core_v1_zones__zone_id__descendants_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "zone_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Zone Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OutputZone"
+                  },
+                  "title": "Response List Zone Descendants Core V1 Zones  Zone Id  Descendants Get"
                 }
               }
             }

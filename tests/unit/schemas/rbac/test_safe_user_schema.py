@@ -70,3 +70,26 @@ def test_output_user_from_db_user_normal():
     out_user = OutputUser.from_db(db_user)
     assert out_user.is_su is False
     assert "is_su" not in out_user.model_dump()
+
+
+# --- Direct validator calls & OutputUser serialization ---
+def test_processed_user_validate_name_none_returns_none():
+    assert ProcessedUser.validate_user_name_syntax(None) is None  # type: ignore[call-arg]  # pydantic wraps cls
+
+
+def test_processed_user_validate_name_invalid_raises():
+    with pytest.raises(BadRequestError):
+        ProcessedUser.validate_user_name_syntax("1abc")  # type: ignore[call-arg]  # pydantic wraps cls
+
+
+def test_output_user_model_dump_json():
+    out = OutputUser(id=uuid4(), email="a@example.com", name="Alice")
+    js = out.model_dump_json()
+    assert isinstance(js, str)
+    assert "Alice" in js
+
+
+def test_output_user_str():
+    out = OutputUser(id=uuid4(), email="a@example.com", name="Alice")
+    assert str(out).startswith("OutUser ")
+    assert "Alice" in str(out)

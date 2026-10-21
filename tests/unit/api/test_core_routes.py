@@ -6,13 +6,19 @@ from uuid import UUID, uuid4
 import pytest
 
 from kronicle.api.core_routes import (
+    attach_zone_parent,
     create_zone,
     delete_core_channel,
     delete_zone,
+    detach_zone_parent,
     get_core_channel,
     get_zone,
     list_channels,
+    list_zone_ancestors,
+    list_zone_children,
     list_zone_channels,
+    list_zone_descendants,
+    list_zone_parents,
     list_zones,
     patch_core_channel,
     patch_zone,
@@ -170,3 +176,45 @@ class TestSyncCoreChannels:
         assert "Synced 2 data channels" in result["detail"]
         assert core.create_missing_core_channels.call_count == 1
         core.delete_orphan_core_channels.assert_called_once_with({channel_id_1, channel_id_2})
+
+
+class TestZoneHierarchyRoutes:
+    def test_attach_zone_parent(self):
+        parent_id = uuid4()
+        child_id = uuid4()
+        core = MagicMock()
+        result = attach_zone_parent(child_id=child_id, parent_id=parent_id, core=core)
+        core.attach_zone.assert_called_once_with(parent_id=parent_id, child_id=child_id)
+        assert result["detail"] == "Zone attached successfully"
+
+    def test_detach_zone_parent(self):
+        parent_id = uuid4()
+        child_id = uuid4()
+        core = MagicMock()
+        result = detach_zone_parent(child_id=child_id, parent_id=parent_id, core=core)
+        core.detach_zone.assert_called_once_with(parent_id=parent_id, child_id=child_id)
+        assert result["detail"] == "Zone detached successfully"
+
+    def test_list_zone_parents(self):
+        core = MagicMock()
+        core.get_zone_parents.return_value = ["p"]
+        assert list_zone_parents(zone_id=ZONE_ID, core=core) == ["p"]
+        core.get_zone_parents.assert_called_once_with(ZONE_ID)
+
+    def test_list_zone_children(self):
+        core = MagicMock()
+        core.get_zone_children.return_value = ["c"]
+        assert list_zone_children(zone_id=ZONE_ID, core=core) == ["c"]
+        core.get_zone_children.assert_called_once_with(ZONE_ID)
+
+    def test_list_zone_ancestors(self):
+        core = MagicMock()
+        core.get_zone_ancestors.return_value = ["a"]
+        assert list_zone_ancestors(zone_id=ZONE_ID, core=core) == ["a"]
+        core.get_zone_ancestors.assert_called_once_with(ZONE_ID)
+
+    def test_list_zone_descendants(self):
+        core = MagicMock()
+        core.get_zone_descendants.return_value = ["d"]
+        assert list_zone_descendants(zone_id=ZONE_ID, core=core) == ["d"]
+        core.get_zone_descendants.assert_called_once_with(ZONE_ID)

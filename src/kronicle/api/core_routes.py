@@ -112,6 +112,95 @@ def delete_zone(
 
 
 # --------------------------------------------------------------------------------------------------
+# Zone Hierarchy
+# --------------------------------------------------------------------------------------------------
+
+
+@core_router.post(
+    "/zones/{child_id}/parent",
+    summary="Attach a zone to a parent",
+    description="Attach child zone under parent zone. Each zone can have at most one parent.",
+    response_model=dict[str, str],
+    dependencies=[Depends(require_permission(PermStr.ZONE_UPDATE))],
+)
+def attach_zone_parent(
+    child_id: UUID,
+    parent_id: UUID = Query(..., description="Parent zone ID"),  # noqa: B008
+    core: CoreService = Depends(core_service),  # noqa: B008
+):
+    core.attach_zone(parent_id=parent_id, child_id=child_id)
+    return {"detail": "Zone attached successfully"}
+
+
+@core_router.delete(
+    "/zones/{child_id}/parent",
+    summary="Detach a zone from its parent",
+    description="Remove parent-child relationship between zones.",
+    response_model=dict[str, str],
+    dependencies=[Depends(require_permission(PermStr.ZONE_UPDATE))],
+)
+def detach_zone_parent(
+    child_id: UUID,
+    parent_id: UUID = Query(..., description="Parent zone ID"),  # noqa: B008
+    core: CoreService = Depends(core_service),  # noqa: B008
+):
+    core.detach_zone(parent_id=parent_id, child_id=child_id)
+    return {"detail": "Zone detached successfully"}
+
+
+@core_router.get(
+    "/zones/{zone_id}/parents",
+    summary="List parents of a zone",
+    response_model=list[OutputZone],
+    dependencies=[Depends(require_permission(PermStr.ZONE_READ))],
+)
+def list_zone_parents(
+    zone_id: UUID,
+    core: CoreService = Depends(core_service),  # noqa: B008
+):
+    return core.get_zone_parents(zone_id)
+
+
+@core_router.get(
+    "/zones/{zone_id}/children",
+    summary="List children of a zone",
+    response_model=list[OutputZone],
+    dependencies=[Depends(require_permission(PermStr.ZONE_READ))],
+)
+def list_zone_children(
+    zone_id: UUID,
+    core: CoreService = Depends(core_service),  # noqa: B008
+):
+    return core.get_zone_children(zone_id)
+
+
+@core_router.get(
+    "/zones/{zone_id}/ancestors",
+    summary="List ancestors of a zone",
+    response_model=list[OutputZone],
+    dependencies=[Depends(require_permission(PermStr.ZONE_READ))],
+)
+def list_zone_ancestors(
+    zone_id: UUID,
+    core: CoreService = Depends(core_service),  # noqa: B008
+):
+    return core.get_zone_ancestors(zone_id)
+
+
+@core_router.get(
+    "/zones/{zone_id}/descendants",
+    summary="List descendants of a zone",
+    response_model=list[OutputZone],
+    dependencies=[Depends(require_permission(PermStr.ZONE_READ))],
+)
+def list_zone_descendants(
+    zone_id: UUID,
+    core: CoreService = Depends(core_service),  # noqa: B008
+):
+    return core.get_zone_descendants(zone_id)
+
+
+# --------------------------------------------------------------------------------------------------
 # Core Channels
 # --------------------------------------------------------------------------------------------------
 

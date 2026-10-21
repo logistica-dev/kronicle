@@ -515,7 +515,7 @@ class DbProvisioner(BaseProvisioner):
         return (row is not None, row[0] if row else None)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     here = "db_provisioner"
 
     parser = argparse.ArgumentParser(description="Kronicle DB provisioner (infra prerequisites)")

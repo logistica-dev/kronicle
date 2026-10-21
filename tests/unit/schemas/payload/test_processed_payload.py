@@ -115,3 +115,36 @@ def test_sanitize_column_metadata_nested_non_string_key_raises():
     bad = {"temperature": {1: "value"}}
     with pytest.raises(BadRequestError, match="Invalid column_metadata"):
         ProcessedPayload.sanitize_column_metadata(bad)
+
+
+# ------------------------------------------------------
+# Remaining branches: normalize_name / _validate_rows
+# ------------------------------------------------------
+def test_normalize_name_classmethod():
+    from kronicle.utils.str_utils import normalize_name
+
+    assert ProcessedPayload.normalize_name("My Chan") == normalize_name("My Chan", prefix="channel_")
+
+
+def test_validate_rows_without_schema_raises():
+    payload = ProcessedPayload.model_construct(channel_id=uuid4(), channel_schema=None)
+    with pytest.raises(BadRequestError, match="no schema available"):
+        payload._validate_rows()
+
+
+def test_validate_rows_strict_raises_on_invalid_row():
+    schema = ChannelSchema.from_user_json({"temp": "float"})
+    payload = ProcessedPayload(channel_id=uuid4(), channel_schema=schema, rows=[{"temp": "not_float"}])
+
+    with pytest.raises(BadRequestError, match="Validation failed for some rows"):
+        payload._validate_rows(strict=True)
+
+    assert payload.op_feedback.has_details
+
+
+def test_validate_rows_all_invalid_non_strict_raises():
+    schema = ChannelSchema.from_user_json({"temp": "float"})
+    payload = ProcessedPayload(channel_id=uuid4(), channel_schema=schema, rows=[{"temp": "not_float"}])
+
+    with pytest.raises(BadRequestError, match="No valid rows to insert"):
+        payload._validate_rows(strict=False)

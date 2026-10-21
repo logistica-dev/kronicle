@@ -110,3 +110,35 @@ def test_input_user_invalid_password():
 def test_input_user_invalid_name():
     with pytest.raises(BadRequestError):
         InputUser(email="test@example.com", password="Valid!Pwd01", name="1abc")
+
+
+# --- Direct validator calls (hit branches unreachable through construction) ---
+def test_validate_login_none_raises():
+    from unittest.mock import MagicMock
+
+    with pytest.raises(BadRequestError, match="Input login must be provided"):
+        InputUserLogin.validate_login(None, MagicMock())
+
+
+def test_validate_user_name_syntax_none_returns_none():
+    assert InputUser.validate_user_name_syntax(None) is None  # type: ignore
+
+
+def test_validate_user_name_syntax_invalid_raises():
+    with pytest.raises(BadRequestError):
+        InputUser.validate_user_name_syntax("1abc")  # type: ignore
+
+
+def test_input_user_patch_falsy_name_returns_none():
+    from kronicle.schemas.rbac.input_user_schemas import InputUserPatch
+
+    patch = InputUserPatch(name=None, full_name=None)
+    assert patch.name is None
+    assert patch.full_name is None
+
+
+def test_input_user_patch_invalid_name_raises():
+    from kronicle.schemas.rbac.input_user_schemas import InputUserPatch
+
+    with pytest.raises(BadRequestError):
+        InputUserPatch(name="1abc")

@@ -496,3 +496,209 @@ class TestPatchCoreChannel:
 
         with pytest.raises(NotFoundError, match="not found"):
             service.patch_core_channel(channel.id, zone_id=uuid4())
+
+
+# --------------------------------------------------------------------------------------
+# Zone Hierarchy
+# --------------------------------------------------------------------------------------
+
+
+class TestAttachZone:
+    def test_attaches_zone_successfully(self, service, mock_db, mock_db_session, mock_zone_repo):
+        parent_id = uuid4()
+        child_id = uuid4()
+        mock_zone_repo.get_by_id.side_effect = [make_zone(id=parent_id), make_zone(id=child_id)]
+        service.zone_hierarchy_service.add_parent = MagicMock()
+
+        service.attach_zone(parent_id, child_id)
+
+        assert mock_zone_repo.get_by_id.call_count == 2
+        service.zone_hierarchy_service.add_parent.assert_called_once()
+
+    def test_raises_if_parent_not_found(self, service, mock_db, mock_db_session, mock_zone_repo):
+        mock_zone_repo.get_by_id.return_value = None
+        with pytest.raises(NotFoundError, match="parent_id|Zone.*not found"):
+            service.attach_zone(uuid4(), uuid4())
+
+    def test_raises_if_child_not_found(self, service, mock_db, mock_db_session, mock_zone_repo):
+        parent_id = uuid4()
+        mock_zone_repo.get_by_id.side_effect = [make_zone(id=parent_id), None]
+        with pytest.raises(NotFoundError, match="child_id|Zone.*not found"):
+            service.attach_zone(parent_id, uuid4())
+
+    def test_raises_if_attach_to_self(self, service, mock_db, mock_db_session, mock_zone_repo):
+        zone_id = uuid4()
+        mock_zone_repo.get_by_id.side_effect = [make_zone(id=zone_id), make_zone(id=zone_id)]
+        with pytest.raises(BadRequestError, match="cannot be attached to itself"):
+            service.attach_zone(zone_id, zone_id)
+
+    def test_converts_value_error_to_bad_request(self, service, mock_db, mock_db_session, mock_zone_repo):
+        parent_id = uuid4()
+        child_id = uuid4()
+        mock_zone_repo.get_by_id.side_effect = [make_zone(id=parent_id), make_zone(id=child_id)]
+        service.zone_hierarchy_service.add_parent = MagicMock(side_effect=ValueError("Cycle detected"))
+
+        with pytest.raises(BadRequestError, match="Cycle detected"):
+            service.attach_zone(parent_id, child_id)
+
+
+class TestDetachZone:
+    def test_detaches_zone_successfully(self, service, mock_db, mock_db_session, mock_zone_repo):
+        parent_id = uuid4()
+        child_id = uuid4()
+        mock_zone_repo.get_by_id.side_effect = [make_zone(id=parent_id), make_zone(id=child_id)]
+        service.zone_hierarchy_service.remove_parent = MagicMock()
+
+        service.detach_zone(parent_id, child_id)
+
+        service.zone_hierarchy_service.remove_parent.assert_called_once()
+
+    def test_raises_if_parent_not_found(self, service, mock_db, mock_db_session, mock_zone_repo):
+        mock_zone_repo.get_by_id.return_value = None
+        with pytest.raises(NotFoundError):
+            service.detach_zone(uuid4(), uuid4())
+
+    def test_raises_if_child_not_found(self, service, mock_db, mock_db_session, mock_zone_repo):
+        parent_id = uuid4()
+        mock_zone_repo.get_by_id.side_effect = [make_zone(id=parent_id), None]
+        with pytest.raises(NotFoundError):
+            service.detach_zone(parent_id, uuid4())
+
+
+class TestGetZoneHierarchy:
+    def test_get_zone_parents(self, service, mock_db, mock_db_session, mock_zone_repo):
+        zone_id = uuid4()
+        zone = make_zone(id=zone_id)
+        parent = make_zone()
+        mock_zone_repo.get_by_id.return_value = zone
+        service.zone_hierarchy_service.list_parents = MagicMock(return_value=[parent])
+
+        with patch("kronicle.services.core_service.OutputZone.from_db") as mock_from:
+            mock_from.return_value = MagicMock()
+            result = service.get_zone_parents(zone_id)
+
+        assert len(result) == 1
+        service.zone_hierarchy_service.list_parents.assert_called_once()
+
+    def test_get_zone_parents_raises_if_not_found(self, service, mock_db, mock_db_session, mock_zone_repo):
+        mock_zone_repo.get_by_id.return_value = None
+        with pytest.raises(NotFoundError):
+            service.get_zone_parents(uuid4())
+
+    def test_get_zone_children(self, service, mock_db, mock_db_session, mock_zone_repo):
+        zone_id = uuid4()
+        zone = make_zone(id=zone_id)
+        child = make_zone()
+        mock_zone_repo.get_by_id.return_value = zone
+        service.zone_hierarchy_service.list_children = MagicMock(return_value=[child])
+
+        with patch("kronicle.services.core_service.OutputZone.from_db") as mock_from:
+            mock_from.return_value = MagicMock()
+            result = service.get_zone_children(zone_id)
+
+        assert len(result) == 1
+
+    def test_get_zone_ancestors(self, service, mock_db, mock_db_session, mock_zone_repo):
+        zone_id = uuid4()
+        zone = make_zone(id=zone_id)
+        ancestor = make_zone()
+        mock_zone_repo.get_by_id.return_value = zone
+        service.zone_hierarchy_service.ancestors = MagicMock(return_value=[ancestor])
+
+        with patch("kronicle.services.core_service.OutputZone.from_db") as mock_from:
+            mock_from.return_value = MagicMock()
+            result = service.get_zone_ancestors(zone_id)
+
+        assert len(result) == 1
+
+    def test_get_zone_descendants(self, service, mock_db, mock_db_session, mock_zone_repo):
+        zone_id = uuid4()
+        zone = make_zone(id=zone_id)
+        descendant = make_zone()
+        mock_zone_repo.get_by_id.return_value = zone
+        service.zone_hierarchy_service.descendants = MagicMock(return_value=[descendant])
+
+        with patch("kronicle.services.core_service.OutputZone.from_db") as mock_from:
+            mock_from.return_value = MagicMock()
+            result = service.get_zone_descendants(zone_id)
+
+        assert len(result) == 1
+
+
+# --------------------------------------------------------------------------------------
+# Coverage gaps: by-name lookups, delete channel, hierarchy not-found paths
+# --------------------------------------------------------------------------------------
+
+
+class TestGetZoneByName:
+    def test_returns_zone(self, service, mock_db_session, mock_zone_repo):
+        zone = make_zone(name="zoned")
+        mock_zone_repo.get_by_name.return_value = zone
+
+        with patch("kronicle.services.core_service.OutputZone.from_db") as mock_from:
+            mock_from.return_value = MagicMock(spec=OutputZone, id=zone.id)
+            result = service.get_zone_by_name("zoned")
+
+        assert result is not None
+        mock_zone_repo.get_by_name.assert_called_once_with(mock_db_session, name="zoned")
+
+    def test_returns_none_if_not_found(self, service, mock_db_session, mock_zone_repo):
+        mock_zone_repo.get_by_name.return_value = None
+        assert service.get_zone_by_name("missing") is None
+
+
+class TestGetZoneHierarchyNotFound:
+    def test_get_zone_children_raises_if_not_found(self, service, mock_zone_repo):
+        mock_zone_repo.get_by_id.return_value = None
+        with pytest.raises(NotFoundError, match="not found"):
+            service.get_zone_children(uuid4())
+
+    def test_get_zone_ancestors_raises_if_not_found(self, service, mock_zone_repo):
+        mock_zone_repo.get_by_id.return_value = None
+        with pytest.raises(NotFoundError, match="not found"):
+            service.get_zone_ancestors(uuid4())
+
+    def test_get_zone_descendants_raises_if_not_found(self, service, mock_zone_repo):
+        mock_zone_repo.get_by_id.return_value = None
+        with pytest.raises(NotFoundError, match="not found"):
+            service.get_zone_descendants(uuid4())
+
+
+class TestGetCoreChannelByName:
+    def test_returns_channel(self, service, mock_db_session, mock_channel_repo):
+        channel = make_channel(name="chan")
+        mock_channel_repo.get_by_name.return_value = channel
+
+        with patch("kronicle.services.core_service.OutputCoreChannel.from_db") as mock_from:
+            mock_from.return_value = MagicMock(spec=OutputCoreChannel, id=channel.id)
+            result = service.get_core_channel_by_name("chan")
+
+        assert result is not None
+        mock_channel_repo.get_by_name.assert_called_once_with(mock_db_session, name="chan")
+
+    def test_returns_none_if_missing(self, service, mock_channel_repo):
+        mock_channel_repo.get_by_name.return_value = None
+        assert service.get_core_channel_by_name("missing") is None
+
+    def test_returns_none_on_not_found_error(self, service, mock_channel_repo):
+        mock_channel_repo.get_by_name.side_effect = NotFoundError("not found")
+        assert service.get_core_channel_by_name("missing") is None
+
+
+class TestDeleteCoreChannel:
+    def test_deletes_channel(self, service, mock_db_session, mock_channel_repo):
+        channel = make_channel()
+        mock_channel_repo.get_by_id.return_value = channel
+        mock_channel_repo.delete.return_value = channel
+
+        with patch("kronicle.services.core_service.OutputCoreChannel.from_db") as mock_from:
+            mock_from.return_value = MagicMock(spec=OutputCoreChannel, id=channel.id)
+            result = service.delete_core_channel(channel.id)
+
+        assert result is not None
+        mock_channel_repo.delete.assert_called_once_with(mock_db_session, entity=channel)
+
+    def test_returns_none_if_missing(self, service, mock_channel_repo):
+        mock_channel_repo.get_by_id.return_value = None
+        assert service.delete_core_channel(uuid4()) is None
+        mock_channel_repo.delete.assert_not_called()

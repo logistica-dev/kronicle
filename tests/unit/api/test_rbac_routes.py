@@ -30,6 +30,7 @@ from kronicle.api.rbac_routes import (
     delete_zone_access_profile,
     delete_zone_policy,
     get_channel_access_profile,
+    get_channel_policy,
     get_group,
     get_group_channels,
     get_group_permissions,
@@ -39,6 +40,7 @@ from kronicle.api.rbac_routes import (
     get_groups_for_user,
     get_role,
     get_row_access_profile,
+    get_row_policy,
     get_user_by_id,
     get_user_channels,
     get_user_permissions,
@@ -47,6 +49,7 @@ from kronicle.api.rbac_routes import (
     get_user_zones,
     get_users_from_group,
     get_zone_access_profile,
+    get_zone_policy,
     list_access_profiles,
     list_channel_access_profiles,
     list_channel_access_profiles_for_channel,
@@ -149,6 +152,13 @@ class TestUserRoutes:
         result = get_user_by_id(user_id=any_uuid, rbac=mock_rbac)
         mock_rbac.fetch_user_by_id.assert_called_once_with(any_uuid)
         assert result == expected
+
+    def test_list_users_empty_string_filter_raises_bad_request(self, mock_rbac):
+        # An empty-string filter is falsy (skips the fetch branches) but not None: it must be rejected.
+        with pytest.raises(BadRequestError, match="Query  cannot be empty"):
+            list_users(email="", name=None, orcid=None, include_inactive=False, rbac=mock_rbac)
+        mock_rbac.list_users.assert_not_called()
+        mock_rbac.fetch_user_by_email.assert_not_called()
 
     @patch("kronicle.api.rbac_routes.ProcessedUser.from_input")
     def test_create_user(self, mock_from_input, mock_rbac):
@@ -321,6 +331,11 @@ class TestGroupRoutes:
         result = get_users_from_group(group_id=any_uuid, rbac=mock_rbac)
         mock_rbac.get_users_from_group.assert_called_once_with(group_id=any_uuid)
         assert result == expected
+
+    def test_get_users_from_group_without_group_id(self, mock_rbac):
+        result = get_users_from_group(group_id=None, rbac=mock_rbac)  # type: ignore
+        assert result == []
+        mock_rbac.get_users_from_group.assert_not_called()
 
     def test_get_groups_for_user(self, mock_rbac, any_uuid):
         user_id = uuid4()
@@ -1088,4 +1103,57 @@ class TestResourceLevelPolicyRoutes:
         mock_rbac.get_row_access_profiles.return_value = expected
         result = list_row_access_profiles_for_row(row_id=any_uuid, rbac=mock_rbac)
         mock_rbac.get_row_access_profiles.assert_called_once_with(any_uuid)
+        assert result == expected
+
+
+class TestPolicyByIdRoutes:
+    """GET /policies/{kind}/{policy_id} — single policy fetched by ID."""
+
+    def test_get_zone_policy(self, mock_rbac, any_uuid):
+        expected = {"id": any_uuid, "name": "zp1"}
+        mock_rbac.get_zone_policy.return_value = expected
+        result = get_zone_policy(policy_id=any_uuid, rbac=mock_rbac)
+        mock_rbac.get_zone_policy.assert_called_once_with(any_uuid)
+        assert result == expected
+
+    def test_get_channel_policy(self, mock_rbac, any_uuid):
+        expected = {"id": any_uuid, "name": "cp1"}
+        mock_rbac.get_channel_policy.return_value = expected
+        result = get_channel_policy(policy_id=any_uuid, rbac=mock_rbac)
+        mock_rbac.get_channel_policy.assert_called_once_with(any_uuid)
+        assert result == expected
+
+    def test_get_row_policy(self, mock_rbac, any_uuid):
+        expected = {"id": any_uuid, "name": "rp1"}
+        mock_rbac.get_row_policy.return_value = expected
+        result = get_row_policy(policy_id=any_uuid, rbac=mock_rbac)
+        mock_rbac.get_row_policy.assert_called_once_with(any_uuid)
+        assert result == expected
+
+
+class TestListPoliciesFilteredByResource:
+    """List-policy endpoints filtered by zone_id / channel_id / row_id (without a name filter)."""
+
+    def test_list_zone_policies_by_zone_id(self, mock_rbac, any_uuid):
+        expected = [{"id": uuid4(), "zone_id": any_uuid}]
+        mock_rbac.list_policies_for_zone.return_value = expected
+        result = list_zone_policies(zone_id=any_uuid, name=None, rbac=mock_rbac)
+        mock_rbac.list_policies_for_zone.assert_called_once_with(any_uuid)
+        mock_rbac.list_zone_policies.assert_not_called()
+        assert result == expected
+
+    def test_list_channel_policies_by_channel_id(self, mock_rbac, any_uuid):
+        expected = [{"id": uuid4(), "channel_id": any_uuid}]
+        mock_rbac.list_policies_for_channel.return_value = expected
+        result = list_channel_policies(channel_id=any_uuid, name=None, rbac=mock_rbac)
+        mock_rbac.list_policies_for_channel.assert_called_once_with(any_uuid)
+        mock_rbac.list_channel_policies.assert_not_called()
+        assert result == expected
+
+    def test_list_row_policies_by_row_id(self, mock_rbac, any_uuid):
+        expected = [{"id": uuid4(), "row_id": any_uuid}]
+        mock_rbac.list_policies_for_row.return_value = expected
+        result = list_row_policies(row_id=any_uuid, name=None, rbac=mock_rbac)
+        mock_rbac.list_policies_for_row.assert_called_once_with(any_uuid)
+        mock_rbac.list_row_policies.assert_not_called()
         assert result == expected

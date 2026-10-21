@@ -117,6 +117,18 @@ class TestDispatch:
         response = await middleware.dispatch(request, MagicMock())
         assert response == "error-response"
 
+    @patch("kronicle.auth.auth_middleware.app_error_adapter", return_value="error-response")
+    @pytest.mark.asyncio
+    async def test_empty_token_after_bearer_prefix(self, mock_adapter, middleware):
+        request = MagicMock(spec=Request)
+        request.url.path = "/channels"
+        request.headers = {"Authorization": "Bearer "}
+        request.state = MagicMock()
+        response = await middleware.dispatch(request, MagicMock())
+        assert response == "error-response"
+        assert isinstance(mock_adapter.call_args[0][1], UnauthorizedError)
+        assert "Token missing" in str(mock_adapter.call_args[0][1])
+
     @pytest.mark.asyncio
     async def test_valid_token_sets_state(self, middleware, jwt_service):
         request = MagicMock(spec=Request)

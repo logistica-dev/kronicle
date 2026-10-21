@@ -426,6 +426,16 @@ def test_ask_validation_lists_pk_and_hypertable_only_issues():
         assert p.ask_validation(auto_approve=False) is True
 
 
+def test_ask_validation_warns_about_missing_metadata_columns():
+    p = _provisioner()
+    p._tracking_missing = False
+    p._metadata_missing = False
+    p._metadata_missing_cols = ["extra_col", "other_col"]
+    p.channels = []
+    with patch.object(p, "_confirm", return_value=True):
+        assert p.ask_validation(auto_approve=False) is True
+
+
 # ==================================================================================================
 # backup / restore_backup
 # ==================================================================================================

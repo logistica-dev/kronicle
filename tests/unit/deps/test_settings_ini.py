@@ -4,7 +4,15 @@ from uuid import UUID
 
 import pytest
 
-from kronicle.deps.settings_ini import AppSettings, AuthSettings, IniSection, JWTSettings, package_version
+import kronicle.deps.settings_ini as si
+from kronicle.deps.settings_ini import (
+    AppSettings,
+    AuthSettings,
+    IniSection,
+    JWTSettings,
+    RbacSettings,
+    package_version,
+)
 
 
 # ---------------------------------------------------------
@@ -120,3 +128,44 @@ def test_jwtsettings_from_parser_override():
     jwt = JWTSettings.from_parser(parser)
     assert jwt.expiration_minutes == 60
     assert jwt.algorithm == "HS512"
+
+
+# ---------------------------------------------------------
+# RbacSettings tests
+# ---------------------------------------------------------
+def test_rbacsettings_reserved_names_from_csv():
+    rbac = RbacSettings(reserved_names="alpha, beta ,, gamma")  # type: ignore
+    assert rbac.reserved_names == ["alpha", "beta", "gamma"]
+
+
+def test_rbacsettings_reserved_names_list_passthrough():
+    rbac = RbacSettings(reserved_names=["delta", "epsilon"])
+    assert rbac.reserved_names == ["delta", "epsilon"]
+
+
+# ---------------------------------------------------------
+# package_version fallbacks
+# ---------------------------------------------------------
+def test_package_version_malformed_pyproject_falls_back_to_metadata(tmp_path, monkeypatch):
+    (tmp_path / "pyproject.toml").write_text("[[[ not valid toml")
+    monkeypatch.setattr(si, "resolve_project_root", lambda *args, **kwargs: tmp_path)
+    monkeypatch.setattr(si.importlib.metadata, "version", lambda name: "9.9.9")
+    assert si.package_version() == "9.9.9"
+
+
+def test_package_version_missing_version_key_falls_back_to_metadata(tmp_path, monkeypatch):
+    (tmp_path / "pyproject.toml").write_text('[project]\nname = "kronicle"\n')
+    monkeypatch.setattr(si, "resolve_project_root", lambda *args, **kwargs: tmp_path)
+    monkeypatch.setattr(si.importlib.metadata, "version", lambda name: "9.9.9")
+    assert si.package_version() == "9.9.9"
+
+
+def test_package_version_unknown_fallback(tmp_path, monkeypatch):
+    # No pyproject.toml and no installed distribution metadata -> UNKNOWN_VERSION
+    monkeypatch.setattr(si, "resolve_project_root", lambda *args, **kwargs: tmp_path)
+
+    def _raise(name):
+        raise si.PackageNotFoundError
+
+    monkeypatch.setattr(si.importlib.metadata, "version", _raise)
+    assert si.package_version() == si.UNKNOWN_VERSION

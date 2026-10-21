@@ -196,3 +196,40 @@ def test_repr():
 def test_repr_optional_true():
     s = SchemaType("double precision", optional=True)
     assert repr(s) == "SchemaType('float', optional=True)"
+
+
+# ------------------------------------------------------------------
+# Defensive validation branches & dict key normalization
+# ------------------------------------------------------------------
+
+
+def test_validate_dict_with_non_dict_result_raises(monkeypatch):
+    """If the registry hands back a non-dict, validate() raises ValueError."""
+    monkeypatch.setattr(SchemaRegistry, "validate_value", lambda self, value, name: 42)
+    with raises(ValueError, match="Expected dict"):
+        SchemaType("dict").validate({"a": 1})
+
+
+def test_validate_list_with_non_list_result_raises(monkeypatch):
+    """If the registry hands back a non-list, validate() raises ValueError."""
+    monkeypatch.setattr(SchemaRegistry, "validate_value", lambda self, value, name: 42)
+    with raises(ValueError, match="Expected list"):
+        SchemaType("list").validate([1, 2])
+
+
+def test_validate_dict_normalizes_nested_keys():
+    t = SchemaType("dict")
+    result = t.validate({"Outer Key": {"inner key": 1}})
+    assert result == {"outer_key": {"inner_key": 1}}
+
+
+def test_validate_dict_rejects_excessive_nesting():
+    t = SchemaType("dict")
+    with raises(ValueError, match="Max dict nesting depth exceeded"):
+        t.validate({"a": {"b": {"c": 1}}})
+
+
+def test_validate_dict_rejects_non_string_keys():
+    t = SchemaType("dict")
+    with raises(ValueError, match="Dict keys must be strings"):
+        t.validate({1: "x"})  # type: ignore[dict-item]

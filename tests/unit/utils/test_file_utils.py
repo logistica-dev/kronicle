@@ -115,3 +115,26 @@ def test_load_ini_file(tmp_path):
     ini_file.write_text("[main]\nfoo = bar\n")
     config = file_utils.load_ini_file(ini_file)
     assert config.get("main", "foo") == "bar"
+
+
+# --------------------------------------------------------------------------------------------------
+# load_env_file
+# --------------------------------------------------------------------------------------------------
+def test_load_env_file_parses_export_and_quoted_lines(tmp_path, monkeypatch):
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        '# a comment\nexport FOO_LOAD_ENV_A = "quoted value"\nFOO_LOAD_ENV_B = plain_value\nnot a valid line\n'
+    )
+
+    monkeypatch.setenv("FOO_LOAD_ENV_A", "old")
+    monkeypatch.setenv("FOO_LOAD_ENV_B", "old")
+
+    file_utils.load_env_file(env_file)
+
+    assert file_utils.environ["FOO_LOAD_ENV_A"] == "quoted value"
+    assert file_utils.environ["FOO_LOAD_ENV_B"] == "plain_value"
+
+
+def test_load_env_file_missing_file_raises(tmp_path):
+    with pytest.raises(FileNotFoundError, match="No file found at this path"):
+        file_utils.load_env_file(tmp_path / "does_not_exist.env")

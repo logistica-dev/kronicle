@@ -147,11 +147,6 @@ def normalize_name(s: str, *, keep_dots=False, prefix: str = "") -> str:
             if not prefix:
                 raise ValueError("Name is invalid.")
             s = prefix + s
-        elif not s:
-            if not prefix:
-                raise ValueError("Name is invalid..")
-            # Generate 8-character random name
-            s = prefix + "".join(choices(ascii_lowercase + digits, k=8))  # not used for security # nosec B311
         return s[:SQL_COL_MAX_LEN]
     except Exception as e:
         raise ValueError("Name is invalid...") from e

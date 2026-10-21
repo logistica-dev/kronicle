@@ -134,6 +134,25 @@ class TestGenericExceptionHandler:
             generic_exception_handler(mock_request, exc)
             assert mock_log.called
 
+    def test_logs_user_frames_when_traceback_comes_from_src(self, mock_request):
+        # Simulate an exception raised inside src/kronicle: the traceback frame
+        # filename is what generic_exception_handler filters on ("src/kronicle"
+        # substring match). The "<...>" wrapper is deliberate: coverage never
+        # traces artificial file names starting with "<" (inorout.py: "file name
+        # is not real"), so the fake frame is invisible to coverage — a plain
+        # src-relative name would be recorded and make the report warn that it
+        # can't parse the (non-existent) source.
+        fake_module = compile("raise RuntimeError('boom')", "<fake_boom:src/kronicle/_fake_boom.py>", "exec")
+        with pytest.raises(RuntimeError) as exc_info:
+            exec(fake_module, {"__name__": "kronicle._fake_boom"})
+
+        with patch("kronicle.errors.exception_handlers.log_e") as mock_log:
+            response = generic_exception_handler(mock_request, exc_info.value)
+
+        assert response.status_code == 500
+        user_frame_logs = [c for c in mock_log.call_args_list if "src/kronicle/_fake_boom.py" in str(c)]
+        assert user_frame_logs, "expected a log entry listing the user (src/kronicle) traceback frames"
+
 
 class TestValueErrorHandler:
     def test_returns_400_json_response(self, mock_request):

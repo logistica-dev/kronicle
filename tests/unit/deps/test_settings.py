@@ -62,6 +62,33 @@ def test_kronicle_settings_dict_json():
     assert "chan_user" in j
 
 
+def test_no_conf_file_path_raises(monkeypatch):
+    """No candidate INI file exists -> RuntimeError."""
+    monkeypatch.setattr(ks, "is_file", lambda f: False)
+    with pytest.raises(RuntimeError, match="No conf file path found"):
+        ks.KronicleSettings()
+
+
+def test_conf_file_incorrect_raises(monkeypatch):
+    """A candidate file exists but cannot be parsed -> RuntimeError('Conf file incorrect')."""
+    monkeypatch.setattr(ks, "is_file", lambda f: True)
+    monkeypatch.setattr(ks, "load_ini_file", MagicMock(side_effect=ValueError("bad ini")))
+    with pytest.raises(RuntimeError, match="Conf file incorrect"):
+        ks.KronicleSettings()
+
+
+def test_api_version():
+    settings = ks.KronicleSettings()
+    assert settings.api_version == "v1"
+
+
+def test_str_dumps_json():
+    settings = ks.KronicleSettings()
+    text = str(settings)
+    assert text.startswith("{")
+    assert "chan_user" in text
+
+
 @pytest.fixture
 def mock_ini_parser(monkeypatch):
     """Mock load_ini_file and SettingsIni classes."""

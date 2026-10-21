@@ -46,6 +46,18 @@ class TestTable:
         assert ConcreteTable.table() == "test_schema.test_table"
 
 
+class TestSerialization:
+    def test_model_dump_json(self):
+        obj = ConcreteTable(extra_field="hello")
+        json_str = obj.model_dump_json()
+        assert json_str.startswith("{")
+        assert "hello" in json_str
+
+    def test_str_returns_json_string(self):
+        obj = ConcreteTable(extra_field="hello")
+        assert str(obj) == obj.model_dump_json(exclude_none=True)
+
+
 class TestEnsureTable:
     def test_calls_create_on_connection(self, mock_conn):
         with patch.object(ConcreteTable.__table__, "create") as mock_create:

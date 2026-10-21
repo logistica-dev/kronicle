@@ -818,7 +818,7 @@ class RbacSchemasProvisioner(BaseProvisioner):
 # ======================================================================================
 # CLI entrypoint
 # ======================================================================================
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     parser = argparse.ArgumentParser(description="Kronicle RBAC/core schema provisioner")
     parser.add_argument("--secrets", default=None, help="Path to a .secrets file to load")
     parser.add_argument(

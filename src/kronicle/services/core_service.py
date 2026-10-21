@@ -91,6 +91,71 @@ class CoreService:
             return OutputZone.from_db(zone)
 
     # ----------------------------------------------------------------------------------------------
+    # Zone Hierarchy
+    # ----------------------------------------------------------------------------------------------
+
+    def attach_zone(self, parent_id: UUID, child_id: UUID) -> None:
+        here = f"{mod}.attach_zone"
+        log_d(here, parent_id, child_id)
+        with self._db.transaction() as db:
+            parent = self._zone_repo.get_by_id(db, id=parent_id)
+            if not parent:
+                raise NotFoundError(f"Zone '{parent_id}' not found")
+            child = self._zone_repo.get_by_id(db, id=child_id)
+            if not child:
+                raise NotFoundError(f"Zone '{child_id}' not found")
+            if parent_id == child_id:
+                raise BadRequestError("Zone cannot be attached to itself")
+            try:
+                self.zone_hierarchy_service.add_parent(db, parent, child)
+            except ValueError as e:
+                raise BadRequestError(str(e)) from e
+
+    def detach_zone(self, parent_id: UUID, child_id: UUID) -> None:
+        here = f"{mod}.detach_zone"
+        log_d(here, parent_id, child_id)
+        with self._db.transaction() as db:
+            parent = self._zone_repo.get_by_id(db, id=parent_id)
+            if not parent:
+                raise NotFoundError(f"Zone '{parent_id}' not found")
+            child = self._zone_repo.get_by_id(db, id=child_id)
+            if not child:
+                raise NotFoundError(f"Zone '{child_id}' not found")
+            self.zone_hierarchy_service.remove_parent(db, parent, child)
+
+    def get_zone_parents(self, zone_id: UUID) -> list[OutputZone]:
+        with self._db.get_db() as db:
+            zone = self._zone_repo.get_by_id(db, id=zone_id)
+            if not zone:
+                raise NotFoundError(f"Zone '{zone_id}' not found")
+            parents = self.zone_hierarchy_service.list_parents(db, zone)
+            return [OutputZone.from_db(p) for p in parents]
+
+    def get_zone_children(self, zone_id: UUID) -> list[OutputZone]:
+        with self._db.get_db() as db:
+            zone = self._zone_repo.get_by_id(db, id=zone_id)
+            if not zone:
+                raise NotFoundError(f"Zone '{zone_id}' not found")
+            children = self.zone_hierarchy_service.list_children(db, zone)
+            return [OutputZone.from_db(p) for p in children]
+
+    def get_zone_ancestors(self, zone_id: UUID) -> list[OutputZone]:
+        with self._db.get_db() as db:
+            zone = self._zone_repo.get_by_id(db, id=zone_id)
+            if not zone:
+                raise NotFoundError(f"Zone '{zone_id}' not found")
+            ancestors = self.zone_hierarchy_service.ancestors(db, zone)
+            return [OutputZone.from_db(a) for a in ancestors]
+
+    def get_zone_descendants(self, zone_id: UUID) -> list[OutputZone]:
+        with self._db.get_db() as db:
+            zone = self._zone_repo.get_by_id(db, id=zone_id)
+            if not zone:
+                raise NotFoundError(f"Zone '{zone_id}' not found")
+            descendants = self.zone_hierarchy_service.descendants(db, zone)
+            return [OutputZone.from_db(d) for d in descendants]
+
+    # ----------------------------------------------------------------------------------------------
     # Core Channels
     # ----------------------------------------------------------------------------------------------
 

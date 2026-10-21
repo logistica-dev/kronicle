@@ -273,3 +273,52 @@ def test_json_path_sql(col_dict_sub):
     path, last = col_nested.json_path_sql
     assert path == "'a'"
     assert last == "b"
+
+
+def test_json_path_sql_without_subkeys(col_int):
+    """A column without subkeys has no JSON path."""
+    assert col_int.json_path_sql == ("", "")
+
+
+def test_range_filter_no_cast_on_str(col_str):
+    """Range filters on a string column produce no SQL cast."""
+    f = MinFilter(col_str, "abc")
+    assert f.sql_cast == ""
+    sql, params = f.to_sql(1)
+    assert sql == "name >= $1"
+    assert params == ["abc"]
+
+
+def test_exact_filter_dict_without_subkeys_raises(col_dict_sub):
+    """A dict column whose subkeys were cleared cannot be used with 'col'."""
+    col_dict_sub.subkeys = None
+    with raises(ValueError, match="not supported on JSON field"):
+        ExactFilter(col_dict_sub, "x")
+
+
+def test_any_filter_dict_without_subkeys_raises(col_dict_sub):
+    """A dict column whose subkeys were cleared cannot be used with 'any'."""
+    col_dict_sub.subkeys = None
+    with raises(ValueError, match="not supported on JSON field"):
+        AnyFilter(col_dict_sub, ["x"])
+
+
+def test_any_filter_scalar_non_str_input_raises(col_int):
+    """Only str / list / tuple inputs are accepted."""
+    with raises(ValueError, match="expects a list or tuple"):
+        AnyFilter(col_int, 123)  # type: ignore[arg-type]
+
+
+def test_has_filter_scalar_input_raises(col_list):
+    """Only str / list / tuple inputs are accepted."""
+    with raises(ValueError, match="expects a list or tuple"):
+        HasFilter(col_list, 123)  # type: ignore[arg-type]
+
+
+def test_has_filter_json_path_sql(col_list):
+    """HasFilter supports a JSON path expression when the column carries subkeys."""
+    col_list.subkeys = ["a", "b"]
+    f = HasFilter(col_list, ["x"])
+    sql, params = f.to_sql(1)
+    assert sql == "(tags->'a'->>'b')::jsonb @> $1::jsonb"
+    assert params == ['["x"]']

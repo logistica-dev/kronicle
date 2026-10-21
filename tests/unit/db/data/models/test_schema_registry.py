@@ -138,3 +138,39 @@ def test_datetime_normalization_returns_iso_datetime():
     registry = SchemaRegistry()
     value = registry.normalize_value("2025-09-17T22:30:00+02:00", "datetime")
     assert isinstance(value, IsoDateTime)
+
+
+def test_normalize_non_convertible_str_type_raises():
+    """A value that is not an instance of the target py_type raises."""
+    registry = SchemaRegistry()
+    with raises(ValueError):
+        registry.normalize_value(5, "str")
+
+
+def test_normalize_str_passthrough():
+    registry = SchemaRegistry()
+    assert registry.normalize_value("hello", "str") == "hello"
+
+
+# ------------------------------------------------------------------
+# SchemaTypeInfo._normalize_float
+# ------------------------------------------------------------------
+
+
+def test_normalize_float_passthrough_for_numbers():
+    assert SchemaTypeInfo._normalize_float(3) == 3
+    assert SchemaTypeInfo._normalize_float(2.5) == 2.5
+
+
+def test_normalize_float_parses_numeric_string():
+    assert SchemaTypeInfo._normalize_float("2.5") == 2.5
+
+
+def test_normalize_float_bad_string_raises():
+    with raises(ValueError, match="Cannot normalize type"):
+        SchemaTypeInfo._normalize_float("abc")
+
+
+def test_normalize_float_other_type_raises():
+    with raises(ValueError, match="Cannot normalize type"):
+        SchemaTypeInfo._normalize_float(None)

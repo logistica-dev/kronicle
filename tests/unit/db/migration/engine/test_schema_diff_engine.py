@@ -7,7 +7,7 @@ factory imported by the module under test (``schema_diff_engine.inspect``).
 """
 
 from typing import TypeVar, cast
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from sqlalchemy import (
@@ -892,3 +892,187 @@ def test_fk_db_key_uses_columns():
         {"constrained_columns": ["channel_id"], "referred_table": "channels", "referred_columns": ["id"]},
     )
     assert SchemaDiffEngine._fk_db_key(fk_def) == ("cols", ("channel_id",), "channels", ("id",))
+
+
+# ==================================================================================================
+# Degenerate indexes (no columns) + rename-detection dedup guards
+# ==================================================================================================
+
+
+def test_diff_skips_columnless_index_when_creating_table():
+    metadata = MetaData()
+    Table(
+        "users",
+        metadata,
+        Column("id", Integer, primary_key=True),
+        Index("ix_empty"),
+        schema="public",
+    )
+    inspector = FakeInspector(schemas=["public"])
+
+    result = _diff(metadata, schemas={"public"}, inspector=inspector)
+
+    assert len(_ops(result, CreateTableOp)) == 1
+    assert _ops(result, CreateIndexOp) == []
+
+
+def test_diff_skips_columnless_index_when_diffing_existing_table():
+    metadata = MetaData()
+    Table(
+        "users",
+        metadata,
+        Column("id", Integer, primary_key=True),
+        Index("ix_empty"),
+        schema="public",
+    )
+    inspector = FakeInspector(schemas=["public"])
+    inspector.add_table(
+        "public",
+        "users",
+        columns=[_col("id", Integer(), nullable=False)],
+        pk={"name": None, "constrained_columns": ["id"]},
+    )
+
+    result = _diff(metadata, schemas={"public"}, inspector=inspector)
+
+    assert _ops(result, CreateIndexOp) == []
+    assert _ops(result, DropIndexOp) == []
+
+
+def test_detect_table_renames_skips_already_used_extras():
+    # "user" matches the first missing name; the second must skip it (already used).
+    matched = SchemaDiffEngine._detect_table_renames("public", {"users", "userss"}, {"user"})
+    assert matched == [("user", "users")]
+
+
+def test_detect_column_renames_skips_already_used_extras():
+    matched = SchemaDiffEngine._detect_column_renames("users", {"col", "coll"}, {"co"})
+    assert matched == [("co", "col")]
+
+
+def test_detect_constraint_renames_skips_already_used_extras():
+    matched = SchemaDiffEngine._detect_constraint_renames({"ck_age", "ck_ages"}, {"ck"})
+    assert matched == [("ck", "ck_age")]
+
+
+# ==================================================================================================
+# Check constraint renames
+# ==================================================================================================
+
+
+def test_diff_renames_check_constraint():
+    metadata = MetaData()
+    Table(
+        "users",
+        metadata,
+        Column("id", Integer, primary_key=True),
+        CheckConstraint("age > 0", name="ck_users_age_new"),
+        schema="public",
+    )
+    inspector = FakeInspector(schemas=["public"])
+    inspector.add_table(
+        "public",
+        "users",
+        columns=[_col("id", Integer(), nullable=False)],
+        pk={"name": None, "constrained_columns": ["id"]},
+        checks=[{"name": "ck_users_age_old", "sqltext": "age > 0"}],
+    )
+
+    result = _diff(metadata, schemas={"public"}, inspector=inspector)
+
+    renames = _ops(result, RenameConstraintOp)
+    assert len(renames) == 1
+    assert renames[0].old_name == "ck_users_age_old"
+    assert renames[0].new_name == "ck_users_age_new"
+    assert _ops(result, AddCheckConstraintOp) == []
+    assert _ops(result, DropConstraintOp) == []
+
+
+# ==================================================================================================
+# FK helper branches driven directly (some are unreachable through diff() because
+# _fk_db_key always yields a column-based key, never a name-based one)
+# ==================================================================================================
+
+
+def _bare_engine() -> SchemaDiffEngine:
+    engine = SchemaDiffEngine.__new__(SchemaDiffEngine)
+    engine.inspector = MagicMock()
+    engine.inspector.get_indexes.return_value = []
+    return engine
+
+
+def test_fk_renames_pairs_similar_named_constraints():
+    engine = _bare_engine()
+    result = SchemaDiff()
+    db_fk = {("name", "fk_msg_old"): {"name": "fk_msg_old"}}
+    meta_cons = MagicMock()
+    meta_fk = {("name", "fk_msg_new"): meta_cons}
+    db_keys, meta_keys = set(db_fk), set(meta_fk)
+
+    engine._diff_fk_renames(result, "public", "messages", db_fk, meta_fk, db_keys, meta_keys)  # type: ignore
+
+    renames = _ops(result, RenameConstraintOp)
+    assert len(renames) == 1
+    assert renames[0].old_name == "fk_msg_old"
+    assert renames[0].new_name == "fk_msg_new"
+    # The matched pair is consumed so no add/drop is derived from it afterwards.
+    assert db_keys == set()
+    assert meta_keys == set()
+
+
+def test_fk_additions_skips_constraints_without_elements():
+    engine = _bare_engine()
+    result = SchemaDiff()
+    key = ("cols", ("channel_id",), "channels", ("id",))
+    cons = MagicMock()
+    cons.elements = []
+
+    engine._diff_fk_additions(result, "public", "messages", {key: cons}, {key})
+
+    assert result.operations == []
+
+
+def test_fk_changes_skips_constraints_without_elements():
+    engine = _bare_engine()
+    result = SchemaDiff()
+    key = ("cols", ("channel_id",), "channels", ("id",))
+    cons = MagicMock()
+    cons.elements = []
+    db_def = {"name": None}
+
+    engine._diff_fk_changes(result, "public", "messages", {key: db_def}, {key: cons}, {key})  # type: ignore
+
+    assert result.operations == []
+
+
+def test_fk_changes_drops_named_db_fk_when_definition_changed():
+    metadata = MetaData()
+    Table("channels", metadata, Column("id", Integer, primary_key=True), schema="public")
+    messages = Table(
+        "messages",
+        metadata,
+        Column("id", Integer, primary_key=True),
+        Column("channel_id", Integer, ForeignKey("public.channels.id", name="fk_msg_ch", ondelete="CASCADE")),
+        schema="public",
+    )
+    cons = next(c for c in messages.constraints if isinstance(c, ForeignKeyConstraint))
+    key = ("name", "fk_msg_ch")
+    db_def = {
+        "name": "fk_msg_ch",
+        "constrained_columns": ["channel_id"],
+        "referred_table": "channels",
+        "referred_columns": ["id"],
+        "options": {"ondelete": "SET NULL", "onupdate": None},
+    }
+
+    engine = _bare_engine()
+    result = SchemaDiff()
+    engine._diff_fk_changes(result, "public", "messages", {key: db_def}, {key: cons}, {key})  # type: ignore
+
+    drops = _ops(result, DropForeignKeyOp)
+    adds = _ops(result, AddForeignKeyOp)
+    assert len(drops) == 1
+    assert drops[0].constraint_name == "fk_msg_ch"
+    assert len(adds) == 1
+    assert adds[0].constraint_name == "fk_msg_ch"
+    assert adds[0].ondelete == "CASCADE"

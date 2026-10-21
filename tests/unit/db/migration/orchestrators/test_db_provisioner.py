@@ -623,3 +623,58 @@ def test_run_once_error_restores_and_reports():
         result = p.run_once()
     assert result.failed is True
     assert restore.call_count == 1
+
+
+# ==================================================================================================
+# Remaining atomic checks / post-analysis branches
+# ==================================================================================================
+
+
+def test_any_managed_schema_exists_true():
+    p = _provisioner()
+    with patch.object(dp, "create_engine", return_value=_engine((1,))):
+        assert p._any_managed_schema_exists("postgresql://p:secret@localhost:5432/kronicle_unit_test") is True
+
+
+def test_any_managed_schema_exists_no_row_returns_false():
+    p = _provisioner()
+    with patch.object(dp, "create_engine", return_value=_engine(None)):
+        assert p._any_managed_schema_exists("postgresql://p:secret@localhost:5432/kronicle_unit_test") is False
+
+
+def test_any_managed_schema_exists_exception_returns_false():
+    p = _provisioner()
+    with patch.object(dp, "create_engine", side_effect=RuntimeError("boom")):
+        assert p._any_managed_schema_exists("postgresql://p:secret@localhost:5432/kronicle_unit_test") is False
+
+
+def test_check_schema_ownership_exception_returns_false():
+    p = _provisioner()
+    with patch.object(dp, "create_engine", side_effect=RuntimeError("boom")):
+        assert (
+            p.check_schema_ownership("core", "kronicle_rbac", "postgresql://p:secret@localhost:5432/kronicle_unit_test")
+            is False
+        )
+
+
+def test_backup_skips_when_no_managed_schemas():
+    p = _provisioner()
+    with (
+        patch.object(DbProvisioner, "check_db_exists", return_value=True),
+        patch.object(DbProvisioner, "_any_managed_schema_exists", return_value=False),
+        patch.object(dp, "subprocess") as sp,
+    ):
+        assert p.backup() is None
+    sp.run.assert_not_called()
+
+
+def test_run_post_analysis_reports_leftovers():
+    p = _provisioner()
+    with patch.object(DbProvisioner, "check_readiness", return_value={"db": ["application database missing"]}):
+        assert p.run_post_analysis() is False
+
+
+def test_run_post_analysis_ok():
+    p = _provisioner()
+    with patch.object(DbProvisioner, "check_readiness", return_value={}):
+        assert p.run_post_analysis() is True

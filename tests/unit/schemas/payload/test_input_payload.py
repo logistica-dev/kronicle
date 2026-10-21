@@ -192,3 +192,33 @@ def test_model_config_has_example():
     assert "id" in ex
     assert "channel_schema" in ex
     assert "rows" in ex
+
+
+# ------------------------------------------------------
+# Remaining branches: falsy name / non-dict values /
+# type guards reached through model_construct
+# ------------------------------------------------------
+def test_name_falsy_returns_empty_string():
+    payload = InputPayload(name="")
+    assert payload.name == ""
+
+    payload = InputPayload(name=None)
+    assert payload.name == ""
+
+
+def test_populate_name_non_dict_passthrough():
+    values = "not a dict"
+    result = InputPayload._populate_name(values)  # type: ignore[arg-type]
+    assert result is values
+
+
+def test_ensure_channel_rows_not_list_via_model_construct():
+    payload = InputPayload.model_construct(rows="not a list")
+    with pytest.raises(BadRequestError, match="Incorrect field"):
+        payload.ensure_channel_rows()
+
+
+def test_ensure_channel_schema_not_dict_via_model_construct():
+    payload = InputPayload.model_construct(channel_schema="not a dict")
+    with pytest.raises(BadRequestError, match="Incorrect type"):
+        payload.ensure_channel_schema()

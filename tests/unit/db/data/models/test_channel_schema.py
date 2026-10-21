@@ -58,9 +58,30 @@ def test_blank_column_name_raises():
         ChannelSchema.sanitize_user_schema({"   ": "int"})
 
 
+def test_only_received_at_schema_raises():
+    # every column skipped -> the sanitized schema stays empty
+    with raises(ValueError, match="Schema cannot be empty"):
+        ChannelSchema.sanitize_user_schema({"received_at": "datetime"})
+
+
+def test_unnormalizable_column_name_raises(monkeypatch):
+    # `normalize_name` is patched to return a falsy name: defensive branch of `_sanitize_column`
+    monkeypatch.setattr(
+        "kronicle.db.data.models.channel_schema.normalize_name",
+        lambda *args, **kwargs: "",
+    )
+    with raises(ValueError, match="Incorrect column name"):
+        ChannelSchema.sanitize_user_schema({"temp": "float"})
+
+
 # ------------------------------------------------------------------
 # Mapping & serialization
 # ------------------------------------------------------------------
+
+
+def test_ordered_columns():
+    schema = ChannelSchema.sanitize_user_schema({"temp": "float", "count": "int"})
+    assert schema.ordered_columns == ["time", "temp", "count", "received_at"]
 
 
 def test_user_to_db_mapping():
@@ -95,6 +116,31 @@ def test_model_dump_flatten():
     assert dumped == {"temp": "float"}
 
 
+def test_model_dump_unflattened():
+    schema = ChannelSchema.sanitize_user_schema({"temp": "float"})
+
+    dumped = schema.model_dump(flatten=False)
+    assert dumped["column_types"] == {"temp": {"name": "float", "optional": False}}
+
+
+def test_model_dump_json():
+    from json import loads
+
+    schema = ChannelSchema.sanitize_user_schema({"temp": "float"})
+
+    assert loads(schema.model_dump_json()) == {"temp": "float"}
+
+
+def test_from_db_json_reconstructs_schema():
+    schema = ChannelSchema.from_db_json({"temp": "DOUBLE PRECISION", "count": "INTEGER"})
+
+    assert schema.column_types["temp"].name == "float"
+    assert schema.column_types["count"].name == "int"
+    # no user names stored in DB: db name is its own user name
+    assert schema.db_to_usr == {"temp": "temp", "count": "count"}
+    assert schema.to_user_json() == {"temp": "float", "count": "int"}
+
+
 # ------------------------------------------------------------------
 # Structural comparison
 # ------------------------------------------------------------------
@@ -112,6 +158,11 @@ def test_equivalent_to_false_if_type_changes():
     s2 = ChannelSchema.sanitize_user_schema({"temp": "int"})
 
     assert not s1.equivalent_to(s2)
+
+
+def test_equivalent_to_non_schema_is_false():
+    s1 = ChannelSchema.sanitize_user_schema({"temp": "float"})
+    assert not s1.equivalent_to({"temp": "float"})  # type: ignore[arg-type]
 
 
 def test_diff_added_removed_changed():
@@ -207,3 +258,12 @@ def test_validate_row_received_at_from_internal():
     validated = schema.validate_row({"temp": 1.0, "received_at": ts}, from_user=False)
 
     assert validated["received_at"] == ts
+
+
+def test_validate_row_keeps_row_id_from_internal():
+    schema = ChannelSchema.sanitize_user_schema({"temp": "float"})
+
+    validated = schema.validate_row({"temp": 1.0, "row_id": 12345}, from_user=False)
+
+    assert validated["row_id"] == 12345
+    assert "row_id" not in schema.validate_row({"temp": 1.0}, from_user=False)

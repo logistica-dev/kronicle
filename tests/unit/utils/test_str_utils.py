@@ -11,6 +11,7 @@ from kronicle.utils.str_utils import (
     enforce_length,
     ensure_uuid4,
     extract_tags,
+    generate_name,
     generate_uuid4,
     is_base64_url,
     is_uuid4,
@@ -663,3 +664,34 @@ def test_normalize_name_keep_dots():
 def test_normalize_name_keep_dots_collapses():
     result = normalize_name("Hello.World", keep_dots=True)
     assert result == "hello.world"
+
+
+# --------------------------------------------------------------------------------------------------
+# Remaining branches: serialize(datetime), generate_name, sanitize_dict non-str normalized key
+# --------------------------------------------------------------------------------------------------
+def test_serialize_datetime_uses_local_isoformat():
+    from datetime import datetime, timezone
+
+    dt = datetime(2025, 9, 17, 20, 0, 0, tzinfo=timezone.utc)
+    assert serialize(dt) == dt.astimezone().isoformat()
+
+
+def test_generate_name_default_length():
+    name = generate_name()
+    assert len(name) == 8
+    assert name.isalnum()
+
+
+def test_generate_name_with_prefix_and_length():
+    name = generate_name(length=6, prefix="x_")
+    assert name.startswith("x_")
+    assert len(name) == 8
+
+
+def test_sanitize_dict_non_str_normalized_key_raises(monkeypatch):
+    """If the key normalizer returns a falsy/non-str value the key is rejected."""
+    import kronicle.utils.str_utils as str_utils_mod
+
+    monkeypatch.setattr(str_utils_mod, "normalize_name", lambda k: "")
+    with raises(ValueError, match="Invalid test key"):
+        str_utils_mod.sanitize_dict({"a": 1}, "test")

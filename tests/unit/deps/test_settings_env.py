@@ -1,6 +1,7 @@
 # tests/unit/deps/test_settings_env.py
 import base64
 from pathlib import Path
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -180,3 +181,173 @@ def test_db_settings(monkeypatch):
     assert "postgresql://" in settings.channel_connection_url
     assert settings.masked_connection_url
     assert settings.masked_connection_url.count("******") == 1
+
+
+# --------------------------------------------------------------------------------------------------
+# UserCreds.creds
+# --------------------------------------------------------------------------------------------------
+def test_user_creds_creds_property():
+    creds = se.UserCreds(username="alice", password="s3cret")
+    assert creds.creds == ("alice", "s3cret")
+
+
+# --------------------------------------------------------------------------------------------------
+# AppSuperuser
+# --------------------------------------------------------------------------------------------------
+def test_app_superuser_from_env(monkeypatch):
+    raw = "root:root@example.com:$argon2id$v=19$m=65536,t=3,p=4$c2FsdA$aGFzaA"
+    monkeypatch.setenv(se.APP_SU_INFO, encode_b64url(raw))
+    su = se.AppSuperuser.from_env()
+    assert su.username == "root"
+    assert su.email == "root@example.com"
+    assert su.password_hash.startswith("$argon2id$")
+
+
+def test_app_superuser_from_env_missing(monkeypatch):
+    monkeypatch.delenv(se.APP_SU_INFO, raising=False)
+    with pytest.raises(RuntimeError, match="KRONICLE_SU_INFO"):
+        se.AppSuperuser.from_env()
+
+
+def test_app_superuser_from_env_malformed(monkeypatch):
+    # Decodes fine but does not contain "user:email:hash" -> unpacking ValueError -> RuntimeError
+    monkeypatch.setenv(se.APP_SU_INFO, encode_b64url("only-a-username"))
+    with pytest.raises(RuntimeError, match="KRONICLE_SU_INFO"):
+        se.AppSuperuser.from_env()
+
+
+# --------------------------------------------------------------------------------------------------
+# DbAccess.from_env validation
+# --------------------------------------------------------------------------------------------------
+@pytest.mark.parametrize("bad_name", ["bad name", "1leading", "semi;colon"])
+def test_db_access_invalid_db_name_raises(monkeypatch, bad_name):
+    monkeypatch.setenv(se.DB_HOST, "localhost")
+    monkeypatch.setenv(se.DB_PORT, "5432")
+    monkeypatch.setenv(se.DB_NAME, bad_name)
+    with pytest.raises(RuntimeError):
+        se.DbAccess.from_env(se.UserCreds(username="user", password="pwd"))
+
+
+# --------------------------------------------------------------------------------------------------
+# DbAccess.session
+# --------------------------------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_db_access_session(monkeypatch):
+    mock_conn = AsyncMock()
+    mock_connect = AsyncMock(return_value=mock_conn)
+    monkeypatch.setattr(se, "connect", mock_connect)
+    db = se.DbAccess(host="dbhost", port=5432, name="kronicle", usr="chan", pwd="cpass")
+
+    async with db.session() as conn:
+        assert conn is mock_conn
+    mock_connect.assert_awaited_once_with(host="dbhost", port=5432, user="chan", password="cpass", database="kronicle")
+    mock_conn.close.assert_awaited_once()
+
+    async with db.session(creds=se.UserCreds("rbac", "rpass"), db_name="other"):
+        pass
+    mock_connect.assert_awaited_with(host="dbhost", port=5432, user="rbac", password="rpass", database="other")
+    assert mock_conn.close.await_count == 2
+
+
+# --------------------------------------------------------------------------------------------------
+# KronicleEnvConf.from_env
+# --------------------------------------------------------------------------------------------------
+def _set_full_env(monkeypatch):
+    monkeypatch.setenv(se.DB_HOST, "localhost")
+    monkeypatch.setenv(se.DB_PORT, "5432")
+    monkeypatch.setenv(se.DB_NAME, "kronicle")
+    monkeypatch.setenv(se.CHAN_CREDS, encode_b64url("chan_usr:chan_pwd"))
+    monkeypatch.setenv(se.RBAC_CREDS, encode_b64url("rbac_usr:rbac_pwd"))
+    monkeypatch.setenv(se.KRONICLE_ENV, "dev")
+    monkeypatch.delenv(se.APP_HOST, raising=False)
+    monkeypatch.delenv(se.APP_PORT, raising=False)
+    monkeypatch.delenv(se.KRONICLE_CONF, raising=False)
+    monkeypatch.delenv(se.KRONICLE_DB_AUTO_MIGRATION, raising=False)
+    monkeypatch.delenv(se.KRONICLE_BACKUP_PREFIX, raising=False)
+    monkeypatch.delenv(se.KRONICLE_BACKUP_DIR, raising=False)
+
+
+def test_kronicle_env_conf_from_env(monkeypatch):
+    _set_full_env(monkeypatch)
+    monkeypatch.setenv(se.DBSU_CREDS, encode_b64url("su_usr:su_pwd"))
+    conf = se.KronicleEnvConf.from_env()
+    assert conf.chan_creds.username == "chan_usr"
+    assert conf.rbac_creds.username == "rbac_usr"
+    assert conf.dbsu_creds is not None
+    assert conf.dbsu_creds.username == "su_usr"
+    assert conf.db.host == "localhost"
+    assert conf.db.port == 5432
+    assert conf.db.name == "kronicle"
+    assert conf.server.host == "0.0.0.0"
+    assert conf.server.port == 8000
+    assert conf.env.is_dev_env
+    assert conf.conf_file is None
+    assert conf.migration.auto is False
+
+
+def test_kronicle_env_conf_from_env_without_dbsu(monkeypatch):
+    _set_full_env(monkeypatch)
+    monkeypatch.delenv(se.DBSU_CREDS, raising=False)
+    conf = se.KronicleEnvConf.from_env()
+    assert conf.dbsu_creds is None
+
+
+# --------------------------------------------------------------------------------------------------
+# DBSettings masked URLs / dumps
+# --------------------------------------------------------------------------------------------------
+def test_db_settings_host_port_and_masked_urls(monkeypatch):
+    _set_full_env(monkeypatch)
+    monkeypatch.setenv(se.DBSU_CREDS, encode_b64url("su_usr:su_pwd"))
+    chan = se.ChanDbCreds.from_env()
+    rbac = se.RbacDbCreds.from_env()
+    dbsu = se.DbSuCreds.from_env()
+    db = se.DbAccess.from_env(chan)
+    conf = se.KronicleEnvConf(
+        chan_creds=chan,
+        rbac_creds=rbac,
+        dbsu_creds=dbsu,
+        db=db,
+        server=se.ConnectionSettings.from_env(),
+        env=se.AppEnv.from_env(),
+        conf_file=None,
+        migration=se.MigrationSettings(),
+    )
+    settings = se.DBSettings(conf)
+    assert settings.host == "localhost"
+    assert settings.port == 5432
+    assert settings.masked_rbac_connection_url.count("******") == 1
+    assert settings.masked_dbsu_connection_url is not None
+    assert settings.masked_dbsu_connection_url.count("******") == 1
+    assert settings.masked_maintenance_url is not None
+    assert settings.masked_maintenance_url.endswith("/postgres")
+    assert settings.masked_maintenance_url.count("******") == 1
+    dumped = settings.model_dump_json()
+    assert '"connection_url"' in dumped
+    assert str(settings).startswith("DBSettings(")
+
+
+def test_db_settings_without_dbsu(monkeypatch):
+    _set_full_env(monkeypatch)
+    monkeypatch.delenv(se.DBSU_CREDS, raising=False)
+    chan = se.ChanDbCreds.from_env()
+    rbac = se.RbacDbCreds.from_env()
+    db = se.DbAccess.from_env(chan)
+    conf = se.KronicleEnvConf(
+        chan_creds=chan,
+        rbac_creds=rbac,
+        dbsu_creds=None,
+        db=db,
+        server=se.ConnectionSettings.from_env(),
+        env=se.AppEnv.from_env(),
+        conf_file=None,
+        migration=se.MigrationSettings(),
+    )
+    settings = se.DBSettings(conf)
+    assert settings.db_name == "kronicle"
+    assert settings.rbac_user == "rbac_usr"
+    assert settings.chan_user == "chan_usr"
+    assert set(settings.owner_passwords) == {"rbac_usr", "chan_usr"}
+    assert settings.dbsu_connection_url is None
+    assert settings.dbsu_maintenance_url is None
+    assert settings.masked_dbsu_connection_url is None
+    assert settings.masked_maintenance_url is None
