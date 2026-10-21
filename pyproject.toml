@@ -1,6 +1,6 @@
 [project]
 name = "kronicle"
-version = "0.7.1"
+version = "0.7.2"
 authors = [{ name = "Olivier Martineau", email = "olivier.martineau@irisa.fr" }]
 maintainers = [
     { name = "Olivier Martineau", email = "olivier.martineau@irisa.fr" },
@@ -15,6 +15,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Natural Language :: English",
     "Operating System :: OS Independent",
 ]
@@ -89,10 +90,7 @@ pre_bump_hooks = ["scripts/commit/commitizen_pre_bump_hook.sh"]
 
 # ----- Tool: coverage
 [tool.coverage.run]
-omit = [
-    "src/kronicle/_build.py",
-    "*/__init__.py",
-]
+omit = ["src/kronicle/_build.py", "*/__init__.py"]
 
 # ----- Tool: pytest
 [tool.pytest.ini_options]
@@ -159,7 +157,7 @@ known-third-party = ["asyncpg"]
 #   uv run tox run-parallel   # what CI runs (only py312 writes coverage)
 #   uv run tox -e py312       # one environment
 [tool.tox]
-env_list = ["py311", "py312", "py313", "py314", "quality"]
+env_list = ["quality", "py311", "py312", "py313", "py314", "py315"]
 skip_missing_interpreters = false
 
 [tool.tox.env_run_base]
