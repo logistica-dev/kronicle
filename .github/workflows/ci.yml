@@ -22,7 +22,7 @@ jobs:
           python-version: '3.12'
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v10.3.0
+        uses: astral-sh/setup-uv@v10.3.3
         with:
           # Exact uv version, read from the locked `uv` dev dependency.
           version-file: uv.lock
@@ -56,7 +56,7 @@ jobs:
           python-version: '3.12'
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v10.3.0
+        uses: astral-sh/setup-uv@v10.3.3
         with:
           # Exact uv version, read from the locked `uv` dev dependency.
           version-file: uv.lock
