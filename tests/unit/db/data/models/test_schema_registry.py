@@ -38,6 +38,7 @@ def test_str():
         ("string", "str"),
         ("text", "str"),
         ("integer", "int"),
+        ("bigint", "int"),
         ("number", "float"),
         ("double precision", "float"),
         ("boolean", "bool"),
@@ -62,6 +63,9 @@ def test_canonical_to_db_and_py():
 
     assert registry.canonical_to_db("str") == "TEXT"
     assert registry.canonical_to_py("str") is str
+
+    assert registry.canonical_to_db("int") == "BIGINT"
+    assert registry.canonical_to_py("int") is int
 
     assert registry.canonical_to_db("float") == "DOUBLE PRECISION"
     assert registry.canonical_to_py("float") is float

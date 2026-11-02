@@ -11,11 +11,7 @@ requires-python = ">=3.11"
 license-files = ["LICENCE.md"]
 license = "AGPL-3.0-or-later"
 classifiers = [
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
-    "Programming Language :: Python :: 3.14",
-    "Programming Language :: Python :: 3.15",
+    "Programming Language :: Python :: 3 :: Only",
     "Natural Language :: English",
     "Operating System :: OS Independent",
 ]
@@ -79,7 +75,7 @@ build-backend = "setuptools.build_meta"
 # ----- Tool: black
 [tool.black]
 line-length = 120
-target-version = ['py312']
+target-version = ['py311']
 
 # ----- Tool: commitizen
 [tool.commitizen]
@@ -119,7 +115,7 @@ include = ["kronicle*"]
 exclude = ["**/__pycache__", "**/.env", "**/.vscod*"]
 extraPaths = ["src", "../kronicle-sdk/src"]
 include = ["src", "tests", "scripts"]
-pythonVersion = "3.12"
+pythonVersion = "3.11"
 reportArgumentType = "warning"
 reportDuplicateImport = true
 reportImportCycles = true

@@ -85,7 +85,7 @@ class SchemaRegistry:
         """Initialize the type registry."""
         self._types = [
             SchemaTypeInfo("str", "TEXT", str, ["string", "str", "text"]),
-            SchemaTypeInfo("int", "INTEGER", int, ["int", "integer"]),
+            SchemaTypeInfo("int", "BIGINT", int, ["int", "integer", "bigint"]),
             SchemaTypeInfo("float", "DOUBLE PRECISION", float, ["float", "number", "double", "double precision"]),
             SchemaTypeInfo("bool", "BOOLEAN", bool, ["bool", "boolean"]),
             SchemaTypeInfo("uuid", "UUID", UUID, ["uuid", "uuid4", "uuidv4", "uuid_v4"]),
