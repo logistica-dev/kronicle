@@ -29,14 +29,14 @@ dependencies = [
     "argon2-cffi>=25.1.0",
     "asyncpg>=0.32.0",
     "email-validator>=2.3.0",
-    "fastapi>=0.162.0",
-    "pydantic>=2.14.2",
-    "pydantic-core>=2.50.2",
+    "fastapi>=0.162.3",
+    "pydantic>=2.14.3",
+    "pydantic-core>=2.50.4",
     "pydantic-settings>=2.16.2",
     "python-jose>=3.5.0",
     "rich>=15.0.0",
     "secure>=2.0.1",
-    "sqlalchemy[postgresql]>=2.1.6",
+    "sqlalchemy[postgresql]>=2.1.8",
     "starlette>=1.10.0",
     "uvicorn>=0.54.0",
 ]
@@ -47,8 +47,8 @@ dev = [
     "commitizen>=4.19.3",
     "pre-commit>=4.7.0",
     "pyright>=1.1.414",
-    "ruff>=0.17.3",
-    "uv>=0.13.6",
+    "ruff>=0.17.4",
+    "uv>=0.13.7",
     "uv-bump>=0.6.0",
 ]
 test = [
@@ -58,8 +58,8 @@ test = [
     "pytest-asyncio>=1.4.1.post1",
     "pytest-cov>=7.1.0",
     "requests>=2.34.2",
-    "tox>=4.67.5",
-    "tox-uv>=1.37.3",
+    "tox>=4.67.13",
+    "tox-uv>=1.37.7",
 ]
 
 
